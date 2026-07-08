@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/dashboard_screen.dart';
-import 'theme/app_theme.dart';
-import 'theme/theme_controller.dart';
+import 'core/core_ui/core_routes.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +42,8 @@ class CineConnectApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: controller.themeMode,
-            home: const DashboardScreen(),
+            initialRoute: CoreRoutes.splash,
+            onGenerateRoute: CoreRoutes.onGenerateRoute,
             builder: (context, child) {
               return AnimatedTheme(
                 data: Theme.of(context),

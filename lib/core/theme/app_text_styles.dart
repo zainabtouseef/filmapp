@@ -6,14 +6,19 @@ import 'app_colors.dart';
 ///
 /// Elegant serif for display / headings (Playfair Display),
 /// premium sans-serif for UI text (Inter), loaded via google_fonts.
+///
+/// Do not create ad-hoc TextStyles in screens — add a new named style
+/// here (or `.copyWith()` an existing one) so typography stays consistent.
 class AppTextStyles {
   AppTextStyles._();
 
   static const String serif = 'PlayfairDisplay';
   static const String sans = 'Inter';
 
-  static TextStyle _serif(TextStyle style) => GoogleFonts.playfairDisplay(textStyle: style);
-  static TextStyle _sans(TextStyle style) => GoogleFonts.inter(textStyle: style);
+  static TextStyle _serif(TextStyle style) =>
+      GoogleFonts.playfairDisplay(textStyle: style);
+  static TextStyle _sans(TextStyle style) =>
+      GoogleFonts.inter(textStyle: style);
 
   // ---- Display / serif headings -----------------------------------------
   static TextStyle get displayLarge => _serif(const TextStyle(

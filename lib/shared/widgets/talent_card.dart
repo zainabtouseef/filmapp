@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../models/talent.dart';
-import '../theme/app_text_styles.dart';
-import '../theme/app_theme.dart';
+import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_text_styles.dart';
+import '../../models/talent.dart';
+import 'portrait_image.dart';
 
 /// Small portrait card used in the horizontal talent carousel.
 class TalentCarouselCard extends StatelessWidget {

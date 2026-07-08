@@ -2,41 +2,97 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_text_styles.dart';
-import '../theme/app_theme.dart';
+import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_text_styles.dart';
 
 /// Floating rounded bottom navigation bar with an elevated center Create button.
 class CineBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
+  final List<CineBottomNavDestination> destinations;
+  final bool compactCenter;
 
-  const CineBottomNav({super.key, this.currentIndex = 1, this.onTap});
+  const CineBottomNav({
+    super.key,
+    this.currentIndex = 1,
+    this.onTap,
+    this.destinations = _defaultBottomNavDestinations,
+    this.compactCenter = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return PremiumBottomNavBar(currentIndex: currentIndex, onTap: onTap);
+    return PremiumBottomNavBar(
+      currentIndex: currentIndex,
+      onTap: onTap,
+      destinations: destinations,
+      compactCenter: compactCenter,
+    );
   }
 }
+
+class CineBottomNavDestination {
+  final IconData icon;
+  final String label;
+
+  const CineBottomNavDestination({
+    required this.icon,
+    required this.label,
+  });
+}
+
+const _defaultBottomNavDestinations = [
+  CineBottomNavDestination(
+    icon: Icons.home_outlined,
+    label: 'Home',
+  ),
+  CineBottomNavDestination(
+    icon: Icons.search_rounded,
+    label: 'Discover',
+  ),
+  CineBottomNavDestination(
+    icon: Icons.add_rounded,
+    label: 'Create',
+  ),
+  CineBottomNavDestination(
+    icon: Icons.work_outline_rounded,
+    label: 'Bookings',
+  ),
+  CineBottomNavDestination(
+    icon: Icons.person_outline_rounded,
+    label: 'Profile',
+  ),
+];
 
 class PremiumBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int>? onTap;
+  final List<CineBottomNavDestination> destinations;
+  final bool compactCenter;
 
   const PremiumBottomNavBar({
     super.key,
     this.currentIndex = 1,
     this.onTap,
+    this.destinations = _defaultBottomNavDestinations,
+    this.compactCenter = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    assert(destinations.length == 5, 'Bottom navigation expects 5 items.');
     final colors = context.appColors;
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 700;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final totalHeight = (wide ? 156.0 : 132.0) + bottomInset;
-    final navHeight = (wide ? 126.0 : 108.0) + bottomInset;
-    final createSize = wide ? 118.0 : 82.0;
+    final totalHeight =
+        (wide ? 156.0 : (compactCenter ? 112.0 : 132.0)) + bottomInset;
+    final navHeight =
+        (wide ? 126.0 : (compactCenter ? 96.0 : 108.0)) + bottomInset;
+    final createSize = wide ? 118.0 : (compactCenter ? 58.0 : 82.0);
+    final sidePadding = wide ? 50.0 : (compactCenter ? 18.0 : 22.0);
+    final itemTop = wide ? 32.0 : (compactCenter ? 23.0 : 26.0);
+    final centerGap = wide ? 160.0 : (compactCenter ? 78.0 : 92.0);
 
     return SizedBox(
       height: totalHeight,
@@ -77,46 +133,50 @@ class PremiumBottomNavBar extends StatelessWidget {
                   child: Stack(
                     children: [
                       Positioned(
-                        left: wide ? 50 : 22,
-                        right: wide ? 50 : 22,
-                        top: wide ? 32 : 26,
+                        left: sidePadding,
+                        right: sidePadding,
+                        top: itemTop,
                         child: Row(
                           children: [
                             Flexible(
                               child: BottomNavItem(
-                                icon: Icons.home_outlined,
-                                label: 'Home',
+                                icon: destinations[0].icon,
+                                label: destinations[0].label,
                                 active: currentIndex == 0,
                                 onTap: () => onTap?.call(0),
                                 wide: wide,
+                                dense: compactCenter,
                               ),
                             ),
                             Flexible(
                               child: BottomNavItem(
-                                icon: Icons.search_rounded,
-                                label: 'Discover',
+                                icon: destinations[1].icon,
+                                label: destinations[1].label,
                                 active: currentIndex == 1,
                                 onTap: () => onTap?.call(1),
                                 wide: wide,
+                                dense: compactCenter,
                               ),
                             ),
-                            SizedBox(width: wide ? 160 : 92),
+                            SizedBox(width: centerGap),
                             Flexible(
                               child: BottomNavItem(
-                                icon: Icons.work_outline_rounded,
-                                label: 'Bookings',
+                                icon: destinations[3].icon,
+                                label: destinations[3].label,
                                 active: currentIndex == 3,
                                 onTap: () => onTap?.call(3),
                                 wide: wide,
+                                dense: compactCenter,
                               ),
                             ),
                             Flexible(
                               child: BottomNavItem(
-                                icon: Icons.person_outline_rounded,
-                                label: 'Profile',
+                                icon: destinations[4].icon,
+                                label: destinations[4].label,
                                 active: currentIndex == 4,
                                 onTap: () => onTap?.call(4),
                                 wide: wide,
+                                dense: compactCenter,
                               ),
                             ),
                           ],
@@ -147,10 +207,13 @@ class PremiumBottomNavBar extends StatelessWidget {
           ),
           Positioned(
             top: 0,
-            child: CenterCreateButton(
+            child: CenterNavButton(
               active: currentIndex == 2,
               size: createSize,
               wide: wide,
+              icon: destinations[2].icon,
+              label: destinations[2].label,
+              compact: compactCenter,
               onTap: () => onTap?.call(2),
             ),
           ),
@@ -166,6 +229,7 @@ class BottomNavItem extends StatelessWidget {
   final bool active;
   final VoidCallback? onTap;
   final bool wide;
+  final bool dense;
 
   const BottomNavItem({
     super.key,
@@ -174,14 +238,15 @@ class BottomNavItem extends StatelessWidget {
     this.active = false,
     this.onTap,
     this.wide = false,
+    this.dense = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final color = active ? colors.goldDark : colors.textTertiary;
-    final iconSize = wide ? 42.0 : 29.0;
-    final labelSize = wide ? 22.0 : 14.5;
+    final iconSize = wide ? 42.0 : (dense ? 25.0 : 29.0);
+    final labelSize = wide ? 22.0 : (dense ? 13.0 : 14.5);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -190,8 +255,8 @@ class BottomNavItem extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: wide ? 76 : 46,
-            height: wide ? 52 : 34,
+            width: wide ? 76 : (dense ? 42 : 46),
+            height: wide ? 52 : (dense ? 30 : 34),
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -224,7 +289,7 @@ class BottomNavItem extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: wide ? 10 : 7),
+          SizedBox(height: wide ? 10 : (dense ? 5 : 7)),
           Text(
             label,
             maxLines: 1,
@@ -236,7 +301,7 @@ class BottomNavItem extends StatelessWidget {
               letterSpacing: 0,
             ),
           ),
-          SizedBox(height: wide ? 12 : 7),
+          SizedBox(height: wide ? 12 : (dense ? 5 : 7)),
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             width: active ? (wide ? 44 : 26) : 0,
@@ -257,17 +322,23 @@ class BottomNavItem extends StatelessWidget {
   }
 }
 
-class CenterCreateButton extends StatelessWidget {
+class CenterNavButton extends StatelessWidget {
   final bool active;
   final double size;
   final bool wide;
+  final IconData icon;
+  final String label;
+  final bool compact;
   final VoidCallback? onTap;
 
-  const CenterCreateButton({
+  const CenterNavButton({
     super.key,
     this.active = false,
     required this.size,
     required this.wide,
+    required this.icon,
+    required this.label,
+    this.compact = false,
     this.onTap,
   });
 
@@ -305,18 +376,18 @@ class CenterCreateButton extends StatelessWidget {
               ],
             ),
             child: Icon(
-              Icons.add_rounded,
+              icon,
               color: colors.isLight ? colors.icon : colors.textPrimary,
-              size: wide ? 60 : 42,
+              size: wide ? 60 : (compact ? 29 : 42),
             ),
           ),
-          SizedBox(height: wide ? 16 : 9),
+          SizedBox(height: wide ? 16 : (compact ? 5 : 9)),
           Text(
-            'Create',
+            label,
             style: AppTextStyles.caption.copyWith(
               color: active ? colors.goldDark : colors.textTertiary,
-              fontSize: wide ? 22 : 15,
-              fontWeight: FontWeight.w600,
+              fontSize: wide ? 22 : (compact ? 13 : 15),
+              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
               letterSpacing: 0,
             ),
           ),

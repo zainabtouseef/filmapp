@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// Drives light / dark / system theme mode across the app.
+///
+/// Future dashboards should read theme mode via
+/// `ThemeControllerProvider.of(context)` — never introduce a second,
+/// competing source of theme-mode state.
 class ThemeController extends ChangeNotifier {
   ThemeMode _themeMode;
 
-  ThemeController({ThemeMode initialThemeMode = ThemeMode.light})
+  ThemeController({ThemeMode initialThemeMode = ThemeMode.dark})
       : _themeMode = initialThemeMode;
 
   ThemeMode get themeMode => _themeMode;

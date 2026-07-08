@@ -2,9 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../models/talent.dart';
-import '../theme/app_text_styles.dart';
-import '../theme/app_theme.dart';
+import '../../models/talent.dart';
+import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_text_styles.dart';
+import 'portrait_image.dart';
 
 /// The large premium featured-talent card.
 class FeaturedTalentCard extends StatelessWidget {
@@ -565,9 +566,8 @@ class _LightPortfolioThumbnails extends StatelessWidget {
       height: thumbSize,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final availableWidth = constraints.maxWidth.isFinite
-              ? constraints.maxWidth
-              : infoWidth;
+          final availableWidth =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : infoWidth;
           final itemWidth = thumbSize + gap;
           final count = availableWidth < (itemWidth * 4) ? maxItemsPerRow : 4;
           final children = <Widget>[];

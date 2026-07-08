@@ -2,12 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cineconnect/core/core_ui/screens/onboarding_screen.dart';
 import 'package:cineconnect/main.dart';
-import 'package:cineconnect/screens/dashboard_screen.dart';
-import 'package:cineconnect/theme/theme_controller.dart';
+import 'package:cineconnect/core/theme/theme_controller.dart';
 
 void main() {
-  testWidgets('renders CineConnect dashboard without overflow errors', (
+  testWidgets('renders CineConnect shared launch flow without overflow errors',
+      (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(320, 800);
@@ -22,8 +23,8 @@ void main() {
 
     final exception = tester.takeException();
 
-    expect(find.byType(DashboardScreen), findsOneWidget);
-    expect(find.text('Featured Talent'), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(find.text('Find Verified Industry Professionals'), findsOneWidget);
     expect(exception, isNull, reason: 'Unexpected exception: $exception');
   });
 }
