@@ -4,6 +4,7 @@ import '../../core_ui/core_routes.dart';
 import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/models/shared_models.dart';
 import '../../core_ui/widgets/core_widgets.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 
@@ -89,10 +90,17 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
               message: 'No payments match this filter yet.',
             )
           else
-            ..._rows.map(
-              (row) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: LedgerRowCard(row: row, onTap: () => _details(row)),
+            CoreGlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Column(
+                children: [
+                  for (var i = 0; i < _rows.length; i++)
+                    LedgerRowCard(
+                      row: _rows[i],
+                      onTap: () => _details(_rows[i]),
+                      showDivider: i != _rows.length - 1,
+                    ),
+                ],
               ),
             ),
         ],
@@ -109,7 +117,7 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 680 ? 4 : 2;
+        final columns = constraints.maxWidth >= AppBreakpoints.phone ? 4 : 2;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -175,11 +183,13 @@ class _SummaryTile extends StatelessWidget {
 class LedgerRowCard extends StatelessWidget {
   final LedgerRowData row;
   final VoidCallback onTap;
+  final bool showDivider;
 
   const LedgerRowCard({
     super.key,
     required this.row,
     required this.onTap,
+    this.showDivider = true,
   });
 
   @override
@@ -187,8 +197,13 @@ class LedgerRowCard extends StatelessWidget {
     final colors = context.appColors;
     return GestureDetector(
       onTap: onTap,
-      child: CoreGlassCard(
-        padding: const EdgeInsets.all(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(bottom: BorderSide(color: colors.borderMuted))
+              : null,
+        ),
         child: Row(
           children: [
             Icon(
@@ -196,6 +211,7 @@ class LedgerRowCard extends StatelessWidget {
                   ? Icons.south_west_rounded
                   : Icons.north_east_rounded,
               color: colors.goldDark,
+              size: 20,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -211,13 +227,13 @@ class LedgerRowCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
                     '${row.bookingId} · ${row.milestone} · ${row.date}',
                     style: AppTextStyles.caption
                         .copyWith(color: colors.textSecondary),
                   ),
-                  const SizedBox(height: 9),
+                  const SizedBox(height: 7),
                   StatusBadge(
                     label: ledgerStatusLabel(row.status),
                     tone: ledgerStatusTone(row.status),
@@ -276,7 +292,7 @@ class _ReceiptDetailsSheet extends StatelessWidget {
             Text(
               'Receipt Detail',
               style: AppTextStyles.sectionTitle
-                  .copyWith(color: colors.textPrimary),
+                  .copyWith(color: colors.textPrimary, fontSize: 19),
             ),
             const SizedBox(height: 14),
             _line(context, 'Receipt ID', row.receiptId),

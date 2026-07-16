@@ -59,6 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     return CoreScreenScaffold(
       scrollable: false,
+      showGlobalControls: false,
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
       child: Column(
         children: [
@@ -152,66 +153,69 @@ class _OnboardingCard extends StatelessWidget {
     final visualInner = compact ? 66.0 : 82.0;
 
     return Center(
-      child: CoreGlassCard(
-        padding: EdgeInsets.fromLTRB(
-          compact ? 18 : 24,
-          compact ? 22 : 30,
-          compact ? 18 : 24,
-          compact ? 22 : 30,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: visualOuter,
-              height: visualOuter,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    colors.goldGlow.withValues(alpha: 0.72),
-                    colors.goldGlow.withValues(alpha: 0.18),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              child: Center(
-                child: Container(
-                  width: visualInner,
-                  height: visualInner,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: colors.goldGradient,
-                  ),
-                  child: Icon(
-                    slide.icon,
-                    color: colors.onGold,
-                    size: compact ? 32 : 40,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: CoreGlassCard(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 18 : 24,
+            compact ? 22 : 30,
+            compact ? 18 : 24,
+            compact ? 22 : 30,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: visualOuter,
+                height: visualOuter,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colors.goldGlow.withValues(alpha: 0.72),
+                      colors.goldGlow.withValues(alpha: 0.18),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
+                child: Center(
+                  child: Container(
+                    width: visualInner,
+                    height: visualInner,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: colors.goldGradient,
+                    ),
+                    child: Icon(
+                      slide.icon,
+                      color: colors.onGold,
+                      size: compact ? 32 : 40,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: compact ? 18 : 26),
-            Text(
-              slide.title,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.heading.copyWith(
-                color: colors.textPrimary,
-                fontSize: compact ? 24 : 30,
-                height: 1.08,
+              SizedBox(height: compact ? 18 : 26),
+              Text(
+                slide.title,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.sectionTitle.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: compact ? 19 : 21,
+                  height: 1.15,
+                ),
               ),
-            ),
-            SizedBox(height: compact ? 10 : 14),
-            Text(
-              slide.description,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMuted.copyWith(
-                color: colors.textSecondary,
-                height: compact ? 1.38 : 1.52,
-                fontSize: compact ? 13.5 : 15,
+              SizedBox(height: compact ? 8 : 10),
+              Text(
+                slide.description,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMuted.copyWith(
+                  color: colors.textSecondary,
+                  height: compact ? 1.35 : 1.45,
+                  fontSize: compact ? 13 : 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -19,7 +19,9 @@ class CoreErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
+      centerContent: true,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           CoreEmptyState(
             icon: Icons.error_outline_rounded,
@@ -46,15 +48,10 @@ class CoreEmptyTemplateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
+      centerContent: true,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const CoreAppHeader(
-            title: 'Empty State Template',
-            subtitle:
-                'Reusable no-data surface for contracts, chats, payments and search.',
-            icon: Icons.inbox_outlined,
-          ),
-          const SizedBox(height: 20),
           CoreEmptyState(
             icon: Icons.inbox_outlined,
             title: 'No payments yet',
@@ -75,7 +72,9 @@ class NoInternetScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
+      centerContent: true,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const CoreEmptyState(
             icon: Icons.wifi_off_rounded,
@@ -102,7 +101,9 @@ class ForceUpdateScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return CoreScreenScaffold(
+      centerContent: true,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const CoreEmptyState(
             icon: Icons.system_update_alt_rounded,
@@ -144,7 +145,9 @@ class MaintenanceModeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return CoreScreenScaffold(
+      centerContent: true,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const CoreEmptyState(
             icon: Icons.construction_rounded,

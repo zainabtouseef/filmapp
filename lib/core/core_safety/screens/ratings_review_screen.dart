@@ -63,7 +63,7 @@ class _RatingsReviewScreenState extends State<RatingsReviewScreen> {
               children: [
                 Text(
                   'TVC Shoot — Lahore',
-                  style: AppTextStyles.sectionTitle
+                  style: AppTextStyles.cardTitle
                       .copyWith(color: colors.textPrimary),
                 ),
                 const SizedBox(height: 8),
@@ -110,7 +110,12 @@ class _RatingsReviewScreenState extends State<RatingsReviewScreen> {
                   onChanged: (value) =>
                       setState(() => _privateComplaint = value),
                   title: Text(
-                    'Submit as private admin complaint instead of public review',
+                    'Private complaint',
+                    style: AppTextStyles.label
+                        .copyWith(color: colors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    'Route to admin support instead of a public review',
                     style: AppTextStyles.caption
                         .copyWith(color: colors.textSecondary),
                   ),

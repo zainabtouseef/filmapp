@@ -65,6 +65,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     return CoreScreenScaffold(
       scrollable: false,
+      showGlobalControls: false,
       padding: const EdgeInsets.all(24),
       child: Stack(
         children: [

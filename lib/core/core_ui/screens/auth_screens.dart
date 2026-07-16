@@ -4,6 +4,17 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../../../features/actor_talent/routes/actor_talent_routes.dart';
+import '../../../features/brand_sponsors/routes/brand_sponsor_routes.dart';
+import '../../../features/casting_agency/routes/casting_agency_routes.dart';
+import '../../../features/crew_services/routes/crew_services_routes.dart';
+import '../../../features/director_producer/routes/director_producer_routes.dart';
+import '../../../features/distribution_partner/routes/distribution_partner_routes.dart';
+import '../../../features/insurance_partner/routes/insurance_partner_routes.dart';
+import '../../../features/legal_partner/routes/legal_partner_routes.dart';
+import '../../../features/location_owner/routes/location_owner_routes.dart';
+import '../../../features/media_equipment/routes/media_equipment_routes.dart';
+import '../../../features/model_extension/routes/model_extension_routes.dart';
 import '../../../features/super_admin/routes/super_admin_routes.dart';
 import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
@@ -22,9 +33,16 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _showPassword = false;
   bool _biometric = false;
   bool _loading = false;
-  String _demoLoginAs = 'User';
+  String _demoLoginAs = 'Director / Producer';
   String? _identityError;
   String? _passwordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _identity.text = 'producer@cineconnect.demo';
+    _password.text = 'demo123';
+  }
 
   @override
   void dispose() {
@@ -34,7 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    final fakeUserType = _demoLoginAs == 'User' ? 'user' : 'super_admin';
+    final fakeUserType =
+        _demoLoginAs == 'User' || _portalRouteFor(_demoLoginAs) != null
+            ? 'user'
+            : 'super_admin';
     final fakeAdminPermission = _demoPermissionFor(_demoLoginAs);
 
     if (fakeUserType == 'super_admin') {
@@ -60,6 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
     const fakeAccountStatus = 'verified';
     if (fakeAccountStatus == 'verification_pending') {
       Navigator.pushNamed(context, CoreRoutes.verificationStatus);
+    } else if (_portalRouteFor(_demoLoginAs) != null) {
+      Navigator.pushNamed(context, _portalRouteFor(_demoLoginAs)!);
     } else {
       Navigator.pushNamed(context, CoreRoutes.dashboard);
     }
@@ -87,6 +110,78 @@ class _LoginScreenState extends State<LoginScreen> {
     };
   }
 
+  String? _portalRouteFor(String label) {
+    return switch (label) {
+      'Director / Producer' => DirectorProducerRoutes.home,
+      'Actor / Talent' => ActorTalentRoutes.dashboard,
+      'Model' => ModelExtensionRoutes.categories,
+      'Location Owner' => LocationOwnerRoutes.home,
+      'Media / Equipment Provider' => MediaEquipmentRoutes.home,
+      'Crew / Services' => CrewServicesRoutes.home,
+      'Casting Agency' => CastingAgencyRoutes.home,
+      'Brand / Sponsor' => BrandSponsorRoutes.home,
+      'Legal Partner' => LegalPartnerRoutes.home,
+      'Insurance / Safety Partner' => InsurancePartnerRoutes.home,
+      'Distribution / Release Partner' => DistributionPartnerRoutes.home,
+      _ => null,
+    };
+  }
+
+  static const _demoRoles = [
+    'User',
+    'Director / Producer',
+    'Actor / Talent',
+    'Model',
+    'Location Owner',
+    'Media / Equipment Provider',
+    'Crew / Services',
+    'Casting Agency',
+    'Brand / Sponsor',
+    'Legal Partner',
+    'Insurance / Safety Partner',
+    'Distribution / Release Partner',
+    'Super Admin',
+    'Payments Officer',
+    'Verification Agent',
+    'Dispute Officer',
+    'Content Moderator',
+  ];
+
+  void _showDemoRolePicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _CoreBottomSheet(
+        title: 'Demo Login As',
+        subtitle: 'Pick a role to preview its portal.',
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.55,
+          ),
+          child: SingleChildScrollView(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _demoRoles
+                  .map(
+                    (role) => CoreChip(
+                      label: role,
+                      selected: _demoLoginAs == role,
+                      onTap: () {
+                        setState(() => _demoLoginAs = role);
+                        Navigator.pop(sheetContext);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showOtpSheet() {
     final otp = TextEditingController();
     final rootContext = context;
@@ -108,7 +203,10 @@ class _LoginScreenState extends State<LoginScreen> {
               onTap: () {
                 if (otp.text.trim().length == 6) {
                   Navigator.pop(context);
-                  Navigator.pushNamed(rootContext, CoreRoutes.dashboard);
+                  Navigator.pushNamed(
+                    rootContext,
+                    _portalRouteFor(_demoLoginAs) ?? CoreRoutes.dashboard,
+                  );
                 } else {
                   showCoreSnack(context, 'Enter a 6-digit OTP');
                 }
@@ -129,15 +227,15 @@ class _LoginScreenState extends State<LoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const CoreBrandMark(),
-          const SizedBox(height: 28),
+          const SizedBox(height: 22),
           Text(
             'Welcome Back',
-            style: AppTextStyles.heading.copyWith(
+            style: AppTextStyles.sectionTitle.copyWith(
               color: colors.textPrimary,
-              fontSize: 32,
+              fontSize: 21,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             'Continue managing your production universe.',
             style:
@@ -203,36 +301,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         .copyWith(color: colors.textSecondary),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Demo Login As:',
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: _showDemoRolePicker,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: colors.border),
+                      color: colors.surface.withValues(alpha: 0.4),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.badge_outlined,
+                            size: 18, color: colors.goldDark),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Demo login as',
+                                style: AppTextStyles.caption
+                                    .copyWith(color: colors.textSecondary),
+                              ),
+                              Text(
+                                _demoLoginAs,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.label
+                                    .copyWith(color: colors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.expand_more_rounded,
+                            color: colors.iconMuted),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    'User',
-                    'Super Admin',
-                    'Payments Officer',
-                    'Verification Agent',
-                    'Dispute Officer',
-                    'Content Moderator',
-                  ]
-                      .map(
-                        (role) => CoreChip(
-                          label: role,
-                          selected: _demoLoginAs == role,
-                          onTap: () => setState(() => _demoLoginAs = role),
-                        ),
-                      )
-                      .toList(),
                 ),
                 const SizedBox(height: 14),
                 CorePrimaryButton(

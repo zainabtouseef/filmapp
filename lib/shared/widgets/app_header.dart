@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/core_ui/core_back_navigation.dart';
+import '../../core/core_ui/core_logout.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/theme_controller.dart';
@@ -115,6 +116,8 @@ class CineConnectHeader extends StatelessWidget {
                 ThemeToggleButton(size: tablet ? 42 : 34),
                 SizedBox(width: tablet ? 18 : 12),
                 _NotificationBell(tablet: tablet),
+                SizedBox(width: tablet ? 18 : 12),
+                _HeaderLogoutButton(size: tablet ? 42 : 34),
                 SizedBox(width: tablet ? 20 : 14),
                 _GoldAvatar(size: avatarSize, child: avatar),
               ],
@@ -193,6 +196,45 @@ class ThemeToggleButton extends StatelessWidget {
               : Icons.dark_mode_outlined,
           color: colors.goldMid,
           size: size * 0.54,
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderLogoutButton extends StatelessWidget {
+  final double size;
+
+  const _HeaderLogoutButton({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Tooltip(
+      message: 'Logout',
+      child: GestureDetector(
+        onTap: () => logoutToLogin(context),
+        child: GlassContainer(
+          width: size,
+          height: size,
+          radius: size / 2,
+          blur: 14,
+          borderColor: colors.border,
+          gradient: colors.glassGradient,
+          shadows: [
+            BoxShadow(
+              color:
+                  colors.shadow.withValues(alpha: colors.isLight ? 0.45 : 0.5),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+          child: Icon(
+            Icons.logout_rounded,
+            color: colors.icon,
+            size: size * 0.54,
+          ),
         ),
       ),
     );

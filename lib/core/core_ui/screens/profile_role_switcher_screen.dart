@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../features/actor_talent/routes/actor_talent_routes.dart';
+import '../../../features/brand_sponsors/routes/brand_sponsor_routes.dart';
+import '../../../features/casting_agency/routes/casting_agency_routes.dart';
+import '../../../features/crew_services/routes/crew_services_routes.dart';
+import '../../../features/director_producer/routes/director_producer_routes.dart';
+import '../../../features/distribution_partner/routes/distribution_partner_routes.dart';
+import '../../../features/insurance_partner/routes/insurance_partner_routes.dart';
+import '../../../features/legal_partner/routes/legal_partner_routes.dart';
+import '../../../features/location_owner/routes/location_owner_routes.dart';
+import '../../../features/media_equipment/routes/media_equipment_routes.dart';
+import '../../../features/model_extension/routes/model_extension_routes.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_routes.dart';
@@ -42,16 +53,24 @@ class _RoleSwitcherSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    // 11 roles comfortably exceed most phone viewport heights, so this
+    // sheet needs its own scrollable + bounded-height wrapper — a bottom
+    // sheet with isScrollControlled:true does NOT make its content
+    // scroll on its own.
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
     return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 26),
       decoration: BoxDecoration(
         gradient: colors.cardGradient,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(top: BorderSide(color: colors.border)),
       ),
-      child: const SafeArea(
+      child: SafeArea(
         top: false,
-        child: _RoleSwitcherContent(fullScreen: false),
+        child: SingleChildScrollView(
+          child: const _RoleSwitcherContent(fullScreen: false),
+        ),
       ),
     );
   }
@@ -70,19 +89,78 @@ class _RoleSwitcherContent extends StatelessWidget {
         'Director / Producer',
         Icons.movie_creation_outlined,
         'Verified',
-        'Used today'
+        'Used today',
+        DirectorProducerRoutes.home,
       ),
       (
         'Actor / Talent',
         Icons.theater_comedy_outlined,
         'Verified',
-        'Last used 2d ago'
+        'Last used 2d ago',
+        ActorTalentRoutes.dashboard,
+      ),
+      (
+        'Model',
+        Icons.style_outlined,
+        'Verified',
+        'Campaign setup',
+        ModelExtensionRoutes.categories,
       ),
       (
         'Location Owner',
         Icons.location_city_outlined,
-        'KYC required',
-        'New role'
+        'Verified',
+        'Property live',
+        LocationOwnerRoutes.home,
+      ),
+      (
+        'Media / Equipment Provider',
+        Icons.videocam_outlined,
+        'Verified',
+        'Inventory active',
+        MediaEquipmentRoutes.home,
+      ),
+      (
+        'Crew / Services',
+        Icons.groups_2_outlined,
+        'Verified',
+        'Available this week',
+        CrewServicesRoutes.home,
+      ),
+      (
+        'Casting Agency',
+        Icons.badge_outlined,
+        'Verified',
+        'Roster synced',
+        CastingAgencyRoutes.home,
+      ),
+      (
+        'Brand / Sponsor',
+        Icons.campaign_outlined,
+        'Verified',
+        'Campaign live',
+        BrandSponsorRoutes.home,
+      ),
+      (
+        'Legal Partner',
+        Icons.gavel_outlined,
+        'Verified',
+        'Review queue',
+        LegalPartnerRoutes.home,
+      ),
+      (
+        'Insurance / Safety Partner',
+        Icons.health_and_safety_outlined,
+        'Verified',
+        'Safety queue',
+        InsurancePartnerRoutes.home,
+      ),
+      (
+        'Distribution / Release Partner',
+        Icons.public_outlined,
+        'Verified',
+        'Release desk',
+        DistributionPartnerRoutes.home,
       ),
     ];
 
@@ -126,19 +204,17 @@ class _RoleSwitcherContent extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          ...roles.map(
-            (role) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RoleRow(
-                title: role.$1,
-                icon: role.$2,
-                badge: role.$3,
-                lastUsed: role.$4,
-              ),
+          const SizedBox(height: 14),
+          for (var i = 0; i < roles.length; i++)
+            _RoleRow(
+              title: roles[i].$1,
+              icon: roles[i].$2,
+              badge: roles[i].$3,
+              lastUsed: roles[i].$4,
+              route: roles[i].$5,
+              showDivider: i != roles.length - 1,
             ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           CorePrimaryButton(
             icon: Icons.add_circle_outline_rounded,
             label: 'Add a New Role',
@@ -155,12 +231,16 @@ class _RoleRow extends StatelessWidget {
   final IconData icon;
   final String badge;
   final String lastUsed;
+  final String route;
+  final bool showDivider;
 
   const _RoleRow({
     required this.title,
     required this.icon,
     required this.badge,
     required this.lastUsed,
+    required this.route,
+    this.showDivider = true,
   });
 
   @override
@@ -168,15 +248,15 @@ class _RoleRow extends StatelessWidget {
     final colors = context.appColors;
     final verified = badge == 'Verified';
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        gradient: colors.inactiveChipGradient,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
+        border: showDivider
+            ? Border(bottom: BorderSide(color: colors.borderMuted))
+            : null,
       ),
       child: Row(
         children: [
-          Icon(icon, color: colors.goldDark),
+          Icon(icon, color: colors.goldDark, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -217,6 +297,8 @@ class _RoleRow extends StatelessWidget {
               showCoreSnack(context, 'Switched to $title');
               if (!verified) {
                 Navigator.pushNamed(context, CoreRoutes.kyc, arguments: title);
+              } else {
+                Navigator.pushNamed(context, route);
               }
             },
             child: const Text('Switch'),

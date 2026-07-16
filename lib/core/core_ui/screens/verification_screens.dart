@@ -164,37 +164,48 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         children: [
           Container(
             width: double.infinity,
-            height: 220,
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                   color: _selfieCaptured ? colors.success : colors.border),
               color: colors.surface.withValues(alpha: 0.42),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
               children: [
-                Icon(
-                  _selfieCaptured
-                      ? Icons.face_retouching_natural
-                      : Icons.face_outlined,
-                  color: _selfieCaptured ? colors.success : colors.goldMid,
-                  size: 64,
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: (_selfieCaptured ? colors.success : colors.goldMid)
+                        .withValues(alpha: 0.13),
+                  ),
+                  child: Icon(
+                    _selfieCaptured
+                        ? Icons.face_retouching_natural
+                        : Icons.face_outlined,
+                    color: _selfieCaptured ? colors.success : colors.goldMid,
+                    size: 22,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  _selfieCaptured
-                      ? 'Selfie captured'
-                      : 'Selfie / liveness placeholder',
-                  style: AppTextStyles.label.copyWith(
-                    color:
-                        _selfieCaptured ? colors.success : colors.textPrimary,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selfieCaptured
+                        ? 'Selfie captured'
+                        : 'Selfie / liveness capture',
+                    style: AppTextStyles.label.copyWith(
+                      color: _selfieCaptured
+                          ? colors.success
+                          : colors.textPrimary,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           CorePrimaryButton(
             icon: Icons.camera_alt_outlined,
             label: 'Capture Selfie',
@@ -274,6 +285,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
       ),
     );
   }
+}
+
+String _statusLabel(VerificationStatus status) {
+  return switch (status) {
+    VerificationStatus.pending => 'Pending',
+    VerificationStatus.needsResubmission => 'Needs Resubmission',
+    VerificationStatus.approved => 'Approved',
+  };
 }
 
 class VerificationStatusScreen extends StatefulWidget {
@@ -366,12 +385,13 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
             child: Icon(data.$1, color: colors.goldMid, size: 44),
           ),
           const SizedBox(height: 18),
-          StatusBadge(label: status.name, tone: data.$4),
+          StatusBadge(label: _statusLabel(status), tone: data.$4),
           const SizedBox(height: 14),
           Text(
             data.$2,
             textAlign: TextAlign.center,
-            style: AppTextStyles.heading.copyWith(color: colors.textPrimary),
+            style: AppTextStyles.sectionTitle
+                .copyWith(color: colors.textPrimary, fontSize: 19),
           ),
           const SizedBox(height: 10),
           Text(

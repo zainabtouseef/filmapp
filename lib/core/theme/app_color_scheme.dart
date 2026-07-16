@@ -33,6 +33,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
   final Color success;
   final Color infoBlue;
   final Color infoPurple;
+  final Color danger;
   final Color onGold;
   final LinearGradient backgroundGradient;
   final LinearGradient glassGradient;
@@ -65,6 +66,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     required this.success,
     required this.infoBlue,
     required this.infoPurple,
+    required this.danger,
     required this.onGold,
     required this.backgroundGradient,
     required this.glassGradient,
@@ -98,6 +100,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     success: Color(0xFF20D37A),
     infoBlue: Color(0xFF2785DF),
     infoPurple: Color(0xFF9D3DDF),
+    danger: Color(0xFFC5372E),
     onGold: Color(0xFFFFFFFF),
     backgroundGradient: LinearGradient(
       begin: Alignment.topCenter,
@@ -171,6 +174,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     success: Color(0xFF20D37A),
     infoBlue: Color(0xFF5AA9FF),
     infoPurple: Color(0xFFC078FF),
+    danger: Color(0xFFFF6B5E),
     onGold: Color(0xFF17120A),
     backgroundGradient: LinearGradient(
       begin: Alignment.topCenter,
@@ -248,6 +252,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     Color? success,
     Color? infoBlue,
     Color? infoPurple,
+    Color? danger,
     Color? onGold,
     LinearGradient? backgroundGradient,
     LinearGradient? glassGradient,
@@ -280,6 +285,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
       success: success ?? this.success,
       infoBlue: infoBlue ?? this.infoBlue,
       infoPurple: infoPurple ?? this.infoPurple,
+      danger: danger ?? this.danger,
       onGold: onGold ?? this.onGold,
       backgroundGradient: backgroundGradient ?? this.backgroundGradient,
       glassGradient: glassGradient ?? this.glassGradient,
@@ -321,6 +327,7 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
       success: Color.lerp(success, other.success, t)!,
       infoBlue: Color.lerp(infoBlue, other.infoBlue, t)!,
       infoPurple: Color.lerp(infoPurple, other.infoPurple, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
       onGold: Color.lerp(onGold, other.onGold, t)!,
       backgroundGradient:
           LinearGradient.lerp(backgroundGradient, other.backgroundGradient, t)!,

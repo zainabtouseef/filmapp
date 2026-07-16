@@ -8,9 +8,16 @@ import '../../theme/app_text_styles.dart';
 class ReportBlockScreen extends StatefulWidget {
   final String? initialReason;
 
+  /// Called when the report is submitted with "Block user" switched on —
+  /// lets the caller persist the block in whatever store backs its own
+  /// blocked-users list, without this shared screen depending on any
+  /// portal-specific state.
+  final VoidCallback? onBlock;
+
   const ReportBlockScreen({
     super.key,
     this.initialReason,
+    this.onBlock,
   });
 
   @override
@@ -18,13 +25,7 @@ class ReportBlockScreen extends StatefulWidget {
 }
 
 class _ReportBlockScreenState extends State<ReportBlockScreen> {
-  late String _reason = widget.initialReason ?? 'Fake offer';
-  String _urgency = 'Normal';
-  bool _uploaded = false;
-  bool _block = false;
-  final _description = TextEditingController();
-
-  final _reasons = const [
+  static const _reasons = [
     'Fake offer',
     'Harassment',
     'Fake profile',
@@ -35,6 +36,25 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
     'Other',
   ];
 
+  late String _reason;
+  late final TextEditingController _description;
+  String _urgency = 'Normal';
+  bool _uploaded = false;
+  bool _block = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialReason;
+    if (initial != null && _reasons.contains(initial)) {
+      _reason = initial;
+      _description = TextEditingController();
+    } else {
+      _reason = 'Other';
+      _description = TextEditingController(text: initial ?? '');
+    }
+  }
+
   @override
   void dispose() {
     _description.dispose();
@@ -42,6 +62,9 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
   }
 
   void _submit() {
+    if (_block) {
+      widget.onBlock?.call();
+    }
     showCoreSuccessDialog(
       context,
       title: 'Report submitted to CineConnect Support.',

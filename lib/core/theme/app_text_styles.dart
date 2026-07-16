@@ -14,10 +14,13 @@ class AppTextStyles {
 
   static const String serif = 'PlayfairDisplay';
   static const String sans = 'Inter';
+  static const String dashboard = 'Inter';
 
   static TextStyle _serif(TextStyle style) =>
       GoogleFonts.playfairDisplay(textStyle: style);
   static TextStyle _sans(TextStyle style) =>
+      GoogleFonts.inter(textStyle: style);
+  static TextStyle _dashboard(TextStyle style) =>
       GoogleFonts.inter(textStyle: style);
 
   // ---- Display / serif headings -----------------------------------------
@@ -93,6 +96,114 @@ class AppTextStyles {
         fontWeight: FontWeight.w600,
         letterSpacing: 1.2,
         color: AppColors.textSecondary,
+      ));
+
+  // ---- Premium admin dashboard ------------------------------------------
+  static TextStyle get dashboardTitleStyle => _dashboard(const TextStyle(
+        fontSize: 30,
+        fontWeight: FontWeight.w800,
+        height: 1.05,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      ));
+
+  static TextStyle get sectionHeaderStyle => _dashboard(const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        height: 1.05,
+        letterSpacing: 1.8,
+        color: AppColors.textPrimary,
+      ));
+
+  static TextStyle get sectionActionStyle => _dashboard(const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        height: 1.05,
+        letterSpacing: 0,
+        color: AppColors.gold,
+      ));
+
+  static TextStyle get cardLabelStyle => _dashboard(const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        height: 1.12,
+        color: AppColors.textSecondary,
+      ));
+
+  static TextStyle get metricNumberStyle => _dashboard(const TextStyle(
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        height: 0.95,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      ));
+
+  static TextStyle get smallMetaStyle => _dashboard(const TextStyle(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w600,
+        height: 1.1,
+        letterSpacing: 0,
+        color: AppColors.textSecondary,
+      ));
+
+  static TextStyle get screenTitle => dashboardTitleStyle;
+
+  static TextStyle get sectionHeading => sectionHeaderStyle;
+
+  static TextStyle get adminSectionTitle => sectionHeaderStyle;
+
+  static TextStyle get sectionAction => sectionActionStyle;
+
+  static TextStyle get cardLabel => cardLabelStyle;
+
+  static TextStyle get metricNumber => metricNumberStyle;
+
+  static TextStyle get smallMetricNumber => _dashboard(const TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        height: 0.96,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      ));
+
+  static TextStyle get smallMeta => smallMetaStyle;
+
+  static TextStyle get statusText => smallMetaStyle.copyWith(
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get footerAction => sectionActionStyle;
+
+  // ---- Compact card language ---------------------------------------------
+  /// Content title inside a card (listing name, dispute type, ticket id).
+  /// Use instead of `sectionHeaderStyle` for anything that isn't an
+  /// all-caps eyebrow label — sentence case, no letter-spacing.
+  static TextStyle get cardTitle => _dashboard(const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        height: 1.2,
+        color: AppColors.textPrimary,
+      ));
+
+  /// Quiet eyebrow label for a sub-panel inside an already-titled screen
+  /// (e.g. a two-column panel header). Deliberately lighter than
+  /// [sectionHeaderStyle] so it doesn't read as a second page heading.
+  static TextStyle get panelLabel => _dashboard(const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        height: 1.1,
+        letterSpacing: 0.6,
+        color: AppColors.textSecondary,
+      ));
+
+  /// Mid-scale figure for a number inline inside a list-style card
+  /// (rate, budget total) — smaller than [metricNumber], which is
+  /// reserved for dedicated metric tiles.
+  static TextStyle get metricNumberCompact => _dashboard(const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w800,
+        height: 1.0,
+        color: AppColors.textPrimary,
       ));
 
   // ---- Price -------------------------------------------------------------

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
+import '../../../core/core_ui/models/shared_models.dart';
 import '../models/admin_models.dart';
 import '../routes/super_admin_routes.dart';
 
@@ -13,18 +14,18 @@ class AdminMockData {
   static const navItems = [
     AdminNavItem(
       label: 'Dashboard',
-      icon: Icons.space_dashboard_outlined,
+      icon: Icons.grid_view_rounded,
       route: SuperAdminRoutes.dashboard,
     ),
     AdminNavItem(
       label: 'Review Hub',
-      icon: Icons.verified_user_outlined,
+      icon: Icons.verified_user_rounded,
       route: SuperAdminRoutes.reviewHub,
     ),
     AdminNavItem(
       label: 'Payments',
       icon: Icons.payments_outlined,
-      route: SuperAdminRoutes.paymentQueue,
+      route: SuperAdminRoutes.payments,
     ),
     AdminNavItem(
       label: 'Disputes',
@@ -38,12 +39,12 @@ class AdminMockData {
     ),
     AdminNavItem(
       label: 'Contracts',
-      icon: Icons.description_outlined,
+      icon: Icons.article_outlined,
       route: SuperAdminRoutes.contractTemplates,
     ),
     AdminNavItem(
       label: 'Users & Access',
-      icon: Icons.people_alt_outlined,
+      icon: Icons.groups_2_outlined,
       route: SuperAdminRoutes.users,
     ),
     AdminNavItem(
@@ -53,12 +54,12 @@ class AdminMockData {
     ),
     AdminNavItem(
       label: 'Audit Logs',
-      icon: Icons.manage_search_outlined,
+      icon: Icons.assignment_outlined,
       route: SuperAdminRoutes.auditLogs,
     ),
     AdminNavItem(
       label: 'Analytics',
-      icon: Icons.analytics_outlined,
+      icon: Icons.bar_chart_rounded,
       route: SuperAdminRoutes.analytics,
     ),
   ];
@@ -542,5 +543,61 @@ class AdminMockData {
     ('Ledger', CoreRoutes.ledger, Icons.receipt_long_outlined),
     ('Report & Block', CoreRoutes.report, Icons.shield_outlined),
     ('Settings', CoreRoutes.settings, Icons.settings_outlined),
+  ];
+
+  static const ledgerEntries = [
+    LedgerRowData(
+      projectName: 'TVC Shoot - Lahore',
+      bookingId: 'BK-2048',
+      milestone: 'Deposit',
+      amount: 1250000,
+      direction: LedgerDirection.incoming,
+      status: LedgerStatus.verified,
+      date: 'Jul 8, 2026 - 11:32 AM',
+      receiptId: 'RCPT-2048-01',
+      transactionId: 'HBL-884120',
+    ),
+    LedgerRowData(
+      projectName: 'Fashion Campaign - Karachi',
+      bookingId: 'BK-2071',
+      milestone: 'Final Payment',
+      amount: 350000,
+      direction: LedgerDirection.outgoing,
+      status: LedgerStatus.released,
+      date: 'Jul 7, 2026 - 4:10 PM',
+      receiptId: 'RCPT-2071-02',
+      transactionId: 'MEZ-119042',
+    ),
+    LedgerRowData(
+      projectName: 'Drama Episode Shoot - Islamabad',
+      bookingId: 'BK-2090',
+      milestone: 'Damage Deposit',
+      amount: 95000,
+      direction: LedgerDirection.outgoing,
+      status: LedgerStatus.disputed,
+      date: 'Jul 6, 2026 - 9:05 AM',
+      receiptId: 'RCPT-2090-01',
+      transactionId: 'UBL-330187',
+    ),
+    LedgerRowData(
+      projectName: 'Equipment Rental - Karachi',
+      bookingId: 'BK-2052',
+      milestone: 'Final',
+      amount: 220000,
+      direction: LedgerDirection.outgoing,
+      status: LedgerStatus.refunded,
+      date: 'Jul 5, 2026 - 2:44 PM',
+      receiptId: 'RCPT-2052-03',
+      transactionId: 'HBL-884019',
+    ),
+  ];
+
+  static const commissionRules = [
+    ('Actor bookings', '8%', 'PKR 2,000 min'),
+    ('Model campaigns', '10%', 'PKR 3,500 min'),
+    ('Location bookings', '7%', 'PKR 4,000 min'),
+    ('Equipment rental', '6%', 'PKR 3,000 min'),
+    ('Crew services', '8%', 'PKR 2,500 min'),
+    ('Brand sponsorship', '12%', 'PKR 8,000 min'),
   ];
 }

@@ -8,9 +8,15 @@ import '../../theme/app_text_styles.dart';
 class ContractViewerScreen extends StatefulWidget {
   final bool showAddendumBanner;
 
+  /// Called once the in-sheet OTP signature actually succeeds — lets a
+  /// caller sync its own booking/contract state without this shared
+  /// screen depending on any portal-specific store.
+  final VoidCallback? onSigned;
+
   const ContractViewerScreen({
     super.key,
     this.showAddendumBanner = false,
+    this.onSigned,
   });
 
   @override
@@ -73,6 +79,7 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
             }
             Navigator.pop(context);
             setState(() => _signed = true);
+            widget.onSigned?.call();
             showCoreSuccessDialog(
               context,
               title: 'Contract Signed',
@@ -159,9 +166,9 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
                     Expanded(
                       child: Text(
                         'Actor Booking Agreement',
-                        style: AppTextStyles.sectionTitle.copyWith(
+                        style: AppTextStyles.cardTitle.copyWith(
                           color: colors.textPrimary,
-                          fontSize: 23,
+                          fontSize: 17,
                         ),
                       ),
                     ),
@@ -193,8 +200,8 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
           ),
           if (requiresKycBeforeSigning) ...[
             const SizedBox(height: 14),
-            const StatusBadge(
-              label:
+            const InlineNotice(
+              message:
                   'Identity verification required before signing high-value contracts.',
               icon: Icons.lock_outline_rounded,
               tone: CoreStatusTone.warning,
@@ -202,8 +209,8 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
           ],
           if (widget.showAddendumBanner) ...[
             const SizedBox(height: 14),
-            const StatusBadge(
-              label: 'Addendum request opened from chat decision.',
+            const InlineNotice(
+              message: 'Addendum request opened from chat decision.',
               icon: Icons.note_add_outlined,
               tone: CoreStatusTone.info,
             ),
@@ -244,13 +251,14 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
 
   Widget _documentBody(BuildContext context) {
     final colors = context.appColors;
+    final clauses = SharedMockData.clauses;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
       decoration: BoxDecoration(
-        color: colors.isLight
-            ? colors.surface
-            : colors.softSurface.withValues(alpha: 0.62),
+        // Fully opaque in both themes — this is document text, it must
+        // never let the animated backdrop show through behind it.
+        color: colors.isLight ? colors.surface : colors.softSurface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: colors.border),
         boxShadow: [
@@ -267,31 +275,35 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
         children: [
           Center(
             child: Text(
-              'CineConnect Contract Record',
-              style: AppTextStyles.heading.copyWith(color: colors.textPrimary),
+              'CINECONNECT CONTRACT RECORD',
+              style: AppTextStyles.panelLabel.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
           ),
-          const SizedBox(height: 18),
-          ...SharedMockData.clauses.map(
-            (clause) => ContractClauseCard(
-              title: clause.title,
-              value: clause.value,
+          const SizedBox(height: 14),
+          for (var i = 0; i < clauses.length; i++)
+            ContractClauseRow(
+              title: clauses[i].title,
+              value: clauses[i].value,
+              showDivider: i != clauses.length - 1,
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-class ContractClauseCard extends StatelessWidget {
+class ContractClauseRow extends StatelessWidget {
   final String title;
   final String value;
+  final bool showDivider;
 
-  const ContractClauseCard({
+  const ContractClauseRow({
     super.key,
     required this.title,
     required this.value,
+    this.showDivider = true,
   });
 
   @override
@@ -299,12 +311,11 @@ class ContractClauseCard extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        color: colors.goldMid.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.goldMid.withValues(alpha: 0.24)),
+        border: showDivider
+            ? Border(bottom: BorderSide(color: colors.borderMuted))
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,7 +328,7 @@ class ContractClauseCard extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Text(
             value,
             style: AppTextStyles.body.copyWith(
@@ -360,7 +371,7 @@ class _SignatureSheet extends StatelessWidget {
             Text(
               'E-Signing Options',
               style: AppTextStyles.sectionTitle
-                  .copyWith(color: colors.textPrimary),
+                  .copyWith(color: colors.textPrimary, fontSize: 19),
             ),
             const SizedBox(height: 14),
             CoreTextField(
@@ -378,7 +389,7 @@ class _SignatureSheet extends StatelessWidget {
                 border: Border.all(color: colors.border),
               ),
               child: Text(
-                'Drawn signature placeholder',
+                'Draw signature area',
                 style:
                     AppTextStyles.caption.copyWith(color: colors.textSecondary),
               ),

@@ -5,6 +5,7 @@ import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/dark_outline_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gold_button.dart';
+import '../../theme/app_breakpoints.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_back_navigation.dart';
@@ -17,6 +18,12 @@ class CoreScreenScaffold extends StatelessWidget {
   final Widget? bottomBar;
   final bool showGlobalControls;
 
+  /// Vertically centers [child] instead of pinning it to the top —
+  /// use for single-card states (error, no-internet, maintenance)
+  /// where top-alignment leaves a large empty area below on tall
+  /// phones. Leave false for ordinary content screens.
+  final bool centerContent;
+
   const CoreScreenScaffold({
     super.key,
     required this.child,
@@ -24,19 +31,49 @@ class CoreScreenScaffold extends StatelessWidget {
     this.padding = const EdgeInsets.fromLTRB(18, 18, 18, 28),
     this.bottomBar,
     this.showGlobalControls = true,
+    this.centerContent = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final body = scrollable
-        ? SingleChildScrollView(
-            padding: padding,
-            child: child,
-          )
-        : Padding(
-            padding: padding,
-            child: child,
+    final body = LayoutBuilder(
+      builder: (context, outer) {
+        // Cap content width on tablet/desktop so text/cards don't
+        // stretch edge-to-edge — no-op below AppBreakpoints.maxContentWidth.
+        Widget capWidth(Widget content) {
+          final width = outer.maxWidth > AppBreakpoints.maxContentWidth
+              ? AppBreakpoints.maxContentWidth
+              : outer.maxWidth;
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(width: width, child: content),
           );
+        }
+
+        if (!scrollable) {
+          return Padding(padding: padding, child: capWidth(child));
+        }
+
+        if (!centerContent) {
+          return SingleChildScrollView(
+            padding: padding,
+            child: capWidth(child),
+          );
+        }
+
+        // Centers content when it fits the viewport; still scrolls
+        // (instead of overflowing) if it doesn't.
+        return SingleChildScrollView(
+          padding: padding,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: outer.maxHeight - padding.vertical,
+            ),
+            child: Center(child: capWidth(child)),
+          ),
+        );
+      },
+    );
 
     return Scaffold(
       body: Stack(
@@ -90,16 +127,16 @@ class CoreAppHeader extends StatelessWidget {
             ),
           ),
         Container(
-          width: 48,
-          height: 48,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: colors.goldGradient,
-            boxShadow: [BoxShadow(color: colors.goldGlow, blurRadius: 18)],
+            boxShadow: [BoxShadow(color: colors.goldGlow, blurRadius: 14)],
           ),
-          child: Icon(icon, color: colors.onGold, size: 25),
+          child: Icon(icon, color: colors.onGold, size: 20),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,17 +145,19 @@ class CoreAppHeader extends StatelessWidget {
                 title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heading.copyWith(
+                style: AppTextStyles.sectionTitle.copyWith(
                   color: colors.textPrimary,
-                  fontSize: 25,
+                  fontSize: 20,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: AppTextStyles.bodyMuted.copyWith(
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
                   color: colors.textSecondary,
-                  height: 1.35,
+                  height: 1.3,
                 ),
               ),
             ],
@@ -362,7 +401,7 @@ class StatusBadge extends StatelessWidget {
       CoreStatusTone.success => colors.success,
       CoreStatusTone.warning => colors.goldMid,
       CoreStatusTone.info => colors.infoBlue,
-      CoreStatusTone.danger => colors.infoPurple,
+      CoreStatusTone.danger => colors.danger,
       CoreStatusTone.neutral => colors.textSecondary,
     };
 
@@ -395,6 +434,61 @@ class StatusBadge extends StatelessWidget {
 }
 
 enum CoreStatusTone { neutral, success, warning, info, danger }
+
+/// A full-sentence contextual message (warning, info, mismatch notice).
+///
+/// Use this instead of [StatusBadge] for anything longer than a short
+/// status word — StatusBadge is a pill sized for single-line labels and
+/// visibly distorts when forced to wrap a sentence.
+class InlineNotice extends StatelessWidget {
+  final String message;
+  final IconData icon;
+  final CoreStatusTone tone;
+
+  const InlineNotice({
+    super.key,
+    required this.message,
+    this.icon = Icons.info_outline_rounded,
+    this.tone = CoreStatusTone.info,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final color = switch (tone) {
+      CoreStatusTone.success => colors.success,
+      CoreStatusTone.warning => colors.goldMid,
+      CoreStatusTone.info => colors.infoBlue,
+      CoreStatusTone.danger => colors.danger,
+      CoreStatusTone.neutral => colors.textSecondary,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: colors.isLight ? 0.08 : 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 17, color: color),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textPrimary,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class CoreTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -440,7 +534,7 @@ class CoreTextField extends StatelessWidget {
         fillColor:
             colors.surface.withValues(alpha: colors.isLight ? 0.74 : 0.36),
         labelStyle: AppTextStyles.caption.copyWith(color: colors.textSecondary),
-        errorStyle: AppTextStyles.caption.copyWith(color: colors.infoPurple),
+        errorStyle: AppTextStyles.caption.copyWith(color: colors.danger),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: colors.border),
@@ -451,11 +545,11 @@ class CoreTextField extends StatelessWidget {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: colors.infoPurple),
+          borderSide: BorderSide(color: colors.danger),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: colors.infoPurple, width: 1.3),
+          borderSide: BorderSide(color: colors.danger, width: 1.3),
         ),
       ),
     );
@@ -705,20 +799,20 @@ class CoreEmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 76,
-            height: 76,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: colors.goldMid.withValues(alpha: 0.12),
             ),
-            child: Icon(icon, color: colors.goldMid, size: 36),
+            child: Icon(icon, color: colors.goldMid, size: 30),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Text(
             title,
             textAlign: TextAlign.center,
-            style:
-                AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary),
+            style: AppTextStyles.sectionTitle
+                .copyWith(color: colors.textPrimary, fontSize: 19),
           ),
           const SizedBox(height: 8),
           Text(
@@ -764,9 +858,10 @@ class SectionLabel extends StatelessWidget {
       children: [
         Text(
           text,
-          style: AppTextStyles.sectionTitle.copyWith(
+          style: AppTextStyles.label.copyWith(
             color: colors.textPrimary,
-            fontSize: 22,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
           ),
         ),
         if (action != null)
@@ -820,11 +915,16 @@ class CoreChip extends StatelessWidget {
                   color: selected ? colors.goldDark : colors.iconMuted),
               const SizedBox(width: 7),
             ],
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: selected ? colors.goldDark : colors.textSecondary,
-                fontWeight: FontWeight.w800,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: selected ? colors.goldDark : colors.textSecondary,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],

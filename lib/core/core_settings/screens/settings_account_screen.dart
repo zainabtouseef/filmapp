@@ -40,8 +40,8 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const StatusBadge(
-                label:
+              const InlineNotice(
+                message:
                     'Payment account changes require OTP confirmation and may be reviewed by admin.',
                 icon: Icons.admin_panel_settings_outlined,
                 tone: CoreStatusTone.warning,
@@ -68,6 +68,7 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
   void _faqSheet() {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _SettingsSheet(
         title: 'Help Center',
@@ -91,19 +92,35 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
     );
   }
 
-  void _confirmDanger(String title) {
+  void _confirmDanger(String title, {required bool irreversible}) {
+    final colors = context.appColors;
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: context.appColors.surface,
+        backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(title,
-            style: AppTextStyles.sectionTitle
-                .copyWith(color: context.appColors.textPrimary)),
+        title: Row(
+          children: [
+            Icon(
+              irreversible
+                  ? Icons.warning_amber_rounded
+                  : Icons.pause_circle_outline_rounded,
+              color: irreversible ? colors.danger : colors.goldDark,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(title,
+                  style: AppTextStyles.sectionTitle
+                      .copyWith(color: colors.textPrimary, fontSize: 18)),
+            ),
+          ],
+        ),
         content: Text(
-          'This is a static confirmation for the client demo.',
-          style: AppTextStyles.bodyMuted
-              .copyWith(color: context.appColors.textSecondary),
+          irreversible
+              ? 'This permanently deletes your account and cannot be undone.'
+              : 'You can reactivate your account any time by logging back in.',
+          style: AppTextStyles.bodyMuted.copyWith(color: colors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -114,7 +131,10 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
               Navigator.pop(context);
               showCoreSnack(context, '$title requested');
             },
-            child: const Text('Confirm'),
+            style: irreversible
+                ? TextButton.styleFrom(foregroundColor: colors.danger)
+                : null,
+            child: Text(irreversible ? 'Delete' : 'Confirm'),
           ),
         ],
       ),
@@ -202,14 +222,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
                       Navigator.pushNamed(context, CoreRoutes.forgotPassword)),
               _toggle(Icons.fingerprint_rounded, 'Enable biometric login',
                   _biometric, (v) => setState(() => _biometric = v)),
-              _toggle(
-                  Icons.password_rounded,
-                  'Two-factor authentication placeholder',
-                  _twoFactor,
-                  (v) => setState(() => _twoFactor = v)),
-              _navRow(
-                  Icons.devices_other_outlined,
-                  'Active sessions placeholder',
+              _toggle(Icons.password_rounded, 'Two-factor authentication',
+                  _twoFactor, (v) => setState(() => _twoFactor = v)),
+              _navRow(Icons.devices_other_outlined, 'Active sessions',
                   () => showCoreSnack(context, 'Active sessions simulated')),
             ],
           ),
@@ -226,10 +241,15 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
           _section(
             'Danger Zone',
             [
-              _navRow(Icons.pause_circle_outline_rounded, 'Deactivate account',
-                  () => _confirmDanger('Deactivate account')),
-              _navRow(Icons.delete_outline_rounded, 'Delete account',
-                  () => _confirmDanger('Delete account')),
+              _navRow(
+                  Icons.pause_circle_outline_rounded,
+                  'Deactivate account',
+                  () => _confirmDanger('Deactivate account',
+                      irreversible: false)),
+              _navRow(
+                  Icons.delete_outline_rounded,
+                  'Delete account',
+                  () => _confirmDanger('Delete account', irreversible: true)),
             ],
           ),
         ],
@@ -267,9 +287,10 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
         children: [
           const SectionLabel(text: 'Payment Accounts'),
           const SizedBox(height: 10),
-          const StatusBadge(
-            label:
+          const InlineNotice(
+            message:
                 'Payment account changes require OTP confirmation and may be reviewed by admin.',
+            icon: Icons.admin_panel_settings_outlined,
             tone: CoreStatusTone.warning,
           ),
           const SizedBox(height: 12),
@@ -400,7 +421,7 @@ class _SettingsSheet extends StatelessWidget {
           children: [
             Text(title,
                 style: AppTextStyles.sectionTitle
-                    .copyWith(color: colors.textPrimary)),
+                    .copyWith(color: colors.textPrimary, fontSize: 19)),
             const SizedBox(height: 16),
             child,
           ],

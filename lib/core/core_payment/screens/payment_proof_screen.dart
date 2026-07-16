@@ -8,7 +8,12 @@ import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 
 class PaymentProofUploadScreen extends StatefulWidget {
-  const PaymentProofUploadScreen({super.key});
+  /// Called once the real submit gate (transaction ID + uploaded proof)
+  /// passes — lets a caller sync its own booking/payment state without
+  /// this shared screen depending on any portal-specific store.
+  final VoidCallback? onSubmitted;
+
+  const PaymentProofUploadScreen({super.key, this.onSubmitted});
 
   @override
   State<PaymentProofUploadScreen> createState() =>
@@ -41,6 +46,7 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
       return;
     }
     setState(() => _status = 'Payment Under Verification');
+    widget.onSubmitted?.call();
     showCoreSuccessDialog(
       context,
       title: 'Payment proof submitted',
@@ -90,8 +96,9 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
                 ),
                 if (_amountMismatch) ...[
                   const SizedBox(height: 10),
-                  const StatusBadge(
-                    label: 'Amount mismatch: admin may request clarification.',
+                  const InlineNotice(
+                    message:
+                        'Amount mismatch: admin may request clarification.',
                     icon: Icons.warning_amber_rounded,
                     tone: CoreStatusTone.warning,
                   ),
@@ -151,8 +158,7 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
         children: [
           Text(
             'TVC Shoot — Lahore',
-            style:
-                AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary),
+            style: AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: 12),
           Wrap(

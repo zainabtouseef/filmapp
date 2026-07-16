@@ -27,7 +27,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _filtered;
     return CoreScreenScaffold(
+      scrollable: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -74,22 +76,27 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          if (_filtered.isEmpty)
-            const CoreEmptyState(
-              icon: Icons.notifications_off_outlined,
-              title: 'No notifications',
-              message: 'You are all caught up for this category.',
-            )
-          else
-            ..._filtered.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: NotificationCard(
-                  notification: item,
-                  onTap: () => Navigator.pushNamed(context, item.routeName),
-                ),
-              ),
-            ),
+          Expanded(
+            child: filtered.isEmpty
+                ? const CoreEmptyState(
+                    icon: Icons.notifications_off_outlined,
+                    title: 'No notifications',
+                    message: 'You are all caught up for this category.',
+                  )
+                : ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final item = filtered[index];
+                      return NotificationCard(
+                        key: ValueKey(item.title + item.time),
+                        notification: item,
+                        onTap: () =>
+                            Navigator.pushNamed(context, item.routeName),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
     );
@@ -107,6 +114,15 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   }
 }
 
+String _categoryLabel(CoreNotificationCategory category) {
+  return switch (category) {
+    CoreNotificationCategory.bookings => 'Bookings',
+    CoreNotificationCategory.payments => 'Payments',
+    CoreNotificationCategory.contracts => 'Contracts',
+    CoreNotificationCategory.system => 'System',
+  };
+}
+
 class NotificationCard extends StatelessWidget {
   final CoreNotification notification;
   final VoidCallback onTap;
@@ -120,7 +136,7 @@ class NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final category = notification.category.name;
+    final category = _categoryLabel(notification.category);
     return GestureDetector(
       onTap: onTap,
       child: CoreGlassCard(

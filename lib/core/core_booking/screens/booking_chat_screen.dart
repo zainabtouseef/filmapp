@@ -208,7 +208,9 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              pinned.first.message.replaceFirst('Pinned: ', ''),
+              pinned.length > 1
+                  ? '${pinned.first.message.replaceFirst('Pinned: ', '')}  ·  +${pinned.length - 1} more'
+                  : pinned.first.message.replaceFirst('Pinned: ', ''),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.caption.copyWith(
@@ -290,7 +292,9 @@ class ChatBubble extends StatelessWidget {
       alignment: align,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+          maxWidth: (MediaQuery.sizeOf(context).width * 0.78)
+              .clamp(0, 460)
+              .toDouble(),
         ),
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(13),

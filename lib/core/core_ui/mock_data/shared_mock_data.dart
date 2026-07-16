@@ -55,9 +55,20 @@ class SharedMockData {
           'Post campaigns, product placements and sponsorship opportunities.',
     ),
     CineRole(
-      icon: Icons.handshake_outlined,
-      name: 'Partner',
-      description: 'Legal, insurance, safety or distribution support partner.',
+      icon: Icons.gavel_outlined,
+      name: 'Legal Partner',
+      description: 'Review contracts, templates, addendums and billing.',
+    ),
+    CineRole(
+      icon: Icons.health_and_safety_outlined,
+      name: 'Insurance / Safety Partner',
+      description:
+          'Support shoot insurance, claims, permits and safety checks.',
+    ),
+    CineRole(
+      icon: Icons.public_outlined,
+      name: 'Distribution / Release Partner',
+      description: 'Coordinate release partners, records and performance data.',
     ),
   ];
 

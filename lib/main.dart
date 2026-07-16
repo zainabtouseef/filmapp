@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'core/core_ui/core_routes.dart';
+import 'core/core_ui/screens/onboarding_screen.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 
@@ -42,7 +43,7 @@ class CineConnectApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: controller.themeMode,
-            initialRoute: CoreRoutes.splash,
+            home: const OnboardingScreen(),
             onGenerateRoute: CoreRoutes.onGenerateRoute,
             builder: (context, child) {
               return AnimatedTheme(

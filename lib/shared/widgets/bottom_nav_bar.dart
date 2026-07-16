@@ -138,7 +138,7 @@ class PremiumBottomNavBar extends StatelessWidget {
                         top: itemTop,
                         child: Row(
                           children: [
-                            Flexible(
+                            Expanded(
                               child: BottomNavItem(
                                 icon: destinations[0].icon,
                                 label: destinations[0].label,
@@ -148,7 +148,7 @@ class PremiumBottomNavBar extends StatelessWidget {
                                 dense: compactCenter,
                               ),
                             ),
-                            Flexible(
+                            Expanded(
                               child: BottomNavItem(
                                 icon: destinations[1].icon,
                                 label: destinations[1].label,
@@ -159,7 +159,7 @@ class PremiumBottomNavBar extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: centerGap),
-                            Flexible(
+                            Expanded(
                               child: BottomNavItem(
                                 icon: destinations[3].icon,
                                 label: destinations[3].label,
@@ -169,7 +169,7 @@ class PremiumBottomNavBar extends StatelessWidget {
                                 dense: compactCenter,
                               ),
                             ),
-                            Flexible(
+                            Expanded(
                               child: BottomNavItem(
                                 icon: destinations[4].icon,
                                 label: destinations[4].label,

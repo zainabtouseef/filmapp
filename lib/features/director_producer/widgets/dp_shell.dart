@@ -1,0 +1,443 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/core_ui/core_back_navigation.dart';
+import '../../../core/core_ui/core_logout.dart';
+import '../../../core/core_ui/core_routes.dart';
+import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/layout/admin_bottom_nav.dart';
+import '../../../shared/layout/admin_screen_scaffold.dart';
+import '../../../shared/layout/admin_top_bar.dart';
+import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
+import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/glass_card.dart';
+import '../routes/director_producer_routes.dart';
+import 'dp_status_chip.dart';
+
+class DPShell extends StatelessWidget {
+  final String title;
+  final String currentRoute;
+  final Widget child;
+
+  const DPShell({
+    super.key,
+    required this.title,
+    required this.currentRoute,
+    required this.child,
+  });
+
+  static const navItems = [
+    DpNavItem(
+      label: 'Home',
+      icon: Icons.dashboard_customize_rounded,
+      route: DirectorProducerRoutes.home,
+    ),
+    DpNavItem(
+      label: 'Projects',
+      icon: Icons.movie_creation_outlined,
+      route: DirectorProducerRoutes.projects,
+    ),
+    DpNavItem(
+      label: 'Discover',
+      icon: Icons.manage_search_rounded,
+      route: DirectorProducerRoutes.marketplace,
+    ),
+    DpNavItem(
+      label: 'Shortlist',
+      icon: Icons.view_kanban_outlined,
+      route: DirectorProducerRoutes.shortlist,
+    ),
+    DpNavItem(
+      label: 'Bargaining',
+      icon: Icons.handshake_outlined,
+      route: DirectorProducerRoutes.bargaining,
+    ),
+    DpNavItem(
+      label: 'Contracts',
+      icon: Icons.article_outlined,
+      route: DirectorProducerRoutes.contracts,
+    ),
+    DpNavItem(
+      label: 'Payments',
+      icon: Icons.payments_outlined,
+      route: DirectorProducerRoutes.payments,
+    ),
+    DpNavItem(
+      label: 'Schedule',
+      icon: Icons.calendar_month_outlined,
+      route: DirectorProducerRoutes.schedule,
+    ),
+    DpNavItem(
+      label: 'Accounts',
+      icon: Icons.account_balance_wallet_outlined,
+      route: DirectorProducerRoutes.accounts,
+    ),
+    DpNavItem(
+      label: 'Room',
+      icon: Icons.forum_outlined,
+      route: DirectorProducerRoutes.room,
+    ),
+    DpNavItem(
+      label: 'Reports',
+      icon: Icons.file_download_outlined,
+      route: DirectorProducerRoutes.reports,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminScreenScaffold(
+      title: title,
+      currentRoute: currentRoute,
+      topBarBuilder: (context, wide, onMenuTap) => _DPTopBar(
+        wide: wide,
+        onMenuTap: onMenuTap,
+      ),
+      sideNavBuilder: (context, currentRoute, onRouteTap) => _DPSidebar(
+        currentRoute: currentRoute,
+        onRouteTap: onRouteTap,
+      ),
+      bottomNavBuilder:
+          (context, currentRoute, menuOpen, onRouteTap, onMoreTap) =>
+              AdminBottomNavSlot(
+        child: _DPBottomNav(
+          currentRoute: currentRoute,
+          menuOpen: menuOpen,
+          onRouteTap: onRouteTap,
+          onMoreTap: onMoreTap,
+        ),
+      ),
+      floatingMenuBuilder: (context, open, currentRoute, onClose, onRouteTap) =>
+          _DPMenuOverlay(
+        open: open,
+        currentRoute: currentRoute,
+        onClose: onClose,
+        onRouteTap: onRouteTap,
+      ),
+      onRouteSelected: (context, route) => Navigator.pushNamed(context, route),
+      child: child,
+    );
+  }
+}
+
+class _DPTopBar extends StatelessWidget {
+  final bool wide;
+  final VoidCallback onMenuTap;
+
+  const _DPTopBar({
+    required this.wide,
+    required this.onMenuTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 700;
+    final colors = context.appColors;
+    return AdminTopBarFrame(
+      compact: compact,
+      child: Row(
+        children: [
+          _DPTopIcon(
+            icon: wide ? Icons.arrow_back_rounded : Icons.menu_rounded,
+            tooltip: wide ? 'Back' : 'Menu',
+            onTap: wide ? () => navigateCoreBack(context) : onMenuTap,
+          ),
+          const SizedBox(width: 10),
+          if (!compact) ...[
+            Icon(Icons.movie_filter_rounded, color: colors.goldDark, size: 21),
+            const SizedBox(width: 8),
+            Text(
+              'PRODUCTION PORTAL',
+              style: AppTextStyles.sectionHeaderStyle.copyWith(
+                color: colors.textPrimary,
+                fontSize: 13,
+                letterSpacing: 1.4,
+              ),
+            ),
+            const SizedBox(width: 14),
+          ],
+          Expanded(
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 11),
+              decoration: BoxDecoration(
+                gradient: colors.searchGradient,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: colors.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search_rounded, color: colors.goldDark, size: 19),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      compact
+                          ? 'Search...'
+                          : 'Search projects, people, locations, bookings...',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          ThemeToggleButton(size: compact ? 34 : 38),
+          const SizedBox(width: 10),
+          _DPTopIcon(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
+          if (!compact) ...[
+            const SizedBox(width: 10),
+            _DPTopIcon(
+              icon: Icons.notifications_none_rounded,
+              tooltip: 'Notifications',
+              onTap: () =>
+                  Navigator.pushNamed(context, CoreRoutes.notifications),
+            ),
+            const SizedBox(width: 10),
+            const DPStatusChip(
+              label: 'Producer',
+              tone: DpTone.warning,
+              icon: Icons.workspace_premium_outlined,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DPTopIcon extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _DPTopIcon({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassContainer(
+          width: 38,
+          height: 38,
+          radius: 19,
+          child: Icon(icon, color: colors.icon, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
+class _DPSidebar extends StatelessWidget {
+  final String currentRoute;
+  final ValueChanged<String> onRouteTap;
+
+  const _DPSidebar({
+    required this.currentRoute,
+    required this.onRouteTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: 276,
+      margin: const EdgeInsets.fromLTRB(14, 14, 0, 14),
+      child: GlassContainer(
+        radius: 24,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'DIRECTOR',
+              style: AppTextStyles.sectionHeaderStyle.copyWith(
+                color: colors.textPrimary,
+                fontSize: 18,
+                letterSpacing: 1.6,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Production command center',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: DPShell.navItems.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, index) {
+                  final item = DPShell.navItems[index];
+                  final active = _active(currentRoute, item.route);
+                  return GestureDetector(
+                    onTap: () => onRouteTap(item.route),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 11,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: active
+                            ? colors.activeChipGradient
+                            : colors.inactiveChipGradient,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: active ? colors.goldMid : colors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            item.icon,
+                            color: active ? colors.goldDark : colors.iconMuted,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.cardLabel.copyWith(
+                                color: active
+                                    ? colors.textPrimary
+                                    : colors.textSecondary,
+                                fontWeight:
+                                    active ? FontWeight.w800 : FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DPBottomNav extends StatelessWidget {
+  final String currentRoute;
+  final bool menuOpen;
+  final ValueChanged<String> onRouteTap;
+  final VoidCallback onMoreTap;
+
+  const _DPBottomNav({
+    required this.currentRoute,
+    required this.menuOpen,
+    required this.onRouteTap,
+    required this.onMoreTap,
+  });
+
+  static const _destinations = [
+    CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
+    CineBottomNavDestination(label: 'Projects', icon: Icons.movie_outlined),
+    CineBottomNavDestination(label: 'Find', icon: Icons.search_rounded),
+    CineBottomNavDestination(label: 'Deals', icon: Icons.handshake_outlined),
+    CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return CineBottomNav(
+      currentIndex: _currentIndex,
+      destinations: _destinations,
+      compactCenter: true,
+      onTap: (index) {
+        switch (index) {
+          case 0:
+            onRouteTap(DirectorProducerRoutes.home);
+            return;
+          case 1:
+            onRouteTap(DirectorProducerRoutes.projects);
+            return;
+          case 2:
+            onRouteTap(DirectorProducerRoutes.marketplace);
+            return;
+          case 3:
+            onRouteTap(DirectorProducerRoutes.bargaining);
+            return;
+          default:
+            onMoreTap();
+        }
+      },
+    );
+  }
+
+  int get _currentIndex {
+    if (menuOpen) return 4;
+    if (_active(currentRoute, DirectorProducerRoutes.home)) return 0;
+    if (_active(currentRoute, DirectorProducerRoutes.projects)) return 1;
+    if (_active(currentRoute, DirectorProducerRoutes.marketplace)) return 2;
+    if (_active(currentRoute, DirectorProducerRoutes.bargaining)) return 3;
+    return 4;
+  }
+}
+
+class _DPMenuOverlay extends StatelessWidget {
+  final bool open;
+  final String currentRoute;
+  final VoidCallback onClose;
+  final ValueChanged<String> onRouteTap;
+
+  const _DPMenuOverlay({
+    required this.open,
+    required this.currentRoute,
+    required this.onClose,
+    required this.onRouteTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingPortalMenuOverlay(
+      open: open,
+      currentRoute: currentRoute,
+      items: [
+        for (final item in DPShell.navItems)
+          FloatingPortalMenuItem(
+            route: item.route,
+            label: item.label,
+            icon: item.icon,
+          ),
+      ],
+      statusTitle: 'Production Portal',
+      statusSubtitle: 'Production command center',
+      statusIcon: Icons.movie_filter_rounded,
+      onClose: onClose,
+      onRouteTap: onRouteTap,
+      isRouteActive: _active,
+    );
+  }
+}
+
+bool _active(String currentRoute, String route) {
+  if (route == DirectorProducerRoutes.home) {
+    return currentRoute == route;
+  }
+  return currentRoute == route || currentRoute.startsWith(route);
+}

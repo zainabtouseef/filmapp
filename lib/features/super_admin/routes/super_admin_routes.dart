@@ -14,9 +14,14 @@ class SuperAdminRoutes {
   static const contentModeration = '/admin/content-moderation';
   static const listingsModeration = '/admin/listings-moderation';
   static const bookingsMonitor = '/admin/bookings-monitor';
+  static const bookingDetail = '/admin/bookings-monitor/:id';
+  static const payments = '/admin/payments';
   static const paymentQueue = '/admin/payment-queue';
   static const paymentReview = '/admin/payment-review/:id';
+  static const paymentLedger = '/admin/payments/ledger';
+  static const paymentRevenue = '/admin/payments/revenue';
   static const contractTemplates = '/admin/contract-templates';
+  static const contractTemplateDetail = '/admin/contract-templates/:id';
   static const fees = '/admin/fees';
   static const disputes = '/admin/disputes';
   static const disputeCase = '/admin/disputes/:id';
@@ -38,9 +43,14 @@ class SuperAdminRoutes {
     contentModeration,
     listingsModeration,
     bookingsMonitor,
+    bookingDetail,
+    payments,
     paymentQueue,
     paymentReview,
+    paymentLedger,
+    paymentRevenue,
     contractTemplates,
+    contractTemplateDetail,
     fees,
     disputes,
     disputeCase,
