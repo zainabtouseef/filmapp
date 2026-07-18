@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -20,6 +22,14 @@ class MD02UsageRightsScreen extends StatefulWidget {
 class _MD02UsageRightsScreenState extends State<MD02UsageRightsScreen> {
   String query = '';
   String filter = 'All';
+  Future<List<ModelUsageRightDto>>? _rightsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _rightsFuture ??= specialist?.modelUsageRights(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,17 +64,68 @@ class _MD02UsageRightsScreenState extends State<MD02UsageRightsScreen> {
               title: 'Mandatory Usage Blocks',
               icon: Icons.policy_outlined,
               actionText: 'Add right',
-              onActionTap: () {
+              onActionTap: () async {
                 store.addUsageRight();
+                final specialist = SpecialistScope.maybeOf(context);
+                if (specialist != null) {
+                  try {
+                    await specialist.createModelUsageRight({
+                      'platform': 'instagram',
+                      'territory': 'Pakistan',
+                      'duration_months': 6,
+                      'exclusive': false,
+                      'status': 'active',
+                    });
+                    if (mounted) {
+                      setState(() => _rightsFuture =
+                          specialist.modelUsageRights(force: true));
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      actorSnack(context, 'Live usage right skipped: $error');
+                    }
+                  }
+                }
+                if (!context.mounted) return;
                 actorSnack(context, 'Draft usage right added');
               },
-              child: rights.isEmpty
-                  ? const CoreEmptyState(
+              child: Column(
+                children: [
+                  if (_rightsFuture != null)
+                    FutureBuilder<List<ModelUsageRightDto>>(
+                      future: _rightsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live usage rights...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live usage rights connected: ${rows.length} right(s), latest ${rows.first.platform}/${rows.first.territory}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
+                  if (rights.isEmpty)
+                    const CoreEmptyState(
                       icon: Icons.policy_outlined,
                       title: 'No usage rights',
                       message: 'Change filter or add a draft right.',
                     )
-                  : Column(
+                  else
+                    Column(
                       children: [
                         for (final right in rights)
                           Padding(
@@ -73,6 +134,8 @@ class _MD02UsageRightsScreenState extends State<MD02UsageRightsScreen> {
                           ),
                       ],
                     ),
+                ],
+              ),
             ),
           ],
         );

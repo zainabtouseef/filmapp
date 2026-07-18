@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/contracts/contract_models.dart';
+import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/director_producer_demo_data.dart';
@@ -9,39 +13,134 @@ import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 
-class DPContractCenterScreen extends StatelessWidget {
+class DPContractCenterScreen extends StatefulWidget {
   const DPContractCenterScreen({super.key});
 
   @override
+  State<DPContractCenterScreen> createState() => _DPContractCenterScreenState();
+}
+
+class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
+  Future<List<CineContract>>? _future;
+  bool _generating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts != null) _future ??= contracts.contracts(force: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final contracts = DirectorProducerDemoData.contracts;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         dpHeaderAction(
           context,
           icon: Icons.article_outlined,
-          label: 'Templates',
-          onTap: () => dpSnack(context, 'Template browser simulated'),
+          label:
+              _generating ? 'Generating...' : 'Generate from accepted booking',
+          onTap: _generating ? () {} : _generateFromAcceptedBooking,
         ),
         const SizedBox(height: 8),
-        DPResponsiveGrid(
-          minWidth: 310,
-          children: contracts
-              .map(
-                (contract) => _ContractCard(
-                  title: contract.title,
-                  project: contract.project,
-                  stakeholder: contract.candidate,
-                  value: contract.value,
-                  status: contract.status,
-                  progress: contract.signatureProgress,
-                  date: contract.createdDate,
-                ),
-              )
-              .toList(),
+        FutureBuilder<List<CineContract>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const CoreEmptyState(
+                icon: Icons.hourglass_top_rounded,
+                title: 'Loading contracts',
+                message: 'Fetching live agreement records.',
+              );
+            }
+            if (snapshot.hasError || (snapshot.data ?? const []).isEmpty) {
+              return _DemoContractGrid();
+            }
+            return DPResponsiveGrid(
+              minWidth: 310,
+              children: [
+                for (final contract in snapshot.data!)
+                  _ContractCard(
+                    title: contract.title,
+                    project: contract.projectId,
+                    stakeholder: contract.counterpartySummary,
+                    value: contract.displayValue,
+                    status: contract.statusLabel,
+                    progress: contract.signatureProgress,
+                    date: contract.effectiveDate ?? 'Draft',
+                    contractId: contract.publicId,
+                    onRequestReview: () => _requestReview(contract),
+                  ),
+              ],
+            );
+          },
         ),
       ],
+    );
+  }
+
+  Future<void> _generateFromAcceptedBooking() async {
+    final bookings = BookingsScope.maybeOf(context);
+    final contracts = ContractsScope.maybeOf(context);
+    if (bookings == null || contracts == null) {
+      dpSnack(context, 'Sign in to generate live contracts');
+      return;
+    }
+    setState(() => _generating = true);
+    try {
+      final rows = await bookings.bookings(force: true);
+      final accepted = rows.firstWhere((row) => row.status == 'accepted');
+      final contract = await contracts.generateForBooking(accepted.publicId);
+      if (!mounted) return;
+      setState(() {
+        _future = contracts.contracts(force: true);
+        _generating = false;
+      });
+      Navigator.pushNamed(context, CoreRoutes.contract,
+          arguments: contract.publicId);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _generating = false);
+      dpSnack(context, 'No accepted booking ready for contract yet');
+    }
+  }
+
+  Future<void> _requestReview(CineContract contract) async {
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts == null) return;
+    try {
+      await contracts.requestLegalReview(contractId: contract.publicId);
+      if (!mounted) return;
+      dpSnack(context, 'Legal review requested');
+    } catch (error) {
+      if (!mounted) return;
+      dpSnack(context, '$error');
+    }
+  }
+}
+
+class _DemoContractGrid extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final contracts = DirectorProducerDemoData.contracts;
+    return DPResponsiveGrid(
+      minWidth: 310,
+      children: contracts
+          .map(
+            (contract) => _ContractCard(
+              title: contract.title,
+              project: contract.project,
+              stakeholder: contract.candidate,
+              value: contract.value,
+              status: contract.status,
+              progress: contract.signatureProgress,
+              date: contract.createdDate,
+              contractId: null,
+              onRequestReview: null,
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -54,6 +153,8 @@ class _ContractCard extends StatelessWidget {
   final String status;
   final double progress;
   final String date;
+  final String? contractId;
+  final VoidCallback? onRequestReview;
 
   const _ContractCard({
     required this.title,
@@ -63,6 +164,8 @@ class _ContractCard extends StatelessWidget {
     required this.status,
     required this.progress,
     required this.date,
+    required this.contractId,
+    required this.onRequestReview,
   });
 
   @override
@@ -115,9 +218,22 @@ class _ContractCard extends StatelessWidget {
           DPHolographicButton(
             label: 'Open Contract',
             icon: Icons.open_in_new_rounded,
-            onTap: () => Navigator.pushNamed(context, CoreRoutes.contract),
+            onTap: () => Navigator.pushNamed(
+              context,
+              CoreRoutes.contract,
+              arguments: contractId,
+            ),
             secondary: true,
           ),
+          if (contractId != null) ...[
+            const SizedBox(height: 8),
+            DPHolographicButton(
+              label: 'Request Legal Review',
+              icon: Icons.gavel_outlined,
+              onTap: onRequestReview,
+              secondary: true,
+            ),
+          ],
         ],
       ),
     );

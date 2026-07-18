@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../features/actor_talent/routes/actor_talent_routes.dart';
-import '../../../features/brand_sponsors/routes/brand_sponsor_routes.dart';
-import '../../../features/casting_agency/routes/casting_agency_routes.dart';
-import '../../../features/crew_services/routes/crew_services_routes.dart';
-import '../../../features/director_producer/routes/director_producer_routes.dart';
-import '../../../features/distribution_partner/routes/distribution_partner_routes.dart';
-import '../../../features/insurance_partner/routes/insurance_partner_routes.dart';
-import '../../../features/legal_partner/routes/legal_partner_routes.dart';
-import '../../../features/location_owner/routes/location_owner_routes.dart';
-import '../../../features/media_equipment/routes/media_equipment_routes.dart';
-import '../../../features/model_extension/routes/model_extension_routes.dart';
+import '../../auth/auth_controller.dart';
+import '../../auth/auth_models.dart';
+import '../../auth/role_mapper.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_routes.dart';
@@ -84,85 +76,9 @@ class _RoleSwitcherContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final roles = const [
-      (
-        'Director / Producer',
-        Icons.movie_creation_outlined,
-        'Verified',
-        'Used today',
-        DirectorProducerRoutes.home,
-      ),
-      (
-        'Actor / Talent',
-        Icons.theater_comedy_outlined,
-        'Verified',
-        'Last used 2d ago',
-        ActorTalentRoutes.dashboard,
-      ),
-      (
-        'Model',
-        Icons.style_outlined,
-        'Verified',
-        'Campaign setup',
-        ModelExtensionRoutes.categories,
-      ),
-      (
-        'Location Owner',
-        Icons.location_city_outlined,
-        'Verified',
-        'Property live',
-        LocationOwnerRoutes.home,
-      ),
-      (
-        'Media / Equipment Provider',
-        Icons.videocam_outlined,
-        'Verified',
-        'Inventory active',
-        MediaEquipmentRoutes.home,
-      ),
-      (
-        'Crew / Services',
-        Icons.groups_2_outlined,
-        'Verified',
-        'Available this week',
-        CrewServicesRoutes.home,
-      ),
-      (
-        'Casting Agency',
-        Icons.badge_outlined,
-        'Verified',
-        'Roster synced',
-        CastingAgencyRoutes.home,
-      ),
-      (
-        'Brand / Sponsor',
-        Icons.campaign_outlined,
-        'Verified',
-        'Campaign live',
-        BrandSponsorRoutes.home,
-      ),
-      (
-        'Legal Partner',
-        Icons.gavel_outlined,
-        'Verified',
-        'Review queue',
-        LegalPartnerRoutes.home,
-      ),
-      (
-        'Insurance / Safety Partner',
-        Icons.health_and_safety_outlined,
-        'Verified',
-        'Safety queue',
-        InsurancePartnerRoutes.home,
-      ),
-      (
-        'Distribution / Release Partner',
-        Icons.public_outlined,
-        'Verified',
-        'Release desk',
-        DistributionPartnerRoutes.home,
-      ),
-    ];
+    final auth = AuthScope.of(context);
+    final user = auth.user;
+    final roles = user?.roles ?? const <AuthRole>[];
 
     return CoreGlassCard(
       padding: const EdgeInsets.all(18),
@@ -187,15 +103,15 @@ class _RoleSwitcherContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Sara Ahmed',
+                      user?.displayName ?? 'CineConnect User',
                       style: AppTextStyles.sectionTitle.copyWith(
                         color: colors.textPrimary,
                         fontSize: 21,
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const StatusBadge(
-                      label: 'Current: Director / Producer',
+                    StatusBadge(
+                      label: 'Current: ${user?.primaryRole?.name ?? 'No role'}',
                       icon: Icons.verified_outlined,
                       tone: CoreStatusTone.success,
                     ),
@@ -205,15 +121,15 @@ class _RoleSwitcherContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          for (var i = 0; i < roles.length; i++)
-            _RoleRow(
-              title: roles[i].$1,
-              icon: roles[i].$2,
-              badge: roles[i].$3,
-              lastUsed: roles[i].$4,
-              route: roles[i].$5,
-              showDivider: i != roles.length - 1,
-            ),
+          if (roles.isEmpty)
+            const CoreEmptyState(
+              icon: Icons.switch_account_outlined,
+              title: 'No active roles yet',
+              message: 'Add a role to start building your CineConnect profile.',
+            )
+          else
+            for (var i = 0; i < roles.length; i++)
+              _RoleRow(role: roles[i], showDivider: i != roles.length - 1),
           const SizedBox(height: 12),
           CorePrimaryButton(
             icon: Icons.add_circle_outline_rounded,
@@ -227,26 +143,17 @@ class _RoleSwitcherContent extends StatelessWidget {
 }
 
 class _RoleRow extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final String badge;
-  final String lastUsed;
-  final String route;
+  final AuthRole role;
   final bool showDivider;
 
-  const _RoleRow({
-    required this.title,
-    required this.icon,
-    required this.badge,
-    required this.lastUsed,
-    required this.route,
-    this.showDivider = true,
-  });
+  const _RoleRow({required this.role, this.showDivider = true});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final verified = badge == 'Verified';
+    final verified = role.status == 'active';
+    final route =
+        RoleMapper.portalRouteForCode(role.code) ?? CoreRoutes.dashboard;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
@@ -256,14 +163,18 @@ class _RoleRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: colors.goldDark, size: 20),
+          Icon(
+            RoleMapper.iconForCode(role.code),
+            color: colors.goldDark,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  role.name,
                   style: AppTextStyles.label.copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w900,
@@ -273,7 +184,7 @@ class _RoleRow extends StatelessWidget {
                 Row(
                   children: [
                     StatusBadge(
-                      label: badge,
+                      label: verified ? 'Verified' : 'Pending',
                       tone: verified
                           ? CoreStatusTone.success
                           : CoreStatusTone.warning,
@@ -281,10 +192,11 @@ class _RoleRow extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        lastUsed,
+                        role.isPrimary ? 'Primary role' : 'Granted role',
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.caption
-                            .copyWith(color: colors.textSecondary),
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textSecondary,
+                        ),
                       ),
                     ),
                   ],
@@ -293,10 +205,16 @@ class _RoleRow extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () {
-              showCoreSnack(context, 'Switched to $title');
+            onPressed: () async {
+              await AuthScope.of(context).setPrimaryRole(role.code);
+              if (!context.mounted) return;
+              showCoreSnack(context, 'Switched to ${role.name}');
               if (!verified) {
-                Navigator.pushNamed(context, CoreRoutes.kyc, arguments: title);
+                Navigator.pushNamed(
+                  context,
+                  CoreRoutes.kyc,
+                  arguments: role.name,
+                );
               } else {
                 Navigator.pushNamed(context, route);
               }

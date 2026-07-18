@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -325,7 +326,7 @@ class _LO02LocationListingWizardScreenState
     };
   }
 
-  void _advance(LocationOwnerDemoStore store) {
+  Future<void> _advance(LocationOwnerDemoStore store) async {
     if (store.listingStep == 1) {
       if (!_photosUploaded) {
         locationSnack(context, 'Attach at least one property photo');
@@ -340,6 +341,50 @@ class _LO02LocationListingWizardScreenState
       store.setListingStep(3);
       return;
     }
+    final operations = OperationsScope.maybeOf(context);
+    if (operations != null) {
+      try {
+        final property = await operations.createLocationProperty(
+          name: '${_area.text.trim()} ${_type.toLowerCase()} location',
+          propertyType: _type.toLowerCase().replaceAll(' ', '_'),
+          areaName: _area.text.trim(),
+          publicAddress: '${_area.text.trim()}, ${_city.text.trim()}',
+          privateAddress: _exactAddress.text.trim(),
+          description: _areas.text.trim(),
+          capacity: int.tryParse(_capacity.text.trim()),
+          parkingSpaces: int.tryParse(_parking.text.trim()),
+          powerBackup: store.listingPowerBackup,
+          accessible: store.listingAccessible,
+          status: 'draft',
+        );
+        await operations.createLocationSpace(property.publicId, {
+          'name': _areas.text.trim().split(',').first.trim().isEmpty
+              ? 'Main shoot area'
+              : _areas.text.trim().split(',').first.trim(),
+          'space_type': 'interior',
+          'capacity': int.tryParse(_capacity.text.trim()),
+          'description': _areas.text.trim(),
+        });
+        await operations.createLocationPricing(property.publicId, {
+          'label': 'Day shoot',
+          'amount_minor': 15000000,
+          'currency': 'PKR',
+          'unit': 'day',
+          'enabled': true,
+        });
+        await operations.createLocationRule(property.publicId, {
+          'rule_type': 'noise',
+          'label': 'Noise after 10 PM requires approval',
+          'allowed': false,
+        });
+        if (!mounted) return;
+        locationSnack(context, 'Live property ${property.publicId} created');
+      } catch (error) {
+        if (!mounted) return;
+        locationSnack(context, 'Live save skipped: $error');
+      }
+    }
+    if (!mounted) return;
     store.submitListing();
     showCoreSuccessDialog(
       context,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -21,6 +23,14 @@ class _DS02DistributorContactsScreenState
     extends State<DS02DistributorContactsScreen> {
   String _query = '';
   String _sort = 'Territory';
+  Future<List<DistributorContactDto>>? _contactsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _contactsFuture ??= specialist?.distributorContacts(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +48,33 @@ class _DS02DistributorContactsScreenState
               selected: true,
               child: Column(
                 children: [
+                  if (_contactsFuture != null)
+                    FutureBuilder<List<DistributorContactDto>>(
+                      future: _contactsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live distributor contacts...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live contacts connected: ${rows.length} contact(s), latest ${rows.first.name}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   DistributionSearchField(
                     hintText: 'Search partner, territory, role...',
                     onChanged: (value) => setState(() => _query = value),

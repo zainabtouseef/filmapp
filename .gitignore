@@ -33,6 +33,22 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Python local tooling
+.coverage
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Backend and deployment secrets
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/.storage/
+deploy/secrets/
+*.pem
+*.key
+docs/CINECONNECT_DEMO_LOGIN_HANDOFF.json
+
 # Symbolication related
 app.*.symbols
 

@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/analytics/analytics_controller.dart';
+import '../../../core/analytics/analytics_models.dart';
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_booking/screens/booking_chat_screen.dart';
 import '../../../core/core_payment/screens/receipts_ledger_screen.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/models/shared_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/payments/payment_models.dart';
+import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/trust_safety/trust_safety_controller.dart';
+import '../../../core/trust_safety/trust_safety_models.dart';
+import '../../../core/verification/verification_models.dart' as verification;
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/cards/mini_trend_card.dart';
 import '../../../shared/sections/admin_action_feed_section.dart'
@@ -54,10 +64,12 @@ part 'admin_portal/admin_screen_helpers.dart';
 
 class SuperAdminPortalScreen extends StatelessWidget {
   final String routeName;
+  final Object? arguments;
 
   const SuperAdminPortalScreen({
     super.key,
     required this.routeName,
+    this.arguments,
   });
 
   @override
@@ -191,14 +203,18 @@ class SuperAdminPortalScreen extends StatelessWidget {
       SuperAdminRoutes.reviewHubListings => const ListingsReviewQueueScreen(),
       SuperAdminRoutes.reviewHubContent => const ContentModerationQueueScreen(),
       SuperAdminRoutes.verifications => const UserVerificationQueueScreen(),
-      SuperAdminRoutes.verificationDetail => const KycReviewDetailScreen(),
+      SuperAdminRoutes.verificationDetail => KycReviewDetailScreen(
+          submissionId: arguments is String ? arguments! as String : null,
+        ),
       SuperAdminRoutes.contentModeration => const ContentModerationScreen(),
       SuperAdminRoutes.listingsModeration => const ListingsModerationScreen(),
       SuperAdminRoutes.bookingsMonitor => const BookingMonitorScreen(),
       SuperAdminRoutes.bookingDetail => const BookingDetailScreen(),
       SuperAdminRoutes.payments => const PaymentsHubScreen(),
       SuperAdminRoutes.paymentQueue => const PaymentVerificationQueueScreen(),
-      SuperAdminRoutes.paymentReview => const PaymentReviewDetailScreen(),
+      SuperAdminRoutes.paymentReview => PaymentReviewDetailScreen(
+          proofId: arguments is String ? arguments! as String : null,
+        ),
       SuperAdminRoutes.paymentLedger => const ReceiptsLedgerAdminScreen(),
       SuperAdminRoutes.paymentRevenue => const RevenueSettingsScreen(),
       SuperAdminRoutes.contractTemplates =>

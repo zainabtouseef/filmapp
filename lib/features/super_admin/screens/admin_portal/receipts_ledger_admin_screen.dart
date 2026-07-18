@@ -11,6 +11,7 @@ class ReceiptsLedgerAdminScreen extends StatefulWidget {
 class _ReceiptsLedgerAdminScreenState extends State<ReceiptsLedgerAdminScreen> {
   String _filter = 'All';
   final _search = TextEditingController();
+  Future<List<LedgerEntryDto>>? _ledgerFuture;
 
   static const _filters = [
     'All',
@@ -21,6 +22,13 @@ class _ReceiptsLedgerAdminScreenState extends State<ReceiptsLedgerAdminScreen> {
     'Refunded',
     'Disputed',
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final payments = PaymentsScope.maybeOf(context);
+    _ledgerFuture ??= payments?.ledger(force: true);
+  }
 
   @override
   void dispose() {
@@ -48,7 +56,38 @@ class _ReceiptsLedgerAdminScreenState extends State<ReceiptsLedgerAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rows = AdminMockData.ledgerEntries.where(_matches).toList();
+    if (_ledgerFuture != null) {
+      return FutureBuilder<List<LedgerEntryDto>>(
+        future: _ledgerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            final message = snapshot.error is ApiException
+                ? (snapshot.error! as ApiException).message
+                : 'Could not load live ledger.';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InlineNotice(message: message, tone: CoreStatusTone.warning),
+                const SizedBox(height: 16),
+                _ledgerContent(AdminMockData.ledgerEntries),
+              ],
+            );
+          }
+          final rows = (snapshot.data ?? const [])
+              .map((entry) => entry.toLedgerRow())
+              .where(_matches)
+              .toList();
+          return _ledgerContent(rows);
+        },
+      );
+    }
+    return _ledgerContent(AdminMockData.ledgerEntries.where(_matches).toList());
+  }
+
+  Widget _ledgerContent(List<LedgerRowData> rows) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

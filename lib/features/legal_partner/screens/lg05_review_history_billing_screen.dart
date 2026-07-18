@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/contracts/contract_models.dart' as contract_models;
+import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -21,6 +23,16 @@ class _LG05ReviewHistoryBillingScreenState
     extends State<LG05ReviewHistoryBillingScreen> {
   String _query = '';
   String _sort = 'Recent';
+  Future<List<contract_models.LegalReviewDto>>? _reviewsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts != null) {
+      _reviewsFuture ??= contracts.legalReviews(force: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +94,34 @@ class _LG05ReviewHistoryBillingScreenState
               ),
             ),
             const SizedBox(height: 12),
+            if (_reviewsFuture != null)
+              FutureBuilder<List<contract_models.LegalReviewDto>>(
+                future: _reviewsFuture,
+                builder: (context, snapshot) {
+                  final liveRows = snapshot.data ?? const [];
+                  if (!snapshot.hasError && liveRows.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: LegalSectionCard(
+                        title: 'Live review history',
+                        icon: Icons.history_outlined,
+                        child: Column(
+                          children: [
+                            for (final row in liveRows.take(8))
+                              LegalInfoRow(
+                                icon: Icons.gavel_outlined,
+                                label: row.status,
+                                value:
+                                    '${row.title} • ${row.requestedBy.displayName}',
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
             LegalTwoColumn(
               left: LegalSectionCard(
                 title: 'Review history',

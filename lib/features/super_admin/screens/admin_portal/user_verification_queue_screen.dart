@@ -11,10 +11,15 @@ class UserVerificationQueueScreen extends StatefulWidget {
 class _UserVerificationQueueScreenState
     extends State<UserVerificationQueueScreen> {
   String _role = 'All';
-  String _city = 'Lahore';
-  String _sla = 'New';
-  String _risk = 'Duplicate Device';
+  String _status = 'pending';
   final _search = TextEditingController();
+  Future<List<verification.KycSubmission>>? _submissionsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _submissionsFuture ??= _load();
+  }
 
   @override
   void dispose() {
@@ -22,25 +27,34 @@ class _UserVerificationQueueScreenState
     super.dispose();
   }
 
-  List<KycSubmission> get _rows {
+  Future<List<verification.KycSubmission>> _load() {
+    return AuthScope.of(context).adminKycSubmissions(status: _status);
+  }
+
+  void _refresh() {
+    setState(() => _submissionsFuture = _load());
+  }
+
+  List<verification.KycSubmission> _rows(
+      List<verification.KycSubmission> submissions) {
     final query = _search.text.toLowerCase();
-    return AdminMockData.kycSubmissions.where((item) {
-      final roleMatch = _role == 'All' || item.role.contains(_role);
+    return submissions.where((item) {
+      final roleMatch = _role == 'All' || item.roleName.contains(_role);
       final queryMatch = query.isEmpty ||
-          item.name.toLowerCase().contains(query) ||
-          item.risk.toLowerCase().contains(query);
-      final cityMatch = item.city == _city;
-      final ageHours = int.tryParse(item.age.replaceAll('h', '')) ?? 0;
-      final slaMatch = switch (_sla) {
-        'New' => ageHours < 12,
-        '12h+' => ageHours >= 12,
-        '24h+' => ageHours >= 24,
-        '48h+' => ageHours >= 48,
-        _ => true,
-      };
-      final riskMatch = item.risk.toLowerCase().contains(_risk.toLowerCase());
-      return roleMatch && queryMatch && cityMatch && slaMatch && riskMatch;
+          item.applicantName.toLowerCase().contains(query) ||
+          item.applicantEmail.toLowerCase().contains(query) ||
+          item.publicId.toLowerCase().contains(query) ||
+          item.riskLevel.toLowerCase().contains(query);
+      return roleMatch && queryMatch;
     }).toList();
+  }
+
+  void _open(verification.KycSubmission submission) {
+    Navigator.pushNamed(
+      context,
+      SuperAdminRoutes.verificationDetail,
+      arguments: submission.publicId,
+    );
   }
 
   @override
@@ -62,13 +76,13 @@ class _UserVerificationQueueScreenState
               AdminFilterBar(
                 filters: const [
                   'All',
-                  'Director/Producer',
-                  'Actor/Talent',
+                  'Director / Producer',
+                  'Actor / Talent',
                   'Model',
                   'Location Owner',
-                  'Equipment Provider',
-                  'Agency',
-                  'Brand/Sponsor',
+                  'Media / Equipment Provider',
+                  'Casting Agency',
+                  'Brand / Sponsor',
                 ],
                 selected: _role,
                 onSelected: (value) => setState(() => _role = value),
@@ -80,35 +94,26 @@ class _UserVerificationQueueScreenState
                 children: [
                   _dropdown(
                     context,
-                    'City',
-                    _city,
-                    const ['Lahore', 'Karachi', 'Islamabad', 'Rawalpindi'],
-                    (value) => setState(() => _city = value),
-                  ),
-                  _dropdown(
-                    context,
-                    'SLA',
-                    _sla,
-                    const ['New', '12h+', '24h+', '48h+'],
-                    (value) => setState(() => _sla = value),
-                  ),
-                  _dropdown(
-                    context,
-                    'Risk',
-                    _risk,
+                    'Status',
+                    _status,
                     const [
-                      'Duplicate CNIC',
-                      'Duplicate Device',
-                      'Mismatched Name',
-                      'Bank Name Mismatch',
+                      'pending',
+                      'approved',
+                      'needs_resubmission',
+                      'rejected',
                     ],
-                    (value) => setState(() => _risk = value),
+                    (value) {
+                      setState(() {
+                        _status = value;
+                        _submissionsFuture = _load();
+                      });
+                    },
                   ),
                   AdminActionButton(
-                    icon: Icons.groups_outlined,
-                    label: 'Bulk assign selected',
+                    icon: Icons.refresh_rounded,
+                    label: 'Refresh queue',
                     secondary: true,
-                    onTap: () => _staffSheet(context),
+                    onTap: _refresh,
                   ),
                 ],
               ),
@@ -116,75 +121,107 @@ class _UserVerificationQueueScreenState
           ),
         ),
         const SizedBox(height: 18),
-        if (_rows.isEmpty)
-          const AdminEmptyState(
-            icon: Icons.search_off_rounded,
-            title: 'No matching submissions',
-            message: 'Try a different city, SLA or risk filter.',
-          )
-        else
-          AdminDataTable(
-            columns: const [
-              'User',
-              'Role',
-              'City',
-              'Docs',
-              'Age',
-              'Risk Flags',
-              'Assigned',
-              'Status',
-              'Action',
-            ],
-            rowActions: _rows
-                .map<VoidCallback?>(
-                  (_) => () => Navigator.pushNamed(
-                      context, SuperAdminRoutes.verificationDetail),
-                )
-                .toList(),
-            rows: _rows
-                .map(
-                  (row) => [
-                    _text(context, row.name, strong: true),
-                    _text(context, row.role),
-                    _text(context, row.city),
-                    _text(context, row.docs),
-                    AdminSlaBadge(age: row.age),
-                    AdminRiskBadge(
-                      label: row.risk,
-                      risk: row.risk == 'No risk'
-                          ? AdminRiskTone.low
-                          : AdminRiskTone.high,
+        FutureBuilder<List<verification.KycSubmission>>(
+          future: _submissionsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const AdminSurface(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              final error = snapshot.error;
+              return AdminSurface(
+                child: Column(
+                  children: [
+                    AdminEmptyState(
+                      icon: Icons.admin_panel_settings_outlined,
+                      title: error is ApiException && error.statusCode == 403
+                          ? 'KYC review permission required'
+                          : 'Could not load verification queue',
+                      message: error is ApiException
+                          ? error.message
+                          : 'Check your connection and try again.',
                     ),
-                    _text(context, row.assignedTo),
-                    AdminStatusBadge(
-                      label: row.status,
-                      tone: row.status.contains('Risk')
-                          ? AdminDecisionTone.danger
-                          : AdminDecisionTone.warning,
-                    ),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _tinyAction(
-                          context,
-                          'Review',
-                          () => Navigator.pushNamed(
-                              context, SuperAdminRoutes.verificationDetail),
-                        ),
-                        _tinyAction(
-                            context, 'Assign', () => _staffSheet(context)),
-                        _tinyAction(
-                          context,
-                          'Reject',
-                          () => _noteDialog(context, 'Reject quick note'),
-                        ),
-                      ],
+                    const SizedBox(height: 12),
+                    AdminActionButton(
+                      icon: Icons.refresh_rounded,
+                      label: 'Retry',
+                      secondary: true,
+                      onTap: _refresh,
                     ),
                   ],
-                )
-                .toList(),
-          ),
+                ),
+              );
+            }
+            final rows = _rows(snapshot.data ?? const []);
+            if (rows.isEmpty) {
+              return const AdminEmptyState(
+                icon: Icons.search_off_rounded,
+                title: 'No matching submissions',
+                message: 'Try a different role, status or search term.',
+              );
+            }
+            return AdminDataTable(
+              columns: const [
+                'User',
+                'Role',
+                'Docs',
+                'Risk',
+                'Status',
+                'Scan',
+                'Action',
+              ],
+              rowActions:
+                  rows.map<VoidCallback?>((row) => () => _open(row)).toList(),
+              rows: rows
+                  .map(
+                    (row) => [
+                      _text(context, row.applicantName, strong: true),
+                      _text(context, row.roleName),
+                      _text(context, '${row.files.length} file(s)'),
+                      AdminRiskBadge(
+                        label: row.riskLevel,
+                        risk: row.riskLevel == 'high'
+                            ? AdminRiskTone.high
+                            : AdminRiskTone.low,
+                      ),
+                      AdminStatusBadge(
+                        label: row.status,
+                        tone: row.status == 'approved'
+                            ? AdminDecisionTone.success
+                            : AdminDecisionTone.warning,
+                      ),
+                      _text(
+                        context,
+                        row.files.isEmpty
+                            ? 'No files'
+                            : row.files
+                                .map((file) => file.scanStatus)
+                                .join(', '),
+                      ),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _tinyAction(context, 'Review', () => _open(row)),
+                          _tinyAction(
+                            context,
+                            'Request info',
+                            () => Navigator.pushNamed(
+                              context,
+                              SuperAdminRoutes.verificationDetail,
+                              arguments: row.publicId,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                  .toList(),
+            );
+          },
+        ),
       ],
     );
   }

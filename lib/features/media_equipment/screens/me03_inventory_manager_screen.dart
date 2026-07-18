@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
+import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -22,6 +24,14 @@ class _ME03InventoryManagerScreenState
     extends State<ME03InventoryManagerScreen> {
   String _query = '';
   String _sort = 'Category';
+  Future<List<EquipmentItemDto>>? _itemsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final operations = OperationsScope.maybeOf(context);
+    _itemsFuture ??= operations?.equipmentItems(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +49,33 @@ class _ME03InventoryManagerScreenState
               selected: true,
               child: Column(
                 children: [
+                  if (_itemsFuture != null)
+                    FutureBuilder<List<EquipmentItemDto>>(
+                      future: _itemsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live equipment inventory...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live inventory connected: ${rows.length} item(s), latest ${rows.first.modelName}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   _SearchField(
                       onChanged: (value) => setState(() => _query = value)),
                   const SizedBox(height: 10),
@@ -112,8 +149,35 @@ class _ME03InventoryManagerScreenState
               icon: Icons.add_box_outlined,
               label: 'Add inventory item',
               compact: true,
-              onTap: () {
+              onTap: () async {
+                final operations = OperationsScope.maybeOf(context);
+                if (operations != null) {
+                  try {
+                    await operations.createEquipmentItem({
+                      'category': 'Camera',
+                      'brand': 'Sony',
+                      'model_name':
+                          'FX6 Smoke Kit ${DateTime.now().millisecondsSinceEpoch % 1000}',
+                      'serial_number': 'serial-tokenized',
+                      'condition': 'excellent',
+                      'day_rate_minor': 4500000,
+                      'deposit_minor': 15000000,
+                      'currency': 'PKR',
+                      'status': 'available',
+                    });
+                    if (mounted) {
+                      setState(() => _itemsFuture =
+                          operations.equipmentItems(force: true));
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      mediaSnack(
+                          context, 'Live inventory save skipped: $error');
+                    }
+                  }
+                }
                 final added = store.addDemoInventoryItem();
+                if (!context.mounted) return;
                 mediaSnack(
                   context,
                   added

@@ -10,10 +10,12 @@ import 'lg05_review_history_billing_screen.dart';
 
 class LegalPartnerPortalScreen extends StatelessWidget {
   final String routeName;
+  final Object? arguments;
 
   const LegalPartnerPortalScreen({
     super.key,
     required this.routeName,
+    this.arguments,
   });
 
   @override
@@ -27,9 +29,10 @@ class LegalPartnerPortalScreen extends StatelessWidget {
   }
 
   Widget _screenFor(String route) {
+    final id = arguments is String ? arguments as String : null;
     return switch (route) {
       LegalPartnerRoutes.contractReview =>
-        const LG02ContractReviewDetailScreen(),
+        LG02ContractReviewDetailScreen(reviewId: id),
       LegalPartnerRoutes.templateReview => const LG03TemplateReviewScreen(),
       LegalPartnerRoutes.addendumReview => const LG04AddendumReviewScreen(),
       LegalPartnerRoutes.billing => const LG05ReviewHistoryBillingScreen(),

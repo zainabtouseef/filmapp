@@ -55,6 +55,8 @@ class _ContentModerationQueueScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const _LiveModerationCases(),
+        const SizedBox(height: 14),
         CoreTextField(
           controller: _search,
           label: 'Search content or uploader',
@@ -82,6 +84,109 @@ class _ContentModerationQueueScreenState
             ),
           ),
       ],
+    );
+  }
+}
+
+class _LiveModerationCases extends StatefulWidget {
+  const _LiveModerationCases();
+
+  @override
+  State<_LiveModerationCases> createState() => _LiveModerationCasesState();
+}
+
+class _LiveModerationCasesState extends State<_LiveModerationCases> {
+  late Future<List<ModerationCaseDto>> _future;
+  bool _deciding = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    _future = trustSafety == null
+        ? Future.value(const <ModerationCaseDto>[])
+        : trustSafety.adminModerationCases(force: true);
+  }
+
+  Future<void> _decide(ModerationCaseDto item, String decision) async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null || _deciding) return;
+    setState(() => _deciding = true);
+    try {
+      await trustSafety.decideModerationCase(
+        caseId: item.publicId,
+        decision: decision,
+        reason: 'Reviewed from Flutter Super Admin moderation queue.',
+      );
+      if (!mounted) return;
+      setState(() => _future = trustSafety.adminModerationCases(force: true));
+      showCoreSnack(context, 'Live moderation case updated');
+    } catch (_) {
+      if (mounted) showCoreSnack(context, 'Could not update live case');
+    } finally {
+      if (mounted) setState(() => _deciding = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<ModerationCaseDto>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError) {
+          return const InlineNotice(
+            message:
+                'Live moderation queue unavailable — showing preview moderation items.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final rows = snapshot.data ?? const <ModerationCaseDto>[];
+        if (rows.isEmpty) {
+          return const InlineNotice(
+            message:
+                'No live moderation cases are open — preview moderation items remain below.',
+          );
+        }
+        final item = rows.first;
+        return AdminSurface(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AdminStatusBadge(
+                label: '${rows.length} live cases',
+                tone: AdminDecisionTone.info,
+              ),
+              AdminStatusBadge(
+                label: item.riskLevel,
+                tone: item.riskLevel == 'high'
+                    ? AdminDecisionTone.danger
+                    : AdminDecisionTone.warning,
+              ),
+              Text(
+                '${item.publicId} · ${item.entityType} · ${item.status}',
+                style: AppTextStyles.caption
+                    .copyWith(color: context.appColors.textSecondary),
+              ),
+              _tinyAction(
+                context,
+                _deciding ? 'Updating...' : 'Approve live',
+                _deciding ? null : () => _decide(item, 'approved'),
+              ),
+              _tinyAction(
+                context,
+                _deciding ? 'Updating...' : 'Remove live',
+                _deciding ? null : () => _decide(item, 'rejected'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

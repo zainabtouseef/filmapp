@@ -102,22 +102,55 @@ class CoreRoutes {
       case notifications:
         page = const NotificationCenterScreen();
       case chat:
-        page = const BookingChatScreen();
+        page = BookingChatScreen(
+          conversationId: routeSettings.arguments is String
+              ? routeSettings.arguments! as String
+              : null,
+        );
       case contract:
         page = ContractViewerScreen(
+          contractId: routeSettings.arguments is String
+              ? routeSettings.arguments! as String
+              : routeSettings.arguments is Map
+                  ? (routeSettings.arguments! as Map)['contract_id'] as String?
+                  : null,
           showAddendumBanner: routeSettings.arguments is Map &&
               ((routeSettings.arguments! as Map)['addendum'] == true),
         );
       case paymentProof:
-        page = const PaymentProofUploadScreen();
+        page = PaymentProofUploadScreen(
+          milestoneId: routeSettings.arguments is String
+              ? routeSettings.arguments! as String
+              : routeSettings.arguments is Map
+                  ? (routeSettings.arguments! as Map)['milestone_id'] as String?
+                  : null,
+        );
       case ledger:
         page = const ReceiptsLedgerScreen();
       case review:
-        page = const RatingsReviewScreen();
+        page = RatingsReviewScreen(
+          bookingId: routeSettings.arguments is String
+              ? routeSettings.arguments! as String
+              : routeSettings.arguments is Map
+                  ? (routeSettings.arguments! as Map)['booking_id'] as String?
+                  : null,
+        );
       case report:
         page = ReportBlockScreen(
           initialReason: routeSettings.arguments is String
               ? routeSettings.arguments! as String
+              : routeSettings.arguments is Map
+                  ? (routeSettings.arguments! as Map)['reason'] as String?
+                  : null,
+          entityType: routeSettings.arguments is Map
+              ? (routeSettings.arguments! as Map)['entity_type'] as String? ??
+                  'user'
+              : 'user',
+          entityId: routeSettings.arguments is Map
+              ? (routeSettings.arguments! as Map)['entity_id'] as String?
+              : null,
+          reportedUserId: routeSettings.arguments is Map
+              ? (routeSettings.arguments! as Map)['reported_user_id'] as String?
               : null,
         );
       case settings:
@@ -192,6 +225,7 @@ class CoreRoutes {
       case _ when LegalPartnerRoutes.allRoutes.contains(routeSettings.name):
         page = LegalPartnerPortalScreen(
           routeName: routeSettings.name ?? LegalPartnerRoutes.home,
+          arguments: routeSettings.arguments,
         );
       case _ when InsurancePartnerRoutes.allRoutes.contains(routeSettings.name):
         page = InsurancePartnerPortalScreen(
@@ -237,6 +271,7 @@ class CoreRoutes {
       case SuperAdminRoutes.analytics:
         page = SuperAdminPortalScreen(
           routeName: routeSettings.name ?? SuperAdminRoutes.dashboard,
+          arguments: routeSettings.arguments,
         );
       default:
         page = const CoreErrorScreen(

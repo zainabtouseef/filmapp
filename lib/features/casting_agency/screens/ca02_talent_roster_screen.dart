@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -19,6 +21,14 @@ class CA02TalentRosterScreen extends StatefulWidget {
 class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
   String _query = '';
   String _sort = 'Availability';
+  Future<List<AgencyTalentDto>>? _rosterFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _rosterFuture ??= specialist?.agencyRoster(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +46,33 @@ class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
               selected: true,
               child: Column(
                 children: [
+                  if (_rosterFuture != null)
+                    FutureBuilder<List<AgencyTalentDto>>(
+                      future: _rosterFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live agency roster...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live roster connected: ${rows.length} represented talent record(s), latest ${rows.first.screenName}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   AgencySearchField(
                     hintText: 'Search talent, category, city...',
                     onChanged: (value) => setState(() => _query = value),

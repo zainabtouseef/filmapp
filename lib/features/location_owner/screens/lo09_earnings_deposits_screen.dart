@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -193,15 +194,14 @@ class _LO09EarningsDepositsScreenState
                               Navigator.pushNamed(context, CoreRoutes.ledger),
                         ),
                         const SizedBox(height: 8),
-                        CorePrimaryButton(
-                          icon: Icons.file_download_outlined,
+                        ExportActionButton(
+                          exportType: 'ledger',
                           label: 'Export ledger',
-                          compact: true,
-                          onTap: () => showCoreSuccessDialog(
-                            context,
-                            title: 'Ledger export ready',
-                            message:
-                                'A demo PDF ledger was generated for the selected property.',
+                          builder: (context, onTap, label) => CorePrimaryButton(
+                            icon: Icons.file_download_outlined,
+                            label: label,
+                            compact: true,
+                            onTap: onTap,
                           ),
                         ),
                       ],

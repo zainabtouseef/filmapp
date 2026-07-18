@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -8,8 +10,22 @@ import '../../../shared/widgets/status_chip.dart';
 import '../data/brand_sponsor_demo_data.dart';
 import '../widgets/brand_sponsor_components.dart';
 
-class BR02BrandProfileScreen extends StatelessWidget {
+class BR02BrandProfileScreen extends StatefulWidget {
   const BR02BrandProfileScreen({super.key});
+
+  @override
+  State<BR02BrandProfileScreen> createState() => _BR02BrandProfileScreenState();
+}
+
+class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
+  Future<BrandProfileDto?>? _profileFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _profileFuture ??= specialist?.brandProfile(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +43,32 @@ class BR02BrandProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_profileFuture != null)
+                  FutureBuilder<BrandProfileDto?>(
+                    future: _profileFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message: 'Loading live brand profile...',
+                            icon: Icons.hourglass_top_rounded,
+                          ),
+                        );
+                      }
+                      final live = snapshot.data;
+                      if (live == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InlineNotice(
+                          message:
+                              'Live brand profile: ${live.name} (${live.trustStatus}).',
+                          icon: Icons.cloud_done_outlined,
+                          tone: CoreStatusTone.success,
+                        ),
+                      );
+                    },
+                  ),
                 BrandMediaFrame(
                   imageUrl: profile.imageUrl,
                   title: profile.name,
@@ -220,7 +262,27 @@ class BR02BrandProfileScreen extends StatelessWidget {
           CorePrimaryButton(
             icon: Icons.save_outlined,
             label: 'Save changes',
-            onTap: () {
+            onTap: () async {
+              final specialist = SpecialistScope.maybeOf(context);
+              if (specialist != null) {
+                try {
+                  await specialist.upsertBrandProfile({
+                    'name': name.text.trim(),
+                    'category': category.text.trim(),
+                    'representative': 'CineConnect brand team',
+                    'description': BrandSponsorDemoData.profile.description,
+                  });
+                  if (context.mounted) {
+                    setState(() =>
+                        _profileFuture = specialist.brandProfile(force: true));
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    brandSnack(context, 'Live profile save skipped: $error');
+                  }
+                }
+              }
+              if (!context.mounted) return;
               Navigator.pop(context);
               brandSnack(context, 'Brand profile changes saved');
             },

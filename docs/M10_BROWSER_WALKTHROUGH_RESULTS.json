@@ -1,0 +1,827 @@
+{
+  "generated_at": "2026-07-18T05:43:22Z",
+  "routes_checked": 82,
+  "screenshots_dir": "docs/m10_walkthrough_screenshots",
+  "results": [
+    {
+      "route": "/",
+      "href": "http://127.0.0.1:53117/",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/001_root.png",
+      "events": []
+    },
+    {
+      "route": "/login",
+      "href": "http://127.0.0.1:53117/#/onboarding",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/002_login.png",
+      "events": []
+    },
+    {
+      "route": "/roles",
+      "href": "http://127.0.0.1:53117/#/roles",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/003_roles.png",
+      "events": []
+    },
+    {
+      "route": "/notifications",
+      "href": "http://127.0.0.1:53117/#/notifications",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/004_notifications.png",
+      "events": []
+    },
+    {
+      "route": "/portal/dashboard",
+      "href": "http://127.0.0.1:53117/#/portal/dashboard",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/005_portal_dashboard.png",
+      "events": []
+    },
+    {
+      "route": "/director",
+      "href": "http://127.0.0.1:53117/#/director",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/006_director.png",
+      "events": []
+    },
+    {
+      "route": "/director/projects",
+      "href": "http://127.0.0.1:53117/#/director/projects",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/007_director_projects.png",
+      "events": []
+    },
+    {
+      "route": "/director/marketplace",
+      "href": "http://127.0.0.1:53117/#/director/marketplace",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/008_director_marketplace.png",
+      "events": []
+    },
+    {
+      "route": "/director/shortlist",
+      "href": "http://127.0.0.1:53117/#/director/shortlist",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/009_director_shortlist.png",
+      "events": []
+    },
+    {
+      "route": "/director/bargaining",
+      "href": "http://127.0.0.1:53117/#/director/bargaining",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/010_director_bargaining.png",
+      "events": []
+    },
+    {
+      "route": "/director/contracts",
+      "href": "http://127.0.0.1:53117/#/director/contracts",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/011_director_contracts.png",
+      "events": []
+    },
+    {
+      "route": "/director/payments",
+      "href": "http://127.0.0.1:53117/#/director/payments",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/012_director_payments.png",
+      "events": []
+    },
+    {
+      "route": "/director/room",
+      "href": "http://127.0.0.1:53117/#/director/room",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/013_director_room.png",
+      "events": []
+    },
+    {
+      "route": "/director/reports",
+      "href": "http://127.0.0.1:53117/#/director/reports",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/014_director_reports.png",
+      "events": []
+    },
+    {
+      "route": "/talent",
+      "href": "http://127.0.0.1:53117/#/talent",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/015_talent.png",
+      "events": []
+    },
+    {
+      "route": "/talent/profile",
+      "href": "http://127.0.0.1:53117/#/talent/profile",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/016_talent_profile.png",
+      "events": []
+    },
+    {
+      "route": "/talent/portfolio",
+      "href": "http://127.0.0.1:53117/#/talent/portfolio",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/017_talent_portfolio.png",
+      "events": []
+    },
+    {
+      "route": "/talent/availability",
+      "href": "http://127.0.0.1:53117/#/talent/availability",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/018_talent_availability.png",
+      "events": []
+    },
+    {
+      "route": "/talent/rates",
+      "href": "http://127.0.0.1:53117/#/talent/rates",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/019_talent_rates.png",
+      "events": []
+    },
+    {
+      "route": "/talent/opportunities",
+      "href": "http://127.0.0.1:53117/#/talent/opportunities",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/020_talent_opportunities.png",
+      "events": []
+    },
+    {
+      "route": "/talent/contracts",
+      "href": "http://127.0.0.1:53117/#/talent/contracts",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/021_talent_contracts.png",
+      "events": []
+    },
+    {
+      "route": "/talent/earnings",
+      "href": "http://127.0.0.1:53117/#/talent/earnings",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/022_talent_earnings.png",
+      "events": []
+    },
+    {
+      "route": "/talent/reputation",
+      "href": "http://127.0.0.1:53117/#/talent/reputation",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/023_talent_reputation.png",
+      "events": []
+    },
+    {
+      "route": "/talent/safety",
+      "href": "http://127.0.0.1:53117/#/talent/safety",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/024_talent_safety.png",
+      "events": []
+    },
+    {
+      "route": "/model",
+      "href": "http://127.0.0.1:53117/#/model",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/025_model.png",
+      "events": []
+    },
+    {
+      "route": "/model/usage-rights",
+      "href": "http://127.0.0.1:53117/#/model/usage-rights",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/026_model_usage-rights.png",
+      "events": []
+    },
+    {
+      "route": "/model/rate-by-usage",
+      "href": "http://127.0.0.1:53117/#/model/rate-by-usage",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/027_model_rate-by-usage.png",
+      "events": []
+    },
+    {
+      "route": "/model/brand-safety",
+      "href": "http://127.0.0.1:53117/#/model/brand-safety",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/028_model_brand-safety.png",
+      "events": []
+    },
+    {
+      "route": "/location-owner",
+      "href": "http://127.0.0.1:53117/#/location-owner",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/029_location-owner.png",
+      "events": []
+    },
+    {
+      "route": "/location-owner/listing-wizard",
+      "href": "http://127.0.0.1:53117/#/location-owner/listing-wizard",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/030_location-owner_listing-wizard.png",
+      "events": []
+    },
+    {
+      "route": "/location-owner/pricing",
+      "href": "http://127.0.0.1:53117/#/location-owner/pricing",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/031_location-owner_pricing.png",
+      "events": []
+    },
+    {
+      "route": "/location-owner/rules",
+      "href": "http://127.0.0.1:53117/#/location-owner/rules",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/032_location-owner_rules.png",
+      "events": []
+    },
+    {
+      "route": "/location-owner/check-in",
+      "href": "http://127.0.0.1:53117/#/location-owner/check-in",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/033_location-owner_check-in.png",
+      "events": []
+    },
+    {
+      "route": "/location-owner/check-out",
+      "href": "http://127.0.0.1:53117/#/location-owner/check-out",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/034_location-owner_check-out.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider",
+      "href": "http://127.0.0.1:53117/#/equipment-provider",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/035_equipment-provider.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider/profile",
+      "href": "http://127.0.0.1:53117/#/equipment-provider/profile",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/036_equipment-provider_profile.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider/inventory",
+      "href": "http://127.0.0.1:53117/#/equipment-provider/inventory",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/037_equipment-provider_inventory.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider/packages",
+      "href": "http://127.0.0.1:53117/#/equipment-provider/packages",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/038_equipment-provider_packages.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider/terms",
+      "href": "http://127.0.0.1:53117/#/equipment-provider/terms",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/039_equipment-provider_terms.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider/handover",
+      "href": "http://127.0.0.1:53117/#/equipment-provider/handover",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/040_equipment-provider_handover.png",
+      "events": []
+    },
+    {
+      "route": "/equipment-provider/return",
+      "href": "http://127.0.0.1:53117/#/equipment-provider/return",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/041_equipment-provider_return.png",
+      "events": []
+    },
+    {
+      "route": "/crew",
+      "href": "http://127.0.0.1:53117/#/crew",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/042_crew.png",
+      "events": []
+    },
+    {
+      "route": "/crew/profile",
+      "href": "http://127.0.0.1:53117/#/crew/profile",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/043_crew_profile.png",
+      "events": []
+    },
+    {
+      "route": "/crew/availability",
+      "href": "http://127.0.0.1:53117/#/crew/availability",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/044_crew_availability.png",
+      "events": []
+    },
+    {
+      "route": "/crew/requests",
+      "href": "http://127.0.0.1:53117/#/crew/requests",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/045_crew_requests.png",
+      "events": []
+    },
+    {
+      "route": "/crew/contracts-payments",
+      "href": "http://127.0.0.1:53117/#/crew/contracts-payments",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/046_crew_contracts-payments.png",
+      "events": []
+    },
+    {
+      "route": "/agency",
+      "href": "http://127.0.0.1:53117/#/agency",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/047_agency.png",
+      "events": []
+    },
+    {
+      "route": "/agency/roster",
+      "href": "http://127.0.0.1:53117/#/agency/roster",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/048_agency_roster.png",
+      "events": []
+    },
+    {
+      "route": "/agency/auditions",
+      "href": "http://127.0.0.1:53117/#/agency/auditions",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/049_agency_auditions.png",
+      "events": []
+    },
+    {
+      "route": "/agency/self-tapes",
+      "href": "http://127.0.0.1:53117/#/agency/self-tapes",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/050_agency_self-tapes.png",
+      "events": []
+    },
+    {
+      "route": "/agency/commission",
+      "href": "http://127.0.0.1:53117/#/agency/commission",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/051_agency_commission.png",
+      "events": []
+    },
+    {
+      "route": "/brand",
+      "href": "http://127.0.0.1:53117/#/brand",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/052_brand.png",
+      "events": []
+    },
+    {
+      "route": "/brand/profile",
+      "href": "http://127.0.0.1:53117/#/brand/profile",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/053_brand_profile.png",
+      "events": []
+    },
+    {
+      "route": "/brand/opportunity-composer",
+      "href": "http://127.0.0.1:53117/#/brand/opportunity-composer",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/054_brand_opportunity-composer.png",
+      "events": []
+    },
+    {
+      "route": "/brand/applications",
+      "href": "http://127.0.0.1:53117/#/brand/applications",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/055_brand_applications.png",
+      "events": []
+    },
+    {
+      "route": "/brand/campaign-tracker",
+      "href": "http://127.0.0.1:53117/#/brand/campaign-tracker",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/056_brand_campaign-tracker.png",
+      "events": []
+    },
+    {
+      "route": "/brand/payments",
+      "href": "http://127.0.0.1:53117/#/brand/payments",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/057_brand_payments.png",
+      "events": []
+    },
+    {
+      "route": "/legal",
+      "href": "http://127.0.0.1:53117/#/legal",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/058_legal.png",
+      "events": []
+    },
+    {
+      "route": "/legal/contract-review",
+      "href": "http://127.0.0.1:53117/#/legal/contract-review",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/059_legal_contract-review.png",
+      "events": []
+    },
+    {
+      "route": "/legal/addendum-review",
+      "href": "http://127.0.0.1:53117/#/legal/addendum-review",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/060_legal_addendum-review.png",
+      "events": []
+    },
+    {
+      "route": "/legal/history-billing",
+      "href": "http://127.0.0.1:53117/#/legal/history-billing",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/061_legal_history-billing.png",
+      "events": []
+    },
+    {
+      "route": "/insurance",
+      "href": "http://127.0.0.1:53117/#/insurance",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/062_insurance.png",
+      "events": []
+    },
+    {
+      "route": "/insurance/records",
+      "href": "http://127.0.0.1:53117/#/insurance/records",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/063_insurance_records.png",
+      "events": []
+    },
+    {
+      "route": "/insurance/claims",
+      "href": "http://127.0.0.1:53117/#/insurance/claims",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/064_insurance_claims.png",
+      "events": []
+    },
+    {
+      "route": "/insurance/safety-permits",
+      "href": "http://127.0.0.1:53117/#/insurance/safety-permits",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/065_insurance_safety-permits.png",
+      "events": []
+    },
+    {
+      "route": "/insurance/incidents",
+      "href": "http://127.0.0.1:53117/#/insurance/incidents",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/066_insurance_incidents.png",
+      "events": []
+    },
+    {
+      "route": "/distribution",
+      "href": "http://127.0.0.1:53117/#/distribution",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/067_distribution.png",
+      "events": []
+    },
+    {
+      "route": "/distribution/contacts",
+      "href": "http://127.0.0.1:53117/#/distribution/contacts",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/068_distribution_contacts.png",
+      "events": []
+    },
+    {
+      "route": "/distribution/release",
+      "href": "http://127.0.0.1:53117/#/distribution/release",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/069_distribution_release.png",
+      "events": []
+    },
+    {
+      "route": "/distribution/reports",
+      "href": "http://127.0.0.1:53117/#/distribution/reports",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/070_distribution_reports.png",
+      "events": []
+    },
+    {
+      "route": "/admin/dashboard",
+      "href": "http://127.0.0.1:53117/#/admin/dashboard",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/071_admin_dashboard.png",
+      "events": []
+    },
+    {
+      "route": "/admin/review-hub",
+      "href": "http://127.0.0.1:53117/#/admin/review-hub",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/072_admin_review-hub.png",
+      "events": []
+    },
+    {
+      "route": "/admin/verifications",
+      "href": "http://127.0.0.1:53117/#/admin/verifications",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/073_admin_verifications.png",
+      "events": []
+    },
+    {
+      "route": "/admin/content-moderation",
+      "href": "http://127.0.0.1:53117/#/admin/content-moderation",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/074_admin_content-moderation.png",
+      "events": []
+    },
+    {
+      "route": "/admin/bookings-monitor",
+      "href": "http://127.0.0.1:53117/#/admin/bookings-monitor",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/075_admin_bookings-monitor.png",
+      "events": []
+    },
+    {
+      "route": "/admin/payments",
+      "href": "http://127.0.0.1:53117/#/admin/payments",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/076_admin_payments.png",
+      "events": []
+    },
+    {
+      "route": "/admin/payment-queue",
+      "href": "http://127.0.0.1:53117/#/admin/payment-queue",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/077_admin_payment-queue.png",
+      "events": []
+    },
+    {
+      "route": "/admin/payments/ledger",
+      "href": "http://127.0.0.1:53117/#/admin/payments/ledger",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/078_admin_payments_ledger.png",
+      "events": []
+    },
+    {
+      "route": "/admin/disputes",
+      "href": "http://127.0.0.1:53117/#/admin/disputes",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/079_admin_disputes.png",
+      "events": []
+    },
+    {
+      "route": "/admin/support",
+      "href": "http://127.0.0.1:53117/#/admin/support",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/080_admin_support.png",
+      "events": []
+    },
+    {
+      "route": "/admin/broadcasts",
+      "href": "http://127.0.0.1:53117/#/admin/broadcasts",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/081_admin_broadcasts.png",
+      "events": []
+    },
+    {
+      "route": "/admin/analytics",
+      "href": "http://127.0.0.1:53117/#/admin/analytics",
+      "title": "CineConnect",
+      "canvas_count": 0,
+      "semantics": true,
+      "html_length": 4297,
+      "screenshot": "docs/m10_walkthrough_screenshots/082_admin_analytics.png",
+      "events": []
+    }
+  ]
+}

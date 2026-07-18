@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/insurance/insurance_controller.dart';
+import '../../../core/insurance/insurance_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -8,8 +11,24 @@ import '../data/insurance_partner_demo_data.dart';
 import '../routes/insurance_partner_routes.dart';
 import '../widgets/insurance_partner_components.dart';
 
-class IN01InsuranceDashboardScreen extends StatelessWidget {
+class IN01InsuranceDashboardScreen extends StatefulWidget {
   const IN01InsuranceDashboardScreen({super.key});
+
+  @override
+  State<IN01InsuranceDashboardScreen> createState() =>
+      _IN01InsuranceDashboardScreenState();
+}
+
+class _IN01InsuranceDashboardScreenState
+    extends State<IN01InsuranceDashboardScreen> {
+  Future<InsuranceDashboardDto>? _dashboardFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final insurance = InsuranceScope.maybeOf(context);
+    _dashboardFuture ??= insurance?.dashboard(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +42,34 @@ class IN01InsuranceDashboardScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const PersonalDashboardKpiStrip(),
+            const SizedBox(height: 12),
+            if (_dashboardFuture != null)
+              FutureBuilder<InsuranceDashboardDto>(
+                future: _dashboardFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: InlineNotice(
+                        message: 'Loading live insurance dashboard...',
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    );
+                  }
+                  final live = snapshot.data;
+                  if (live == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InlineNotice(
+                      message:
+                          'Live insurance: ${live.activePolicyCount}/${live.policyCount} active policies, ${live.openClaims} open claim(s).',
+                      icon: Icons.cloud_done_outlined,
+                      tone: CoreStatusTone.success,
+                    ),
+                  );
+                },
+              ),
             InsuranceKpiRail(metrics: InsurancePartnerDemoData.metrics),
             const SizedBox(height: 12),
             InsuranceTwoColumn(

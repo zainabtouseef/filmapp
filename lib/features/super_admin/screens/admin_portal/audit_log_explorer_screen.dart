@@ -82,8 +82,12 @@ class _AuditLogExplorerScreenState extends State<AuditLogExplorerScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _tinyAction(context, 'Export CSV',
-                        () => showCoreSnack(context, 'CSV exported')),
+                    ExportActionButton(
+                      exportType: 'admin_disputes',
+                      label: 'Export CSV',
+                      builder: (context, onTap, label) =>
+                          _tinyAction(context, label, onTap),
+                    ),
                     _tinyAction(context, 'Export PDF',
                         () => showCoreSnack(context, 'PDF export prepared')),
                     _tinyAction(context, 'Copy Event ID',

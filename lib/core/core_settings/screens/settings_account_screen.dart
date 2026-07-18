@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/auth_controller.dart';
 import '../../core_ui/core_routes.dart';
 import '../../core_ui/widgets/core_widgets.dart';
 import '../../theme/app_color_scheme.dart';
@@ -24,7 +25,19 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
   bool _discovery = true;
   bool _biometric = false;
   bool _twoFactor = false;
+  bool _loggingOut = false;
   String _language = 'English';
+
+  Future<void> _logout() async {
+    setState(() => _loggingOut = true);
+    await AuthScope.of(context).logout();
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      CoreRoutes.login,
+      (route) => false,
+    );
+  }
 
   void _otpPaymentModal() {
     final otp = TextEditingController();
@@ -33,8 +46,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: _SettingsSheet(
           title: 'Confirm Payment Account Change',
           child: Column(
@@ -54,8 +68,10 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
                 label: 'Confirm Change',
                 onTap: () {
                   Navigator.pop(context);
-                  showCoreSnack(context,
-                      'Payment account change sent for high-value review');
+                  showCoreSnack(
+                    context,
+                    'Payment account change sent for high-value review',
+                  );
                 },
               ),
             ],
@@ -76,16 +92,17 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
           mainAxisSize: MainAxisSize.min,
           children: const [
             _FaqRow(
-                question: 'How does payment verification work?',
-                answer: 'Upload proof; Super Admin verifies before closure.'),
+              question: 'How does payment verification work?',
+              answer: 'Upload proof; Super Admin verifies before closure.',
+            ),
             _FaqRow(
-                question: 'When is contact visible?',
-                answer:
-                    'Phone and exact location unlock after secured booking.'),
+              question: 'When is contact visible?',
+              answer: 'Phone and exact location unlock after secured booking.',
+            ),
             _FaqRow(
-                question: 'Can I switch roles?',
-                answer:
-                    'Yes, from the role switcher once each role is verified.'),
+              question: 'Can I switch roles?',
+              answer: 'Yes, from the role switcher once each role is verified.',
+            ),
           ],
         ),
       ),
@@ -110,9 +127,13 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(title,
-                  style: AppTextStyles.sectionTitle
-                      .copyWith(color: colors.textPrimary, fontSize: 18)),
+              child: Text(
+                title,
+                style: AppTextStyles.sectionTitle.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 18,
+                ),
+              ),
             ),
           ],
         ),
@@ -124,8 +145,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
@@ -154,104 +176,142 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             icon: Icons.settings_outlined,
           ),
           const SizedBox(height: 18),
-          _section(
-            'Account',
-            [
-              _navRow(Icons.person_outline, 'Edit basic info',
-                  () => showCoreSnack(context, 'Edit profile simulated')),
-              _navRow(
-                  Icons.lock_reset_rounded,
-                  'Change password',
-                  () =>
-                      Navigator.pushNamed(context, CoreRoutes.forgotPassword)),
-              _navRow(Icons.switch_account_outlined, 'Manage roles',
-                  () => Navigator.pushNamed(context, CoreRoutes.profileRoles)),
-              _navRow(
-                  Icons.verified_user_outlined,
-                  'Verification status',
-                  () => Navigator.pushNamed(
-                      context, CoreRoutes.verificationStatus)),
-            ],
-          ),
-          _section(
-            'Notifications',
-            [
-              _toggle(Icons.notifications_none_rounded, 'In-app', _inApp,
-                  (v) => setState(() => _inApp = v)),
-              _toggle(Icons.phone_iphone_rounded, 'Push', _push,
-                  (v) => setState(() => _push = v)),
-              _toggle(Icons.email_outlined, 'Email', _email,
-                  (v) => setState(() => _email = v)),
-              _toggle(Icons.sms_outlined, 'SMS', _sms,
-                  (v) => setState(() => _sms = v)),
-              _toggle(Icons.chat_outlined, 'WhatsApp consent', _whatsapp,
-                  (v) => setState(() => _whatsapp = v)),
-            ],
-          ),
+          _section('Account', [
+            _navRow(
+              Icons.person_outline,
+              'Edit basic info',
+              () => showCoreSnack(context, 'Edit profile simulated'),
+            ),
+            _navRow(
+              Icons.lock_reset_rounded,
+              'Change password',
+              () => Navigator.pushNamed(context, CoreRoutes.forgotPassword),
+            ),
+            _navRow(
+              Icons.switch_account_outlined,
+              'Manage roles',
+              () => Navigator.pushNamed(context, CoreRoutes.profileRoles),
+            ),
+            _navRow(
+              Icons.logout_rounded,
+              _loggingOut ? 'Signing out...' : 'Sign out',
+              _loggingOut ? () {} : _logout,
+            ),
+            _navRow(
+              Icons.verified_user_outlined,
+              'Verification status',
+              () => Navigator.pushNamed(context, CoreRoutes.verificationStatus),
+            ),
+          ]),
+          _section('Notifications', [
+            _toggle(
+              Icons.notifications_none_rounded,
+              'In-app',
+              _inApp,
+              (v) => setState(() => _inApp = v),
+            ),
+            _toggle(
+              Icons.phone_iphone_rounded,
+              'Push',
+              _push,
+              (v) => setState(() => _push = v),
+            ),
+            _toggle(
+              Icons.email_outlined,
+              'Email',
+              _email,
+              (v) => setState(() => _email = v),
+            ),
+            _toggle(
+              Icons.sms_outlined,
+              'SMS',
+              _sms,
+              (v) => setState(() => _sms = v),
+            ),
+            _toggle(
+              Icons.chat_outlined,
+              'WhatsApp consent',
+              _whatsapp,
+              (v) => setState(() => _whatsapp = v),
+            ),
+          ]),
           _languageSection(),
-          _section(
-            'Privacy',
-            [
-              _toggle(
-                  Icons.phone_locked_outlined,
-                  'Hide phone number until secured booking',
-                  _hidePhone,
-                  (v) => setState(() => _hidePhone = v)),
-              _toggle(
-                  Icons.location_off_outlined,
-                  'Hide exact location until secured stage',
-                  _hideLocation,
-                  (v) => setState(() => _hideLocation = v)),
-              _toggle(
-                  Icons.water_drop_outlined,
-                  'Watermark public portfolio previews',
-                  _watermark,
-                  (v) => setState(() => _watermark = v)),
-              _toggle(Icons.travel_explore_outlined, 'Allow profile discovery',
-                  _discovery, (v) => setState(() => _discovery = v)),
-            ],
-          ),
+          _section('Privacy', [
+            _toggle(
+              Icons.phone_locked_outlined,
+              'Hide phone number until secured booking',
+              _hidePhone,
+              (v) => setState(() => _hidePhone = v),
+            ),
+            _toggle(
+              Icons.location_off_outlined,
+              'Hide exact location until secured stage',
+              _hideLocation,
+              (v) => setState(() => _hideLocation = v),
+            ),
+            _toggle(
+              Icons.water_drop_outlined,
+              'Watermark public portfolio previews',
+              _watermark,
+              (v) => setState(() => _watermark = v),
+            ),
+            _toggle(
+              Icons.travel_explore_outlined,
+              'Allow profile discovery',
+              _discovery,
+              (v) => setState(() => _discovery = v),
+            ),
+          ]),
           _paymentSection(),
-          _section(
-            'Security',
-            [
-              _navRow(
-                  Icons.lock_reset_rounded,
-                  'Change password',
-                  () =>
-                      Navigator.pushNamed(context, CoreRoutes.forgotPassword)),
-              _toggle(Icons.fingerprint_rounded, 'Enable biometric login',
-                  _biometric, (v) => setState(() => _biometric = v)),
-              _toggle(Icons.password_rounded, 'Two-factor authentication',
-                  _twoFactor, (v) => setState(() => _twoFactor = v)),
-              _navRow(Icons.devices_other_outlined, 'Active sessions',
-                  () => showCoreSnack(context, 'Active sessions simulated')),
-            ],
-          ),
-          _section(
-            'Support',
-            [
-              _navRow(Icons.help_outline_rounded, 'Help center', _faqSheet),
-              _navRow(Icons.support_agent_outlined, 'Contact support',
-                  () => showCoreSnack(context, 'Contact support simulated')),
-              _navRow(Icons.report_problem_outlined, 'Report a problem',
-                  () => Navigator.pushNamed(context, CoreRoutes.report)),
-            ],
-          ),
-          _section(
-            'Danger Zone',
-            [
-              _navRow(
-                  Icons.pause_circle_outline_rounded,
-                  'Deactivate account',
-                  () => _confirmDanger('Deactivate account',
-                      irreversible: false)),
-              _navRow(
-                  Icons.delete_outline_rounded,
-                  'Delete account',
-                  () => _confirmDanger('Delete account', irreversible: true)),
-            ],
-          ),
+          _section('Security', [
+            _navRow(
+              Icons.lock_reset_rounded,
+              'Change password',
+              () => Navigator.pushNamed(context, CoreRoutes.forgotPassword),
+            ),
+            _toggle(
+              Icons.fingerprint_rounded,
+              'Enable biometric login',
+              _biometric,
+              (v) => setState(() => _biometric = v),
+            ),
+            _toggle(
+              Icons.password_rounded,
+              'Two-factor authentication',
+              _twoFactor,
+              (v) => setState(() => _twoFactor = v),
+            ),
+            _navRow(
+              Icons.devices_other_outlined,
+              'Active sessions',
+              () => showCoreSnack(context, 'Active sessions simulated'),
+            ),
+          ]),
+          _section('Support', [
+            _navRow(Icons.help_outline_rounded, 'Help center', _faqSheet),
+            _navRow(
+              Icons.support_agent_outlined,
+              'Contact support',
+              () => showCoreSnack(context, 'Contact support simulated'),
+            ),
+            _navRow(
+              Icons.report_problem_outlined,
+              'Report a problem',
+              () => Navigator.pushNamed(context, CoreRoutes.report),
+            ),
+          ]),
+          _section('Danger Zone', [
+            _navRow(
+              Icons.pause_circle_outline_rounded,
+              'Deactivate account',
+              () => _confirmDanger('Deactivate account', irreversible: false),
+            ),
+            _navRow(
+              Icons.delete_outline_rounded,
+              'Delete account',
+              () => _confirmDanger('Delete account', irreversible: true),
+            ),
+          ]),
         ],
       ),
     );
@@ -307,8 +367,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
                 Expanded(
                   child: Text(
                     'HBL · Sara Ahmed Productions · **** 4821',
-                    style:
-                        AppTextStyles.label.copyWith(color: colors.textPrimary),
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
               ],
@@ -359,7 +420,11 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
   }
 
   Widget _toggle(
-      IconData icon, String title, bool value, ValueChanged<bool> onChanged) {
+    IconData icon,
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return Builder(
       builder: (context) {
         final colors = context.appColors;
@@ -385,8 +450,10 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
         return ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(icon, color: colors.goldDark),
-          title: Text(title,
-              style: AppTextStyles.label.copyWith(color: colors.textPrimary)),
+          title: Text(
+            title,
+            style: AppTextStyles.label.copyWith(color: colors.textPrimary),
+          ),
           trailing: Icon(Icons.chevron_right_rounded, color: colors.iconMuted),
           onTap: onTap,
         );
@@ -399,10 +466,7 @@ class _SettingsSheet extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const _SettingsSheet({
-    required this.title,
-    required this.child,
-  });
+  const _SettingsSheet({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -419,9 +483,13 @@ class _SettingsSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style: AppTextStyles.sectionTitle
-                    .copyWith(color: colors.textPrimary, fontSize: 19)),
+            Text(
+              title,
+              style: AppTextStyles.sectionTitle.copyWith(
+                color: colors.textPrimary,
+                fontSize: 19,
+              ),
+            ),
             const SizedBox(height: 16),
             child,
           ],
@@ -435,10 +503,7 @@ class _FaqRow extends StatelessWidget {
   final String question;
   final String answer;
 
-  const _FaqRow({
-    required this.question,
-    required this.answer,
-  });
+  const _FaqRow({required this.question, required this.answer});
 
   @override
   Widget build(BuildContext context) {
@@ -448,12 +513,15 @@ class _FaqRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(question,
-              style: AppTextStyles.label.copyWith(color: colors.textPrimary)),
+          Text(
+            question,
+            style: AppTextStyles.label.copyWith(color: colors.textPrimary),
+          ),
           const SizedBox(height: 4),
-          Text(answer,
-              style:
-                  AppTextStyles.caption.copyWith(color: colors.textSecondary)),
+          Text(
+            answer,
+            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+          ),
         ],
       ),
     );

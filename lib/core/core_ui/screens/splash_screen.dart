@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../auth/auth_controller.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_routes.dart';
@@ -21,10 +22,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _scale;
   late final Animation<Offset> _slide;
 
-  final bool hasValidToken = false;
-  final bool isFirstLaunch = true;
-  final bool forceUpdateRequired = false;
-
   @override
   void initState() {
     super.initState();
@@ -38,18 +35,46 @@ class _SplashScreenState extends State<SplashScreen>
       begin: const Offset(0, 0.16),
       end: Offset.zero,
     ).animate(_fade);
-    Timer(const Duration(milliseconds: 2100), _routeNext);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareAndRoute());
   }
 
-  void _routeNext() {
+  Future<void> _prepareAndRoute() async {
+    final auth = AuthScope.of(context);
+    final minimumSplash = Future<void>.delayed(
+      const Duration(milliseconds: 2100),
+    );
+    var forceUpdateRequired = false;
+    var maintenanceEnabled = false;
+    try {
+      final bootstrap = await auth.bootstrap();
+      final data = bootstrap['data'] as Map<String, dynamic>;
+      final forceUpdate = data['force_update'] as Map<String, dynamic>;
+      final maintenance = data['maintenance'] as Map<String, dynamic>;
+      forceUpdateRequired = forceUpdate['required'] as bool? ?? false;
+      maintenanceEnabled = maintenance['enabled'] as bool? ?? false;
+    } catch (_) {
+      // Offline routing still lets a stored session continue to its portal.
+    }
+    await minimumSplash;
+    _routeNext(
+      forceUpdateRequired: forceUpdateRequired,
+      maintenanceEnabled: maintenanceEnabled,
+    );
+  }
+
+  void _routeNext({
+    required bool forceUpdateRequired,
+    required bool maintenanceEnabled,
+  }) {
     if (!mounted) return;
+    final auth = AuthScope.of(context);
     final route = forceUpdateRequired
         ? CoreRoutes.forceUpdate
-        : hasValidToken
-            ? CoreRoutes.dashboard
-            : isFirstLaunch
-                ? CoreRoutes.onboarding
-                : CoreRoutes.login;
+        : maintenanceEnabled
+            ? CoreRoutes.maintenance
+            : auth.isAuthenticated
+                ? auth.initialAuthenticatedRoute
+                : CoreRoutes.onboarding;
     Navigator.pushReplacementNamed(context, route);
   }
 

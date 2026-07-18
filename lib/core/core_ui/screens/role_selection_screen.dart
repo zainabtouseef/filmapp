@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/auth_controller.dart';
+import '../../auth/auth_models.dart';
+import '../../auth/role_mapper.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_routes.dart';
@@ -16,6 +19,35 @@ class RoleSelectionScreen extends StatefulWidget {
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   CineRole? _selectedPrimaryRole;
+  late Future<List<CineRole>> _rolesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _rolesFuture = _loadRoles();
+  }
+
+  Future<List<CineRole>> _loadRoles() async {
+    try {
+      final roles = await AuthScope.of(context).roles();
+      return roles.map(_roleFromApi).toList();
+    } catch (_) {
+      return SharedMockData.roles;
+    }
+  }
+
+  CineRole _roleFromApi(AuthRole role) {
+    final fallback = SharedMockData.roles.where(
+      (item) => item.name == role.name,
+    );
+    return CineRole(
+      icon: RoleMapper.iconForCode(role.code),
+      name: role.name,
+      description: fallback.isEmpty
+          ? 'Create a verified CineConnect profile for this role.'
+          : fallback.first.description,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,30 +63,37 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
             showBack: false,
           ),
           const SizedBox(height: 24),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final columns = width >= 900
-                  ? 3
-                  : width >= 620
-                      ? 2
-                      : 1;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: SharedMockData.roles.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: columns == 1 ? 3.45 : 2.18,
-                ),
-                itemBuilder: (context, index) {
-                  final role = SharedMockData.roles[index];
-                  return RoleCard(
-                    role: role,
-                    selected: _selectedPrimaryRole?.name == role.name,
-                    onTap: () => setState(() => _selectedPrimaryRole = role),
+          FutureBuilder<List<CineRole>>(
+            future: _rolesFuture,
+            builder: (context, snapshot) {
+              final roles = snapshot.data ?? SharedMockData.roles;
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final columns = width >= 900
+                      ? 3
+                      : width >= 620
+                          ? 2
+                          : 1;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: roles.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: columns == 1 ? 3.45 : 2.18,
+                    ),
+                    itemBuilder: (context, index) {
+                      final role = roles[index];
+                      return RoleCard(
+                        role: role,
+                        selected: _selectedPrimaryRole?.name == role.name,
+                        onTap: () =>
+                            setState(() => _selectedPrimaryRole = role),
+                      );
+                    },
                   );
                 },
               );

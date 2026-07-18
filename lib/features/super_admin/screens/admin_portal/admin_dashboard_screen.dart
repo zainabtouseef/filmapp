@@ -9,6 +9,8 @@ class AdminDashboardScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const _LiveAdminDashboardPanel(),
+        const SizedBox(height: 12),
         const DashboardSectionHeader(
           title: 'Quick Actions',
           icon: Icons.flash_on_rounded,
@@ -59,6 +61,81 @@ class AdminDashboardScreen extends StatelessWidget {
         const SizedBox(height: 12),
         const _RecentActivityCard(),
       ],
+    );
+  }
+}
+
+class _LiveAdminDashboardPanel extends StatefulWidget {
+  const _LiveAdminDashboardPanel();
+
+  @override
+  State<_LiveAdminDashboardPanel> createState() =>
+      _LiveAdminDashboardPanelState();
+}
+
+class _LiveAdminDashboardPanelState extends State<_LiveAdminDashboardPanel> {
+  late Future<AdminDashboardDto> _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final analytics = AnalyticsScope.maybeOf(context);
+    _future = analytics == null
+        ? Future.error(StateError('AnalyticsScope missing'))
+        : analytics.adminDashboard(force: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<AdminDashboardDto>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const InlineNotice(
+            message:
+                'Live admin dashboard unavailable — showing preview dashboard metrics.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final data = snapshot.data!;
+        return AdminSurface(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              AdminStatusBadge(
+                label: '${data.pendingKycCount} pending KYC',
+                tone: AdminDecisionTone.warning,
+              ),
+              AdminStatusBadge(
+                label: '${data.pendingPaymentProofs} payment proofs',
+                tone: AdminDecisionTone.info,
+              ),
+              AdminStatusBadge(
+                label: '${data.openDisputes} open disputes',
+                tone: AdminDecisionTone.danger,
+              ),
+              AdminStatusBadge(
+                label: '${data.openSupportTickets} support tickets',
+                tone: AdminDecisionTone.info,
+              ),
+              AdminStatusBadge(
+                label: '${data.totalUsers} users',
+                tone: AdminDecisionTone.success,
+              ),
+              AdminStatusBadge(
+                label:
+                    '${(data.conversionRate * 100).toStringAsFixed(1)}% conversion',
+                tone: AdminDecisionTone.success,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -119,8 +119,9 @@ class ForceUpdateScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Current v1.0.0 · Required v1.1.0',
-                    style:
-                        AppTextStyles.label.copyWith(color: colors.textPrimary),
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
               ],
@@ -164,8 +165,9 @@ class MaintenanceModeScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Estimated return: Today, 8:30 PM PKT',
-                    style:
-                        AppTextStyles.label.copyWith(color: colors.textPrimary),
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.textPrimary,
+                    ),
                   ),
                 ),
               ],

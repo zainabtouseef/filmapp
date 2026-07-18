@@ -19,6 +19,8 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const _LiveModerationCases(),
+        const SizedBox(height: 14),
         AdminFilterBar(
           filters: const [
             'Portfolio Photos',

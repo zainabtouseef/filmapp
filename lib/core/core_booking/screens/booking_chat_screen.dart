@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../bookings/booking_models.dart' as booking_models;
+import '../../bookings/bookings_controller.dart';
 import '../../core_ui/core_routes.dart';
 import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/models/shared_models.dart';
@@ -8,7 +10,9 @@ import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 
 class BookingChatScreen extends StatefulWidget {
-  const BookingChatScreen({super.key});
+  final String? conversationId;
+
+  const BookingChatScreen({super.key, this.conversationId});
 
   @override
   State<BookingChatScreen> createState() => _BookingChatScreenState();
@@ -17,7 +21,19 @@ class BookingChatScreen extends StatefulWidget {
 class _BookingChatScreenState extends State<BookingChatScreen> {
   final _composer = TextEditingController();
   late final List<ChatMessage> _messages = List.of(SharedMockData.chatMessages);
+  Future<booking_models.BookingConversation>? _conversationFuture;
   bool _securedBooking = false;
+
+  bool get _live => widget.conversationId?.startsWith('CONV-') ?? false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_live) {
+      _conversationFuture ??=
+          BookingsScope.of(context).conversation(widget.conversationId!);
+    }
+  }
 
   @override
   void dispose() {
@@ -36,6 +52,10 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
   void _send() {
     final text = _composer.text.trim();
     if (text.isEmpty) return;
+    if (_live) {
+      _sendLive(text);
+      return;
+    }
     setState(() {
       _messages.add(
         ChatMessage(
@@ -49,6 +69,19 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     });
   }
 
+  Future<void> _sendLive(String text) async {
+    await BookingsScope.of(context).sendMessage(
+      conversationId: widget.conversationId!,
+      body: _maskPhoneNumbers(text),
+    );
+    if (!mounted) return;
+    _composer.clear();
+    setState(() {
+      _conversationFuture =
+          BookingsScope.of(context).conversation(widget.conversationId!);
+    });
+  }
+
   void _messageActions(ChatMessage message) {
     showModalBottomSheet<void>(
       context: context,
@@ -56,6 +89,9 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
       builder: (context) => _MessageActionsSheet(
         onPin: () {
           Navigator.pop(context);
+          if (message.id != null) {
+            BookingsScope.of(context).pinMessage(message.id!);
+          }
           showCoreSnack(context, 'Decision pinned');
         },
         onAddendum: () {
@@ -80,21 +116,64 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_live) {
+      return FutureBuilder<booking_models.BookingConversation>(
+        future: _conversationFuture,
+        builder: (context, snapshot) {
+          final conversation = snapshot.data;
+          final messages = conversation == null
+              ? const <ChatMessage>[]
+              : conversation.messages
+                  .map(
+                    (item) => ChatMessage(
+                      id: item.publicId,
+                      sender: item.sender.displayName,
+                      message: item.body ?? '',
+                      time: _relative(item.createdAt),
+                      mine: false,
+                    ),
+                  )
+                  .toList();
+          return _chatScaffold(
+            title: conversation?.title ?? 'Booking chat',
+            bookingId: conversation?.bookingId ?? 'Live booking',
+            messages: messages,
+            loading: snapshot.connectionState == ConnectionState.waiting,
+          );
+        },
+      );
+    }
+    return _chatScaffold(
+      title: 'TVC Shoot — Lahore',
+      bookingId: 'BK-2048',
+      messages: _messages,
+    );
+  }
+
+  Widget _chatScaffold({
+    required String title,
+    required String bookingId,
+    required List<ChatMessage> messages,
+    bool loading = false,
+  }) {
     return CoreScreenScaffold(
       scrollable: false,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         children: [
-          _contextHeader(context),
+          _contextHeader(context, title: title, bookingId: bookingId),
           const SizedBox(height: 12),
           _pinnedSection(),
           const SizedBox(height: 10),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 12),
-              itemCount: _messages.length,
+              itemCount: loading ? 1 : messages.length,
               itemBuilder: (context, index) {
-                final message = _messages[index];
+                if (loading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final message = messages[index];
                 return GestureDetector(
                   onLongPress: () => _messageActions(message),
                   child: ChatBubble(message: message),
@@ -108,7 +187,11 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     );
   }
 
-  Widget _contextHeader(BuildContext context) {
+  Widget _contextHeader(
+    BuildContext context, {
+    required String title,
+    required String bookingId,
+  }) {
     final colors = context.appColors;
     return CoreGlassCard(
       padding: const EdgeInsets.all(14),
@@ -122,7 +205,7 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'TVC Shoot — Lahore',
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.sectionTitle.copyWith(
@@ -132,7 +215,7 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Booking ID: BK-2048',
+                      'Booking ID: $bookingId',
                       style: AppTextStyles.caption
                           .copyWith(color: colors.textSecondary),
                     ),
@@ -273,6 +356,15 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
         ],
       ),
     );
+  }
+
+  String _relative(DateTime? date) {
+    if (date == null) return 'now';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m';
+    if (diff.inDays < 1) return '${diff.inHours}h';
+    return '${diff.inDays}d';
   }
 }
 

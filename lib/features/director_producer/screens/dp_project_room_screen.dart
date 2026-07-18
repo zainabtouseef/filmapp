@@ -1,27 +1,293 @@
+import 'dart:async';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/projects/project_models.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/uploads/upload_repository.dart';
 import '../data/director_producer_demo_data.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 
-class DPProjectRoomScreen extends StatelessWidget {
-  const DPProjectRoomScreen({super.key});
+class DPProjectRoomScreen extends StatefulWidget {
+  final String? projectId;
+
+  const DPProjectRoomScreen({super.key, this.projectId});
+
+  @override
+  State<DPProjectRoomScreen> createState() => _DPProjectRoomScreenState();
+}
+
+class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
+  Future<ProjectRoom>? _roomFuture;
+  bool _started = false;
+  bool _savingDecision = false;
+  bool _uploadingFile = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _reload();
+    }
+  }
+
+  void _reload() {
+    final controller = ProjectsScope.maybeOf(context);
+    final projectId = widget.projectId;
+    setState(() {
+      _roomFuture = controller == null || projectId == null
+          ? Future<ProjectRoom>.error(
+              const ApiException(
+                code: 'project.missing',
+                message: 'Project id is required.',
+              ),
+            )
+          : controller.room(projectId);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final feedItems = DirectorProducerDemoData.roomItems.take(6).toList();
-    final fileItems = DirectorProducerDemoData.roomItems.skip(6).toList();
+    return FutureBuilder<ProjectRoom>(
+      future: _roomFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return DPSectionCard(
+            title: 'Project Room',
+            icon: Icons.hourglass_top_rounded,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 28),
+                child: CircularProgressIndicator(
+                  color: context.appColors.goldMid,
+                ),
+              ),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          final feedItems = DirectorProducerDemoData.roomItems.take(6).toList();
+          final fileItems = DirectorProducerDemoData.roomItems.skip(6).toList();
+          return _RoomFallback(
+            feedItems: feedItems,
+            fileItems: fileItems,
+            warning: 'Live project room unavailable — showing preview room.',
+          );
+        }
+        final room = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            dpHeaderAction(
+              context,
+              icon: Icons.campaign_outlined,
+              label: _savingDecision ? 'Pinning...' : 'Pin Decision',
+              onTap: _savingDecision ? () {} : _pinDecision,
+            ),
+            const SizedBox(height: 8),
+            DPTwoColumn(
+              left: DPSectionCard(
+                title: 'Team Feed',
+                icon: Icons.chat_bubble_outline_rounded,
+                child: Column(
+                  children: [
+                    if (room.items.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: dpText(
+                          context,
+                          'No room decisions yet. Pin one for the team.',
+                        ),
+                      )
+                    else
+                      for (var i = 0; i < room.items.length; i++)
+                        _RoomFeedItem(
+                          author: room.items[i].creatorName ?? 'CineConnect',
+                          text: room.items[i].body?.isNotEmpty == true
+                              ? room.items[i].body!
+                              : room.items[i].title,
+                          time: _timeLabel(room.items[i].createdAt),
+                          showDivider: i != room.items.length - 1,
+                        ),
+                  ],
+                ),
+              ),
+              right: DPSectionCard(
+                title: 'Files & Decisions',
+                icon: Icons.folder_copy_outlined,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < room.files.length; i++)
+                      _RoomFileItem(
+                        kind: room.files[i].folder,
+                        title: room.files[i].label,
+                        status: room.files[i].file.processingStatus,
+                        showDivider: i != room.files.length - 1,
+                      ),
+                    for (final item
+                        in room.items.where((item) => item.pinnedAt != null))
+                      _RoomFileItem(
+                        kind: 'Decision',
+                        title: item.title,
+                        status: 'Pinned',
+                      ),
+                    const SizedBox(height: 8),
+                    DPHolographicButton(
+                      label: _uploadingFile ? 'Uploading File' : 'Upload File',
+                      icon: Icons.upload_file_rounded,
+                      onTap: _uploadingFile ? null : _uploadFile,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _pinDecision() async {
+    final controller = ProjectsScope.maybeOf(context);
+    final projectId = widget.projectId;
+    if (controller == null || projectId == null) {
+      dpSnack(context, 'Open a live project before pinning decisions');
+      return;
+    }
+    setState(() => _savingDecision = true);
+    try {
+      await controller.createRoomItem(
+        projectId: projectId,
+        title: 'Production decision',
+        body: 'Decision pinned from the Director/Producer project room.',
+      );
+      if (!mounted) return;
+      dpSnack(context, 'Decision pinned');
+      _reload();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _savingDecision = false);
+    }
+  }
+
+  Future<void> _uploadFile() async {
+    final auth = AuthScope.maybeOf(context);
+    final projects = ProjectsScope.maybeOf(context);
+    final projectId = widget.projectId;
+    if (auth == null || projects == null || projectId == null) {
+      dpSnack(context, 'Open a live project before uploading files');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
+    );
+    final picked = result?.files.single;
+    final bytes = picked?.bytes;
+    if (picked == null || bytes == null) return;
+    setState(() => _uploadingFile = true);
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'project_document',
+        file: PickedFileData(
+          name: picked.name,
+          mimeType: _mimeTypeFor(picked),
+          bytes: bytes,
+        ),
+      );
+      await _linkFileWhenReady(
+        controller: projects,
+        projectId: projectId,
+        fileId: uploaded.publicId,
+        label: picked.name,
+      );
+      if (!mounted) return;
+      dpSnack(context, 'Project file linked');
+      _reload();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _uploadingFile = false);
+    }
+  }
+
+  Future<void> _linkFileWhenReady({
+    required ProjectsController controller,
+    required String projectId,
+    required String fileId,
+    required String label,
+  }) async {
+    for (var attempt = 0; attempt < 6; attempt += 1) {
+      try {
+        await controller.linkProjectFile(
+          projectId: projectId,
+          fileId: fileId,
+          label: label,
+        );
+        return;
+      } on ApiException catch (error) {
+        final waitingForScan = error.fields.containsKey('file_id') ||
+            error.message.toLowerCase().contains('clean') ||
+            error.message.toLowerCase().contains('ready');
+        if (!waitingForScan || attempt == 5) rethrow;
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    }
+  }
+
+  String _mimeTypeFor(PlatformFile file) {
+    final extension = (file.extension ?? '').toLowerCase();
+    return switch (extension) {
+      'pdf' => 'application/pdf',
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'application/octet-stream',
+    };
+  }
+
+  String _timeLabel(DateTime? date) {
+    if (date == null) return 'now';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m';
+    if (diff.inDays < 1) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+}
+
+class _RoomFallback extends StatelessWidget {
+  final List<List<String>> feedItems;
+  final List<List<String>> fileItems;
+  final String warning;
+
+  const _RoomFallback({
+    required this.feedItems,
+    required this.fileItems,
+    required this.warning,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        dpHeaderAction(
-          context,
-          icon: Icons.campaign_outlined,
-          label: 'Broadcast',
-          onTap: () => dpSnack(context, 'Broadcast composer simulated'),
+        DPSectionCard(
+          title: 'Preview Mode',
+          icon: Icons.info_outline_rounded,
+          child: dpText(context, warning),
         ),
         const SizedBox(height: 8),
         DPTwoColumn(
@@ -52,12 +318,6 @@ class DPProjectRoomScreen extends StatelessWidget {
                     status: fileItems[i][2],
                     showDivider: i != fileItems.length - 1,
                   ),
-                const SizedBox(height: 8),
-                DPHolographicButton(
-                  label: 'Upload File',
-                  icon: Icons.upload_file_rounded,
-                  onTap: () => dpSnack(context, 'File upload queued'),
-                ),
               ],
             ),
           ),
@@ -152,8 +412,13 @@ class _RoomFileItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.insert_drive_file_outlined,
-              size: 18, color: colors.textSecondary),
+          Icon(
+            kind == 'Decision'
+                ? Icons.push_pin_outlined
+                : Icons.insert_drive_file_outlined,
+            size: 18,
+            color: colors.textSecondary,
+          ),
           const SizedBox(width: 9),
           Expanded(child: dpText(context, title, strong: true)),
           const SizedBox(width: 10),

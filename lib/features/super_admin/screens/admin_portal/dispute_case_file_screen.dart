@@ -23,6 +23,8 @@ class _DisputeCaseFileScreenState extends State<DisputeCaseFileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const _LiveDisputePanel(),
+        const SizedBox(height: 14),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -167,8 +169,7 @@ class _DisputeCaseFileScreenState extends State<DisputeCaseFileScreen> {
       secondary: label != 'Close as resolved',
       onTap: () {
         if (_ruling.text.trim().isEmpty) {
-          showCoreSnack(
-              context, 'Write a ruling before recording a decision.');
+          showCoreSnack(context, 'Write a ruling before recording a decision.');
           return;
         }
         showCoreSuccessDialog(

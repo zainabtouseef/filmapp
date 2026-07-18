@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -120,7 +121,34 @@ class AT05RateCardScreen extends StatelessWidget {
             icon: Icons.verified_user_outlined,
             label: 'Confirm OTP',
             compact: true,
-            onTap: () {
+            onTap: () async {
+              final auth = AuthScope.maybeOf(context);
+              if (auth != null) {
+                try {
+                  final profile = await auth.talentProfile();
+                  final dayRate = ActorTalentDemoStore.instance.rates
+                      .firstWhere(
+                        (rate) => rate.id == 'per-day',
+                        orElse: () => ActorTalentDemoStore.instance.rates.first,
+                      )
+                      .amount;
+                  await auth.updateTalentProfile(
+                    screenName: profile.screenName?.trim().isNotEmpty == true
+                        ? profile.screenName!.trim()
+                        : 'CineConnect Talent',
+                    languages: profile.languages,
+                    dayRateMinor: dayRate * 100,
+                    availabilityStatus: profile.availabilityStatus,
+                    currency: profile.currency,
+                  );
+                } catch (error) {
+                  if (context.mounted) {
+                    actorSnack(
+                        context, 'Live day rate publish skipped: $error');
+                  }
+                }
+              }
+              if (!context.mounted) return;
               Navigator.pop(context);
               actorSnack(context, 'Rates published and linked to negotiations');
             },

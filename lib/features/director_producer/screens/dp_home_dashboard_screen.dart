@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../shared/sections/admin_live_monitoring_section.dart';
 import '../../../shared/sections/admin_quick_actions_section.dart';
@@ -70,6 +71,8 @@ class DPHomeDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 14),
+        const PersonalDashboardKpiStrip(),
         const SizedBox(height: 14),
         AdminQuickActionsSection(
           items: [

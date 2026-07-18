@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../routes/director_producer_routes.dart';
@@ -19,19 +22,45 @@ class DPCreateProjectWizardScreen extends StatefulWidget {
 
 class _DPCreateProjectWizardScreenState
     extends State<DPCreateProjectWizardScreen> {
+  final _title = TextEditingController(text: 'Aurora Biscuit TVC');
+  final _type = TextEditingController(text: 'tvc');
+  final _description = TextEditingController(
+    text: 'Premium family brand film with warm interiors.',
+  );
+  final _startDate = TextEditingController(text: '2026-08-18');
+  final _endDate = TextEditingController(text: '2026-08-22');
+  final _budget = TextEditingController(text: '8500000');
   int _step = 0;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _type.dispose();
+    _description.dispose();
+    _startDate.dispose();
+    _endDate.dispose();
+    _budget.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final steps = ['Type + Info', 'Cities + Dates', 'Budget', 'Team'];
+    final steps = ['Type + Info', 'Dates', 'Budget', 'Review'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         dpHeaderAction(
           context,
-          icon: Icons.auto_awesome_rounded,
-          label: _step == steps.length - 1 ? 'Create' : 'Next',
-          onTap: _next,
+          icon: _step == steps.length - 1
+              ? Icons.check_circle_outline
+              : Icons.arrow_forward_rounded,
+          label: _saving
+              ? 'Creating...'
+              : _step == steps.length - 1
+                  ? 'Create'
+                  : 'Next',
+          onTap: _saving ? () {} : _next,
         ),
         const SizedBox(height: 6),
         SingleChildScrollView(
@@ -62,77 +91,76 @@ class _DPCreateProjectWizardScreenState
   Widget _stepBody(BuildContext context) {
     return switch (_step) {
       0 => Column(
-          children: const [
-            _FormPreviewRow(
+          children: [
+            CoreTextField(
+              controller: _type,
               label: 'Project type',
               icon: Icons.movie_creation_outlined,
-              value: 'TVC',
             ),
-            SizedBox(height: 12),
-            _FormPreviewRow(
+            const SizedBox(height: 12),
+            CoreTextField(
+              controller: _title,
               label: 'Project title',
               icon: Icons.title_rounded,
-              value: 'Aurora Biscuit TVC',
             ),
-            SizedBox(height: 12),
-            _FormPreviewRow(
+            const SizedBox(height: 12),
+            CoreTextField(
+              controller: _description,
               label: 'Description / tone',
               icon: Icons.notes_rounded,
-              value: 'Premium family brand film with warm interiors.',
+              maxLines: 3,
             ),
           ],
         ),
       1 => Column(
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: const [
-                DPStatusChip(label: 'Lahore', tone: DpTone.warning),
-                DPStatusChip(label: 'Karachi', tone: DpTone.info),
-                DPStatusChip(label: 'Islamabad', tone: DpTone.neutral),
-                DPStatusChip(label: 'Hunza', tone: DpTone.neutral),
-              ],
+            CoreTextField(
+              controller: _startDate,
+              label: 'Start date (YYYY-MM-DD)',
+              icon: Icons.date_range_outlined,
+              keyboardType: TextInputType.datetime,
             ),
             const SizedBox(height: 12),
-            const _FormPreviewRow(
-              label: 'Date range',
-              icon: Icons.date_range_outlined,
-              value: 'Jul 18 - Jul 22',
+            CoreTextField(
+              controller: _endDate,
+              label: 'End date (YYYY-MM-DD)',
+              icon: Icons.event_available_outlined,
+              keyboardType: TextInputType.datetime,
             ),
             const SizedBox(height: 12),
             const DPStatusChip(label: 'Tentative dates', tone: DpTone.warning),
           ],
         ),
       2 => Column(
-          children: const [
-            _FormPreviewRow(
-              label: 'Minimum budget',
+          children: [
+            CoreTextField(
+              controller: _budget,
+              label: 'Estimated budget (PKR)',
               icon: Icons.payments_outlined,
-              value: 'PKR 6.5M',
+              keyboardType: TextInputType.number,
             ),
-            SizedBox(height: 12),
-            _FormPreviewRow(
-              label: 'Maximum budget',
-              icon: Icons.savings_outlined,
-              value: 'PKR 8.5M',
-            ),
-            SizedBox(height: 14),
-            DPBudgetHealthBar(value: .62, label: 'Budget health preview'),
+            const SizedBox(height: 14),
+            const DPBudgetHealthBar(value: .62, label: 'Budget health preview'),
           ],
         ),
       _ => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ...[
-              'Invite co-producer - Manage bookings',
-              'Invite production manager - Requirements + schedule',
-              'Invite finance lead - Payments only',
-            ].map((row) => dpBullet(context, row)),
+            _ReviewRow(label: 'Project', value: _title.text),
+            const SizedBox(height: 10),
+            _ReviewRow(label: 'Type', value: _type.text),
+            const SizedBox(height: 10),
+            _ReviewRow(
+              label: 'Dates',
+              value: '${_startDate.text} → ${_endDate.text}',
+            ),
+            const SizedBox(height: 10),
+            _ReviewRow(label: 'Budget', value: 'PKR ${_budget.text}'),
             const SizedBox(height: 12),
             DPHolographicButton(
-              label: 'Create Project',
+              label: _saving ? 'Creating Project' : 'Create Project',
               icon: Icons.check_circle_outline,
-              onTap: _next,
+              onTap: _saving ? null : _createProject,
             ),
           ],
         ),
@@ -143,22 +171,57 @@ class _DPCreateProjectWizardScreenState
     if (_step < 3) {
       setState(() => _step++);
     } else {
-      dpSnack(context, 'Demo project created');
-      Navigator.pushNamed(context, DirectorProducerRoutes.projectDetail);
+      _createProject();
     }
+  }
+
+  Future<void> _createProject() async {
+    final controller = ProjectsScope.maybeOf(context);
+    if (controller == null) {
+      dpSnack(context, 'Sign in to create projects');
+      return;
+    }
+    if (_title.text.trim().length < 2 || _type.text.trim().length < 2) {
+      dpSnack(context, 'Project title and type are required');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final project = await controller.createProject(
+        title: _title.text.trim(),
+        projectType: _type.text.trim(),
+        description: _description.text.trim(),
+        startDate: _startDate.text.trim(),
+        endDate: _endDate.text.trim(),
+        estimatedBudgetMinor: _parseBudgetMinor(_budget.text),
+      );
+      if (!mounted) return;
+      dpSnack(context, 'Project created');
+      Navigator.pushNamed(
+        context,
+        DirectorProducerRoutes.projectDetail,
+        arguments: project.publicId,
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  int? _parseBudgetMinor(String value) {
+    final whole = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (whole == null) return null;
+    return whole * 100;
   }
 }
 
-class _FormPreviewRow extends StatelessWidget {
+class _ReviewRow extends StatelessWidget {
   final String label;
-  final IconData icon;
   final String value;
 
-  const _FormPreviewRow({
-    required this.label,
-    required this.icon,
-    required this.value,
-  });
+  const _ReviewRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -172,29 +235,23 @@ class _FormPreviewRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: colors.goldDark, size: 18),
-          const SizedBox(width: 9),
+          Text(
+            label,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+            child: Text(
+              value.isEmpty ? 'Not set' : value,
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.cardLabel.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

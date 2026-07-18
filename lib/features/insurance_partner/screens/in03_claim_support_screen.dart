@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/insurance/insurance_controller.dart';
+import '../../../core/insurance/insurance_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/insurance_partner_demo_data.dart';
@@ -19,6 +21,14 @@ class _IN03ClaimSupportScreenState extends State<IN03ClaimSupportScreen> {
     text: 'Impact mark visible on front element; awaiting serial confirmation.',
   );
   String? _error;
+  Future<List<InsuranceClaimDto>>? _claimsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final insurance = InsuranceScope.maybeOf(context);
+    _claimsFuture ??= insurance?.claims(force: true);
+  }
 
   @override
   void dispose() {
@@ -42,6 +52,32 @@ class _IN03ClaimSupportScreenState extends State<IN03ClaimSupportScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_claimsFuture != null)
+                  FutureBuilder<List<InsuranceClaimDto>>(
+                    future: _claimsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message: 'Loading live insurance claims...',
+                            icon: Icons.hourglass_top_rounded,
+                          ),
+                        );
+                      }
+                      final rows = snapshot.data ?? const [];
+                      if (rows.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InlineNotice(
+                          message:
+                              'Live claims connected: ${rows.length} claim(s), latest ${rows.first.publicId} is ${rows.first.status}.',
+                          icon: Icons.cloud_done_outlined,
+                          tone: CoreStatusTone.success,
+                        ),
+                      );
+                    },
+                  ),
                 Row(
                   children: [
                     Expanded(
@@ -248,6 +284,26 @@ class _IN03ClaimSupportScreenState extends State<IN03ClaimSupportScreen> {
       return;
     }
     setState(() => _error = null);
+    final insurance = InsuranceScope.maybeOf(context);
+    final liveClaims = _claimsFuture;
+    if (insurance != null && liveClaims != null) {
+      () async {
+        try {
+          final claims = await liveClaims;
+          if (claims.isEmpty) return;
+          await insurance.decideClaim(
+            claimId: claims.first.publicId,
+            status: 'approved',
+            estimateMinor: 8500000,
+          );
+          if (!mounted) return;
+          setState(() => _claimsFuture = insurance.claims(force: true));
+        } catch (error) {
+          if (!context.mounted) return;
+          insuranceSnack(context, 'Live claim decision skipped: $error');
+        }
+      }();
+    }
     store.finalizeClaim();
     insuranceSnack(context, 'Claim evidence finalized');
   }

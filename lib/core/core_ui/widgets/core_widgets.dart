@@ -562,6 +562,7 @@ class CoreDropdownField<T> extends StatelessWidget {
   final String label;
   final IconData icon;
   final ValueChanged<T?> onChanged;
+  final String Function(T value)? labelBuilder;
 
   const CoreDropdownField({
     super.key,
@@ -570,6 +571,7 @@ class CoreDropdownField<T> extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onChanged,
+    this.labelBuilder,
   });
 
   @override
@@ -583,7 +585,7 @@ class CoreDropdownField<T> extends StatelessWidget {
             (item) => DropdownMenuItem<T>(
               value: item,
               child: Text(
-                item.toString(),
+                labelBuilder?.call(item) ?? item.toString(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -617,7 +619,7 @@ class UploadCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool uploaded;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const UploadCard({
     super.key,
@@ -666,7 +668,7 @@ class UploadCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    uploaded ? 'Uploaded' : subtitle,
+                    subtitle,
                     style: AppTextStyles.caption.copyWith(
                       color: uploaded ? colors.success : colors.textSecondary,
                     ),

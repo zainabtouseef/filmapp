@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../contracts/contract_models.dart';
+import '../../contracts/contracts_controller.dart';
 import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/widgets/core_widgets.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 
 class ContractViewerScreen extends StatefulWidget {
+  final String? contractId;
   final bool showAddendumBanner;
 
   /// Called once the in-sheet OTP signature actually succeeds — lets a
@@ -15,6 +20,7 @@ class ContractViewerScreen extends StatefulWidget {
 
   const ContractViewerScreen({
     super.key,
+    this.contractId,
     this.showAddendumBanner = false,
     this.onSigned,
   });
@@ -26,19 +32,35 @@ class ContractViewerScreen extends StatefulWidget {
 class _ContractViewerScreenState extends State<ContractViewerScreen> {
   String _version = 'v1.1';
   bool _signed = false;
+  bool _signing = false;
+  Future<CineContract>? _contractFuture;
   final bool requiresKycBeforeSigning = true;
 
-  void _correctionDialog() {
+  bool get _live => widget.contractId?.startsWith('CON-') ?? false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_live && _contractFuture == null) {
+      final contracts = ContractsScope.maybeOf(context);
+      if (contracts != null) {
+        _contractFuture = contracts.contract(widget.contractId!);
+      }
+    }
+  }
+
+  void _correctionDialog([CineContract? contract]) {
     final controller = TextEditingController();
+    final rootContext = context;
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: context.appColors.surface,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: dialogContext.appColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'What needs correction?',
           style: AppTextStyles.sectionTitle
-              .copyWith(color: context.appColors.textPrimary),
+              .copyWith(color: dialogContext.appColors.textPrimary),
         ),
         content: CoreTextField(
           controller: controller,
@@ -48,9 +70,35 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              showCoreSnack(context, 'Correction request sent');
+            onPressed: () async {
+              if (contract != null) {
+                final contracts = ContractsScope.maybeOf(rootContext);
+                if (contracts != null) {
+                  unawaited(
+                    contracts
+                        .createAddendum(
+                          contractId: contract.publicId,
+                          reason: 'Correction request',
+                          content: controller.text.trim().isEmpty
+                              ? 'Please review the requested correction.'
+                              : controller.text.trim(),
+                        )
+                        .catchError((_) => ContractAddendum(
+                              publicId: '',
+                              requestedBy: const ContractUser(
+                                publicId: '',
+                                displayName: '',
+                              ),
+                              reason: '',
+                              content: '',
+                              status: 'failed',
+                              createdAt: null,
+                            )),
+                  );
+                }
+              }
+              Navigator.pop(dialogContext);
+              showCoreSnack(rootContext, 'Correction request sent');
             },
             child: const Text('Submit'),
           ),
@@ -62,26 +110,49 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
   void _signatureSheet() {
     final typed = TextEditingController();
     final otp = TextEditingController();
+    final rootContext = context;
+    final contracts = ContractsScope.maybeOf(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
         child: _SignatureSheet(
           typed: typed,
           otp: otp,
-          onSigned: () {
+          loading: _signing,
+          onSigned: () async {
             if (otp.text.trim().length != 6) {
-              showCoreSnack(context, 'Enter any 6-digit OTP');
+              showCoreSnack(rootContext, 'Enter any 6-digit OTP');
               return;
             }
-            Navigator.pop(context);
-            setState(() => _signed = true);
+            if (_live) {
+              if (contracts == null) return;
+              setState(() => _signing = true);
+              try {
+                final updated = await contracts.sign(widget.contractId!);
+                if (!mounted || !rootContext.mounted) return;
+                setState(() {
+                  _signed = updated.isSigned;
+                  _contractFuture = Future.value(updated);
+                  _signing = false;
+                });
+              } catch (error) {
+                if (!mounted || !rootContext.mounted) return;
+                setState(() => _signing = false);
+                showCoreSnack(rootContext, '$error');
+                return;
+              }
+            } else {
+              setState(() => _signed = true);
+            }
+            if (!sheetContext.mounted || !rootContext.mounted) return;
+            Navigator.pop(sheetContext);
             widget.onSigned?.call();
             showCoreSuccessDialog(
-              context,
+              rootContext,
               title: 'Contract Signed',
               message: 'The agreement status is now marked as Signed.',
             );
@@ -145,6 +216,36 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_live && _contractFuture != null) {
+      return FutureBuilder<CineContract>(
+        future: _contractFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CoreScreenScaffold(
+              child: CoreEmptyState(
+                icon: Icons.hourglass_top_rounded,
+                title: 'Loading contract',
+                message: 'Fetching the signed agreement from CineConnect.',
+              ),
+            );
+          }
+          if (snapshot.hasError || snapshot.data == null) {
+            return _demoScaffold(context);
+          }
+          final contract = snapshot.data!;
+          _signed = contract.isSigned;
+          return _contractScaffold(context, contract: contract);
+        },
+      );
+    }
+    return _demoScaffold(context);
+  }
+
+  Widget _demoScaffold(BuildContext context) {
+    return _contractScaffold(context);
+  }
+
+  Widget _contractScaffold(BuildContext context, {CineContract? contract}) {
     final colors = context.appColors;
     return CoreScreenScaffold(
       child: Column(
@@ -165,7 +266,7 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Actor Booking Agreement',
+                        contract?.title ?? 'Actor Booking Agreement',
                         style: AppTextStyles.cardTitle.copyWith(
                           color: colors.textPrimary,
                           fontSize: 17,
@@ -182,7 +283,9 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Contract ID: CC-CON-2026-0041 · Booking BK-2048 · TVC Shoot — Lahore',
+                  contract == null
+                      ? 'Contract ID: CC-CON-2026-0041 · Booking BK-2048 · TVC Shoot — Lahore'
+                      : 'Contract ID: ${contract.publicId} · Booking ${contract.bookingId} · ${contract.displayValue}',
                   style: AppTextStyles.caption
                       .copyWith(color: colors.textSecondary),
                 ),
@@ -216,14 +319,14 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
             ),
           ],
           const SizedBox(height: 18),
-          _documentBody(context),
+          _documentBody(context, contract: contract),
           const SizedBox(height: 18),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               _actionButton(Icons.edit_note_outlined, 'Request Correction',
-                  _correctionDialog),
+                  () => _correctionDialog(contract)),
               _actionButton(
                   Icons.draw_outlined, 'Sign Contract', _signatureSheet),
               _actionButton(Icons.picture_as_pdf_outlined, 'Download PDF',
@@ -249,9 +352,9 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
     );
   }
 
-  Widget _documentBody(BuildContext context) {
+  Widget _documentBody(BuildContext context, {CineContract? contract}) {
     final colors = context.appColors;
-    final clauses = SharedMockData.clauses;
+    final clauses = contract?.clauses;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
@@ -282,12 +385,29 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          for (var i = 0; i < clauses.length; i++)
+          if (contract != null) ...[
             ContractClauseRow(
-              title: clauses[i].title,
-              value: clauses[i].value,
-              showDivider: i != clauses.length - 1,
+              title: 'Parties',
+              value: contract.counterpartySummary,
             ),
+            ContractClauseRow(
+              title: 'Commercials',
+              value:
+                  '${contract.displayValue} · effective ${contract.effectiveDate ?? 'on signature'} · ${contract.signatureProgressPercent}',
+            ),
+            for (var i = 0; i < (clauses ?? const []).length; i++)
+              ContractClauseRow(
+                title: clauses![i].title,
+                value: clauses[i].bodyText,
+                showDivider: i != clauses.length - 1,
+              ),
+          ] else
+            for (var i = 0; i < SharedMockData.clauses.length; i++)
+              ContractClauseRow(
+                title: SharedMockData.clauses[i].title,
+                value: SharedMockData.clauses[i].value,
+                showDivider: i != SharedMockData.clauses.length - 1,
+              ),
         ],
       ),
     );
@@ -345,11 +465,13 @@ class ContractClauseRow extends StatelessWidget {
 class _SignatureSheet extends StatelessWidget {
   final TextEditingController typed;
   final TextEditingController otp;
-  final VoidCallback onSigned;
+  final bool loading;
+  final Future<void> Function() onSigned;
 
   const _SignatureSheet({
     required this.typed,
     required this.otp,
+    required this.loading,
     required this.onSigned,
   });
 
@@ -400,6 +522,7 @@ class _SignatureSheet extends StatelessWidget {
             CorePrimaryButton(
               icon: Icons.verified_outlined,
               label: 'OTP-confirmed signature',
+              loading: loading,
               onTap: onSigned,
             ),
           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/director_producer_demo_data.dart';
@@ -114,11 +115,15 @@ class _ReportCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              DPHolographicButton(
+              ExportActionButton(
+                exportType: 'bookings',
                 label: 'Export',
-                icon: Icons.download_rounded,
-                onTap: () => dpSnack(context, 'Export downloaded'),
-                secondary: true,
+                builder: (context, onTap, label) => DPHolographicButton(
+                  label: label,
+                  icon: Icons.download_rounded,
+                  onTap: onTap,
+                  secondary: true,
+                ),
               ),
             ],
           ),

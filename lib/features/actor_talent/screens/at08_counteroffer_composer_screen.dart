@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/actor_talent_demo_data.dart';
@@ -27,6 +29,7 @@ class _AT08CounterofferComposerScreenState
   late final TextEditingController conditions;
   late final TextEditingController message;
   String? error;
+  bool sending = false;
 
   @override
   void initState() {
@@ -160,6 +163,10 @@ class _AT08CounterofferComposerScreenState
       setState(() => error = 'Required');
       return;
     }
+    if (offerId.startsWith('BKG-')) {
+      _submitLive();
+      return;
+    }
     ActorTalentDemoStore.instance.sendCounteroffer(offerId);
     ActorTalentDemoStore.instance.clearDraft(offerId);
     setState(() => error = null);
@@ -170,6 +177,45 @@ class _AT08CounterofferComposerScreenState
           route.settings.name == ActorTalentRoutes.opportunities ||
           route.isFirst,
     );
+  }
+
+  Future<void> _submitLive() async {
+    final feeMinor = _parseMinor(amount.text);
+    if (feeMinor == null || feeMinor <= 0) {
+      setState(() => error = 'Enter a valid amount');
+      return;
+    }
+    setState(() {
+      sending = true;
+      error = null;
+    });
+    try {
+      await BookingsScope.of(context).createCounterOffer(
+        bookingId: offerId,
+        feeMinor: feeMinor,
+        conditions: conditions.text.trim(),
+        message: message.text.trim(),
+      );
+      if (!mounted) return;
+      actorSnack(context, 'Counteroffer sent to Director');
+      Navigator.popUntil(
+        context,
+        (route) =>
+            route.settings.name == ActorTalentRoutes.opportunities ||
+            route.isFirst,
+      );
+    } on ApiException catch (apiError) {
+      if (!mounted) return;
+      setState(() => error = apiError.message);
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  int? _parseMinor(String value) {
+    final whole = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (whole == null) return null;
+    return whole * 100;
   }
 }
 

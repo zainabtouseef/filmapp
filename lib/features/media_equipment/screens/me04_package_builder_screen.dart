@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
+import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -21,6 +23,16 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
   late final TextEditingController _price;
   late final TextEditingController _terms;
   late bool _operatorIncluded;
+  Future<List<EquipmentItemDto>>? _liveItemsFuture;
+  final Set<String> _selectedLiveItemIds = {};
+  bool _publishing = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final operations = OperationsScope.maybeOf(context);
+    _liveItemsFuture ??= operations?.equipmentItems(force: true);
+  }
 
   @override
   void initState() {
@@ -107,9 +119,13 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
                         icon: store.packageStep == 3
                             ? Icons.verified_outlined
                             : Icons.arrow_forward_rounded,
-                        label: store.packageStep == 3 ? 'Publish' : 'Continue',
+                        label: _publishing
+                            ? 'Publishing…'
+                            : store.packageStep == 3
+                                ? 'Publish'
+                                : 'Continue',
                         compact: true,
-                        onTap: () => _advance(store),
+                        onTap: _publishing ? null : () => _advance(store),
                       ),
                     ),
                   ],
@@ -184,6 +200,52 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
     return switch (store.packageStep) {
       1 => Column(
           children: [
+            if (_liveItemsFuture != null)
+              FutureBuilder<List<EquipmentItemDto>>(
+                future: _liveItemsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 10),
+                      child: InlineNotice(
+                        message: 'Loading live inventory for package items...',
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    );
+                  }
+                  final liveItems = snapshot.data ?? const [];
+                  if (liveItems.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InlineNotice(
+                          message:
+                              'Live inventory connected: select items here to attach them to the backend package.',
+                          icon: Icons.cloud_done_outlined,
+                          tone: CoreStatusTone.success,
+                        ),
+                      ),
+                      for (final item in liveItems)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _SelectableItemRow(
+                            itemName: item.modelName,
+                            serial: item.publicId,
+                            selected:
+                                _selectedLiveItemIds.contains(item.publicId),
+                            onTap: () => setState(() {
+                              if (!_selectedLiveItemIds.add(item.publicId)) {
+                                _selectedLiveItemIds.remove(item.publicId);
+                              }
+                            }),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                    ],
+                  );
+                },
+              ),
             for (final item in store.inventory)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -242,9 +304,9 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
     };
   }
 
-  void _advance(MediaEquipmentDemoStore store) {
+  Future<void> _advance(MediaEquipmentDemoStore store) async {
     if (store.packageStep == 1) {
-      if (store.selectedPackageItems.isEmpty) {
+      if (store.selectedPackageItems.isEmpty && _selectedLiveItemIds.isEmpty) {
         mediaSnack(context, 'Select at least one inventory item');
         return;
       }
@@ -258,6 +320,34 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
       }
       store.setPackageStep(3);
       return;
+    }
+    setState(() => _publishing = true);
+    try {
+      final operations = OperationsScope.maybeOf(context);
+      if (operations != null) {
+        final packageResponse = await operations.createEquipmentPackage({
+          'name': _name.text.trim(),
+          'description': 'Created from ME-04 package builder',
+          'operator_included': _operatorIncluded,
+          'price_minor': (int.tryParse(_price.text.trim()) ?? 0) * 100,
+          'currency': 'PKR',
+          'terms': _terms.text.trim(),
+          'status': 'published',
+        });
+        final data = packageResponse['data'] as Map<String, dynamic>?;
+        final package = data?['package'] as Map<String, dynamic>?;
+        final packageId = package?['public_id'] as String?;
+        if (packageId != null && packageId.isNotEmpty) {
+          for (final itemId in _selectedLiveItemIds) {
+            await operations.addEquipmentPackageItem(packageId, itemId);
+          }
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      mediaSnack(context, 'Live package publish skipped: $error');
+    } finally {
+      if (mounted) setState(() => _publishing = false);
     }
     store.submitPackage(
       label: _name.text.trim(),
@@ -273,6 +363,7 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
       terms: _terms.text.trim(),
       operatorIncluded: _operatorIncluded,
     );
+    if (!mounted) return;
     showCoreSuccessDialog(
       context,
       title: 'Package published',

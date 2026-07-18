@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -10,8 +12,22 @@ import '../models/model_extension_models.dart';
 import '../widgets/model_extension_components.dart';
 
 /// MD-04 Rate by Usage
-class MD04RateByUsageScreen extends StatelessWidget {
+class MD04RateByUsageScreen extends StatefulWidget {
   const MD04RateByUsageScreen({super.key});
+
+  @override
+  State<MD04RateByUsageScreen> createState() => _MD04RateByUsageScreenState();
+}
+
+class _MD04RateByUsageScreenState extends State<MD04RateByUsageScreen> {
+  Future<List<ModelUsageRateDto>>? _ratesFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _ratesFuture ??= specialist?.modelUsageRates(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +79,33 @@ class MD04RateByUsageScreen extends StatelessWidget {
               icon: Icons.payments_outlined,
               child: Column(
                 children: [
+                  if (_ratesFuture != null)
+                    FutureBuilder<List<ModelUsageRateDto>>(
+                      future: _ratesFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live model usage rates...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live usage rates connected: ${rows.length} rate(s), latest ${rows.first.label}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   for (final rate in store.rates)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -119,8 +162,31 @@ class MD04RateByUsageScreen extends StatelessWidget {
             icon: Icons.verified_user_outlined,
             label: 'Confirm OTP',
             compact: true,
-            onTap: () {
+            onTap: () async {
               ModelExtensionDemoStore.instance.publishRates();
+              final specialist = SpecialistScope.maybeOf(context);
+              if (specialist != null) {
+                try {
+                  for (final rate in ModelExtensionDemoStore.instance.rates) {
+                    await specialist.createModelUsageRate({
+                      'label': rate.label,
+                      'scope': rate.scope,
+                      'amount_minor': rate.amount * 100,
+                      'currency': 'PKR',
+                      'requires_review': rate.requiresReview,
+                      'negotiable': rate.negotiable,
+                    });
+                  }
+                  if (!context.mounted) return;
+                  setState(() =>
+                      _ratesFuture = specialist.modelUsageRates(force: true));
+                } catch (error) {
+                  if (context.mounted) {
+                    actorSnack(context, 'Live rate publish skipped: $error');
+                  }
+                }
+              }
+              if (!context.mounted) return;
               Navigator.pop(context);
               actorSnack(context, 'Usage rates published');
             },

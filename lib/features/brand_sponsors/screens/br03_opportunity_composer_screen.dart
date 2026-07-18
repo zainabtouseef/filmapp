@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/brand_sponsor_demo_data.dart';
@@ -25,6 +26,7 @@ class _BR03OpportunityComposerScreenState
   final _eligibility =
       TextEditingController(text: 'Youth, music, fashion or campus projects');
   String _category = 'Product placement';
+  bool _publishing = false;
   String? _error;
 
   @override
@@ -105,9 +107,10 @@ class _BR03OpportunityComposerScreenState
                     Expanded(
                       child: CorePrimaryButton(
                         icon: Icons.publish_outlined,
-                        label: 'Publish',
+                        label: _publishing ? 'Publishing...' : 'Publish',
                         compact: true,
-                        onTap: () => _submit(context, store),
+                        onTap:
+                            _publishing ? null : () => _submit(context, store),
                       ),
                     ),
                   ],
@@ -191,17 +194,51 @@ class _BR03OpportunityComposerScreenState
     );
   }
 
-  void _submit(BuildContext context, BrandSponsorDemoStore store) {
+  Future<void> _submit(
+    BuildContext context,
+    BrandSponsorDemoStore store,
+  ) async {
     if (_title.text.trim().length < 6 ||
         _budget.text.trim().isEmpty ||
         _deliverables.text.trim().length < 8) {
       setState(() => _error = 'Complete title, budget and deliverables.');
       return;
     }
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _publishing = true;
+    });
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist != null) {
+      try {
+        await specialist.createBrandOpportunity({
+          'title': _title.text.trim(),
+          'category': _category.toLowerCase().replaceAll(' ', '_'),
+          'budget_minor': _parseMoneyMinor(_budget.text),
+          'currency': 'PKR',
+          'usage_summary': _usage.text.trim(),
+          'eligibility': _eligibility.text.trim(),
+          'deliverables': _deliverables.text.trim(),
+          'application_due_at':
+              DateTime.now().add(const Duration(days: 14)).toIso8601String(),
+          'status': 'published',
+        });
+      } catch (error) {
+        if (!context.mounted) return;
+        brandSnack(context, 'Live opportunity publish skipped: $error');
+      }
+    }
     store.createOpportunityDraft();
+    if (!context.mounted) return;
+    setState(() => _publishing = false);
     brandSnack(context, 'Opportunity published to applications market');
     Navigator.pushNamed(context, BrandSponsorRoutes.applications);
+  }
+
+  int _parseMoneyMinor(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    final major = int.tryParse(digits) ?? 0;
+    return major * 100;
   }
 }
 

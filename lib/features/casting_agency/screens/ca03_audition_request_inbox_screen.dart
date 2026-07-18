@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -21,6 +23,14 @@ class _CA03AuditionRequestInboxScreenState
     extends State<CA03AuditionRequestInboxScreen> {
   String _query = '';
   String _sort = 'Newest';
+  Future<List<AuditionDto>>? _auditionsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _auditionsFuture ??= specialist?.auditions(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +48,33 @@ class _CA03AuditionRequestInboxScreenState
               selected: true,
               child: Column(
                 children: [
+                  if (_auditionsFuture != null)
+                    FutureBuilder<List<AuditionDto>>(
+                      future: _auditionsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live audition requests...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live auditions connected: ${rows.length} request(s), latest ${rows.first.publicId} is ${rows.first.status}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   AgencySearchField(
                     hintText: 'Search project, director, role...',
                     onChanged: (value) => setState(() => _query = value),
@@ -105,6 +142,26 @@ class _CA03AuditionRequestInboxScreenState
                       onReview: () {
                         store.reviewAudition(audition.id);
                         store.selectAudition(audition.id);
+                        final specialist = SpecialistScope.maybeOf(context);
+                        final live = _auditionsFuture;
+                        if (specialist != null && live != null) {
+                          () async {
+                            try {
+                              final rows = await live;
+                              if (rows.isEmpty) return;
+                              await specialist.updateAuditionStatus(
+                                rows.first.publicId,
+                                'reviewing',
+                              );
+                              if (!mounted) return;
+                              setState(() => _auditionsFuture =
+                                  specialist.auditions(force: true));
+                            } catch (_) {
+                              // Demo state remains the fallback if the live
+                              // audition is not writable by this account.
+                            }
+                          }();
+                        }
                         agencySnack(context, '${audition.project} in review');
                       },
                       onShortlist: () {

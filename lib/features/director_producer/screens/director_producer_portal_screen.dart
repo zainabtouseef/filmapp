@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/core_contract/screens/contract_viewer_screen.dart';
 import '../../../core/core_payment/screens/payment_proof_screen.dart';
 import '../../../core/core_payment/screens/receipts_ledger_screen.dart';
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_shell.dart';
 import 'dp_bargaining_center_screen.dart';
@@ -36,10 +38,16 @@ class DirectorProducerPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DPShell(
+    final auth = AuthScope.maybeOf(context);
+    final content = DPShell(
       title: _title(routeName),
       currentRoute: routeName,
       child: _content(routeName),
+    );
+    if (auth == null) return content;
+    return ProjectsScope(
+      controller: ProjectsController.fromClient(auth.apiClient),
+      child: content,
     );
   }
 
@@ -75,7 +83,8 @@ class DirectorProducerPortalScreen extends StatelessWidget {
         const DPCreateProjectWizardScreen(),
       DirectorProducerRoutes.projectDetail =>
         DPProjectDetailScreen(projectId: id),
-      DirectorProducerRoutes.requirements => const DPRequirementBuilderScreen(),
+      DirectorProducerRoutes.requirements =>
+        DPRequirementBuilderScreen(projectId: id),
       DirectorProducerRoutes.marketplace =>
         const DPMarketplaceDiscoveryScreen(),
       DirectorProducerRoutes.filters => const DPSmartFiltersSheet(),
@@ -91,7 +100,7 @@ class DirectorProducerPortalScreen extends StatelessWidget {
       DirectorProducerRoutes.payments => const DPPaymentCenterScreen(),
       DirectorProducerRoutes.schedule => const DPCalendarScheduleScreen(),
       DirectorProducerRoutes.accounts => const DPProjectAccountsScreen(),
-      DirectorProducerRoutes.room => const DPProjectRoomScreen(),
+      DirectorProducerRoutes.room => DPProjectRoomScreen(projectId: id),
       DirectorProducerRoutes.reports => const DPReportsExportScreen(),
       _ => const DPHomeDashboardScreen(),
     };

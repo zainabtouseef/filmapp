@@ -12,6 +12,14 @@ class _PaymentVerificationQueueScreenState
     extends State<PaymentVerificationQueueScreen> {
   String _filter = 'All';
   bool _sortValue = true;
+  Future<List<PaymentProofDto>>? _proofsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final payments = PaymentsScope.maybeOf(context);
+    _proofsFuture ??= payments?.adminProofs(force: true);
+  }
 
   bool _matches(AdminPaymentProof proof) {
     final ageHours = int.tryParse(proof.age.replaceAll('h', '')) ?? 0;
@@ -27,43 +35,103 @@ class _PaymentVerificationQueueScreenState
     };
   }
 
+  AdminPaymentProof _toAdminProof(PaymentProofDto proof) {
+    return AdminPaymentProof(
+      proofId: proof.publicId,
+      bookingId: proof.bookingId.isEmpty ? 'Booking' : proof.bookingId,
+      contractId:
+          proof.transactionId.isEmpty ? 'Payment proof' : proof.transactionId,
+      payer: 'Submitted by ${proof.submittedBy.displayName}',
+      payee: 'Milestone ${proof.milestoneId}',
+      milestone: proof.status.replaceAll('_', ' '),
+      expectedAmount: proof.claimedAmountMinor ~/ 100,
+      claimedAmount: proof.claimedAmountMinor ~/ 100,
+      method: _methodLabel(proof.method),
+      risk: proof.riskScore >= 70
+          ? 'Duplicate Proof'
+          : proof.riskScore >= 40
+              ? 'Amount Mismatch'
+              : 'No Risk',
+      age: '0h',
+      status: proof.status,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final proofs =
-        AdminMockData.paymentProofs.where(_matches).toList()
-          ..sort((a, b) => _sortValue
-              ? b.claimedAmount.compareTo(a.claimedAmount)
-              : b.age.compareTo(a.age));
+    if (_proofsFuture != null) {
+      return FutureBuilder<List<PaymentProofDto>>(
+        future: _proofsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            final message = snapshot.error is ApiException
+                ? (snapshot.error! as ApiException).message
+                : 'Could not load live payment proofs.';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InlineNotice(message: message, tone: CoreStatusTone.warning),
+                const SizedBox(height: 16),
+                _queueContent(context, AdminMockData.paymentProofs),
+              ],
+            );
+          }
+          final proofs =
+              (snapshot.data ?? const []).map(_toAdminProof).toList();
+          return _queueContent(context, proofs);
+        },
+      );
+    }
+    return _queueContent(context, AdminMockData.paymentProofs);
+  }
+
+  Widget _queueContent(BuildContext context, List<AdminPaymentProof> source) {
+    final filtered = source.where(_matches).toList()
+      ..sort((a, b) => _sortValue
+          ? b.claimedAmount.compareTo(a.claimedAmount)
+          : b.age.compareTo(a.age));
+    final pending = source.where((proof) => proof.status == 'pending').toList();
+    final totalPending =
+        pending.fold<int>(0, (total, proof) => total + proof.claimedAmount);
+    final highValue =
+        source.where((proof) => proof.claimedAmount >= 100000).length;
+    final mismatch =
+        source.where((proof) => proof.risk == 'Amount Mismatch').length;
+    final duplicate =
+        source.where((proof) => proof.risk == 'Duplicate Proof').length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ResponsiveGrid(
           minTileWidth: 190,
           childAspectRatio: 2.6,
-          children: const [
+          children: [
             AdminMetricTile(
                 label: 'Total pending value',
-                value: 'PKR 4.2M',
+                value: 'PKR ${_adminMoney(totalPending)}',
                 icon: Icons.account_balance_wallet_outlined,
                 tone: AdminDecisionTone.warning),
             AdminMetricTile(
                 label: 'High-value proofs',
-                value: '6',
+                value: '$highValue',
                 icon: Icons.priority_high_rounded,
                 tone: AdminDecisionTone.danger),
             AdminMetricTile(
                 label: 'Mismatch alerts',
-                value: '3',
+                value: '$mismatch',
                 icon: Icons.compare_arrows_rounded,
                 tone: AdminDecisionTone.danger),
             AdminMetricTile(
                 label: 'Duplicate warnings',
-                value: '2',
+                value: '$duplicate',
                 icon: Icons.copy_all_outlined,
                 tone: AdminDecisionTone.warning),
-            AdminMetricTile(
+            const AdminMetricTile(
                 label: 'Oldest pending proof',
-                value: '27h',
+                value: 'Live',
                 icon: Icons.timer_outlined,
                 tone: AdminDecisionTone.warning),
           ],
@@ -91,26 +159,44 @@ class _PaymentVerificationQueueScreenState
           onTap: () => setState(() => _sortValue = !_sortValue),
         ),
         const SizedBox(height: 16),
-        if (proofs.isEmpty)
+        if (filtered.isEmpty)
           const AdminEmptyState(
             icon: Icons.search_off_rounded,
             title: 'No matching proofs',
             message: 'Try a different filter.',
           )
         else
-          ...proofs.map(
+          ...filtered.map(
             (proof) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _PaymentProofRow(
                 proof: proof,
                 onReview: () => Navigator.pushNamed(
-                    context, SuperAdminRoutes.paymentReview),
+                  context,
+                  SuperAdminRoutes.paymentReview,
+                  arguments: proof.proofId,
+                ),
               ),
             ),
           ),
       ],
     );
   }
+}
+
+String _methodLabel(String value) {
+  return switch (value) {
+    'bank_transfer' => 'Bank Transfer',
+    'card_sandbox' => 'Gateway Ref',
+    'wallet' => 'Wallet',
+    _ => value.replaceAll('_', ' '),
+  };
+}
+
+String _adminMoney(int value) {
+  if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+  if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}K';
+  return '$value';
 }
 
 class _PaymentProofRow extends StatelessWidget {

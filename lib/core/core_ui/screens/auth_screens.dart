@@ -2,19 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../auth/auth_controller.dart';
+import '../../auth/role_mapper.dart';
+import '../../network/api_exception.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
-import '../../../features/actor_talent/routes/actor_talent_routes.dart';
-import '../../../features/brand_sponsors/routes/brand_sponsor_routes.dart';
-import '../../../features/casting_agency/routes/casting_agency_routes.dart';
-import '../../../features/crew_services/routes/crew_services_routes.dart';
-import '../../../features/director_producer/routes/director_producer_routes.dart';
-import '../../../features/distribution_partner/routes/distribution_partner_routes.dart';
-import '../../../features/insurance_partner/routes/insurance_partner_routes.dart';
-import '../../../features/legal_partner/routes/legal_partner_routes.dart';
-import '../../../features/location_owner/routes/location_owner_routes.dart';
-import '../../../features/media_equipment/routes/media_equipment_routes.dart';
-import '../../../features/model_extension/routes/model_extension_routes.dart';
 import '../../../features/super_admin/routes/super_admin_routes.dart';
 import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
@@ -40,8 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _identity.text = 'producer@cineconnect.demo';
-    _password.text = 'demo123';
+    _identity.text = '';
+    _password.text = '';
   }
 
   @override
@@ -69,22 +61,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() {
       _identityError =
-          _identity.text.trim().isEmpty ? 'Phone or email is required' : null;
+          _identity.text.trim().isEmpty ? 'Email is required' : null;
       _passwordError = _password.text.isEmpty ? 'Password is required' : null;
     });
     if (_identityError != null || _passwordError != null) return;
 
     setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-
-    const fakeAccountStatus = 'verified';
-    if (fakeAccountStatus == 'verification_pending') {
-      Navigator.pushNamed(context, CoreRoutes.verificationStatus);
-    } else if (_portalRouteFor(_demoLoginAs) != null) {
-      Navigator.pushNamed(context, _portalRouteFor(_demoLoginAs)!);
-    } else {
-      Navigator.pushNamed(context, CoreRoutes.dashboard);
+    try {
+      final auth = AuthScope.of(context);
+      await auth.login(email: _identity.text.trim(), password: _password.text);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, auth.initialAuthenticatedRoute);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _passwordError = error.message;
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -111,20 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String? _portalRouteFor(String label) {
-    return switch (label) {
-      'Director / Producer' => DirectorProducerRoutes.home,
-      'Actor / Talent' => ActorTalentRoutes.dashboard,
-      'Model' => ModelExtensionRoutes.categories,
-      'Location Owner' => LocationOwnerRoutes.home,
-      'Media / Equipment Provider' => MediaEquipmentRoutes.home,
-      'Crew / Services' => CrewServicesRoutes.home,
-      'Casting Agency' => CastingAgencyRoutes.home,
-      'Brand / Sponsor' => BrandSponsorRoutes.home,
-      'Legal Partner' => LegalPartnerRoutes.home,
-      'Insurance / Safety Partner' => InsurancePartnerRoutes.home,
-      'Distribution / Release Partner' => DistributionPartnerRoutes.home,
-      _ => null,
-    };
+    return RoleMapper.portalRouteForCode(RoleMapper.codeForLabel(label));
   }
 
   static const _demoRoles = [
@@ -238,8 +219,9 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 4),
           Text(
             'Continue managing your production universe.',
-            style:
-                AppTextStyles.bodyMuted.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.bodyMuted.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
           const SizedBox(height: 24),
           CoreGlassCard(
@@ -280,7 +262,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pushNamed(
-                          context, CoreRoutes.forgotPassword),
+                        context,
+                        CoreRoutes.forgotPassword,
+                      ),
                       child: const Text('Forgot Password?'),
                     ),
                   ],
@@ -292,13 +276,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   onChanged: (value) => setState(() => _biometric = value),
                   title: Text(
                     'Biometric login',
-                    style:
-                        AppTextStyles.label.copyWith(color: colors.textPrimary),
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.textPrimary,
+                    ),
                   ),
                   subtitle: Text(
                     'Enable after first login',
-                    style: AppTextStyles.caption
-                        .copyWith(color: colors.textSecondary),
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -306,7 +292,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   onTap: _showDemoRolePicker,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: colors.border),
@@ -314,8 +302,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.badge_outlined,
-                            size: 18, color: colors.goldDark),
+                        Icon(
+                          Icons.badge_outlined,
+                          size: 18,
+                          color: colors.goldDark,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
@@ -323,21 +314,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Text(
                                 'Demo login as',
-                                style: AppTextStyles.caption
-                                    .copyWith(color: colors.textSecondary),
+                                style: AppTextStyles.caption.copyWith(
+                                  color: colors.textSecondary,
+                                ),
                               ),
                               Text(
                                 _demoLoginAs,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.label
-                                    .copyWith(color: colors.textPrimary),
+                                style: AppTextStyles.label.copyWith(
+                                  color: colors.textPrimary,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.expand_more_rounded,
-                            color: colors.iconMuted),
+                        Icon(
+                          Icons.expand_more_rounded,
+                          color: colors.iconMuted,
+                        ),
                       ],
                     ),
                   ),
@@ -378,6 +373,7 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
   int _step = 0;
   bool _terms = false;
   bool _showPassword = false;
+  bool _loading = false;
   String _city = SharedMockData.cities.first;
 
   final _fullName = TextEditingController();
@@ -425,7 +421,9 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
         ..['phone'] =
             _phone.text.trim().isEmpty ? 'Phone number is required' : null
         ..['email'] = _email.text.trim().isEmpty ? 'Email is required' : null
-        ..['password'] = _password.text.isEmpty ? 'Password is required' : null
+        ..['password'] = _password.text.length < 10
+            ? 'Password must contain at least 10 characters'
+            : null
         ..['confirm'] =
             _confirm.text != _password.text ? 'Passwords must match' : null
         ..['terms'] = _terms ? null : 'Accept terms to continue';
@@ -433,10 +431,30 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
     return _errors.values.every((error) => error == null);
   }
 
-  void _createAccount() {
+  Future<void> _createAccount() async {
     if (!_validateSignup()) return;
-    _startTimer();
-    setState(() => _step = 1);
+    setState(() => _loading = true);
+    try {
+      await AuthScope.of(context).register(
+        email: _email.text.trim(),
+        password: _password.text,
+        displayName: _fullName.text.trim(),
+        initialRole: RoleMapper.codeForLabel(widget.selectedRole),
+      );
+      if (!mounted) return;
+      _startTimer();
+      setState(() => _step = 1);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errors['email'] = error.fields['email']?.first;
+        _errors['password'] = error.fields['password']?.first;
+        _errors['fullName'] = error.fields['display_name']?.first;
+        _errors['form'] = error.message;
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _verifyOtp() {
@@ -486,26 +504,37 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
             icon: Icons.verified_outlined,
             tone: CoreStatusTone.warning,
           ),
+          if (_errors['form'] != null) ...[
+            const SizedBox(height: 12),
+            InlineNotice(
+              message: _errors['form']!,
+              icon: Icons.info_outline_rounded,
+              tone: CoreStatusTone.warning,
+            ),
+          ],
           const SizedBox(height: 18),
           CoreTextField(
-              controller: _fullName,
-              label: 'Full name',
-              icon: Icons.person_outline,
-              errorText: _errors['fullName']),
+            controller: _fullName,
+            label: 'Full name',
+            icon: Icons.person_outline,
+            errorText: _errors['fullName'],
+          ),
           const SizedBox(height: 14),
           CoreTextField(
-              controller: _phone,
-              label: 'Phone number',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              errorText: _errors['phone']),
+            controller: _phone,
+            label: 'Phone number',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            errorText: _errors['phone'],
+          ),
           const SizedBox(height: 14),
           CoreTextField(
-              controller: _email,
-              label: 'Email',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              errorText: _errors['email']),
+            controller: _email,
+            label: 'Email',
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            errorText: _errors['email'],
+          ),
           const SizedBox(height: 14),
           CoreTextField(
             controller: _password,
@@ -515,18 +544,21 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
             errorText: _errors['password'],
             suffix: IconButton(
               onPressed: () => setState(() => _showPassword = !_showPassword),
-              icon: Icon(_showPassword
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined),
+              icon: Icon(
+                _showPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+              ),
             ),
           ),
           const SizedBox(height: 14),
           CoreTextField(
-              controller: _confirm,
-              label: 'Confirm password',
-              icon: Icons.lock_reset_rounded,
-              obscureText: !_showPassword,
-              errorText: _errors['confirm']),
+            controller: _confirm,
+            label: 'Confirm password',
+            icon: Icons.lock_reset_rounded,
+            obscureText: !_showPassword,
+            errorText: _errors['confirm'],
+          ),
           const SizedBox(height: 14),
           CoreDropdownField<String>(
             value: _city,
@@ -537,9 +569,10 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
           ),
           const SizedBox(height: 14),
           CoreTextField(
-              controller: _referral,
-              label: 'Referral code optional',
-              icon: Icons.confirmation_number_outlined),
+            controller: _referral,
+            label: 'Referral code optional',
+            icon: Icons.confirmation_number_outlined,
+          ),
           const SizedBox(height: 10),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
@@ -548,22 +581,25 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
             onChanged: (value) => setState(() => _terms = value ?? false),
             title: Text(
               'I agree to CineConnect terms, privacy and verification rules',
-              style:
-                  AppTextStyles.caption.copyWith(color: colors.textSecondary),
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
             subtitle: _errors['terms'] == null
                 ? null
                 : Text(
                     _errors['terms']!,
-                    style: AppTextStyles.caption
-                        .copyWith(color: colors.infoPurple),
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.infoPurple,
+                    ),
                   ),
           ),
           const SizedBox(height: 18),
           CorePrimaryButton(
             icon: Icons.mark_email_read_outlined,
             label: 'Create Account',
-            onTap: _createAccount,
+            loading: _loading,
+            onTap: _loading ? null : _createAccount,
           ),
         ],
       ),
@@ -594,8 +630,9 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
                   _resendSeconds == 0
                       ? 'You can resend the code now'
                       : 'Resend available in $_resendSeconds seconds',
-                  style: AppTextStyles.caption
-                      .copyWith(color: colors.textSecondary),
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
               ),
               TextButton(
@@ -634,6 +671,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   String? _error;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -644,11 +682,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _next() {
+  Future<void> _next() async {
     setState(() => _error = null);
     if (_step == 0 && _identity.text.trim().isEmpty) {
-      setState(() => _error = 'Enter your phone or email');
+      setState(() => _error = 'Enter your email');
       return;
+    }
+    if (_step == 0) {
+      setState(() => _loading = true);
+      try {
+        await AuthScope.of(context).forgotPassword(_identity.text.trim());
+      } on ApiException catch (error) {
+        if (!mounted) return;
+        setState(() => _error = error.message);
+        return;
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
+      if (!mounted) return;
     }
     if (_step == 1 && _otp.text.trim().length != 6) {
       setState(() => _error = 'Enter any 6-digit OTP');
@@ -692,9 +743,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 if (_step == 0)
                   CoreTextField(
                     controller: _identity,
-                    label: 'Phone or email',
+                    label: 'Email',
                     icon: Icons.alternate_email_rounded,
                     errorText: _error,
+                    keyboardType: TextInputType.emailAddress,
                   )
                 else if (_step == 1)
                   OtpInputRow(controller: _otp, errorText: _error)
@@ -725,15 +777,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ? Icons.login_rounded
                       : Icons.arrow_forward_rounded,
                   label: _step == 0
-                      ? 'Send OTP'
+                      ? 'Send Reset Email'
                       : _step == 1
                           ? 'Verify OTP'
                           : _step == 2
                               ? 'Update Password'
                               : 'Back to Login',
+                  loading: _loading,
                   onTap: _step == 3
                       ? () => Navigator.pushNamed(context, CoreRoutes.login)
-                      : _next,
+                      : _loading
+                          ? null
+                          : _next,
                 ),
               ],
             ),
@@ -773,13 +828,19 @@ class _CoreBottomSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: AppTextStyles.sectionTitle
-                      .copyWith(color: colors.textPrimary)),
+              Text(
+                title,
+                style: AppTextStyles.sectionTitle.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text(subtitle,
-                  style: AppTextStyles.bodyMuted
-                      .copyWith(color: colors.textSecondary)),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodyMuted.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
               const SizedBox(height: 18),
               child,
             ],

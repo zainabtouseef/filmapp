@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../auth/auth_controller.dart';
+import '../../auth/role_mapper.dart';
+import '../../network/api_exception.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../../uploads/upload_repository.dart';
+import '../../verification/verification_models.dart';
 import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
@@ -10,10 +17,7 @@ import '../widgets/core_widgets.dart';
 class KycVerificationScreen extends StatefulWidget {
   final String selectedRole;
 
-  const KycVerificationScreen({
-    super.key,
-    required this.selectedRole,
-  });
+  const KycVerificationScreen({super.key, required this.selectedRole});
 
   @override
   State<KycVerificationScreen> createState() => _KycVerificationScreenState();
@@ -26,6 +30,13 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   bool _selfieCaptured = false;
   bool _roleDocUploaded = false;
   bool _ownsAccount = false;
+  bool _submitting = false;
+  String? _loadingUpload;
+  String? _formError;
+  UploadedFile? _frontFile;
+  UploadedFile? _backFile;
+  UploadedFile? _selfieFile;
+  UploadedFile? _roleDocFile;
   final _documentNumber = TextEditingController();
   final _expiry = TextEditingController();
   final _accountTitle = TextEditingController();
@@ -44,21 +55,173 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     super.dispose();
   }
 
-  void _next() {
+  Future<void> _uploadPickedFile({
+    required String slot,
+    required PickedFileData file,
+  }) async {
+    setState(() {
+      _loadingUpload = slot;
+      _formError = null;
+    });
+    try {
+      final uploadedFile = await AuthScope.of(context).uploadFile(
+        purpose: 'kyc_document',
+        file: file,
+      );
+      if (!mounted) return;
+      setState(() {
+        switch (slot) {
+          case 'front':
+            _frontFile = uploadedFile;
+            _frontUploaded = true;
+          case 'back':
+            _backFile = uploadedFile;
+            _backUploaded = true;
+          case 'selfie':
+            _selfieFile = uploadedFile;
+            _selfieCaptured = true;
+          case 'role':
+            _roleDocFile = uploadedFile;
+            _roleDocUploaded = true;
+        }
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _formError = error.message);
+    } finally {
+      if (mounted) setState(() => _loadingUpload = null);
+    }
+  }
+
+  Future<void> _pickDocumentForSlot(String slot) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final picked = result.files.single;
+      final bytes = picked.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        setState(() => _formError = 'Could not read the selected file.');
+        return;
+      }
+      await _uploadPickedFile(
+        slot: slot,
+        file: PickedFileData(
+          name: picked.name,
+          mimeType: _mimeTypeForName(picked.name),
+          bytes: bytes,
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _formError = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _formError = 'Could not open the file picker.');
+    }
+  }
+
+  Future<void> _captureSelfie() async {
+    try {
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        imageQuality: 92,
+        maxWidth: 1600,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      if (bytes.isEmpty) {
+        setState(() => _formError = 'Could not read the captured selfie.');
+        return;
+      }
+      await _uploadPickedFile(
+        slot: 'selfie',
+        file: PickedFileData(
+          name: image.name.isEmpty ? 'selfie-liveness.jpg' : image.name,
+          mimeType: image.mimeType ?? _mimeTypeForName(image.name),
+          bytes: bytes,
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _formError = error.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _formError = 'Could not open the camera.');
+    }
+  }
+
+  Future<void> _next() async {
+    setState(() => _formError = null);
+    if (_step == 0 &&
+        (_frontFile == null ||
+            _backFile == null ||
+            _documentNumber.text.trim().isEmpty)) {
+      setState(
+        () => _formError =
+            'Upload both identity images and add the document number.',
+      );
+      return;
+    }
+    if (_step == 1 && _selfieFile == null) {
+      setState(() => _formError = 'Capture a selfie before continuing.');
+      return;
+    }
+    if (_step == 2 && _roleDocFile == null) {
+      setState(() => _formError = 'Upload at least one role proof document.');
+      return;
+    }
     if (_step < 3) {
       setState(() => _step++);
       return;
     }
-    showCoreSuccessDialog(
-      context,
-      title: 'Submitted for Verification',
-      message: 'Your KYC submission has been sent to CineConnect Admin review.',
-      buttonLabel: 'View Status',
-      onDone: () => Navigator.pushNamed(
+    if (!_ownsAccount) {
+      setState(
+          () => _formError = 'Confirm the payment account belongs to you.');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await AuthScope.of(context).createAndSubmitKyc(
+        roleCode: RoleMapper.codeForLabel(widget.selectedRole),
+        documents: [
+          KycDocumentDraft(
+            documentType: 'national_id_front',
+            fileId: _frontFile?.publicId,
+          ),
+          KycDocumentDraft(
+            documentType: 'national_id_back',
+            fileId: _backFile?.publicId,
+          ),
+          KycDocumentDraft(
+            documentType: 'selfie_liveness',
+            fileId: _selfieFile?.publicId,
+          ),
+          KycDocumentDraft(
+            documentType: 'role_proof',
+            fileId: _roleDocFile?.publicId,
+          ),
+        ],
+      );
+      if (!mounted) return;
+      showCoreSuccessDialog(
         context,
-        CoreRoutes.verificationStatus,
-      ),
-    );
+        title: 'Submitted for Verification',
+        message:
+            'Your KYC submission has been sent to CineConnect Admin review.',
+        buttonLabel: 'View Status',
+        onDone: () =>
+            Navigator.pushNamed(context, CoreRoutes.verificationStatus),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _formError = error.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -80,6 +243,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             duration: const Duration(milliseconds: 220),
             child: _stepBody(context),
           ),
+          if (_formError != null) ...[
+            const SizedBox(height: 12),
+            InlineNotice(
+              message: _formError!,
+              icon: Icons.info_outline_rounded,
+              tone: CoreStatusTone.warning,
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             children: [
@@ -99,7 +270,8 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
                       ? Icons.outbox_outlined
                       : Icons.arrow_forward_rounded,
                   label: _step == 3 ? 'Submit for Verification' : 'Continue',
-                  onTap: _next,
+                  loading: _submitting,
+                  onTap: _submitting ? null : _next,
                 ),
               ),
             ],
@@ -128,16 +300,24 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
           const SizedBox(height: 14),
           UploadCard(
             title: 'CNIC/passport front',
-            subtitle: 'Upload a clear front-side image',
+            subtitle: _frontFile == null
+                ? 'Upload a clear front-side image'
+                : 'Saved for admin review · ${_frontFile!.scanStatus}',
             uploaded: _frontUploaded,
-            onTap: () => setState(() => _frontUploaded = true),
+            onTap: _loadingUpload == null
+                ? () => _pickDocumentForSlot('front')
+                : null,
           ),
           const SizedBox(height: 12),
           UploadCard(
             title: 'CNIC/passport back',
-            subtitle: 'Upload a clear back-side image',
+            subtitle: _backFile == null
+                ? 'Upload a clear back-side image'
+                : 'Saved for admin review · ${_backFile!.scanStatus}',
             uploaded: _backUploaded,
-            onTap: () => setState(() => _backUploaded = true),
+            onTap: _loadingUpload == null
+                ? () => _pickDocumentForSlot('back')
+                : null,
           ),
           const SizedBox(height: 14),
           CoreTextField(
@@ -168,7 +348,8 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                  color: _selfieCaptured ? colors.success : colors.border),
+                color: _selfieCaptured ? colors.success : colors.border,
+              ),
               color: colors.surface.withValues(alpha: 0.42),
             ),
             child: Row(
@@ -196,9 +377,8 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
                         ? 'Selfie captured'
                         : 'Selfie / liveness capture',
                     style: AppTextStyles.label.copyWith(
-                      color: _selfieCaptured
-                          ? colors.success
-                          : colors.textPrimary,
+                      color:
+                          _selfieCaptured ? colors.success : colors.textPrimary,
                     ),
                   ),
                 ),
@@ -208,8 +388,9 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
           const SizedBox(height: 12),
           CorePrimaryButton(
             icon: Icons.camera_alt_outlined,
-            label: 'Capture Selfie',
-            onTap: () => setState(() => _selfieCaptured = true),
+            label: _selfieFile == null ? 'Capture Selfie' : 'Selfie Saved',
+            loading: _loadingUpload == 'selfie',
+            onTap: _loadingUpload == null ? _captureSelfie : null,
           ),
         ],
       ),
@@ -230,9 +411,13 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: UploadCard(
                 title: doc,
-                subtitle: 'Attach PDF, image or portfolio link proof',
+                subtitle: _roleDocFile == null
+                    ? 'Attach PDF, image or portfolio link proof'
+                    : 'Saved for admin review · ${_roleDocFile!.scanStatus}',
                 uploaded: _roleDocUploaded,
-                onTap: () => setState(() => _roleDocUploaded = true),
+                onTap: _loadingUpload == null
+                    ? () => _pickDocumentForSlot('role')
+                    : null,
               ),
             ),
           ),
@@ -277,14 +462,24 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             onChanged: (value) => setState(() => _ownsAccount = value ?? false),
             title: Text(
               'I confirm this account belongs to me',
-              style:
-                  AppTextStyles.caption.copyWith(color: colors.textSecondary),
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+String _mimeTypeForName(String name) {
+  final lower = name.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  return 'application/octet-stream';
 }
 
 String _statusLabel(VerificationStatus status) {
@@ -304,7 +499,23 @@ class VerificationStatusScreen extends StatefulWidget {
 }
 
 class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
-  VerificationStatus status = VerificationStatus.pending;
+  late Future<List<KycSubmission>> _submissionsFuture;
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loaded) {
+      _submissionsFuture = AuthScope.of(context).myKycSubmissions();
+      _loaded = true;
+    }
+  }
+
+  void _refresh() {
+    setState(() {
+      _submissionsFuture = AuthScope.of(context).myKycSubmissions();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -318,39 +529,76 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
             icon: Icons.fact_check_outlined,
           ),
           const SizedBox(height: 20),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              CoreChip(
-                label: 'Pending',
-                selected: status == VerificationStatus.pending,
-                onTap: () =>
-                    setState(() => status = VerificationStatus.pending),
-              ),
-              CoreChip(
-                label: 'Needs Resubmission',
-                selected: status == VerificationStatus.needsResubmission,
-                onTap: () => setState(
-                    () => status = VerificationStatus.needsResubmission),
-              ),
-              CoreChip(
-                label: 'Approved',
-                selected: status == VerificationStatus.approved,
-                onTap: () =>
-                    setState(() => status = VerificationStatus.approved),
-              ),
-            ],
+          FutureBuilder<List<KycSubmission>>(
+            future: _submissionsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const CoreGlassCard(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return CoreGlassCard(
+                  child: Column(
+                    children: [
+                      const CoreEmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Could not load verification status',
+                        message: 'Check your connection and try again.',
+                      ),
+                      const SizedBox(height: 12),
+                      CoreSecondaryButton(
+                        icon: Icons.refresh_rounded,
+                        label: 'Retry',
+                        onTap: _refresh,
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final submissions = snapshot.data ?? const <KycSubmission>[];
+              if (submissions.isEmpty) {
+                return CoreGlassCard(
+                  child: Column(
+                    children: [
+                      const CoreEmptyState(
+                        icon: Icons.fact_check_outlined,
+                        title: 'No verification submitted yet',
+                        message:
+                            'Complete KYC to unlock full booking, contract and payment access.',
+                      ),
+                      const SizedBox(height: 12),
+                      CorePrimaryButton(
+                        icon: Icons.upload_file_outlined,
+                        label: 'Start Verification',
+                        onTap: () =>
+                            Navigator.pushNamed(context, CoreRoutes.kyc),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return _statusCard(context, submissions.first);
+            },
           ),
-          const SizedBox(height: 20),
-          _statusCard(context),
         ],
       ),
     );
   }
 
-  Widget _statusCard(BuildContext context) {
+  VerificationStatus _statusFor(String value) {
+    return switch (value) {
+      'approved' => VerificationStatus.approved,
+      'needs_resubmission' ||
+      'rejected' =>
+        VerificationStatus.needsResubmission,
+      _ => VerificationStatus.pending,
+    };
+  }
+
+  Widget _statusCard(BuildContext context, KycSubmission submission) {
     final colors = context.appColors;
+    final status = _statusFor(submission.status);
     final data = switch (status) {
       VerificationStatus.pending => (
           Icons.hourglass_top_rounded,
@@ -390,8 +638,10 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
           Text(
             data.$2,
             textAlign: TextAlign.center,
-            style: AppTextStyles.sectionTitle
-                .copyWith(color: colors.textPrimary, fontSize: 19),
+            style: AppTextStyles.sectionTitle.copyWith(
+              color: colors.textPrimary,
+              fontSize: 19,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
@@ -402,6 +652,24 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
               height: 1.45,
             ),
           ),
+          if (submission.decisionReason != null) ...[
+            const SizedBox(height: 12),
+            InlineNotice(
+              message: submission.decisionReason!,
+              icon: Icons.info_outline_rounded,
+              tone: CoreStatusTone.warning,
+            ),
+          ],
+          if (submission.files.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              '${submission.files.length} verification file(s) attached · scan pending',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
           const SizedBox(height: 22),
           if (status == VerificationStatus.pending) ...[
             CorePrimaryButton(
@@ -413,7 +681,7 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
             CoreSecondaryButton(
               icon: Icons.refresh_rounded,
               label: 'Check Status',
-              onTap: () => showCoreSnack(context, 'Still pending admin review'),
+              onTap: _refresh,
             ),
           ] else if (status == VerificationStatus.needsResubmission)
             CorePrimaryButton(

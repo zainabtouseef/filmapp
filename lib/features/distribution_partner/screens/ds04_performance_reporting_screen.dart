@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -23,6 +25,14 @@ class _DS04PerformanceReportingScreenState
     extends State<DS04PerformanceReportingScreen> {
   String _query = '';
   String _channel = 'All';
+  Future<List<DistributionReportDto>>? _reportsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _reportsFuture ??= specialist?.distributionReports(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +51,33 @@ class _DS04PerformanceReportingScreenState
               selected: true,
               child: Column(
                 children: [
+                  if (_reportsFuture != null)
+                    FutureBuilder<List<DistributionReportDto>>(
+                      future: _reportsFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live distribution reports...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live reports connected: ${rows.length} report(s), latest ${rows.first.publicId}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   DistributionSearchField(
                     hintText: 'Search partner, territory, channel...',
                     onChanged: (value) => setState(() => _query = value),

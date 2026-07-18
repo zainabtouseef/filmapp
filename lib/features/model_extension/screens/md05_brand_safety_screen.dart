@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -8,8 +10,22 @@ import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../data/model_extension_demo_data.dart';
 
 /// MD-05 Brand Safety Preferences
-class MD05BrandSafetyScreen extends StatelessWidget {
+class MD05BrandSafetyScreen extends StatefulWidget {
   const MD05BrandSafetyScreen({super.key});
+
+  @override
+  State<MD05BrandSafetyScreen> createState() => _MD05BrandSafetyScreenState();
+}
+
+class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
+  Future<List<ModelRestrictedCategoryDto>>? _restrictedFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _restrictedFuture ??= specialist?.modelRestrictedCategories(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +79,33 @@ class MD05BrandSafetyScreen extends StatelessWidget {
               icon: Icons.block_rounded,
               child: Column(
                 children: [
+                  if (_restrictedFuture != null)
+                    FutureBuilder<List<ModelRestrictedCategoryDto>>(
+                      future: _restrictedFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live brand safety rules...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live brand safety connected: ${rows.where((row) => row.blocked).length}/${rows.length} restricted.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   for (final category in store.restricted)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -95,6 +138,40 @@ class MD05BrandSafetyScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      CoreSecondaryButton(
+                        icon: Icons.save_outlined,
+                        label: 'Save live restrictions',
+                        compact: true,
+                        onTap: () async {
+                          final specialist = SpecialistScope.maybeOf(context);
+                          if (specialist == null) return;
+                          try {
+                            await specialist.updateModelRestrictedCategories(
+                              store.restricted
+                                  .map(
+                                    (item) => {
+                                      'category': item.label,
+                                      'blocked': item.blocked,
+                                      'reason': item.blocked
+                                          ? 'Model preference'
+                                          : null,
+                                    },
+                                  )
+                                  .toList(),
+                            );
+                            if (!context.mounted) return;
+                            setState(() => _restrictedFuture = specialist
+                                .modelRestrictedCategories(force: true));
+                            actorSnack(context, 'Live restrictions saved');
+                          } catch (error) {
+                            if (context.mounted) {
+                              actorSnack(
+                                  context, 'Live restrictions skipped: $error');
+                            }
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
                       CorePrimaryButton(
                         icon: Icons.report_gmailerrorred_outlined,
                         label: 'Simulate flagged offer',

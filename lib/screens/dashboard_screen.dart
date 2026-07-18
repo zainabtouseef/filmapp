@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_assets.dart';
 import '../core/constants/app_icons.dart';
 import '../core/constants/app_strings.dart';
+import '../core/analytics/analytics_widgets.dart';
 import '../core/theme/app_color_scheme.dart';
 import '../core/theme/app_text_styles.dart';
 import '../models/talent.dart';
@@ -57,6 +58,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             _header(),
             SizedBox(height: _topGap(afterHeader: true)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: PersonalDashboardKpiStrip(),
+            ),
+            SizedBox(height: _topGap(afterSearch: true)),
             _searchBar(),
             SizedBox(height: _topGap(afterSearch: true)),
             _categoryRow(),

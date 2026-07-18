@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/distribution_partner_demo_data.dart';
@@ -21,6 +23,15 @@ class _DS03ReleaseCoordinationScreenState
     text: 'Pakistan theatrical first, UAE OTT after 45-day holdback.',
   );
   String? _error;
+  bool _submitting = false;
+  Future<List<DistributionProjectDto>>? _projectsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _projectsFuture ??= specialist?.distributionProjects(force: true);
+  }
 
   @override
   void dispose() {
@@ -44,6 +55,32 @@ class _DS03ReleaseCoordinationScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_projectsFuture != null)
+                  FutureBuilder<List<DistributionProjectDto>>(
+                    future: _projectsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message: 'Loading live release projects...',
+                            icon: Icons.hourglass_top_rounded,
+                          ),
+                        );
+                      }
+                      final rows = snapshot.data ?? const [];
+                      if (rows.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InlineNotice(
+                          message:
+                              'Live release projects connected: ${rows.length} project(s), latest ${rows.first.publicId}.',
+                          icon: Icons.cloud_done_outlined,
+                          tone: CoreStatusTone.success,
+                        ),
+                      );
+                    },
+                  ),
                 DistributionMediaFrame(
                   imageUrl: project.imageUrl,
                   title: project.title,
@@ -127,6 +164,28 @@ class _DS03ReleaseCoordinationScreenState
                         compact: true,
                         onTap: () {
                           setState(() => _error = null);
+                          final specialist = SpecialistScope.maybeOf(context);
+                          final live = _projectsFuture;
+                          if (specialist != null && live != null) {
+                            () async {
+                              try {
+                                final rows = await live;
+                                if (rows.isEmpty) return;
+                                await specialist.updateDistributionProject(
+                                  rows.first.publicId,
+                                  {
+                                    'status_note': _notes.text.trim(),
+                                    'status': 'onboarding',
+                                  },
+                                );
+                                if (!mounted) return;
+                                setState(() => _projectsFuture = specialist
+                                    .distributionProjects(force: true));
+                              } catch (_) {
+                                // Demo state remains the fallback.
+                              }
+                            }();
+                          }
                           store.saveReleaseDraft();
                           distributionSnack(context, 'Release draft saved');
                         },
@@ -136,9 +195,10 @@ class _DS03ReleaseCoordinationScreenState
                     Expanded(
                       child: CorePrimaryButton(
                         icon: Icons.send_outlined,
-                        label: 'Submit',
+                        label: _submitting ? 'Submitting…' : 'Submit',
                         compact: true,
-                        onTap: () => _submit(context, store),
+                        onTap:
+                            _submitting ? null : () => _submit(context, store),
                       ),
                     ),
                   ],
@@ -229,7 +289,10 @@ class _DS03ReleaseCoordinationScreenState
     );
   }
 
-  void _submit(BuildContext context, DistributionPartnerDemoStore store) {
+  Future<void> _submit(
+    BuildContext context,
+    DistributionPartnerDemoStore store,
+  ) async {
     if (!store.handoverReady || _notes.text.trim().length < 12) {
       setState(
         () => _error =
@@ -237,9 +300,43 @@ class _DS03ReleaseCoordinationScreenState
       );
       return;
     }
-    setState(() => _error = null);
-    store.submitReleaseHandover();
-    distributionSnack(context, 'Release handover submitted');
+    setState(() {
+      _error = null;
+      _submitting = true;
+    });
+    try {
+      final specialist = SpecialistScope.maybeOf(context);
+      final live = _projectsFuture;
+      if (specialist != null && live != null) {
+        final rows = await live;
+        if (rows.isNotEmpty) {
+          await specialist.updateDistributionProject(
+            rows.first.publicId,
+            {
+              'status': 'submitted',
+              'status_note': _notes.text.trim(),
+            },
+          );
+          if (mounted) {
+            setState(() {
+              _projectsFuture = specialist.distributionProjects(force: true);
+            });
+          }
+        }
+      }
+      store.submitReleaseHandover();
+      if (!context.mounted) return;
+      distributionSnack(context, 'Release handover submitted');
+    } catch (error) {
+      if (!context.mounted) return;
+      store.submitReleaseHandover();
+      distributionSnack(
+        context,
+        'Release handover saved locally; live sync skipped: $error',
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 }
 

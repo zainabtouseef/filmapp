@@ -11,12 +11,14 @@ class DPCandidateCard extends StatefulWidget {
   final DpCandidate candidate;
   final VoidCallback? onProfile;
   final VoidCallback? onRequest;
+  final Future<bool> Function()? onShortlist;
 
   const DPCandidateCard({
     super.key,
     required this.candidate,
     this.onProfile,
     this.onRequest,
+    this.onShortlist,
   });
 
   @override
@@ -25,6 +27,7 @@ class DPCandidateCard extends StatefulWidget {
 
 class _DPCandidateCardState extends State<DPCandidateCard> {
   bool _shortlisted = false;
+  bool _savingShortlist = false;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +79,7 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
               ),
               IconButton(
                 visualDensity: VisualDensity.compact,
-                onPressed: () => setState(() => _shortlisted = !_shortlisted),
+                onPressed: _savingShortlist ? null : _toggleShortlist,
                 icon: Icon(
                   _shortlisted ? Icons.favorite : Icons.favorite_border,
                   color: _shortlisted ? colors.infoPurple : colors.iconMuted,
@@ -136,5 +139,20 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
         ],
       ),
     );
+  }
+
+  Future<void> _toggleShortlist() async {
+    final action = widget.onShortlist;
+    if (action == null || _shortlisted) {
+      setState(() => _shortlisted = !_shortlisted);
+      return;
+    }
+    setState(() => _savingShortlist = true);
+    final saved = await action();
+    if (!mounted) return;
+    setState(() {
+      _savingShortlist = false;
+      _shortlisted = saved || _shortlisted;
+    });
   }
 }

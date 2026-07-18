@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -8,8 +11,25 @@ import '../data/brand_sponsor_demo_data.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
 
-class BR01BrandDashboardScreen extends StatelessWidget {
+class BR01BrandDashboardScreen extends StatefulWidget {
   const BR01BrandDashboardScreen({super.key});
+
+  @override
+  State<BR01BrandDashboardScreen> createState() =>
+      _BR01BrandDashboardScreenState();
+}
+
+class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
+  Future<List<BrandOpportunityDto>>? _opportunitiesFuture;
+  Future<BrandProfileDto?>? _profileFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _profileFuture ??= specialist?.brandProfile(force: true);
+    _opportunitiesFuture ??= specialist?.brandOpportunities(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +42,47 @@ class BR01BrandDashboardScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const PersonalDashboardKpiStrip(),
+            const SizedBox(height: 12),
+            if (_profileFuture != null || _opportunitiesFuture != null)
+              FutureBuilder<List<Object?>>(
+                future: Future.wait<Object?>([
+                  if (_profileFuture != null) _profileFuture!,
+                  if (_opportunitiesFuture != null) _opportunitiesFuture!,
+                ]),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: InlineNotice(
+                        message: 'Loading live brand workspace...',
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    );
+                  }
+                  final values = snapshot.data ?? const [];
+                  BrandProfileDto? profile;
+                  List<BrandOpportunityDto> opportunities = const [];
+                  for (final value in values) {
+                    if (value is BrandProfileDto) profile = value;
+                    if (value is List<BrandOpportunityDto>) {
+                      opportunities = value;
+                    }
+                  }
+                  if (profile == null && opportunities.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InlineNotice(
+                      message:
+                          'Live brand connected: ${profile?.name ?? 'profile pending'}, ${opportunities.length} opportunity/opportunities.',
+                      icon: Icons.cloud_done_outlined,
+                      tone: CoreStatusTone.success,
+                    ),
+                  );
+                },
+              ),
             BrandKpiRail(metrics: BrandSponsorDemoData.metrics),
             const SizedBox(height: 12),
             BrandTwoColumn(

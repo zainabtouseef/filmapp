@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/contracts/contract_models.dart' as contract_models;
+import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -27,6 +29,14 @@ class _LG03TemplateReviewScreenState extends State<LG03TemplateReviewScreen> {
     text: 'Avoid ambiguity between client approval and payment verification.',
   );
   String? _error;
+  Future<List<contract_models.ContractTemplate>>? _templatesFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts != null) _templatesFuture ??= contracts.templates();
+  }
 
   @override
   void dispose() {
@@ -124,30 +134,9 @@ class _LG03TemplateReviewScreenState extends State<LG03TemplateReviewScreen> {
               ),
               const SizedBox(height: 12),
               LegalSectionCard(
-                title: 'Current template queue',
+                title: 'Published templates',
                 icon: Icons.pending_actions_outlined,
-                child: Column(
-                  children: [
-                    for (final item in LegalPartnerDemoData.templateChanges)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _TemplateRow(
-                          template: item.template,
-                          clause: item.clause,
-                          status: item.status,
-                        ),
-                      ),
-                    CoreSecondaryButton(
-                      icon: Icons.article_outlined,
-                      label: 'Review contract sample',
-                      compact: true,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        LegalPartnerRoutes.contractReview,
-                      ),
-                    ),
-                  ],
-                ),
+                child: _TemplateQueue(future: _templatesFuture),
               ),
             ],
           ),
@@ -166,6 +155,77 @@ class _LG03TemplateReviewScreenState extends State<LG03TemplateReviewScreen> {
     setState(() => _error = null);
     store.submitTemplateChange();
     legalSnack(context, 'Template change submitted for platform approval');
+  }
+}
+
+class _TemplateQueue extends StatelessWidget {
+  final Future<List<contract_models.ContractTemplate>>? future;
+
+  const _TemplateQueue({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    if (future != null) {
+      return FutureBuilder<List<contract_models.ContractTemplate>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CoreEmptyState(
+              icon: Icons.hourglass_top_rounded,
+              title: 'Loading templates',
+              message: 'Fetching published legal templates.',
+            );
+          }
+          final rows = snapshot.data ?? const [];
+          if (!snapshot.hasError && rows.isNotEmpty) {
+            return Column(
+              children: [
+                for (final item in rows.take(8))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _TemplateRow(
+                      template: item.name,
+                      clause:
+                          '${item.category} · ${item.clauses.length} clauses',
+                      status: LegalStatus.approved,
+                    ),
+                  ),
+              ],
+            );
+          }
+          return _DemoTemplateQueue();
+        },
+      );
+    }
+    return _DemoTemplateQueue();
+  }
+}
+
+class _DemoTemplateQueue extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (final item in LegalPartnerDemoData.templateChanges)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _TemplateRow(
+              template: item.template,
+              clause: item.clause,
+              status: item.status,
+            ),
+          ),
+        CoreSecondaryButton(
+          icon: Icons.article_outlined,
+          label: 'Review contract sample',
+          compact: true,
+          onTap: () => Navigator.pushNamed(
+            context,
+            LegalPartnerRoutes.contractReview,
+          ),
+        ),
+      ],
+    );
   }
 }
 

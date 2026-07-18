@@ -139,6 +139,7 @@ class AdminBooking {
 }
 
 class AdminPaymentProof {
+  final String? proofId;
   final String bookingId;
   final String contractId;
   final String payer;
@@ -149,8 +150,10 @@ class AdminPaymentProof {
   final String method;
   final String risk;
   final String age;
+  final String status;
 
   const AdminPaymentProof({
+    this.proofId,
     required this.bookingId,
     required this.contractId,
     required this.payer,
@@ -161,6 +164,7 @@ class AdminPaymentProof {
     required this.method,
     required this.risk,
     required this.age,
+    this.status = 'pending',
   });
 }
 

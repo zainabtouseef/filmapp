@@ -4,6 +4,8 @@ import '../../core_ui/core_routes.dart';
 import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/models/shared_models.dart';
 import '../../core_ui/widgets/core_widgets.dart';
+import '../../payments/payment_models.dart';
+import '../../payments/payments_controller.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
@@ -17,6 +19,7 @@ class ReceiptsLedgerScreen extends StatefulWidget {
 
 class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
   String _filter = 'All';
+  Future<List<LedgerEntryDto>>? _ledgerFuture;
   final _filters = const [
     'All',
     'Incoming',
@@ -26,6 +29,13 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
     'Refunded',
     'Disputed',
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final payments = PaymentsScope.maybeOf(context);
+    if (payments != null) _ledgerFuture ??= payments.ledger(force: true);
+  }
 
   List<LedgerRowData> get _rows {
     return SharedMockData.ledgerRows.where((row) {
@@ -52,6 +62,34 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_ledgerFuture != null) {
+      return FutureBuilder<List<LedgerEntryDto>>(
+        future: _ledgerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const CoreScreenScaffold(
+              child: CoreEmptyState(
+                icon: Icons.hourglass_top_rounded,
+                title: 'Loading ledger',
+                message: 'Fetching verified and pending payments.',
+              ),
+            );
+          }
+          final liveRows = (snapshot.data ?? const [])
+              .map((row) => row.toLedgerRow())
+              .toList();
+          if (!snapshot.hasError && liveRows.isNotEmpty) {
+            return _ledgerScaffold(context, rows: _filterRows(liveRows));
+          }
+          return _ledgerScaffold(context, rows: _rows);
+        },
+      );
+    }
+    return _ledgerScaffold(context, rows: _rows);
+  }
+
+  Widget _ledgerScaffold(BuildContext context,
+      {required List<LedgerRowData> rows}) {
     return CoreScreenScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,7 +121,7 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          if (_rows.isEmpty)
+          if (rows.isEmpty)
             const CoreEmptyState(
               icon: Icons.receipt_long_outlined,
               title: 'No ledger rows',
@@ -96,9 +134,9 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
                 children: [
                   for (var i = 0; i < _rows.length; i++)
                     LedgerRowCard(
-                      row: _rows[i],
-                      onTap: () => _details(_rows[i]),
-                      showDivider: i != _rows.length - 1,
+                      row: rows[i],
+                      onTap: () => _details(rows[i]),
+                      showDivider: i != rows.length - 1,
                     ),
                 ],
               ),
@@ -106,6 +144,20 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
         ],
       ),
     );
+  }
+
+  List<LedgerRowData> _filterRows(List<LedgerRowData> rows) {
+    return rows.where((row) {
+      return switch (_filter) {
+        'Incoming' => row.direction == LedgerDirection.incoming,
+        'Outgoing' => row.direction == LedgerDirection.outgoing,
+        'Pending' => row.status == LedgerStatus.pendingVerification,
+        'Verified' => row.status == LedgerStatus.verified,
+        'Refunded' => row.status == LedgerStatus.refunded,
+        'Disputed' => row.status == LedgerStatus.disputed,
+        _ => true,
+      };
+    }).toList();
   }
 
   Widget _summaryGrid(BuildContext context) {

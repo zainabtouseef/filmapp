@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/actor_talent_demo_data.dart';
@@ -25,6 +28,12 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   late final TextEditingController credits;
   late final TextEditingController agency;
   String? error;
+  String? remoteStatus;
+  bool loadingRemote = false;
+  bool savingRemote = false;
+  bool publishingListing = false;
+  bool attemptedRemoteLoad = false;
+  List<ProfileCity> supportedCities = const [];
 
   @override
   void initState() {
@@ -37,6 +46,15 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     skills = TextEditingController(text: store.profileSkills);
     credits = TextEditingController(text: store.profileCredits);
     agency = TextEditingController(text: store.agency);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!attemptedRemoteLoad) {
+      attemptedRemoteLoad = true;
+      _loadRemoteProfile();
+    }
   }
 
   @override
@@ -63,6 +81,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             child: Column(
               children: [
                 const StepWizardIndicator(currentStep: 2, totalSteps: 4),
+                if (loadingRemote) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(minHeight: 2),
+                ],
                 const SizedBox(height: 14),
                 CoreTextField(
                   controller: stageName,
@@ -128,6 +150,18 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                     ),
                   ),
                 ],
+                if (remoteStatus != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      remoteStatus!,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: context.appColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -136,7 +170,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                         icon: Icons.save_outlined,
                         label: 'Save draft',
                         compact: true,
-                        onTap: _saveDraft,
+                        onTap: savingRemote ? null : _saveDraft,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -145,10 +179,22 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                         icon: Icons.verified_outlined,
                         label: 'Submit review',
                         compact: true,
-                        onTap: _submit,
+                        loading: savingRemote,
+                        onTap: savingRemote ? null : _submit,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 8),
+                CoreSecondaryButton(
+                  icon: Icons.travel_explore_outlined,
+                  label: publishingListing
+                      ? 'Publishing listing…'
+                      : 'Publish marketplace listing',
+                  compact: true,
+                  onTap: savingRemote || publishingListing
+                      ? null
+                      : _publishMarketplaceListing,
                 ),
               ],
             ),
@@ -169,6 +215,56 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     return controller.text.trim().isEmpty ? error : null;
   }
 
+  Future<void> _loadRemoteProfile() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) return;
+    setState(() {
+      loadingRemote = true;
+      remoteStatus = 'Loading saved CineConnect profile…';
+    });
+    try {
+      final cities = await auth.cities();
+      final profile = await auth.myProfile();
+      final talent = await auth.talentProfile();
+      if (!mounted) return;
+      final loadedLanguages = talent.languages
+          .map((item) => item.language)
+          .where((item) => item.trim().isNotEmpty)
+          .join(', ');
+      setState(() {
+        supportedCities = cities;
+        if ((talent.screenName ?? '').trim().isNotEmpty) {
+          stageName.text = talent.screenName!.trim();
+        }
+        if ((profile.city?.name ?? '').trim().isNotEmpty) {
+          city.text = profile.city!.name;
+        }
+        if (loadedLanguages.isNotEmpty) {
+          languages.text = loadedLanguages;
+        }
+        if ((profile.bio ?? '').trim().isNotEmpty &&
+            skills.text.trim().isEmpty) {
+          skills.text = profile.bio!.trim();
+        }
+        remoteStatus = 'Synced with backend profile';
+      });
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() {
+        remoteStatus = 'Using local draft: ${exception.message}';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        remoteStatus = 'Using local draft until backend is reachable';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => loadingRemote = false);
+      }
+    }
+  }
+
   void _saveDraft() {
     ActorTalentDemoStore.instance.saveProfileDraft(
       stageName: stageName.text.trim(),
@@ -182,11 +278,20 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     actorSnack(context, 'Profile draft saved');
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (stageName.text.trim().isEmpty ||
         realName.text.trim().isEmpty ||
         city.text.trim().isEmpty) {
       setState(() => error = 'Required');
+      return;
+    }
+    final matchedCity = _matchedCity();
+    if (supportedCities.isNotEmpty && matchedCity == null) {
+      setState(() {
+        error = 'Choose a supported city';
+        remoteStatus =
+            'Supported cities: ${supportedCities.map((item) => item.name).join(', ')}';
+      });
       return;
     }
     ActorTalentDemoStore.instance.updateProfile(
@@ -199,9 +304,153 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       agencyName:
           agency.text.trim().isEmpty ? 'Independent' : agency.text.trim(),
     );
-    setState(() => error = null);
-    actorSnack(context, 'Profile sent to moderation');
-    Navigator.pushNamed(context, ActorTalentRoutes.portfolio);
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      setState(() => error = null);
+      actorSnack(context, 'Profile sent to moderation');
+      Navigator.pushNamed(context, ActorTalentRoutes.portfolio);
+      return;
+    }
+    setState(() {
+      error = null;
+      savingRemote = true;
+      remoteStatus = 'Saving profile to backend…';
+    });
+    try {
+      await auth.updateMyProfile(
+        bio: _bioForBackend(),
+        cityId: matchedCity?.publicId,
+        visibility: 'public',
+      );
+      await auth.updateTalentProfile(
+        screenName: stageName.text.trim(),
+        languages: _languagesForBackend(),
+      );
+      if (!mounted) return;
+      setState(() => remoteStatus = 'Backend profile saved');
+      actorSnack(context, 'Profile saved and sent to moderation');
+      Navigator.pushNamed(context, ActorTalentRoutes.portfolio);
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() {
+        error = exception.message;
+        remoteStatus = 'Fix the highlighted fields and try again.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        error = 'Could not reach backend';
+        remoteStatus = 'Your local draft is saved. Try again when online.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => savingRemote = false);
+      }
+    }
+  }
+
+  Future<void> _publishMarketplaceListing() async {
+    if (stageName.text.trim().isEmpty || city.text.trim().isEmpty) {
+      setState(() => error = 'Required');
+      return;
+    }
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      actorSnack(context, 'Sign in to publish a marketplace listing');
+      return;
+    }
+    final matchedCity = _matchedCity();
+    if (supportedCities.isNotEmpty && matchedCity == null) {
+      setState(() {
+        error = 'Choose a supported city';
+        remoteStatus =
+            'Supported cities: ${supportedCities.map((item) => item.name).join(', ')}';
+      });
+      return;
+    }
+    setState(() {
+      error = null;
+      publishingListing = true;
+      remoteStatus = 'Publishing your public marketplace listing…';
+    });
+    try {
+      await auth.updateMyProfile(
+        bio: _bioForBackend(),
+        cityId: matchedCity?.publicId,
+        visibility: 'public',
+      );
+      await auth.updateTalentProfile(
+        screenName: stageName.text.trim(),
+        languages: _languagesForBackend(),
+      );
+      final listing = await auth.publishMarketplaceListing(
+        title: '${stageName.text.trim()} — Actor',
+        summary: _listingSummary(),
+        cityId: matchedCity?.publicId,
+      );
+      if (!mounted) return;
+      setState(() => remoteStatus = 'Published listing ${listing.publicId}');
+      actorSnack(context, 'Marketplace listing published');
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() {
+        error = exception.message;
+        remoteStatus = exception.code == 'marketplace.kyc_required'
+            ? 'Approved Actor / Talent KYC is required before public listing.'
+            : 'Listing was not published. Check the details and try again.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        error = 'Could not reach backend';
+        remoteStatus = 'Listing was not published. Try again when online.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => publishingListing = false);
+      }
+    }
+  }
+
+  ProfileCity? _matchedCity() {
+    final value = city.text.trim().toLowerCase();
+    for (final item in supportedCities) {
+      if (item.name.toLowerCase() == value ||
+          item.publicId.toLowerCase() == value) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  List<TalentLanguage> _languagesForBackend() {
+    return languages.text
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .map((item) => TalentLanguage(language: item))
+        .toList();
+  }
+
+  String _bioForBackend() {
+    final parts = <String>[
+      if (skills.text.trim().isNotEmpty) 'Skills: ${skills.text.trim()}',
+      if (credits.text.trim().isNotEmpty) 'Credits: ${credits.text.trim()}',
+      if (agency.text.trim().isNotEmpty) 'Agency: ${agency.text.trim()}',
+    ];
+    return parts.join('\n');
+  }
+
+  String _listingSummary() {
+    final parts = <String>[
+      if (skills.text.trim().isNotEmpty) skills.text.trim(),
+      if (credits.text.trim().isNotEmpty) credits.text.trim(),
+      if (languages.text.trim().isNotEmpty)
+        'Languages: ${languages.text.trim()}',
+    ];
+    final summary = parts.join('\n');
+    if (summary.trim().length >= 10) return summary;
+    return 'Available actor/talent profile for CineConnect productions.';
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -17,6 +18,14 @@ class ME02ProviderProfileScreen extends StatefulWidget {
 
 class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
   bool _newUpload = false;
+  Future<dynamic>? _profileFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final operations = OperationsScope.maybeOf(context);
+    _profileFuture ??= operations?.equipmentProfile(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +44,33 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_profileFuture != null)
+                    FutureBuilder<dynamic>(
+                      future: _profileFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live provider profile...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final live = snapshot.data;
+                        if (live == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live provider: ${live.name} · ${live.coverage}',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   MediaFrame(
                     imageUrl: profile.imageUrl,
                     title: store.profileName,
@@ -290,7 +326,31 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
           CorePrimaryButton(
             icon: Icons.save_outlined,
             label: 'Save profile',
-            onTap: () {
+            onTap: () async {
+              final operations = OperationsScope.maybeOf(context);
+              if (operations != null) {
+                try {
+                  await operations.upsertEquipmentProfile(
+                    name: name.text.trim().isEmpty
+                        ? store.profileName
+                        : name.text.trim(),
+                    coverage: coverage.text.trim().isEmpty
+                        ? store.profileCoverage
+                        : coverage.text.trim(),
+                    serviceCategories:
+                        MediaEquipmentDemoData.profile.serviceCategories,
+                    bio: MediaEquipmentDemoData.profile.bio,
+                  );
+                  if (mounted) {
+                    setState(() => _profileFuture =
+                        operations.equipmentProfile(force: true));
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    mediaSnack(context, 'Live profile save skipped: $error');
+                  }
+                }
+              }
               store.updateProfile(
                 name: name.text.trim().isEmpty
                     ? store.profileName
@@ -299,8 +359,10 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                     ? store.profileCoverage
                     : coverage.text.trim(),
               );
-              Navigator.pop(context);
-              mediaSnack(context, 'Profile changes saved');
+              if (context.mounted) {
+                Navigator.pop(context);
+                mediaSnack(context, 'Profile changes saved');
+              }
             },
           ),
         ],

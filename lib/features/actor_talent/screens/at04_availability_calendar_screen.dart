@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/booking_models.dart' as booking_models;
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -20,6 +22,16 @@ class AT04AvailabilityCalendarScreen extends StatefulWidget {
 class _AT04AvailabilityCalendarScreenState
     extends State<AT04AvailabilityCalendarScreen> {
   int selectedDay = 3;
+  Future<List<booking_models.AvailabilityEntry>>? _availabilityFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings != null) {
+      _availabilityFuture ??= bookings.availability();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +54,44 @@ class _AT04AvailabilityCalendarScreenState
                   const SizedBox(height: 12),
                   _Legend(),
                 ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ActorSectionCard(
+              title: 'Live Availability Entries',
+              icon: Icons.cloud_done_outlined,
+              child: FutureBuilder<List<booking_models.AvailabilityEntry>>(
+                future: _availabilityFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CoreEmptyState(
+                      icon: Icons.hourglass_top_rounded,
+                      title: 'Loading availability',
+                      message: 'Fetching your server calendar.',
+                    );
+                  }
+                  final rows = snapshot.data ?? const [];
+                  if (snapshot.hasError || rows.isEmpty) {
+                    return const CoreEmptyState(
+                      icon: Icons.event_available_outlined,
+                      title: 'No live entries yet',
+                      message: 'Use Edit on a selected day to save one.',
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (final row in rows.take(5))
+                        ActorInfoRow(
+                          icon: row.status == 'booked'
+                              ? Icons.lock_clock_outlined
+                              : Icons.event_available_outlined,
+                          label: row.status,
+                          value:
+                              '${row.startAt.toLocal().toString().split('.').first} → ${row.endAt.toLocal().toString().split('.').first}',
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 12),
@@ -137,10 +187,10 @@ class _AT04AvailabilityCalendarScreenState
         children: [
           for (final status in ActorAvailabilityStatus.values)
             ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 ActorTalentDemoStore.instance.setAvailability(day, status);
                 Navigator.pop(context);
-                actorSnack(context, 'Jul $day marked ${_statusLabel(status)}');
+                await _saveLiveAvailability(day, status);
               },
               icon: Icon(_statusIcon(status), size: 18),
               label: Text(_statusLabel(status)),
@@ -148,6 +198,45 @@ class _AT04AvailabilityCalendarScreenState
         ],
       ),
     );
+  }
+
+  Future<void> _saveLiveAvailability(
+    int day,
+    ActorAvailabilityStatus status,
+  ) async {
+    final now = DateTime.now().toUtc();
+    final start = DateTime.utc(now.year, now.month, day, 9);
+    final end = start.add(const Duration(hours: 8));
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) {
+      actorSnack(context, 'Jul $day marked ${_statusLabel(status)}');
+      return;
+    }
+    try {
+      await bookings.createAvailability(
+        startAt: start.toIso8601String(),
+        endAt: end.toIso8601String(),
+        status: _backendStatus(status),
+        note: 'Saved from Flutter availability calendar',
+      );
+      if (!mounted) return;
+      setState(() {
+        _availabilityFuture = bookings.availability();
+      });
+      actorSnack(context, 'Jul $day marked ${_statusLabel(status)}');
+    } catch (error) {
+      if (!mounted) return;
+      actorSnack(context, '$error');
+    }
+  }
+
+  String _backendStatus(ActorAvailabilityStatus status) {
+    return switch (status) {
+      ActorAvailabilityStatus.available => 'available',
+      ActorAvailabilityStatus.tentative => 'hold',
+      ActorAvailabilityStatus.booked => 'hold',
+      ActorAvailabilityStatus.unavailable => 'blocked',
+    };
   }
 }
 

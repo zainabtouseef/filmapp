@@ -15,6 +15,8 @@ class _DisputeCenterScreenState extends State<DisputeCenterScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const _LiveDisputePanel(),
+        const SizedBox(height: 16),
         _ResponsiveGrid(
           minTileWidth: 190,
           childAspectRatio: 2.6,
@@ -76,6 +78,109 @@ class _DisputeCenterScreenState extends State<DisputeCenterScreen> {
           );
         }),
       ],
+    );
+  }
+}
+
+class _LiveDisputePanel extends StatefulWidget {
+  const _LiveDisputePanel();
+
+  @override
+  State<_LiveDisputePanel> createState() => _LiveDisputePanelState();
+}
+
+class _LiveDisputePanelState extends State<_LiveDisputePanel> {
+  late Future<List<DisputeDto>> _future;
+  bool _updating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    _future = trustSafety == null
+        ? Future.value(const <DisputeDto>[])
+        : trustSafety.adminDisputes(force: true);
+  }
+
+  Future<void> _decide(DisputeDto dispute, String decision) async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null || _updating) return;
+    setState(() => _updating = true);
+    try {
+      await trustSafety.decideDispute(
+        disputeId: dispute.publicId,
+        decision: decision,
+        note: 'Recorded from Flutter Super Admin dispute center.',
+      );
+      if (!mounted) return;
+      setState(() => _future = trustSafety.adminDisputes(force: true));
+      showCoreSnack(context, 'Live dispute updated');
+    } catch (_) {
+      if (mounted) showCoreSnack(context, 'Could not update live dispute');
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<DisputeDto>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError) {
+          return const InlineNotice(
+            message:
+                'Live dispute queue unavailable — showing preview dispute cases.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final rows = snapshot.data ?? const <DisputeDto>[];
+        if (rows.isEmpty) {
+          return const InlineNotice(
+            message:
+                'No live disputes are open — preview dispute cases remain below.',
+          );
+        }
+        final dispute = rows.first;
+        return AdminSurface(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AdminStatusBadge(
+                label: '${rows.length} live disputes',
+                tone: AdminDecisionTone.warning,
+              ),
+              AdminStatusBadge(
+                label: dispute.severity,
+                tone: dispute.severity == 'high'
+                    ? AdminDecisionTone.danger
+                    : AdminDecisionTone.info,
+              ),
+              Text(
+                '${dispute.publicId} · ${dispute.type} · ${dispute.status}',
+                style: AppTextStyles.caption
+                    .copyWith(color: context.appColors.textSecondary),
+              ),
+              _tinyAction(
+                context,
+                _updating ? 'Updating...' : 'Resolve live',
+                _updating ? null : () => _decide(dispute, 'resolved'),
+              ),
+              _tinyAction(
+                context,
+                _updating ? 'Updating...' : 'Escalate live',
+                _updating ? null : () => _decide(dispute, 'escalated'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

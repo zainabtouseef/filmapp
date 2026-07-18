@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -184,12 +185,32 @@ class ME06RateTermsScreen extends StatelessWidget {
           CorePrimaryButton(
             icon: Icons.sync_rounded,
             label: 'Confirm publish',
-            onTap: () {
+            onTap: () async {
               if (otp.text.trim().length != 6) {
                 mediaSnack(context, 'Enter a 6-digit OTP');
                 return;
               }
+              final operations = OperationsScope.maybeOf(context);
+              if (operations != null) {
+                try {
+                  for (final term in store.terms) {
+                    await operations.createEquipmentTerm({
+                      'label': term.label,
+                      'note': term.note,
+                      'amount_minor': term.amount * 100,
+                      'currency': 'PKR',
+                      'enabled': term.enabled,
+                      'term_type': term.id,
+                    });
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    mediaSnack(context, 'Live terms publish skipped: $error');
+                  }
+                }
+              }
               store.publishTerms();
+              if (!context.mounted) return;
               Navigator.pop(context);
               mediaSnack(context, 'Terms published to contracts');
             },

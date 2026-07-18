@@ -1,7 +1,9 @@
 part of '../super_admin_screens.dart';
 
 class KycReviewDetailScreen extends StatefulWidget {
-  const KycReviewDetailScreen({super.key});
+  final String? submissionId;
+
+  const KycReviewDetailScreen({super.key, this.submissionId});
 
   @override
   State<KycReviewDetailScreen> createState() => _KycReviewDetailScreenState();
@@ -12,6 +14,18 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
   double _zoom = 1;
   final Set<String> _checked = {'Identity document readable'};
   final _note = TextEditingController();
+  Future<verification.KycSubmission>? _submissionFuture;
+  bool _savingDecision = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final submissionId = widget.submissionId;
+    if (_submissionFuture == null && submissionId != null) {
+      _submissionFuture =
+          AuthScope.of(context).adminKycSubmission(submissionId);
+    }
+  }
 
   @override
   void dispose() {
@@ -21,6 +35,56 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.submissionId == null) {
+      return const AdminEmptyState(
+        icon: Icons.fact_check_outlined,
+        title: 'Open a submission from the queue',
+        message: 'Choose a KYC row first so the admin review can load.',
+      );
+    }
+    return FutureBuilder<verification.KycSubmission>(
+      future: _submissionFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
+              children: [
+                AdminEmptyState(
+                  icon: Icons.cloud_off_outlined,
+                  title: error is ApiException && error.statusCode == 403
+                      ? 'KYC review permission required'
+                      : 'Could not load KYC submission',
+                  message: error is ApiException
+                      ? error.message
+                      : 'Check your connection and try again.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: () => setState(() {
+                    _submissionFuture = AuthScope.of(context)
+                        .adminKycSubmission(widget.submissionId!);
+                  }),
+                ),
+              ],
+            ),
+          );
+        }
+        final submission = snapshot.data!;
+        return _content(context, submission);
+      },
+    );
+  }
+
+  Widget _content(BuildContext context, verification.KycSubmission submission) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Matches _ThreePane's threshold so this screen's three-column
@@ -29,9 +93,9 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
         final wide =
             MediaQuery.sizeOf(context).width >= AppBreakpoints.wideDesktop;
         final children = [
-          _applicantPanel(context),
-          _documentPanel(context),
-          _decisionPanel(context),
+          _applicantPanel(context, submission),
+          _documentPanel(context, submission),
+          _decisionPanel(context, submission),
         ];
         if (!wide) {
           return Column(
@@ -57,25 +121,38 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
     );
   }
 
-  Widget _applicantPanel(BuildContext context) {
+  Widget _applicantPanel(
+      BuildContext context, verification.KycSubmission submission) {
     return AdminSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AdminUserMiniCard(
-            name: 'FrameHouse Pvt Ltd',
-            detail: 'Media Provider - Lahore',
-            badge: 'Risk flagged',
+          AdminUserMiniCard(
+            name: submission.applicantName,
+            detail: '${submission.roleName} - ${submission.applicantEmail}',
+            badge: submission.status,
           ),
           const SizedBox(height: 14),
-          const AdminRiskBadge(
-              label: 'Risk score 72', risk: AdminRiskTone.high),
+          AdminRiskBadge(
+            label: 'Risk ${submission.riskLevel}',
+            risk: submission.riskLevel == 'high'
+                ? AdminRiskTone.high
+                : AdminRiskTone.low,
+          ),
           const SizedBox(height: 14),
-          _kv(context, 'Phone/email', '0300-XXX / ops@framehouse.pk'),
-          _kv(context, 'Submitted', 'Jul 8, 2026 - 11:10'),
-          _kv(context, 'Status', 'Pending review'),
-          _kv(context, 'Device/IP', 'Android 16 / 10.0.2.15'),
-          _kv(context, 'Previous submissions', '1 rejected, 1 resubmitted'),
+          _kv(context, 'Email', submission.applicantEmail),
+          _kv(context, 'Submission', submission.publicId),
+          _kv(context, 'Status', submission.status),
+          _kv(context, 'Documents', '${submission.files.length} uploaded'),
+          _kv(
+            context,
+            'Scan state',
+            submission.files.isEmpty
+                ? 'No files'
+                : submission.files
+                    .map((file) => '${file.originalName}: ${file.scanStatus}')
+                    .join(', '),
+          ),
           const SizedBox(height: 14),
           AdminActionButton(
             icon: Icons.manage_search_outlined,
@@ -96,34 +173,33 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
     );
   }
 
-  Widget _documentPanel(BuildContext context) {
+  Widget _documentPanel(
+      BuildContext context, verification.KycSubmission submission) {
+    final filters = submission.documentTypes.isEmpty
+        ? const ['Document']
+        : submission.documentTypes;
+    final selectedDocument =
+        filters.contains(_document) ? _document : filters.first;
+    final fileNames =
+        submission.files.map((file) => file.originalName).toList();
     return AdminSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AdminFilterBar(
-            filters: const [
-              'CNIC Front',
-              'CNIC Back',
-              'Selfie',
-              'Company Registration',
-              'Bank Details',
-              'Address Proof',
-            ],
-            selected: _document,
+            filters: filters,
+            selected: selectedDocument,
             onSelected: (value) => setState(() => _document = value),
           ),
           const SizedBox(height: 12),
           Transform.scale(
             scale: _zoom,
             child: AdminEvidenceViewer(
-              title: _document,
+              title: selectedDocument,
               icon: Icons.article_outlined,
-              details: const [
-                'Clear edges',
-                'OCR confidence 94%',
-                'Admin preview'
-              ],
+              details: fileNames.isEmpty
+                  ? const ['No files attached yet']
+                  : fileNames,
             ),
           ),
           const SizedBox(height: 14),
@@ -169,7 +245,8 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
     );
   }
 
-  Widget _decisionPanel(BuildContext context) {
+  Widget _decisionPanel(
+      BuildContext context, verification.KycSubmission submission) {
     final checks = const [
       'Identity document readable',
       'Selfie matches document',
@@ -215,38 +292,78 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
           const SizedBox(height: 14),
           AdminActionButton(
             icon: Icons.verified_outlined,
-            label: 'Approve',
-            onTap: () => _decision(
-                context, 'User approved. Marketplace access unlocked.'),
+            label: _savingDecision ? 'Saving...' : 'Approve',
+            onTap: _savingDecision
+                ? null
+                : () => _decision(
+                      context,
+                      submission,
+                      decision: 'approved',
+                      message: 'User approved. Marketplace access unlocked.',
+                    ),
           ),
           const SizedBox(height: 10),
           AdminActionButton(
             icon: Icons.cancel_outlined,
             label: 'Reject with Reason',
             secondary: true,
-            onTap: () => _noteDialog(
-              context,
-              'Reject reason: CNIC image unclear / Bank name mismatch / Missing property proof',
-            ),
+            onTap: _savingDecision
+                ? null
+                : () => _decision(
+                      context,
+                      submission,
+                      decision: 'rejected',
+                      message: 'KYC rejected and reason saved.',
+                    ),
           ),
           const SizedBox(height: 10),
           AdminActionButton(
             icon: Icons.contact_support_outlined,
             label: 'Request More Info',
             secondary: true,
-            onTap: () => _noteDialog(context, 'Request more information'),
+            onTap: _savingDecision
+                ? null
+                : () => _decision(
+                      context,
+                      submission,
+                      decision: 'needs_resubmission',
+                      message: 'User asked to resubmit KYC information.',
+                    ),
           ),
         ],
       ),
     );
   }
 
-  void _decision(BuildContext context, String message) {
-    showCoreSuccessDialog(
-      context,
-      title: 'Decision Saved',
-      message: message,
-      onDone: () => showCoreSnack(context, 'Decision written to audit log.'),
-    );
+  Future<void> _decision(
+    BuildContext context,
+    verification.KycSubmission submission, {
+    required String decision,
+    required String message,
+  }) async {
+    setState(() => _savingDecision = true);
+    final auth = AuthScope.of(context);
+    try {
+      final updated = await auth.adminKycDecision(
+        publicId: submission.publicId,
+        decision: decision,
+        reason: _note.text.trim(),
+      );
+      if (!context.mounted) return;
+      setState(() {
+        _submissionFuture = Future.value(updated);
+        _savingDecision = false;
+      });
+      showCoreSuccessDialog(
+        context,
+        title: 'Decision Saved',
+        message: message,
+        onDone: () => showCoreSnack(context, 'Decision written to audit log.'),
+      );
+    } on ApiException catch (error) {
+      if (!context.mounted) return;
+      setState(() => _savingDecision = false);
+      showCoreSnack(context, error.message);
+    }
   }
 }

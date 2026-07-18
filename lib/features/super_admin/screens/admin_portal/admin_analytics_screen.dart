@@ -10,6 +10,27 @@ class AdminAnalyticsScreen extends StatefulWidget {
 class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   String _tab = 'Marketplace Growth';
   String _range = 'This month';
+  Future<AdminAnalyticsDto>? _future;
+
+  int get _rangeDays => switch (_range) {
+        'Year' => 90,
+        'Quarter' => 90,
+        'Last month' => 30,
+        _ => 30,
+      };
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _load();
+  }
+
+  void _load() {
+    final analytics = AnalyticsScope.maybeOf(context);
+    if (analytics != null) {
+      _future = analytics.adminAnalytics(force: true, days: _rangeDays);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +81,70 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_future != null) ...[
+          FutureBuilder<AdminAnalyticsDto>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: LinearProgressIndicator(minHeight: 2),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: InlineNotice(
+                    message:
+                        'Live analytics unavailable — showing preview analytics below.',
+                    tone: CoreStatusTone.warning,
+                  ),
+                );
+              }
+              final live = snapshot.data!;
+              final users = live.newUsersByDay.values.fold<int>(
+                0,
+                (sum, value) => sum + value,
+              );
+              final bookings = live.newBookingsByDay.values.fold<int>(
+                0,
+                (sum, value) => sum + value,
+              );
+              final secured = live.securedBookingsByDay.values.fold<int>(
+                0,
+                (sum, value) => sum + value,
+              );
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AdminSurface(
+                  padding: const EdgeInsets.all(12),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      AdminStatusBadge(
+                        label: '${live.rangeDays} day live range',
+                        tone: AdminDecisionTone.info,
+                      ),
+                      AdminStatusBadge(
+                        label: '$users new users',
+                        tone: AdminDecisionTone.success,
+                      ),
+                      AdminStatusBadge(
+                        label: '$bookings new bookings',
+                        tone: AdminDecisionTone.warning,
+                      ),
+                      AdminStatusBadge(
+                        label: '$secured secured bookings',
+                        tone: AdminDecisionTone.success,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
         AdminFilterBar(
           filters: const [
             'Marketplace Growth',
@@ -82,12 +167,20 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                 'Date range',
                 _range,
                 const ['This month', 'Last month', 'Quarter', 'Year'],
-                (v) => setState(() => _range = v)),
-            AdminActionButton(
+                (v) => setState(() {
+                      _range = v;
+                      _load();
+                    })),
+            ExportActionButton(
+              exportType: 'admin_disputes',
+              label: 'Export report',
+              builder: (context, onTap, label) => AdminActionButton(
                 icon: Icons.download_outlined,
-                label: 'Export report',
+                label: label,
                 secondary: true,
-                onTap: () => showCoreSnack(context, 'Report exported')),
+                onTap: onTap,
+              ),
+            ),
             AdminActionButton(
                 icon: Icons.compare_arrows_rounded,
                 label: 'Compare month',

@@ -1,0 +1,364 @@
+import 'dart:typed_data';
+
+import 'package:flutter/widgets.dart';
+
+import '../network/api_client.dart';
+import '../network/api_exception.dart';
+import '../marketplace/marketplace_models.dart';
+import '../profile/profile_models.dart';
+import '../uploads/upload_repository.dart';
+import '../verification/verification_models.dart';
+import 'auth_models.dart';
+import 'auth_repository.dart';
+import 'role_mapper.dart';
+import 'token_store.dart';
+
+class AuthController extends ChangeNotifier {
+  final AuthRepository _repository;
+  final ApiClient _client;
+  final TokenStore _tokenStore;
+
+  AuthUser? _user;
+  String? _refreshToken;
+  bool _ready = false;
+
+  AuthController({
+    required AuthRepository repository,
+    required ApiClient client,
+    required TokenStore tokenStore,
+  })  : _repository = repository,
+        _client = client,
+        _tokenStore = tokenStore;
+
+  AuthUser? get user => _user;
+  bool get isAuthenticated => _user != null && _refreshToken != null;
+  bool get ready => _ready;
+  ApiClient get apiClient => _client;
+
+  String get initialAuthenticatedRoute {
+    final roleCode = _user?.primaryRole?.code;
+    return RoleMapper.portalRouteForCode(roleCode ?? '') ?? '/portal/dashboard';
+  }
+
+  Future<void> initialize() async {
+    final access = await _tokenStore.readAccessToken();
+    final refresh = await _tokenStore.readRefreshToken();
+    _client.accessToken = access;
+    _refreshToken = refresh;
+    if (refresh != null) {
+      try {
+        final session = await _repository.refresh(refresh);
+        await _acceptSession(session);
+      } on ApiException {
+        await clearSession();
+      }
+    }
+    _ready = true;
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> bootstrap() {
+    return _repository.bootstrap();
+  }
+
+  Future<List<AuthRole>> roles() {
+    return _repository.roles();
+  }
+
+  Future<void> login({required String email, required String password}) async {
+    final session = await _repository.login(email: email, password: password);
+    await _acceptSession(session);
+  }
+
+  Future<void> register({
+    required String email,
+    required String password,
+    required String displayName,
+    required String initialRole,
+  }) async {
+    final session = await _repository.register(
+      email: email,
+      password: password,
+      displayName: displayName,
+      initialRole: initialRole,
+      termsVersion: '2026-07',
+    );
+    await _acceptSession(session);
+  }
+
+  Future<void> forgotPassword(String email) {
+    return _repository.forgotPassword(email);
+  }
+
+  Future<void> logout() async {
+    final token = _refreshToken;
+    if (token != null) {
+      await _repository.logout(token);
+    }
+    await clearSession();
+  }
+
+  Future<void> setPrimaryRole(String roleCode) async {
+    _user = await _repository.setPrimaryRole(roleCode);
+    notifyListeners();
+  }
+
+  Future<UploadedFile> completeDemoUpload({
+    required String purpose,
+    required String mimeType,
+    required String originalName,
+    required int sizeBytes,
+  }) async {
+    final seed = originalName.codeUnits.isEmpty ? [0] : originalName.codeUnits;
+    final bytes = Uint8List.fromList(
+      List<int>.generate(sizeBytes, (index) => seed[index % seed.length]),
+    );
+    return uploadFile(
+      purpose: purpose,
+      file: PickedFileData(
+        name: originalName,
+        mimeType: mimeType,
+        bytes: bytes,
+      ),
+    );
+  }
+
+  Future<UploadedFile> uploadFile({
+    required String purpose,
+    required PickedFileData file,
+    void Function(int sentBytes, int totalBytes)? onProgress,
+  }) {
+    return UploadRepository(_client).uploadFile(
+      purpose: purpose,
+      file: file,
+      onProgress: onProgress,
+    );
+  }
+
+  Future<KycSubmission> createAndSubmitKyc({
+    required String roleCode,
+    required List<KycDocumentDraft> documents,
+  }) async {
+    final created = await _repository.createKycSubmission(
+      roleCode: roleCode,
+      documents: documents,
+    );
+    return _repository.submitKycSubmission(created.publicId);
+  }
+
+  Future<List<KycSubmission>> myKycSubmissions() {
+    return _repository.myKycSubmissions();
+  }
+
+  Future<List<KycSubmission>> adminKycSubmissions({String status = 'pending'}) {
+    return _repository.adminKycSubmissions(status: status);
+  }
+
+  Future<KycSubmission> adminKycSubmission(String publicId) {
+    return _repository.adminKycSubmission(publicId);
+  }
+
+  Future<KycSubmission> adminKycDecision({
+    required String publicId,
+    required String decision,
+    String? reason,
+  }) {
+    return _repository.adminKycDecision(
+      publicId: publicId,
+      decision: decision,
+      reason: reason,
+    );
+  }
+
+  Future<List<ProfileCity>> cities() {
+    return _repository.cities();
+  }
+
+  Future<UserProfile> myProfile() {
+    return _repository.myProfile();
+  }
+
+  Future<UserProfile> updateMyProfile({
+    required String bio,
+    required String? cityId,
+    String visibility = 'public',
+  }) {
+    return _repository.updateMyProfile(
+      bio: bio,
+      cityId: cityId,
+      visibility: visibility,
+    );
+  }
+
+  Future<TalentProfile> talentProfile() {
+    return _repository.talentProfile();
+  }
+
+  Future<TalentProfile> updateTalentProfile({
+    required String screenName,
+    required List<TalentLanguage> languages,
+    int? dayRateMinor,
+    String availabilityStatus = 'available',
+    String currency = 'PKR',
+  }) {
+    return _repository.updateTalentProfile(
+      screenName: screenName,
+      languages: languages,
+      dayRateMinor: dayRateMinor,
+      availabilityStatus: availabilityStatus,
+      currency: currency,
+    );
+  }
+
+  Future<List<MarketplaceListing>> marketplaceListings({
+    String? type,
+    String? query,
+  }) {
+    return _repository.marketplaceListings(type: type, query: query);
+  }
+
+  Future<MarketplaceListing> publishMarketplaceListing({
+    required String title,
+    required String summary,
+    String? cityId,
+    List<String> portfolioItemIds = const [],
+  }) {
+    return _repository.publishMarketplaceListing(
+      title: title,
+      summary: summary,
+      cityId: cityId,
+      portfolioItemIds: portfolioItemIds,
+    );
+  }
+
+  Future<void> createSavedSearch({
+    required String name,
+    String? listingType,
+    String? queryText,
+  }) {
+    return _repository.createSavedSearch(
+      name: name,
+      listingType: listingType,
+      queryText: queryText,
+    );
+  }
+
+  Future<MarketplaceShortlistBundle> shortlistBundle() {
+    return _repository.shortlistBundle();
+  }
+
+  Future<void> deleteSavedSearch(String publicId) {
+    return _repository.deleteSavedSearch(publicId);
+  }
+
+  Future<MarketplaceShortlistItem> updateShortlistItem({
+    required String publicId,
+    int? rank,
+    String? status,
+    String? notes,
+  }) {
+    return _repository.updateShortlistItem(
+      publicId: publicId,
+      rank: rank,
+      status: status,
+      notes: notes,
+    );
+  }
+
+  Future<void> deleteShortlistItem(String publicId) {
+    return _repository.deleteShortlistItem(publicId);
+  }
+
+  Future<List<MarketplacePortfolioItem>> portfolioItems({
+    String profileType = 'talent',
+  }) {
+    return _repository.portfolioItems(profileType: profileType);
+  }
+
+  Future<MarketplacePortfolioItem> createPortfolioItem({
+    String profileType = 'talent',
+    required String title,
+    required String category,
+    required String fileId,
+    int? durationSeconds,
+    String status = 'published',
+    bool isCover = false,
+    int? sortOrder,
+  }) {
+    return _repository.createPortfolioItem(
+      profileType: profileType,
+      title: title,
+      category: category,
+      fileId: fileId,
+      durationSeconds: durationSeconds,
+      status: status,
+      isCover: isCover,
+      sortOrder: sortOrder,
+    );
+  }
+
+  Future<MarketplacePortfolioItem> updatePortfolioItem({
+    required String publicId,
+    String? title,
+    String? category,
+    int? durationSeconds,
+    String? status,
+    bool? isCover,
+    int? sortOrder,
+  }) {
+    return _repository.updatePortfolioItem(
+      publicId: publicId,
+      title: title,
+      category: category,
+      durationSeconds: durationSeconds,
+      status: status,
+      isCover: isCover,
+      sortOrder: sortOrder,
+    );
+  }
+
+  Future<void> deletePortfolioItem(String publicId) {
+    return _repository.deletePortfolioItem(publicId);
+  }
+
+  Future<void> addToDefaultShortlist(String listingId) {
+    return _repository.addToDefaultShortlist(listingId);
+  }
+
+  Future<void> clearSession() async {
+    _user = null;
+    _refreshToken = null;
+    _client.accessToken = null;
+    await _tokenStore.clear();
+    notifyListeners();
+  }
+
+  Future<void> _acceptSession(AuthSession session) async {
+    _user = session.user;
+    _refreshToken = session.tokens.refreshToken;
+    _client.accessToken = session.tokens.accessToken;
+    await _tokenStore.save(
+      accessToken: session.tokens.accessToken,
+      refreshToken: session.tokens.refreshToken,
+    );
+    notifyListeners();
+  }
+}
+
+class AuthScope extends InheritedNotifier<AuthController> {
+  const AuthScope({
+    super.key,
+    required AuthController controller,
+    required super.child,
+  }) : super(notifier: controller);
+
+  static AuthController of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AuthScope>();
+    assert(scope != null, 'AuthScope is missing from the widget tree');
+    return scope!.notifier!;
+  }
+
+  static AuthController? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<AuthScope>()?.notifier;
+  }
+}

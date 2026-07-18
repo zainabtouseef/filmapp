@@ -52,6 +52,7 @@ class CoreNotification {
 }
 
 class ChatMessage {
+  final String? id;
   final String sender;
   final String message;
   final String time;
@@ -60,6 +61,7 @@ class ChatMessage {
   final bool pinned;
 
   const ChatMessage({
+    this.id,
     required this.sender,
     required this.message,
     required this.time,

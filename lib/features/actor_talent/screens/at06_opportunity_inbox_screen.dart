@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/booking_models.dart';
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
@@ -18,23 +20,24 @@ class AT06OpportunityInboxScreen extends StatefulWidget {
 class _AT06OpportunityInboxScreenState
     extends State<AT06OpportunityInboxScreen> {
   String query = '';
+  Future<List<Booking>>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings != null) {
+      _future ??= bookings.opportunities(force: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final store = ActorTalentDemoStore.instance;
     return AnimatedBuilder(
-      animation: ActorTalentDemoStore.instance,
+      animation: store,
       builder: (context, _) {
-        final store = ActorTalentDemoStore.instance;
         final tab = store.selectedOpportunityTab;
-        final filtered = ActorTalentDemoData.opportunities.where((item) {
-          final matchesTab = tab == _tabFor(item.type);
-          final normalized = query.toLowerCase().trim();
-          final matchesQuery = normalized.isEmpty ||
-              item.projectTitle.toLowerCase().contains(normalized) ||
-              item.role.toLowerCase().contains(normalized) ||
-              item.producer.toLowerCase().contains(normalized);
-          return matchesTab && matchesQuery;
-        }).toList();
         return Column(
           children: [
             ActorSearchFilterBar(
@@ -52,35 +55,116 @@ class _AT06OpportunityInboxScreenState
             ActorSectionCard(
               title: 'Sorted by Expiry',
               icon: Icons.inbox_outlined,
-              child: filtered.isEmpty
-                  ? _EmptyOpportunity(tab: tab)
-                  : ActorResponsiveGrid(
-                      minWidth: 270,
-                      children: [
-                        for (final opportunity in filtered)
-                          ActorOpportunityCard(
-                            opportunity: opportunity,
-                            status: store.opportunityStatus(opportunity),
-                            onOpen: () => Navigator.pushNamed(
-                              context,
-                              ActorTalentRoutes.offerDetail,
-                              arguments: opportunity.id,
-                            ),
-                            onPrimary: () => store.acceptOffer(opportunity.id),
-                            onHold: () {
-                              store.holdDates(opportunity.id);
-                              actorSnack(
-                                context,
-                                '${opportunity.projectTitle} dates held',
-                              );
-                            },
+              child: FutureBuilder<List<Booking>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const _EmptyOpportunity(tab: 'Loading offers');
+                  }
+                  if (snapshot.hasError) {
+                    return _DemoOpportunityGrid(query: query, tab: tab);
+                  }
+                  final bookings = _filter(snapshot.data ?? const []);
+                  if (bookings.isEmpty) {
+                    return _DemoOpportunityGrid(query: query, tab: tab);
+                  }
+                  return ActorResponsiveGrid(
+                    minWidth: 270,
+                    children: [
+                      for (final booking in bookings)
+                        ActorOpportunityCard(
+                          opportunity: booking.toActorOpportunity(),
+                          status: booking.toActorOpportunity().status,
+                          onOpen: () => Navigator.pushNamed(
+                            context,
+                            ActorTalentRoutes.offerDetail,
+                            arguments: booking.publicId,
                           ),
-                      ],
-                    ),
+                          onPrimary: () => _accept(booking),
+                          onHold: () => actorSnack(
+                            context,
+                            'Live holds are managed in Availability Calendar',
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         );
       },
+    );
+  }
+
+  List<Booking> _filter(List<Booking> rows) {
+    final normalized = query.toLowerCase().trim();
+    return rows.where((item) {
+      final haystack =
+          '${item.requester.displayName} ${item.category} ${item.status}'
+              .toLowerCase();
+      return normalized.isEmpty || haystack.contains(normalized);
+    }).toList();
+  }
+
+  Future<void> _accept(Booking booking) async {
+    final offer = booking.activeOffer;
+    if (offer == null) return;
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) {
+      actorSnack(context, 'Offer accepted. Terms approved.');
+      return;
+    }
+    try {
+      await bookings.acceptOffer(offer.publicId);
+      if (!mounted) return;
+      actorSnack(context, 'Offer accepted. Terms approved.');
+      setState(() => _future = bookings.opportunities(force: true));
+    } catch (error) {
+      if (!mounted) return;
+      actorSnack(context, '$error');
+    }
+  }
+}
+
+class _DemoOpportunityGrid extends StatelessWidget {
+  final String query;
+  final String tab;
+
+  const _DemoOpportunityGrid({required this.query, required this.tab});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = ActorTalentDemoStore.instance;
+    final filtered = ActorTalentDemoData.opportunities.where((item) {
+      final matchesTab = tab == _tabFor(item.type);
+      final normalized = query.toLowerCase().trim();
+      final matchesQuery = normalized.isEmpty ||
+          item.projectTitle.toLowerCase().contains(normalized) ||
+          item.role.toLowerCase().contains(normalized) ||
+          item.producer.toLowerCase().contains(normalized);
+      return matchesTab && matchesQuery;
+    }).toList();
+    if (filtered.isEmpty) return _EmptyOpportunity(tab: tab);
+    return ActorResponsiveGrid(
+      minWidth: 270,
+      children: [
+        for (final opportunity in filtered)
+          ActorOpportunityCard(
+            opportunity: opportunity,
+            status: store.opportunityStatus(opportunity),
+            onOpen: () => Navigator.pushNamed(
+              context,
+              ActorTalentRoutes.offerDetail,
+              arguments: opportunity.id,
+            ),
+            onPrimary: () => store.acceptOffer(opportunity.id),
+            onHold: () {
+              store.holdDates(opportunity.id);
+              actorSnack(context, '${opportunity.projectTitle} dates held');
+            },
+          ),
+      ],
     );
   }
 
@@ -106,10 +190,13 @@ class _EmptyOpportunity extends StatelessWidget {
         runSpacing: 8,
         children: [
           StatusChip(
-              label: 'No $tab', color: Theme.of(context).colorScheme.primary),
+            label: 'No $tab',
+            color: Theme.of(context).colorScheme.primary,
+          ),
           StatusChip(
-              label: 'Filtered-zero state',
-              color: Theme.of(context).colorScheme.secondary),
+            label: 'Filtered-zero state',
+            color: Theme.of(context).colorScheme.secondary,
+          ),
         ],
       ),
     );

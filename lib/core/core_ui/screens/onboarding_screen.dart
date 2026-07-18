@@ -81,9 +81,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               controller: _controller,
               itemCount: _slides.length,
               onPageChanged: (value) => setState(() => _index = value),
-              itemBuilder: (context, index) => _OnboardingCard(
-                slide: _slides[index],
-              ),
+              itemBuilder: (context, index) =>
+                  _OnboardingCard(slide: _slides[index]),
             ),
           ),
           const SizedBox(height: 22),

@@ -120,7 +120,10 @@ class _MilestoneColumn extends StatelessWidget {
                         label: 'Upload Proof',
                         icon: Icons.upload_file_rounded,
                         onTap: () => Navigator.pushNamed(
-                            context, CoreRoutes.paymentProof),
+                          context,
+                          CoreRoutes.paymentProof,
+                          arguments: item.id,
+                        ),
                       ),
                     ],
                   ],

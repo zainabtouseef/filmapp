@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -8,8 +11,25 @@ import '../data/casting_agency_demo_data.dart';
 import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_components.dart';
 
-class CA01AgencyDashboardScreen extends StatelessWidget {
+class CA01AgencyDashboardScreen extends StatefulWidget {
   const CA01AgencyDashboardScreen({super.key});
+
+  @override
+  State<CA01AgencyDashboardScreen> createState() =>
+      _CA01AgencyDashboardScreenState();
+}
+
+class _CA01AgencyDashboardScreenState extends State<CA01AgencyDashboardScreen> {
+  Future<List<AuditionDto>>? _auditionsFuture;
+  Future<AgencyProfileDto?>? _profileFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _profileFuture ??= specialist?.agencyProfile(force: true);
+    _auditionsFuture ??= specialist?.auditions(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +42,45 @@ class CA01AgencyDashboardScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const PersonalDashboardKpiStrip(),
+            const SizedBox(height: 12),
+            if (_profileFuture != null || _auditionsFuture != null)
+              FutureBuilder<List<Object?>>(
+                future: Future.wait<Object?>([
+                  if (_profileFuture != null) _profileFuture!,
+                  if (_auditionsFuture != null) _auditionsFuture!,
+                ]),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: InlineNotice(
+                        message: 'Loading live agency workspace...',
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    );
+                  }
+                  final values = snapshot.data ?? const [];
+                  AgencyProfileDto? profile;
+                  List<AuditionDto> auditions = const [];
+                  for (final value in values) {
+                    if (value is AgencyProfileDto) profile = value;
+                    if (value is List<AuditionDto>) auditions = value;
+                  }
+                  if (profile == null && auditions.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InlineNotice(
+                      message:
+                          'Live agency connected: ${profile?.name ?? 'profile pending'}, ${auditions.length} audition request(s).',
+                      icon: Icons.cloud_done_outlined,
+                      tone: CoreStatusTone.success,
+                    ),
+                  );
+                },
+              ),
             AgencyKpiRail(metrics: CastingAgencyDemoData.metrics),
             const SizedBox(height: 12),
             AgencyTwoColumn(

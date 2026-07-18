@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -8,8 +11,26 @@ import '../data/distribution_partner_demo_data.dart';
 import '../routes/distribution_partner_routes.dart';
 import '../widgets/distribution_partner_components.dart';
 
-class DS01DistributionDashboardScreen extends StatelessWidget {
+class DS01DistributionDashboardScreen extends StatefulWidget {
   const DS01DistributionDashboardScreen({super.key});
+
+  @override
+  State<DS01DistributionDashboardScreen> createState() =>
+      _DS01DistributionDashboardScreenState();
+}
+
+class _DS01DistributionDashboardScreenState
+    extends State<DS01DistributionDashboardScreen> {
+  Future<DistributionProfileDto?>? _profileFuture;
+  Future<List<DistributionProjectDto>>? _projectsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final specialist = SpecialistScope.maybeOf(context);
+    _profileFuture ??= specialist?.distributionProfile(force: true);
+    _projectsFuture ??= specialist?.distributionProjects(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +43,47 @@ class DS01DistributionDashboardScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const PersonalDashboardKpiStrip(),
+            const SizedBox(height: 12),
+            if (_profileFuture != null || _projectsFuture != null)
+              FutureBuilder<List<Object?>>(
+                future: Future.wait<Object?>([
+                  if (_profileFuture != null) _profileFuture!,
+                  if (_projectsFuture != null) _projectsFuture!,
+                ]),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: InlineNotice(
+                        message: 'Loading live distribution workspace...',
+                        icon: Icons.hourglass_top_rounded,
+                      ),
+                    );
+                  }
+                  final values = snapshot.data ?? const [];
+                  DistributionProfileDto? profile;
+                  List<DistributionProjectDto> projects = const [];
+                  for (final value in values) {
+                    if (value is DistributionProfileDto) profile = value;
+                    if (value is List<DistributionProjectDto>) {
+                      projects = value;
+                    }
+                  }
+                  if (profile == null && projects.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InlineNotice(
+                      message:
+                          'Live distribution connected: ${profile?.name ?? 'profile pending'}, ${projects.length} release project(s).',
+                      icon: Icons.cloud_done_outlined,
+                      tone: CoreStatusTone.success,
+                    ),
+                  );
+                },
+              ),
             DistributionKpiRail(metrics: DistributionPartnerDemoData.metrics),
             const SizedBox(height: 12),
             DistributionTwoColumn(

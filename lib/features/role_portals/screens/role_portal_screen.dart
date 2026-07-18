@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -94,6 +95,10 @@ class _PortalBody extends StatelessWidget {
       children: [
         _ScreenIntro(portal: portal, screen: screen),
         const SizedBox(height: 12),
+        if (screen.kind == PortalScreenKind.dashboard) ...[
+          const PersonalDashboardKpiStrip(),
+          const SizedBox(height: 12),
+        ],
         MetricActionRail(
           items: [
             for (final metric in RolePortalDemoData.metricsFor(portal))
@@ -777,11 +782,15 @@ class _ReportsPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        CorePrimaryButton(
-          icon: Icons.file_download_outlined,
+        ExportActionButton(
+          exportType: 'bookings',
           label: screen.primaryAction,
-          compact: true,
-          onTap: () => showCoreSnack(context, 'Report export prepared'),
+          builder: (context, onTap, label) => CorePrimaryButton(
+            icon: Icons.file_download_outlined,
+            label: label,
+            compact: true,
+            onTap: onTap,
+          ),
         ),
       ],
     );

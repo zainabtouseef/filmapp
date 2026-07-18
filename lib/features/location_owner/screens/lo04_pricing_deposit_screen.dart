@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -258,12 +259,46 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
           CorePrimaryButton(
             icon: Icons.verified_user_outlined,
             label: 'Confirm publish',
-            onTap: () {
+            onTap: () async {
               if (otp.text.trim().length != 6) {
                 locationSnack(context, 'Enter a 6-digit OTP');
                 return;
               }
+              final operations = OperationsScope.maybeOf(context);
+              if (operations != null) {
+                try {
+                  final properties =
+                      await operations.locationProperties(force: true);
+                  final propertyId =
+                      properties.isEmpty ? null : properties.first.publicId;
+                  if (propertyId == null || propertyId.isEmpty) {
+                    if (mounted) {
+                      locationSnack(
+                        context,
+                        'Live pricing skipped: create a location first',
+                      );
+                    }
+                  } else {
+                    for (final price
+                        in LocationOwnerDemoStore.instance.prices) {
+                      await operations.createLocationPricing(propertyId, {
+                        'label': price.label,
+                        'amount_minor': price.amount * 100,
+                        'currency': 'PKR',
+                        'unit': _pricingUnit(price.id),
+                        'enabled': price.enabled,
+                        'conditions': 'Published from LO-04 rate card',
+                      });
+                    }
+                  }
+                } catch (error) {
+                  if (mounted) {
+                    locationSnack(context, 'Live pricing skipped: $error');
+                  }
+                }
+              }
               LocationOwnerDemoStore.instance.publishPricing();
+              if (!mounted) return;
               Navigator.pop(context);
               locationSnack(context, 'Pricing published and synced');
             },
@@ -271,6 +306,15 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
         ],
       ),
     ).whenComplete(otp.dispose);
+  }
+
+  String _pricingUnit(String priceId) {
+    return switch (priceId) {
+      'night' => 'night',
+      'hourly' => 'hour',
+      'deposit' => 'deposit',
+      _ => 'day',
+    };
   }
 }
 

@@ -1,32 +1,114 @@
 part of '../super_admin_screens.dart';
 
-class PaymentsHubScreen extends StatelessWidget {
+class PaymentsHubScreen extends StatefulWidget {
   const PaymentsHubScreen({super.key});
 
   @override
+  State<PaymentsHubScreen> createState() => _PaymentsHubScreenState();
+}
+
+class _PaymentsHubScreenState extends State<PaymentsHubScreen> {
+  Future<List<PaymentProofDto>>? _proofsFuture;
+  Future<List<LedgerEntryDto>>? _ledgerFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final payments = PaymentsScope.maybeOf(context);
+    _proofsFuture ??= payments?.adminProofs(force: true);
+    _ledgerFuture ??= payments?.ledger(force: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final proofs = AdminMockData.paymentProofs.take(3).toList();
-    final ledger = AdminMockData.ledgerEntries.take(3).toList();
+    if (_proofsFuture != null || _ledgerFuture != null) {
+      return FutureBuilder<List<dynamic>>(
+        future: Future.wait([
+          _proofsFuture ?? Future<List<PaymentProofDto>>.value(const []),
+          _ledgerFuture ?? Future<List<LedgerEntryDto>>.value(const []),
+        ]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final proofDtos = snapshot.hasError
+              ? const <PaymentProofDto>[]
+              : (snapshot.data?[0] as List<PaymentProofDto>? ?? const []);
+          final ledgerDtos = snapshot.hasError
+              ? const <LedgerEntryDto>[]
+              : (snapshot.data?[1] as List<LedgerEntryDto>? ?? const []);
+          final proofs = proofDtos
+              .map((proof) => AdminPaymentProof(
+                    proofId: proof.publicId,
+                    bookingId: proof.bookingId,
+                    contractId: proof.transactionId,
+                    payer: 'Submitted by ${proof.submittedBy.displayName}',
+                    payee: 'Milestone ${proof.milestoneId}',
+                    milestone: proof.status.replaceAll('_', ' '),
+                    expectedAmount: proof.claimedAmountMinor ~/ 100,
+                    claimedAmount: proof.claimedAmountMinor ~/ 100,
+                    method: _methodLabel(proof.method),
+                    risk: proof.riskScore >= 40 ? 'Amount Mismatch' : 'No Risk',
+                    age: '0h',
+                    status: proof.status,
+                  ))
+              .take(3)
+              .toList();
+          final ledger =
+              ledgerDtos.map((entry) => entry.toLedgerRow()).take(3).toList();
+          return _hubContent(
+            context,
+            proofs: proofs.isEmpty
+                ? AdminMockData.paymentProofs.take(3).toList()
+                : proofs,
+            ledger: ledger.isEmpty
+                ? AdminMockData.ledgerEntries.take(3).toList()
+                : ledger,
+            notice: snapshot.hasError
+                ? 'Live finance hub unavailable; showing demo rows.'
+                : null,
+          );
+        },
+      );
+    }
+    return _hubContent(
+      context,
+      proofs: AdminMockData.paymentProofs.take(3).toList(),
+      ledger: AdminMockData.ledgerEntries.take(3).toList(),
+    );
+  }
+
+  Widget _hubContent(
+    BuildContext context, {
+    required List<AdminPaymentProof> proofs,
+    required List<LedgerRowData> ledger,
+    String? notice,
+  }) {
     final fees = AdminMockData.commissionRules.take(3).toList();
-    const metricTiles = [
+    final pendingValue =
+        proofs.fold<int>(0, (sum, item) => sum + item.claimedAmount);
+    final metricTiles = [
       AdminMetricTile(
           label: 'Pending Value',
-          value: 'PKR 4.2M',
+          value: 'PKR ${_adminMoney(pendingValue)}',
           icon: Icons.account_balance_wallet_outlined,
           tone: AdminDecisionTone.warning),
       AdminMetricTile(
           label: 'High-Value Proofs',
-          value: '6',
+          value:
+              '${proofs.where((proof) => proof.claimedAmount >= 100000).length}',
           icon: Icons.priority_high_rounded,
           tone: AdminDecisionTone.danger),
       AdminMetricTile(
           label: 'Mismatch Alerts',
-          value: '3',
+          value:
+              '${proofs.where((proof) => proof.risk == 'Amount Mismatch').length}',
           icon: Icons.compare_arrows_rounded,
           tone: AdminDecisionTone.danger),
       AdminMetricTile(
           label: 'Duplicate Warnings',
-          value: '2',
+          value:
+              '${proofs.where((proof) => proof.risk == 'Duplicate Proof').length}',
           icon: Icons.copy_all_outlined,
           tone: AdminDecisionTone.warning),
     ];
@@ -34,6 +116,10 @@ class PaymentsHubScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (notice != null) ...[
+          InlineNotice(message: notice, tone: CoreStatusTone.warning),
+          const SizedBox(height: 12),
+        ],
         MetricActionRail(
           items: [
             for (final tile in metricTiles) tile.toActionItem(context),
@@ -58,7 +144,10 @@ class PaymentsHubScreen extends StatelessWidget {
                   child: _PaymentProofRow(
                     proof: proof,
                     onReview: () => Navigator.pushNamed(
-                        context, SuperAdminRoutes.paymentReview),
+                      context,
+                      SuperAdminRoutes.paymentReview,
+                      arguments: proof.proofId,
+                    ),
                   ),
                 ),
               ),

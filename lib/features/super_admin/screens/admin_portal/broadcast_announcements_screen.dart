@@ -16,12 +16,78 @@ class _BroadcastAnnouncementsScreenState
   String _priority = 'Normal';
   String _segment = 'All actors in Lahore';
   String _status = 'Draft';
+  bool _sending = false;
+  String? _notice;
 
   @override
   void dispose() {
     _title.dispose();
     _body.dispose();
     super.dispose();
+  }
+
+  List<String> get _audienceRoles {
+    return switch (_segment) {
+      'All actors in Lahore' => const ['actor_talent'],
+      'All location owners in Karachi' => const ['location_owner'],
+      'All pending KYC users' => const ['all'],
+      'All producers with active negotiations' => const ['director_producer'],
+      'All payment-pending users' => const ['all'],
+      _ => const ['all'],
+    };
+  }
+
+  Future<void> _saveOrSend({required bool publish}) async {
+    if (_sending) return;
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    setState(() {
+      _sending = true;
+      _notice = null;
+    });
+    try {
+      String? liveId;
+      if (trustSafety != null) {
+        final announcement = await trustSafety.createAnnouncement({
+          'title': _title.text.trim(),
+          'body': _body.text.trim(),
+          'priority': _priority.toLowerCase(),
+          'audience': {'roles': _audienceRoles},
+          'channels': {
+            'in_app': true,
+            'push': true,
+            'email': false,
+            'sms': false
+          },
+        });
+        liveId = announcement.publicId;
+        if (publish) {
+          await trustSafety.publishAnnouncement(announcement.publicId);
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _status = publish ? 'Sent live' : 'Draft saved';
+        _notice = liveId == null
+            ? 'Announcement kept as preview because live admin access is unavailable.'
+            : 'Live announcement $liveId ${publish ? 'published' : 'saved as draft'}.';
+      });
+      if (publish) {
+        showCoreSuccessDialog(
+          context,
+          title: 'Broadcast sent',
+          message:
+              'The live announcement was published to the selected audience.',
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _notice =
+            'Live announcement endpoint unavailable — preview announcement kept locally.';
+      });
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   @override
@@ -32,6 +98,15 @@ class _BroadcastAnnouncementsScreenState
       left: AdminSurface(
         child: Column(
           children: [
+            if (_notice != null) ...[
+              InlineNotice(
+                message: _notice!,
+                tone: _notice!.startsWith('Live')
+                    ? CoreStatusTone.info
+                    : CoreStatusTone.warning,
+              ),
+              const SizedBox(height: 12),
+            ],
             CoreTextField(
                 controller: _title,
                 label: 'Announcement title',
@@ -89,15 +164,11 @@ class _BroadcastAnnouncementsScreenState
               runSpacing: 8,
               children: [
                 _tinyAction(context, 'Save Draft',
-                    () => setState(() => _status = 'Draft saved')),
+                    _sending ? null : () => _saveOrSend(publish: false)),
                 _tinyAction(context, 'Schedule',
                     () => setState(() => _status = 'Scheduled')),
-                _tinyAction(
-                    context,
-                    'Send Now',
-                    () => showCoreSuccessDialog(context,
-                        title: 'Broadcast sent',
-                        message: 'Static audience segment notified.')),
+                _tinyAction(context, _sending ? 'Sending...' : 'Send Now',
+                    _sending ? null : () => _saveOrSend(publish: true)),
                 _tinyAction(context, 'Test Send',
                     () => showCoreSnack(context, 'Test notification sent')),
               ],
@@ -117,9 +188,71 @@ class _BroadcastAnnouncementsScreenState
                 priority: _priority,
                 segment: _segment,
                 status: _status),
+            const SizedBox(height: 14),
+            const _LiveAnnouncementsList(),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LiveAnnouncementsList extends StatefulWidget {
+  const _LiveAnnouncementsList();
+
+  @override
+  State<_LiveAnnouncementsList> createState() => _LiveAnnouncementsListState();
+}
+
+class _LiveAnnouncementsListState extends State<_LiveAnnouncementsList> {
+  late Future<List<AnnouncementDto>> _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    _future = trustSafety == null
+        ? Future.value(const <AnnouncementDto>[])
+        : trustSafety.announcements(force: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<AnnouncementDto>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError) {
+          return const InlineNotice(
+            message: 'Live announcement history unavailable.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final rows = snapshot.data ?? const <AnnouncementDto>[];
+        if (rows.isEmpty) {
+          return const InlineNotice(message: 'No live announcements yet.');
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AdminSectionHeader(title: 'Recent Live Broadcasts'),
+            const SizedBox(height: 8),
+            ...rows.take(3).map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AdminStatusBadge(
+                      label: '${item.publicId} · ${item.status}',
+                      tone: item.status == 'published'
+                          ? AdminDecisionTone.success
+                          : AdminDecisionTone.neutral,
+                    ),
+                  ),
+                ),
+          ],
+        );
+      },
     );
   }
 }

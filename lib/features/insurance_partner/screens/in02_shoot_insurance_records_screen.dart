@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/insurance/insurance_controller.dart';
+import '../../../core/insurance/insurance_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -21,6 +23,14 @@ class _IN02ShootInsuranceRecordsScreenState
     extends State<IN02ShootInsuranceRecordsScreen> {
   String _query = '';
   String _sort = 'Risk';
+  Future<List<InsurancePolicyDto>>? _policiesFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final insurance = InsuranceScope.maybeOf(context);
+    _policiesFuture ??= insurance?.policies(force: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +48,33 @@ class _IN02ShootInsuranceRecordsScreenState
               selected: true,
               child: Column(
                 children: [
+                  if (_policiesFuture != null)
+                    FutureBuilder<List<InsurancePolicyDto>>(
+                      future: _policiesFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: InlineNotice(
+                              message: 'Loading live insurance policies...',
+                              icon: Icons.hourglass_top_rounded,
+                            ),
+                          );
+                        }
+                        final rows = snapshot.data ?? const [];
+                        if (rows.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InlineNotice(
+                            message:
+                                'Live policy records connected: ${rows.length} policy/policies, latest ${rows.first.publicId}.',
+                            icon: Icons.cloud_done_outlined,
+                            tone: CoreStatusTone.success,
+                          ),
+                        );
+                      },
+                    ),
                   InsuranceSearchField(
                     hintText: 'Search project, booking, insured party...',
                     onChanged: (value) => setState(() => _query = value),

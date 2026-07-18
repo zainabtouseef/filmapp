@@ -36,6 +36,8 @@ class _SupportCrmScreenState extends State<SupportCrmScreen> {
     final messages = _threads[_selected.id]!;
     return Column(
       children: [
+        const _LiveSupportPanel(),
+        const SizedBox(height: 14),
         AdminFilterBar(
           filters: const [
             'Inbox',
@@ -123,6 +125,121 @@ class _SupportCrmScreenState extends State<SupportCrmScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LiveSupportPanel extends StatefulWidget {
+  const _LiveSupportPanel();
+
+  @override
+  State<_LiveSupportPanel> createState() => _LiveSupportPanelState();
+}
+
+class _LiveSupportPanelState extends State<_LiveSupportPanel> {
+  late Future<List<SupportTicketDto>> _future;
+  bool _updating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    _future = trustSafety == null
+        ? Future.value(const <SupportTicketDto>[])
+        : trustSafety.adminSupportTickets(force: true);
+  }
+
+  Future<void> _update(SupportTicketDto ticket, String action) async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null || _updating) return;
+    setState(() => _updating = true);
+    try {
+      if (action == 'reply') {
+        await trustSafety.createSupportMessage(
+          ticketId: ticket.publicId,
+          body: 'Admin response sent from Flutter Support CRM.',
+          internalNote: true,
+        );
+      } else {
+        await trustSafety.updateSupportTicket(ticket.publicId, {
+          'status': action,
+          'assign_to_me': true,
+        });
+      }
+      if (!mounted) return;
+      setState(() => _future = trustSafety.adminSupportTickets(force: true));
+      showCoreSnack(context, 'Live support ticket updated');
+    } catch (_) {
+      if (mounted) showCoreSnack(context, 'Could not update live ticket');
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<SupportTicketDto>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError) {
+          return const InlineNotice(
+            message:
+                'Live Support CRM unavailable — showing preview support tickets.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final rows = snapshot.data ?? const <SupportTicketDto>[];
+        if (rows.isEmpty) {
+          return const InlineNotice(
+            message:
+                'No live support tickets are open — preview tickets remain below.',
+          );
+        }
+        final ticket = rows.first;
+        return AdminSurface(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              AdminStatusBadge(
+                label: '${rows.length} live tickets',
+                tone: AdminDecisionTone.info,
+              ),
+              AdminStatusBadge(
+                label: ticket.priority,
+                tone: ticket.priority == 'urgent'
+                    ? AdminDecisionTone.danger
+                    : AdminDecisionTone.warning,
+              ),
+              Text(
+                '${ticket.publicId} · ${ticket.subject} · ${ticket.status}',
+                style: AppTextStyles.caption
+                    .copyWith(color: context.appColors.textSecondary),
+              ),
+              _tinyAction(
+                context,
+                _updating ? 'Updating...' : 'Assign live',
+                _updating ? null : () => _update(ticket, ticket.status),
+              ),
+              _tinyAction(
+                context,
+                _updating ? 'Updating...' : 'Reply live',
+                _updating ? null : () => _update(ticket, 'reply'),
+              ),
+              _tinyAction(
+                context,
+                _updating ? 'Updating...' : 'Resolve live',
+                _updating ? null : () => _update(ticket, 'resolved'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

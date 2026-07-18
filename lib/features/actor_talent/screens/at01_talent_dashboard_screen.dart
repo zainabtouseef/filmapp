@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/actor_talent_demo_data.dart';
@@ -32,6 +33,8 @@ class AT01TalentDashboardScreen extends StatelessWidget {
                 right: ActorProgressMeter(value: store.profileCompleteness),
               ),
             ),
+            const SizedBox(height: 12),
+            const PersonalDashboardKpiStrip(),
             const SizedBox(height: 12),
             ActorKpiRail(metrics: ActorTalentDemoData.metrics),
             const SizedBox(height: 12),

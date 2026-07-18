@@ -46,8 +46,7 @@ class _BookingMonitorScreenState extends State<BookingMonitorScreen> {
                   : () => _noteDialog(
                         context,
                         'Flag ${booking.id} - reason',
-                        onSave: () =>
-                            setState(() => _flagged.add(booking.id)),
+                        onSave: () => setState(() => _flagged.add(booking.id)),
                       ),
             ),
           );

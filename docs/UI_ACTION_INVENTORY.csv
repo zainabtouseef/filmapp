@@ -1,0 +1,992 @@
+file,line,handler,classification,source
+lib/core/analytics/analytics_widgets.dart,74,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.review),"
+lib/core/analytics/analytics_widgets.dart,83,onTap,navigation,onTap: () =>
+lib/core/core_booking/screens/booking_chat_screen.dart,178,onLongPress,review,"onLongPress: () => _messageActions(message),"
+lib/core/core_booking/screens/booking_chat_screen.dart,228,onChanged,local_state,"onChanged: (value) => setState(() => _securedBooking = value),"
+lib/core/core_booking/screens/booking_chat_screen.dart,252,onTap,navigation,onTap: () =>
+lib/core/core_booking/screens/booking_chat_screen.dart,262,onTap,navigation,onTap: () =>
+lib/core/core_booking/screens/booking_chat_screen.dart,270,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.report),"
+lib/core/core_booking/screens/booking_chat_screen.dart,318,onTap,review,"onTap: () => showCoreSnack(context, 'Attachment picker simulated'),"
+lib/core/core_booking/screens/booking_chat_screen.dart,338,onTap,local_state,onTap: () => setState(() {
+lib/core/core_booking/screens/booking_chat_screen.dart,354,onTap,server_candidate,"onTap: _send,"
+lib/core/core_booking/screens/booking_chat_screen.dart,526,onTap,review,"onTap: onTap,"
+lib/core/core_contract/screens/contract_viewer_screen.dart,73,onPressed,review,onPressed: () async {
+lib/core/core_contract/screens/contract_viewer_screen.dart,298,onChanged,local_state,onChanged: (value) =>
+lib/core/core_contract/screens/contract_viewer_screen.dart,350,onTap,review,"onTap: onTap,"
+lib/core/core_contract/screens/contract_viewer_screen.dart,526,onTap,server_candidate,"onTap: onSigned,"
+lib/core/core_payment/screens/payment_proof_screen.dart,207,onChanged,local_state,onChanged: (value) {
+lib/core/core_payment/screens/payment_proof_screen.dart,221,onChanged,local_state,onChanged: (value) {
+lib/core/core_payment/screens/payment_proof_screen.dart,235,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/core/core_payment/screens/payment_proof_screen.dart,255,onChanged,local_state,onChanged: (value) =>
+lib/core/core_payment/screens/payment_proof_screen.dart,271,onTap,server_candidate,"onTap: _pickProof,"
+lib/core/core_payment/screens/payment_proof_screen.dart,285,onTap,server_candidate,"onTap: _submit,"
+lib/core/core_payment/screens/receipts_ledger_screen.dart,116,onTap,local_state,"onTap: () => setState(() => _filter = filter),"
+lib/core/core_payment/screens/receipts_ledger_screen.dart,138,onTap,review,"onTap: () => _details(rows[i]),"
+lib/core/core_payment/screens/receipts_ledger_screen.dart,251,onTap,review,"onTap: onTap,"
+lib/core/core_payment/screens/receipts_ledger_screen.dart,361,onTap,review,onTap: () =>
+lib/core/core_payment/screens/receipts_ledger_screen.dart,368,onTap,navigation,onTap: () {
+lib/core/core_safety/screens/ratings_review_screen.dart,134,onChanged,local_state,"onChanged: (value) => setState(() => _rating = value)),"
+lib/core/core_safety/screens/ratings_review_screen.dart,144,onTap,local_state,onTap: () => setState(() {
+lib/core/core_safety/screens/ratings_review_screen.dart,166,onChanged,local_state,onChanged: (value) =>
+lib/core/core_safety/screens/ratings_review_screen.dart,185,onTap,local_state,"onTap: () => setState(() => _evidenceUploaded = true),"
+lib/core/core_safety/screens/ratings_review_screen.dart,192,onTap,server_candidate,"onTap: _submitting ? null : _submit,"
+lib/core/core_safety/screens/report_block_screen.dart,217,onChanged,local_state,onChanged: (value) =>
+lib/core/core_safety/screens/report_block_screen.dart,225,onTap,local_state,"onTap: () => setState(() => _uploaded = true),"
+lib/core/core_safety/screens/report_block_screen.dart,240,onChanged,local_state,onChanged: (value) =>
+lib/core/core_safety/screens/report_block_screen.dart,247,onChanged,local_state,"onChanged: (value) => setState(() => _block = value),"
+lib/core/core_safety/screens/report_block_screen.dart,263,onTap,server_candidate,"onTap: _submitting ? null : _submit,"
+lib/core/core_safety/screens/report_block_screen.dart,269,onTap,review,"onTap: () => navigateCoreBack(context),"
+lib/core/core_settings/screens/settings_account_screen.dart,69,onTap,navigation,onTap: () {
+lib/core/core_settings/screens/settings_account_screen.dart,148,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/core/core_settings/screens/settings_account_screen.dart,152,onPressed,navigation,onPressed: () {
+lib/core/core_settings/screens/settings_account_screen.dart,333,onChanged,local_state,onChanged: (value) =>
+lib/core/core_settings/screens/settings_account_screen.dart,386,onTap,review,"onTap: _otpPaymentModal,"
+lib/core/core_settings/screens/settings_account_screen.dart,395,onTap,review,"onTap: _otpPaymentModal,"
+lib/core/core_settings/screens/settings_account_screen.dart,436,onChanged,review,"onChanged: onChanged,"
+lib/core/core_settings/screens/settings_account_screen.dart,458,onTap,review,"onTap: onTap,"
+lib/core/core_ui/screens/auth_screens.dart,152,onTap,navigation,onTap: () {
+lib/core/core_ui/screens/auth_screens.dart,184,onTap,navigation,onTap: () {
+lib/core/core_ui/screens/auth_screens.dart,244,onPressed,local_state,onPressed: () =>
+lib/core/core_ui/screens/auth_screens.dart,259,onPressed,review,"onPressed: _showOtpSheet,"
+lib/core/core_ui/screens/auth_screens.dart,264,onPressed,navigation,onPressed: () => Navigator.pushNamed(
+lib/core/core_ui/screens/auth_screens.dart,276,onChanged,local_state,"onChanged: (value) => setState(() => _biometric = value),"
+lib/core/core_ui/screens/auth_screens.dart,292,onTap,server_candidate,"onTap: _showDemoRolePicker,"
+lib/core/core_ui/screens/auth_screens.dart,345,onTap,review,"onTap: _loading ? null : _login,"
+lib/core/core_ui/screens/auth_screens.dart,351,onTap,navigation,onTap: () =>
+lib/core/core_ui/screens/auth_screens.dart,546,onPressed,local_state,"onPressed: () => setState(() => _showPassword = !_showPassword),"
+lib/core/core_ui/screens/auth_screens.dart,568,onChanged,local_state,"onChanged: (value) => setState(() => _city = value ?? _city),"
+lib/core/core_ui/screens/auth_screens.dart,581,onChanged,local_state,"onChanged: (value) => setState(() => _terms = value ?? false),"
+lib/core/core_ui/screens/auth_screens.dart,602,onTap,server_candidate,"onTap: _loading ? null : _createAccount,"
+lib/core/core_ui/screens/auth_screens.dart,639,onPressed,server_candidate,"onPressed: _resendSeconds == 0 ? _startTimer : null,"
+lib/core/core_ui/screens/auth_screens.dart,645,onPressed,local_state,"onPressed: () => setState(() => _step = 0),"
+lib/core/core_ui/screens/auth_screens.dart,652,onTap,server_candidate,"onTap: _verifyOtp,"
+lib/core/core_ui/screens/auth_screens.dart,787,onTap,navigation,onTap: _step == 3
+lib/core/core_ui/screens/notification_center_screen.dart,154,onTap,review,"onTap: _markAllRead,"
+lib/core/core_ui/screens/notification_center_screen.dart,201,onTap,review,"onTap: () => _openNotification(item),"
+lib/core/core_ui/screens/notification_center_screen.dart,217,onTap,local_state,"onTap: () => setState(() => _tab = index),"
+lib/core/core_ui/screens/notification_center_screen.dart,247,onTap,review,"onTap: onTap,"
+lib/core/core_ui/screens/onboarding_screen.dart,70,onPressed,review,"onPressed: _goRoleSelection,"
+lib/core/core_ui/screens/onboarding_screen.dart,112,onTap,review,onTap: () {
+lib/core/core_ui/screens/profile_role_switcher_screen.dart,137,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.roleSelection),"
+lib/core/core_ui/screens/profile_role_switcher_screen.dart,208,onPressed,review,onPressed: () async {
+lib/core/core_ui/screens/role_selection_screen.dart,93,onTap,local_state,onTap: () =>
+lib/core/core_ui/screens/role_selection_screen.dart,106,onTap,navigation,onTap: _selectedPrimaryRole == null
+lib/core/core_ui/screens/role_selection_screen.dart,118,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.login),"
+lib/core/core_ui/screens/role_selection_screen.dart,142,onTap,review,"onTap: onTap,"
+lib/core/core_ui/screens/utility_screens.dart,31,onAction,review,"onAction: () => showCoreSnack(context, 'Retrying static state'),"
+lib/core/core_ui/screens/utility_screens.dart,37,onTap,review,"onTap: () => navigateCoreBack(context),"
+lib/core/core_ui/screens/utility_screens.dart,61,onAction,navigation,"onAction: () => Navigator.pushNamed(context, CoreRoutes.dashboard),"
+lib/core/core_ui/screens/utility_screens.dart,89,onTap,review,"onTap: () => showCoreSnack(context, 'Connection check simulated'),"
+lib/core/core_ui/screens/utility_screens.dart,134,onTap,server_candidate,"onTap: () => showCoreSnack(context, 'App store redirect simulated'),"
+lib/core/core_ui/screens/utility_screens.dart,180,onTap,review,onTap: () =>
+lib/core/core_ui/screens/verification_screens.dart,262,onTap,local_state,"onTap: () => setState(() => _step--),"
+lib/core/core_ui/screens/verification_screens.dart,274,onTap,server_candidate,"onTap: _submitting ? null : _next,"
+lib/core/core_ui/screens/verification_screens.dart,307,onTap,server_candidate,onTap: _loadingUpload == null
+lib/core/core_ui/screens/verification_screens.dart,318,onTap,server_candidate,onTap: _loadingUpload == null
+lib/core/core_ui/screens/verification_screens.dart,393,onTap,server_candidate,"onTap: _loadingUpload == null ? _captureSelfie : null,"
+lib/core/core_ui/screens/verification_screens.dart,418,onTap,server_candidate,onTap: _loadingUpload == null
+lib/core/core_ui/screens/verification_screens.dart,462,onChanged,local_state,"onChanged: (value) => setState(() => _ownsAccount = value ?? false),"
+lib/core/core_ui/screens/verification_screens.dart,553,onTap,review,"onTap: _refresh,"
+lib/core/core_ui/screens/verification_screens.dart,574,onTap,navigation,onTap: () =>
+lib/core/core_ui/screens/verification_screens.dart,678,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.dashboard),"
+lib/core/core_ui/screens/verification_screens.dart,684,onTap,review,"onTap: _refresh,"
+lib/core/core_ui/screens/verification_screens.dart,690,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.kyc),"
+lib/core/core_ui/screens/verification_screens.dart,696,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.dashboard),"
+lib/core/core_ui/widgets/core_widgets.dart,126,onTap,review,"onTap: () => navigateCoreBack(context),"
+lib/core/core_ui/widgets/core_widgets.dart,184,onTap,server_candidate,"onTap: () => navigateCoreBack(context),"
+lib/core/core_ui/widgets/core_widgets.dart,284,onTap,review,"onTap: onTap,"
+lib/core/core_ui/widgets/core_widgets.dart,310,onTap,review,"onTap: onTap,"
+lib/core/core_ui/widgets/core_widgets.dart,333,onTap,review,"onTap: onTap,"
+lib/core/core_ui/widgets/core_widgets.dart,526,onChanged,review,"onChanged: onChanged,"
+lib/core/core_ui/widgets/core_widgets.dart,595,onChanged,review,"onChanged: onChanged,"
+lib/core/core_ui/widgets/core_widgets.dart,636,onTap,server_candidate,"onTap: onTap,"
+lib/core/core_ui/widgets/core_widgets.dart,738,onChanged,local_state,onChanged: (value) {
+lib/core/core_ui/widgets/core_widgets.dart,768,onPressed,review,"onPressed: () => onChanged(index + 1),"
+lib/core/core_ui/widgets/core_widgets.dart,834,onTap,review,"onTap: onAction,"
+lib/core/core_ui/widgets/core_widgets.dart,871,onPressed,review,"onPressed: onAction,"
+lib/core/core_ui/widgets/core_widgets.dart,900,onTap,review,"onTap: onTap,"
+lib/core/core_ui/widgets/core_widgets.dart,961,onPressed,navigation,onPressed: () {
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,94,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,102,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,110,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,117,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,124,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,132,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,139,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,173,onTap,server_candidate,"onTap: savingRemote ? null : _saveDraft,"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,183,onTap,server_candidate,"onTap: savingRemote ? null : _submit,"
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,195,onTap,server_candidate,onTap: savingRemote || publishingListing
+lib/features/actor_talent/screens/at02_profile_builder_screen.dart,527,onTap,navigation,"onTap: () => Navigator.pop(dialogContext),"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,135,onDelete,server_candidate,"onDelete: () => _deleteItem(item),"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,315,onTap,navigation,"onTap: () => Navigator.pop(dialogContext),"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,462,onTap,navigation,"onTap: () => Navigator.pop(dialogContext),"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,559,onTap,review,"onTap: busy ? null : onPreview,"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,569,onTap,review,"onTap: busy ? null : onCover,"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,585,onTap,review,"onTap: busy ? null : onMoveUp,"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,592,onTap,server_candidate,"onTap: busy ? null : onMoveDown,"
+lib/features/actor_talent/screens/at03_portfolio_showreel_screen.dart,599,onTap,server_candidate,"onTap: busy ? null : onDelete,"
+lib/features/actor_talent/screens/at04_availability_calendar_screen.dart,52,onSelected,local_state,"onSelected: (day) => setState(() => selectedDay = day),"
+lib/features/actor_talent/screens/at04_availability_calendar_screen.dart,166,onTap,server_candidate,onTap: () {
+lib/features/actor_talent/screens/at04_availability_calendar_screen.dart,190,onPressed,navigation,onPressed: () async {
+lib/features/actor_talent/screens/at04_availability_calendar_screen.dart,267,onTap,review,"onTap: () => onSelected(day),"
+lib/features/actor_talent/screens/at05_rate_card_screen.dart,54,onTap,server_candidate,"onTap: () => _reauth(context),"
+lib/features/actor_talent/screens/at05_rate_card_screen.dart,95,onTap,navigation,onTap: () {
+lib/features/actor_talent/screens/at05_rate_card_screen.dart,124,onTap,review,onTap: () async {
+lib/features/actor_talent/screens/at05_rate_card_screen.dart,210,onPressed,server_candidate,onPressed: () => store.updateRate(
+lib/features/actor_talent/screens/at05_rate_card_screen.dart,220,onPressed,server_candidate,onPressed: () => store.updateRate(
+lib/features/actor_talent/screens/at05_rate_card_screen.dart,235,onChanged,server_candidate,onChanged: (value) =>
+lib/features/actor_talent/screens/at07_offer_detail_screen.dart,115,onTap,navigation,onTap: () async {
+lib/features/actor_talent/screens/at07_offer_detail_screen.dart,226,onTap,review,"onTap: busy ? null : () => onAccept(booking),"
+lib/features/actor_talent/screens/at07_offer_detail_screen.dart,233,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/actor_talent/screens/at07_offer_detail_screen.dart,244,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/actor_talent/screens/at07_offer_detail_screen.dart,255,onTap,server_candidate,"onTap: busy ? null : () => onReject(booking),"
+lib/features/actor_talent/screens/at07_offer_detail_screen.dart,318,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,80,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,87,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,94,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,102,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,110,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,120,onTap,server_candidate,"onTap: _saveDraft,"
+lib/features/actor_talent/screens/at08_counteroffer_composer_screen.dart,129,onTap,server_candidate,"onTap: _submit,"
+lib/features/actor_talent/screens/at09_contract_signing_screen.dart,138,onTap,navigation,onTap: primary.isSigned
+lib/features/actor_talent/screens/at09_contract_signing_screen.dart,151,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/actor_talent/screens/at09_contract_signing_screen.dart,234,onTap,navigation,onTap: store.contractSigned
+lib/features/actor_talent/screens/at09_contract_signing_screen.dart,254,onTap,navigation,onTap: () {
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,181,onTap,server_candidate,"onTap: () => onCreateAccount(),"
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,188,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.ledger),"
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,195,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.report),"
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,288,onTap,server_candidate,onTap: store.receiptConfirmed
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,300,onTap,navigation,onTap: () =>
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,308,onTap,review,"onTap: () => _issueSheet(context),"
+lib/features/actor_talent/screens/at10_earnings_security_screen.dart,338,onTap,navigation,onTap: () {
+lib/features/actor_talent/screens/at11_reputation_reviews_screen.dart,83,onTap,navigation,onTap: () =>
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,57,onChanged,server_candidate,"onChanged: store.togglePhoneHidden,"
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,63,onChanged,server_candidate,"onChanged: store.toggleAdultContentBoundary,"
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,69,onChanged,server_candidate,"onChanged: store.toggleTravelConsent,"
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,75,onChanged,server_candidate,"onChanged: store.toggleEmergencySupport,"
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,101,onTap,navigation,onTap: () => Navigator.push(
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,116,onTap,review,onTap: () async {
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,281,onChanged,review,"Switch(value: value, onChanged: onChanged),"
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,320,onPressed,server_candidate,onPressed: () {
+lib/features/actor_talent/screens/at12_safety_controls_screen.dart,410,onPressed,server_candidate,"onPressed: _unblocking ? null : _unblock,"
+lib/features/actor_talent/widgets/actor_talent_components.dart,95,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/actor_talent/widgets/actor_talent_components.dart,158,onPressed,review,"onPressed: onActionTap,"
+lib/features/actor_talent/widgets/actor_talent_components.dart,258,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/actor_talent/widgets/actor_talent_components.dart,279,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/actor_talent/widgets/actor_talent_components.dart,301,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/actor_talent/widgets/actor_talent_components.dart,505,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/actor_talent/widgets/actor_talent_components.dart,600,onTap,review,"onTap: onHold,"
+lib/features/actor_talent/widgets/actor_talent_components.dart,609,onTap,review,"onTap: onPrimary,"
+lib/features/actor_talent/widgets/actor_talent_components.dart,618,onTap,review,"onTap: onOpen,"
+lib/features/actor_talent/widgets/actor_talent_components.dart,661,onChanged,review,"onChanged: onQueryChanged,"
+lib/features/actor_talent/widgets/actor_talent_components.dart,697,onTap,review,"onTap: () => onFilterChanged(filter),"
+lib/features/actor_talent/widgets/actor_talent_shell.dart,217,onTap,review,onTap: (index) {
+lib/features/actor_talent/widgets/actor_talent_shell.dart,282,onTap,review,"onTap: onMenuTap,"
+lib/features/actor_talent/widgets/actor_talent_shell.dart,317,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),"
+lib/features/actor_talent/widgets/actor_talent_shell.dart,323,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/brand_sponsors/screens/br01_brand_dashboard_screen.dart,162,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/brand_sponsors/screens/br01_brand_dashboard_screen.dart,174,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/brand_sponsors/screens/br01_brand_dashboard_screen.dart,196,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/brand_sponsors/screens/br02_brand_profile_screen.dart,145,onTap,review,"onTap: () => _showEditSheet(context),"
+lib/features/brand_sponsors/screens/br02_brand_profile_screen.dart,156,onTap,server_candidate,onTap: () {
+lib/features/brand_sponsors/screens/br02_brand_profile_screen.dart,195,onTap,server_candidate,onTap: () {
+lib/features/brand_sponsors/screens/br02_brand_profile_screen.dart,265,onTap,server_candidate,onTap: () async {
+lib/features/brand_sponsors/screens/br03_opportunity_composer_screen.dart,71,onTap,local_state,"onTap: () => setState(() => _category = category),"
+lib/features/brand_sponsors/screens/br03_opportunity_composer_screen.dart,100,onTap,server_candidate,onTap: () {
+lib/features/brand_sponsors/screens/br03_opportunity_composer_screen.dart,112,onTap,server_candidate,onTap:
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,44,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,62,onTap,server_candidate,"onTap: () => store.setApplicationsFilter(filter),"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,73,onTap,local_state,onTap: () {
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,92,onAction,local_state,onAction: () {
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,182,onTap,navigation,onTap: () {
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,218,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,226,onTap,navigation,onTap: () {
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,318,onTap,review,"onTap: onDetails,"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,327,onTap,review,"onTap: onInfo,"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,340,onTap,server_candidate,"onTap: onReject,"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,349,onTap,review,"onTap: onShortlist,"
+lib/features/brand_sponsors/screens/br04_applications_inbox_screen.dart,358,onTap,review,"onTap: onNegotiate,"
+lib/features/brand_sponsors/screens/br05_negotiation_terms_screen.dart,93,onTap,navigation,onTap: () =>
+lib/features/brand_sponsors/screens/br05_negotiation_terms_screen.dart,103,onTap,server_candidate,onTap: () {
+lib/features/brand_sponsors/screens/br05_negotiation_terms_screen.dart,115,onTap,navigation,onTap: () {
+lib/features/brand_sponsors/screens/br05_negotiation_terms_screen.dart,180,onTap,navigation,onTap: () =>
+lib/features/brand_sponsors/screens/br06_campaign_tracker_screen.dart,50,onTap,local_state,onTap: () {
+lib/features/brand_sponsors/screens/br06_campaign_tracker_screen.dart,95,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/brand_sponsors/screens/br06_campaign_tracker_screen.dart,208,onTap,review,"onTap: onDelivered,"
+lib/features/brand_sponsors/screens/br06_campaign_tracker_screen.dart,217,onTap,review,"onTap: onRevision,"
+lib/features/brand_sponsors/screens/br06_campaign_tracker_screen.dart,226,onTap,server_candidate,"onTap: onApprove,"
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,81,onTap,server_candidate,onTap: () {
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,97,onAction,server_candidate,"onAction: () => store.setPaymentsFilter('All'),"
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,152,onTap,review,onTap: () => brandSnack(
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,235,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,243,onTap,navigation,onTap: () {
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,316,onPressed,server_candidate,"onPressed: onVerify,"
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,322,onPressed,review,"onPressed: onReceipt,"
+lib/features/brand_sponsors/screens/br07_payments_records_screen.dart,328,onPressed,review,"onPressed: onIssue,"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,87,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,146,onPressed,review,"TextButton(onPressed: onActionTap, child: Text(actionText!)),"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,230,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,251,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,273,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,456,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/brand_sponsors/widgets/brand_sponsor_components.dart,491,onChanged,review,"onChanged: onChanged,"
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,150,onTap,review,"onTap: wide ? () => navigateCoreBack(context) : onMenuTap,"
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,201,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,208,onTap,navigation,onTap: () =>
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,235,onTap,review,"onTap: onTap,"
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,304,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,331,onTap,review,"onTap: onTap,"
+lib/features/brand_sponsors/widgets/brand_sponsor_shell.dart,382,onTap,review,"onTap: (index) => onRouteTap(BrandSponsorRoutes.primaryNav[index]),"
+lib/features/casting_agency/screens/ca01_agency_dashboard_screen.dart,161,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/casting_agency/screens/ca01_agency_dashboard_screen.dart,173,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/casting_agency/screens/ca01_agency_dashboard_screen.dart,195,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,78,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,100,onAction,local_state,onAction: () {
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,190,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,227,onTap,review,"onTap: () => onFilter(filter),"
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,238,onTap,review,"onTap: () => onSort(option),"
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,320,onTap,review,"onTap: onDetails,"
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,329,onTap,review,"onTap: onTape,"
+lib/features/casting_agency/screens/ca02_talent_roster_screen.dart,341,onTap,server_candidate,"onTap: onToggle,"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,80,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,98,onTap,server_candidate,"onTap: () => store.setAuditionFilter(filter),"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,109,onTap,local_state,onTap: () {
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,128,onAction,local_state,onAction: () {
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,235,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,270,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,278,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,368,onTap,review,"onTap: onDetails,"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,377,onTap,review,"onTap: onReview,"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,390,onTap,review,"onTap: onDecline,"
+lib/features/casting_agency/screens/ca03_audition_request_inbox_screen.dart,399,onTap,review,"onTap: onShortlist,"
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,66,onTap,server_candidate,"onTap: () => store.toggleTalent(talent.id),"
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,93,onChanged,local_state,"onChanged: (value) => setState(() => _includeTapes = value),"
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,115,onTap,server_candidate,onTap: () =>
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,125,onTap,server_candidate,"onTap: () => _submit(context, store),"
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,211,onTap,server_candidate,"onTap: () => store.selectAudition(audition.id),"
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,235,onTap,review,"onTap: onTap,"
+lib/features/casting_agency/screens/ca04_candidate_shortlist_screen.dart,332,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/casting_agency/screens/ca05_self_tape_collection_screen.dart,52,onTap,local_state,onTap: () {
+lib/features/casting_agency/screens/ca05_self_tape_collection_screen.dart,97,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/casting_agency/screens/ca05_self_tape_collection_screen.dart,166,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca05_self_tape_collection_screen.dart,250,onTap,review,"onTap: onPreview,"
+lib/features/casting_agency/screens/ca05_self_tape_collection_screen.dart,259,onTap,review,"onTap: onRequest,"
+lib/features/casting_agency/screens/ca05_self_tape_collection_screen.dart,269,onTap,review,"onTap: onForward,"
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,42,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,60,onTap,local_state,onTap: () {
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,83,onAction,local_state,onAction: () => setState(() {
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,141,onTap,review,"onTap: () => _showAddNote(context),"
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,148,onTap,navigation,onTap: () =>
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,239,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,313,onTap,review,"onTap: onDetail,"
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,322,onTap,server_candidate,"onTap: onReject,"
+lib/features/casting_agency/screens/ca06_selection_notes_screen.dart,331,onTap,review,"onTap: onSelect,"
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,84,onTap,local_state,onTap: () {
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,103,onAction,local_state,"onAction: () => setState(() => _filter = 'All'),"
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,145,onChanged,server_candidate,onChanged: (value) =>
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,152,onTap,server_candidate,onTap: () => agencySnack(
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,162,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,244,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,252,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,325,onPressed,server_candidate,"onPressed: onVerify,"
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,331,onPressed,review,"onPressed: onReceipt,"
+lib/features/casting_agency/screens/ca07_commission_records_screen.dart,337,onPressed,review,"onPressed: onIssue,"
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,43,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,61,onTap,local_state,onTap: () {
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,84,onAction,local_state,onAction: () => setState(() {
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,142,onTap,review,onTap: () => agencySnack(
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,208,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,219,onTap,navigation,onTap: () {
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,305,onTap,review,"onTap: onDetail,"
+lib/features/casting_agency/screens/ca08_agency_booking_records_screen.dart,314,onTap,review,"onTap: onClose,"
+lib/features/casting_agency/widgets/casting_agency_components.dart,98,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/casting_agency/widgets/casting_agency_components.dart,160,onPressed,review,"TextButton(onPressed: onActionTap, child: Text(actionText!)),"
+lib/features/casting_agency/widgets/casting_agency_components.dart,244,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/casting_agency/widgets/casting_agency_components.dart,265,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/casting_agency/widgets/casting_agency_components.dart,287,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/casting_agency/widgets/casting_agency_components.dart,471,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/casting_agency/widgets/casting_agency_components.dart,557,onChanged,review,"onChanged: onChanged,"
+lib/features/crew_services/screens/cr01_crew_dashboard_screen.dart,89,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr01_crew_dashboard_screen.dart,101,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr01_crew_dashboard_screen.dart,135,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr01_crew_dashboard_screen.dart,185,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr01_crew_dashboard_screen.dart,218,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr01_crew_dashboard_screen.dart,245,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr02_service_profile_screen.dart,90,onTap,review,"onTap: () => _showEditSheet(context),"
+lib/features/crew_services/screens/cr02_service_profile_screen.dart,101,onTap,server_candidate,onTap: () {
+lib/features/crew_services/screens/cr02_service_profile_screen.dart,144,onTap,review,onTap: () => showDialog<void>(
+lib/features/crew_services/screens/cr02_service_profile_screen.dart,187,onTap,navigation,"onTap: () => Navigator.pop(dialogContext),"
+lib/features/crew_services/screens/cr02_service_profile_screen.dart,254,onTap,server_candidate,onTap: () {
+lib/features/crew_services/screens/cr03_portfolio_credits_screen.dart,57,onTap,local_state,"onTap: () => setState(() => _tab = tab),"
+lib/features/crew_services/screens/cr03_portfolio_credits_screen.dart,118,onTap,navigation,"onTap: () => Navigator.pop(dialogContext),"
+lib/features/crew_services/screens/cr03_portfolio_credits_screen.dart,159,onTap,server_candidate,onTap: () {
+lib/features/crew_services/screens/cr03_portfolio_credits_screen.dart,250,onTap,review,"onTap: onPreview,"
+lib/features/crew_services/screens/cr03_portfolio_credits_screen.dart,259,onTap,server_candidate,"onTap: onToggle,"
+lib/features/crew_services/screens/cr04_availability_calendar_screen.dart,71,onTap,local_state,"onTap: () => setState(() => _selectedDay = day),"
+lib/features/crew_services/screens/cr04_availability_calendar_screen.dart,84,onTap,server_candidate,onTap: () async {
+lib/features/crew_services/screens/cr04_availability_calendar_screen.dart,183,onTap,server_candidate,onTap: () async {
+lib/features/crew_services/screens/cr04_availability_calendar_screen.dart,201,onTap,server_candidate,onTap: () async {
+lib/features/crew_services/screens/cr04_availability_calendar_screen.dart,246,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr04_availability_calendar_screen.dart,356,onTap,review,"onTap: onTap,"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,58,onChanged,local_state,"onChanged: (value) => setState(() => _query = value)),"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,75,onTap,server_candidate,"onTap: () => store.setRequestFilter(filter),"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,86,onTap,local_state,onTap: () {
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,105,onAction,local_state,onAction: () {
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,198,onTap,navigation,onTap: () {
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,232,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,240,onTap,navigation,onTap: () {
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,264,onChanged,review,"onChanged: onChanged,"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,372,onTap,review,"onTap: onDetails,"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,381,onTap,review,"onTap: onCounter,"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,394,onTap,server_candidate,"onTap: onReject,"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,403,onTap,review,"onTap: onAccept,"
+lib/features/crew_services/screens/cr05_requests_negotiation_screen.dart,413,onTap,review,"onTap: onDetails,"
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,104,onTap,local_state,onTap: () {
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,153,onTap,navigation,onTap: () => Navigator.push(
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,170,onTap,navigation,onTap: () => Navigator.push(
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,174,onSubmitted,server_candidate,"onSubmitted: store.uploadPaymentProof,"
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,184,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,298,onPressed,review,"onPressed: onReceipt,"
+lib/features/crew_services/screens/cr06_contracts_payments_screen.dart,310,onPressed,review,"onPressed: onIssue,"
+lib/features/crew_services/screens/cr07_ratings_work_history_screen.dart,79,onChanged,local_state,"onChanged: (value) => setState(() => _query = value)),"
+lib/features/crew_services/screens/cr07_ratings_work_history_screen.dart,96,onTap,local_state,onTap: () {
+lib/features/crew_services/screens/cr07_ratings_work_history_screen.dart,119,onAction,local_state,onAction: () => setState(() {
+lib/features/crew_services/screens/cr07_ratings_work_history_screen.dart,156,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/crew_services/screens/cr07_ratings_work_history_screen.dart,196,onChanged,review,"onChanged: onChanged,"
+lib/features/crew_services/widgets/crew_services_components.dart,138,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/crew_services/widgets/crew_services_components.dart,200,onPressed,review,"TextButton(onPressed: onActionTap, child: Text(actionText!)),"
+lib/features/crew_services/widgets/crew_services_components.dart,284,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/crew_services/widgets/crew_services_components.dart,305,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/crew_services/widgets/crew_services_components.dart,327,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/crew_services/widgets/crew_services_components.dart,510,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/director_producer/screens/dp_bargaining_center_screen.dart,62,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_bargaining_center_screen.dart,82,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_bargaining_center_screen.dart,133,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_bargaining_center_screen.dart,177,onTap,review,"onTap: onTap,"
+lib/features/director_producer/screens/dp_bargaining_center_screen.dart,207,onTap,review,"onTap: onTap,"
+lib/features/director_producer/screens/dp_booking_request_form_screen.dart,81,onTap,server_candidate,"onTap: _sending ? () {} : () => _send(seed),"
+lib/features/director_producer/screens/dp_booking_request_form_screen.dart,141,onTap,server_candidate,"onTap: _sending ? null : () => _send(seed),"
+lib/features/director_producer/screens/dp_booking_request_form_screen.dart,234,onTap,server_candidate,"onTap: onSend,"
+lib/features/director_producer/screens/dp_calendar_schedule_screen.dart,23,onTap,review,"onTap: () => dpSnack(context, 'Calendar sync simulated'),"
+lib/features/director_producer/screens/dp_contract_center_screen.dart,44,onTap,review,"onTap: _generating ? () {} : _generateFromAcceptedBooking,"
+lib/features/director_producer/screens/dp_contract_center_screen.dart,221,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_contract_center_screen.dart,233,onTap,review,"onTap: onRequestReview,"
+lib/features/director_producer/screens/dp_create_project_wizard_screen.dart,63,onTap,server_candidate,"onTap: _saving ? () {} : _next,"
+lib/features/director_producer/screens/dp_create_project_wizard_screen.dart,163,onTap,server_candidate,"onTap: _saving ? null : _createProject,"
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,42,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,51,onTap,navigation,onTap: () =>
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,60,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,69,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,85,onTap,navigation,onTap: () =>
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,94,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,103,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,112,onTap,navigation,onTap: () =>
+lib/features/director_producer/screens/dp_home_dashboard_screen.dart,132,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_marketplace_discovery_screen.dart,67,onTap,navigation,onTap: () =>
+lib/features/director_producer/screens/dp_marketplace_discovery_screen.dart,91,onTap,review,"onTap: () => _setCategory(category),"
+lib/features/director_producer/screens/dp_marketplace_discovery_screen.dart,237,onTap,server_candidate,"onTap: onSaveSearch,"
+lib/features/director_producer/screens/dp_negotiation_thread_screen.dart,173,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_negotiation_thread_screen.dart,260,onTap,server_candidate,"onTap: sending ? null : () => onCounter(thread),"
+lib/features/director_producer/screens/dp_negotiation_thread_screen.dart,265,onTap,server_candidate,"onTap: sending ? null : () => onAccept(thread),"
+lib/features/director_producer/screens/dp_negotiation_thread_screen.dart,420,onTap,server_candidate,"onTap: onCounter,"
+lib/features/director_producer/screens/dp_payment_center_screen.dart,107,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.ledger),"
+lib/features/director_producer/screens/dp_project_accounts_screen.dart,27,onTap,review,"onTap: () => dpSnack(context, 'Budget export ready'),"
+lib/features/director_producer/screens/dp_project_detail_screen.dart,191,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_project_detail_screen.dart,199,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_project_detail_screen.dart,208,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_project_room_screen.dart,93,onTap,review,"onTap: _savingDecision ? () {} : _pinDecision,"
+lib/features/director_producer/screens/dp_project_room_screen.dart,146,onTap,server_candidate,"onTap: _uploadingFile ? null : _uploadFile,"
+lib/features/director_producer/screens/dp_projects_list_screen.dart,67,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_projects_list_screen.dart,72,onChanged,local_state,"controller: _search, onChanged: () => setState(() {})),"
+lib/features/director_producer/screens/dp_projects_list_screen.dart,87,onTap,local_state,"onTap: () => setState(() => _filter = filter),"
+lib/features/director_producer/screens/dp_projects_list_screen.dart,299,onChanged,local_state,"onChanged: (_) => onChanged(),"
+lib/features/director_producer/screens/dp_reports_export_screen.dart,25,onTap,review,"onTap: () => dpSnack(context, 'Report generation started'),"
+lib/features/director_producer/screens/dp_reports_export_screen.dart,124,onTap,review,"onTap: onTap,"
+lib/features/director_producer/screens/dp_requirement_builder_screen.dart,82,onTap,server_candidate,"onTap: _saving ? () {} : _saveRequirement,"
+lib/features/director_producer/screens/dp_requirement_builder_screen.dart,97,onTap,local_state,"onTap: () => setState(() => _category = category),"
+lib/features/director_producer/screens/dp_requirement_builder_screen.dart,144,onTap,server_candidate,"onTap: _saving ? null : _saveRequirement,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,116,onTap,navigation,onTap: () =>
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,157,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,180,onDelete,server_candidate,"onDelete: _deleteSavedSearch,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,186,onDelete,server_candidate,"onDelete: _deleteShortlistItem,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,274,onDelete,server_candidate,"onDelete: () => onDelete(search.publicId),"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,337,onPressed,server_candidate,"onPressed: loading ? null : onDelete,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,391,onDelete,server_candidate,"onDelete: onDelete,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,450,onDelete,server_candidate,"onDelete: () => onDelete(item.publicId),"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,513,onTap,review,"onTap: onMoveUp,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,519,onTap,review,"onTap: onMoveDown,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,527,onTap,server_candidate,"onTap: onSelect,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,533,onTap,server_candidate,"onTap: onDelete,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,561,onTap,review,"onTap: loading ? null : onTap,"
+lib/features/director_producer/screens/dp_shortlist_board_screen.dart,628,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,31,onTap,navigation,onTap: () =>
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,53,onSelected,local_state,"onSelected: (value) => setState(() => _category = value),"
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,66,onSelected,local_state,"onSelected: (value) => setState(() => _city = value),"
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,89,onChanged,local_state,onChanged: (value) =>
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,101,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,109,onTap,server_candidate,"onTap: () => dpSnack(context, 'Filter view saved'),"
+lib/features/director_producer/screens/dp_smart_filters_sheet.dart,156,onTap,review,"onTap: () => onSelected(option),"
+lib/features/director_producer/screens/dp_stakeholder_profile_screen.dart,33,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/screens/dp_stakeholder_profile_screen.dart,153,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/widgets/dp_action_required_strip.dart,25,onTap,review,"onTap: item.onTap,"
+lib/features/director_producer/widgets/dp_candidate_card.dart,82,onPressed,server_candidate,"onPressed: _savingShortlist ? null : _toggleShortlist,"
+lib/features/director_producer/widgets/dp_candidate_card.dart,125,onTap,review,"onTap: widget.onProfile,"
+lib/features/director_producer/widgets/dp_candidate_card.dart,134,onTap,server_candidate,"onTap: widget.onRequest,"
+lib/features/director_producer/widgets/dp_holographic_button.dart,24,onTap,review,"onTap: onTap,"
+lib/features/director_producer/widgets/dp_layout_helpers.dart,128,onTap,review,"onTap: onActionTap,"
+lib/features/director_producer/widgets/dp_layout_helpers.dart,193,onTap,review,"onTap: onTap,"
+lib/features/director_producer/widgets/dp_metric_card.dart,32,onTap,review,"onTap: onTap,"
+lib/features/director_producer/widgets/dp_milestone_board.dart,122,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/director_producer/widgets/dp_project_card.dart,97,onTap,review,"onTap: onOpen,"
+lib/features/director_producer/widgets/dp_requirement_card.dart,71,onTap,review,"onTap: onFindMatches,"
+lib/features/director_producer/widgets/dp_shell.dart,144,onTap,review,"onTap: wide ? () => navigateCoreBack(context) : onMenuTap,"
+lib/features/director_producer/widgets/dp_shell.dart,195,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/director_producer/widgets/dp_shell.dart,202,onTap,navigation,onTap: () =>
+lib/features/director_producer/widgets/dp_shell.dart,235,onTap,review,"onTap: onTap,"
+lib/features/director_producer/widgets/dp_shell.dart,292,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/director_producer/widgets/dp_shell.dart,371,onTap,review,onTap: (index) {
+lib/features/distribution_partner/screens/ds01_distribution_dashboard_screen.dart,165,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/distribution_partner/screens/ds01_distribution_dashboard_screen.dart,177,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/distribution_partner/screens/ds01_distribution_dashboard_screen.dart,199,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,80,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,98,onTap,server_candidate,"onTap: () => store.setContactFilter(filter),"
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,109,onTap,local_state,onTap: () {
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,135,onAction,local_state,onAction: () {
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,191,onTap,review,onTap: () => distributionSnack(
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,260,onTap,navigation,onTap: () {
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,274,onTap,navigation,onTap: () {
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,344,onTap,review,"onTap: onDetail,"
+lib/features/distribution_partner/screens/ds02_distributor_contacts_screen.dart,353,onTap,server_candidate,"onTap: onApprove,"
+lib/features/distribution_partner/screens/ds03_release_coordination_screen.dart,131,onTap,server_candidate,"onTap: () => store.toggleHandover(item.id),"
+lib/features/distribution_partner/screens/ds03_release_coordination_screen.dart,165,onTap,local_state,onTap: () {
+lib/features/distribution_partner/screens/ds03_release_coordination_screen.dart,200,onTap,server_candidate,onTap:
+lib/features/distribution_partner/screens/ds03_release_coordination_screen.dart,241,onTap,navigation,onTap: () =>
+lib/features/distribution_partner/screens/ds03_release_coordination_screen.dart,249,onTap,navigation,onTap: () =>
+lib/features/distribution_partner/screens/ds03_release_coordination_screen.dart,277,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,83,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,101,onTap,local_state,"onTap: () => setState(() => _channel = channel),"
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,109,onTap,server_candidate,"onTap: () => store.setReportFilter('Submitted'),"
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,115,onTap,server_candidate,onTap: () {
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,194,onAction,local_state,onAction: () {
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,255,onTap,server_candidate,onTap: () {
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,322,onTap,navigation,onTap: () {
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,334,onTap,navigation,onTap: () {
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,449,onTap,review,"onTap: onDetail,"
+lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart,458,onTap,review,"onTap: onClose,"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,88,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,147,onPressed,review,"TextButton(onPressed: onActionTap, child: Text(actionText!)),"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,235,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,256,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,384,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,463,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,498,onChanged,review,"onChanged: onChanged,"
+lib/features/distribution_partner/widgets/distribution_partner_components.dart,595,onTap,review,"onTap: onTap,"
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,137,onTap,review,"onTap: wide ? () => navigateCoreBack(context) : onMenuTap,"
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,188,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,195,onTap,navigation,onTap: () =>
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,222,onTap,review,"onTap: onTap,"
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,291,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,318,onTap,review,"onTap: onTap,"
+lib/features/distribution_partner/widgets/distribution_partner_shell.dart,369,onTap,review,"onTap: (index) => onRouteTap(DistributionPartnerRoutes.primaryNav[index]),"
+lib/features/insurance_partner/screens/in01_insurance_dashboard_screen.dart,151,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/insurance_partner/screens/in01_insurance_dashboard_screen.dart,163,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/insurance_partner/screens/in01_insurance_dashboard_screen.dart,185,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,80,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,99,onTap,server_candidate,"onTap: () => store.setPolicyFilter(filter),"
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,110,onTap,local_state,onTap: () {
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,134,onAction,local_state,onAction: () {
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,187,onTap,review,onTap: () => insuranceSnack(
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,262,onTap,navigation,onTap: () {
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,274,onTap,navigation,onTap: () {
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,349,onTap,review,"onTap: onDetail,"
+lib/features/insurance_partner/screens/in02_shoot_insurance_records_screen.dart,358,onTap,server_candidate,"onTap: onVerify,"
+lib/features/insurance_partner/screens/in03_claim_support_screen.dart,140,onTap,server_candidate,"onTap: () => store.toggleEvidence(item.id),"
+lib/features/insurance_partner/screens/in03_claim_support_screen.dart,174,onTap,local_state,onTap: () {
+lib/features/insurance_partner/screens/in03_claim_support_screen.dart,187,onTap,review,"onTap: () => _finalize(context, store),"
+lib/features/insurance_partner/screens/in03_claim_support_screen.dart,227,onTap,navigation,onTap: () =>
+lib/features/insurance_partner/screens/in03_claim_support_screen.dart,235,onTap,navigation,onTap: () {
+lib/features/insurance_partner/screens/in03_claim_support_screen.dart,358,onPressed,review,"onPressed: onResolve,"
+lib/features/insurance_partner/screens/in04_safety_checks_permits_screen.dart,84,onTap,server_candidate,"onTap: () => store.toggleSafetyStep(step.id),"
+lib/features/insurance_partner/screens/in04_safety_checks_permits_screen.dart,104,onTap,local_state,onTap: () {
+lib/features/insurance_partner/screens/in04_safety_checks_permits_screen.dart,117,onTap,review,"onTap: () => _complete(context, store),"
+lib/features/insurance_partner/screens/in04_safety_checks_permits_screen.dart,157,onTap,navigation,onTap: () =>
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,44,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,57,onTap,local_state,"onTap: () => setState(() => _severity = severity),"
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,65,onTap,server_candidate,"onTap: () => store.setIncidentFilter('This month'),"
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,71,onTap,server_candidate,onTap: () {
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,151,onAction,local_state,onAction: () {
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,211,onTap,server_candidate,onTap: () {
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,272,onTap,navigation,onTap: () {
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,284,onTap,navigation,onTap: () {
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,399,onTap,review,"onTap: onDetail,"
+lib/features/insurance_partner/screens/in05_incident_reports_screen.dart,408,onTap,review,"onTap: onResolve,"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,91,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,150,onPressed,review,"TextButton(onPressed: onActionTap, child: Text(actionText!)),"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,235,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,256,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,384,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,463,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,498,onChanged,review,"onChanged: onChanged,"
+lib/features/insurance_partner/widgets/insurance_partner_components.dart,595,onTap,review,"onTap: onTap,"
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,138,onTap,review,"onTap: wide ? () => navigateCoreBack(context) : onMenuTap,"
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,193,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,200,onTap,navigation,onTap: () =>
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,227,onTap,review,"onTap: onTap,"
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,300,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,327,onTap,review,"onTap: onTap,"
+lib/features/insurance_partner/widgets/insurance_partner_shell.dart,378,onTap,review,"onTap: (index) => onRouteTap(InsurancePartnerRoutes.primaryNav[index]),"
+lib/features/legal_partner/screens/lg01_legal_dashboard_screen.dart,175,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg01_legal_dashboard_screen.dart,302,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg01_legal_dashboard_screen.dart,314,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg01_legal_dashboard_screen.dart,336,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,162,onTap,navigation,onTap: review.contractId == null
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,199,onTap,server_candidate,"onTap: deciding ? null : () => onDecision('approved'),"
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,206,onTap,review,"onTap: deciding ? null : () => onDecision('changes_requested'),"
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,213,onTap,server_candidate,"onTap: deciding ? null : () => onDecision('rejected'),"
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,275,onTap,navigation,onTap: () =>
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,313,onTap,server_candidate,"onTap: () => _confirmApprove(context, store, request),"
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,320,onTap,server_candidate,onTap: () {
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,330,onTap,navigation,onTap: () {
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,361,onTap,navigation,onTap: () =>
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,369,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,408,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/legal_partner/screens/lg02_contract_review_detail_screen.dart,416,onTap,navigation,onTap: () {
+lib/features/legal_partner/screens/lg03_template_review_screen.dart,85,onTap,server_candidate,onTap: () =>
+lib/features/legal_partner/screens/lg03_template_review_screen.dart,97,onTap,server_candidate,"onTap: () => _submit(context, store),"
+lib/features/legal_partner/screens/lg03_template_review_screen.dart,222,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,68,onTap,local_state,onTap: () {
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,140,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,213,onTap,navigation,onTap: () {
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,224,onTap,navigation,onTap: () {
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,285,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,369,onTap,review,"onTap: onDetail,"
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,378,onTap,review,"onTap: onCorrection,"
+lib/features/legal_partner/screens/lg04_addendum_review_screen.dart,387,onTap,server_candidate,"onTap: onApprove,"
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,55,onChanged,local_state,"onChanged: (value) => setState(() => _query = value),"
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,73,onTap,server_candidate,"onTap: () => store.setBillingFilter(filter),"
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,84,onTap,local_state,onTap: () {
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,135,onAction,local_state,onAction: () {
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,188,onTap,review,onTap: () => legalSnack(
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,255,onTap,navigation,onTap: () {
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,266,onTap,navigation,onTap: () {
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,341,onTap,review,"onTap: onDetail,"
+lib/features/legal_partner/screens/lg05_review_history_billing_screen.dart,350,onTap,review,"onTap: onBill,"
+lib/features/legal_partner/widgets/legal_partner_components.dart,89,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/legal_partner/widgets/legal_partner_components.dart,148,onPressed,review,"TextButton(onPressed: onActionTap, child: Text(actionText!)),"
+lib/features/legal_partner/widgets/legal_partner_components.dart,232,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/legal_partner/widgets/legal_partner_components.dart,253,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/legal_partner/widgets/legal_partner_components.dart,379,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/legal_partner/widgets/legal_partner_components.dart,458,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/legal_partner/widgets/legal_partner_components.dart,493,onChanged,review,"onChanged: onChanged,"
+lib/features/legal_partner/widgets/legal_partner_shell.dart,137,onTap,review,"onTap: wide ? () => navigateCoreBack(context) : onMenuTap,"
+lib/features/legal_partner/widgets/legal_partner_shell.dart,188,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/legal_partner/widgets/legal_partner_shell.dart,195,onTap,navigation,onTap: () =>
+lib/features/legal_partner/widgets/legal_partner_shell.dart,222,onTap,review,"onTap: onTap,"
+lib/features/legal_partner/widgets/legal_partner_shell.dart,291,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/legal_partner/widgets/legal_partner_shell.dart,318,onTap,review,"onTap: onTap,"
+lib/features/legal_partner/widgets/legal_partner_shell.dart,369,onTap,review,"onTap: (index) => onRouteTap(LegalPartnerRoutes.primaryNav[index]),"
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,101,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,113,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,151,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,226,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,261,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,278,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,288,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,298,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo01_owner_dashboard_screen.dart,373,onTap,review,"onTap: onReset,"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,125,onTap,navigation,onTap: store.listingStep == 1
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,141,onTap,server_candidate,"onTap: () => _advance(store),"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,210,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,255,onChanged,local_state,"onChanged: (_) => setState(() => _cityError = null),"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,263,onChanged,local_state,"onChanged: (_) => setState(() => _areaError = null),"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,271,onChanged,local_state,"onChanged: (_) => setState(() => _addressError = null),"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,277,onChanged,server_candidate,"onChanged: store.setExactAddressEncrypted,"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,314,onChanged,server_candidate,"onChanged: store.setListingPowerBackup,"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,321,onChanged,server_candidate,"onChanged: store.setListingAccessible,"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,445,onChanged,server_candidate,"onChanged: onTypeChanged,"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,452,onTap,server_candidate,"onTap: onPhotosTap,"
+lib/features/location_owner/screens/lo02_location_listing_wizard_screen.dart,459,onTap,server_candidate,"onTap: onVideoTap,"
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,59,onTap,local_state,"onTap: () => setState(() => _selectedDay = day),"
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,72,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,192,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,267,onTap,review,"onTap: onTap,"
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,329,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,344,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo03_availability_calendar_screen.dart,361,onTap,navigation,onTap: () {
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,109,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,121,onTap,server_candidate,"onTap: _showPublishOtp,"
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,172,onTap,local_state,onTap: () {
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,221,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,262,onTap,server_candidate,onTap: () async {
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,376,onPressed,server_candidate,"onPressed: onMinus,"
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,382,onPressed,review,"onPressed: onPlus,"
+lib/features/location_owner/screens/lo04_pricing_deposit_screen.dart,387,onChanged,review,"onChanged: onEnabled,"
+lib/features/location_owner/screens/lo05_rules_restrictions_screen.dart,69,onChanged,server_candidate,onChanged: () {
+lib/features/location_owner/screens/lo05_rules_restrictions_screen.dart,113,onTap,review,"onTap: () => _showSyncOtp(context, store),"
+lib/features/location_owner/screens/lo05_rules_restrictions_screen.dart,128,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo05_rules_restrictions_screen.dart,138,onTap,server_candidate,onTap: () => locationSnack(
+lib/features/location_owner/screens/lo05_rules_restrictions_screen.dart,168,onTap,review,onTap: () async {
+lib/features/location_owner/screens/lo05_rules_restrictions_screen.dart,274,onChanged,review,"Switch.adaptive(value: rule.allowed, onChanged: (_) => onChanged()),"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,69,onAction,local_state,onAction: () {
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,167,onTap,navigation,onTap: () {
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,201,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,209,onTap,navigation,onTap: () {
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,251,onChanged,review,"onChanged: onQueryChanged,"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,294,onTap,review,"onTap: () => onFilterChanged(filter),"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,305,onTap,review,"onTap: () => onSortChanged(sort),"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,397,onTap,review,"onTap: onDetails,"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,406,onTap,review,"onTap: onCounter,"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,419,onTap,server_candidate,"onTap: onReject,"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,428,onTap,review,"onTap: onAccept,"
+lib/features/location_owner/screens/lo06_booking_requests_screen.dart,438,onTap,review,"onTap: onDetails,"
+lib/features/location_owner/screens/lo07_check_in_inspection_screen.dart,168,onTap,server_candidate,onTap: store.checkInConfirmed
+lib/features/location_owner/screens/lo07_check_in_inspection_screen.dart,282,onTap,review,"onTap: locked ? null : onIssue,"
+lib/features/location_owner/screens/lo07_check_in_inspection_screen.dart,291,onTap,review,"onTap: locked ? null : onCapture,"
+lib/features/location_owner/screens/lo08_check_out_damage_claim_screen.dart,78,onTap,review,"onTap: () => _showDamageClaimSheet(context, store),"
+lib/features/location_owner/screens/lo08_check_out_damage_claim_screen.dart,87,onTap,review,onTap: () {
+lib/features/location_owner/screens/lo08_check_out_damage_claim_screen.dart,164,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo08_check_out_damage_claim_screen.dart,210,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart,97,onTap,local_state,onTap: () {
+lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart,183,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart,193,onTap,navigation,onTap: () =>
+lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart,204,onTap,review,"onTap: onTap,"
+lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart,283,onPressed,review,"onPressed: onReceipt,"
+lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart,295,onPressed,review,"onPressed: onIssue,"
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,55,onTap,local_state,onTap: () {
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,74,onTap,local_state,onTap: () {
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,168,onTap,review,onTap: () => showCoreSuccessDialog(
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,189,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,199,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,208,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,228,onTap,server_candidate,onTap: () {
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,293,onTap,review,"onTap: onTap,"
+lib/features/location_owner/screens/lo10_property_performance_screen.dart,357,onTap,review,"onTap: onTap,"
+lib/features/location_owner/widgets/location_owner_components.dart,142,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/location_owner/widgets/location_owner_components.dart,205,onPressed,review,"onPressed: onActionTap,"
+lib/features/location_owner/widgets/location_owner_components.dart,305,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/location_owner/widgets/location_owner_components.dart,326,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/location_owner/widgets/location_owner_components.dart,348,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/location_owner/widgets/location_owner_components.dart,537,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/location_owner/widgets/location_owner_shell.dart,182,onTap,review,onTap: (index) {
+lib/features/location_owner/widgets/location_owner_shell.dart,247,onTap,review,"onTap: onMenuTap,"
+lib/features/location_owner/widgets/location_owner_shell.dart,268,onTap,review,"onTap: () => _showPropertySwitcher(context),"
+lib/features/location_owner/widgets/location_owner_shell.dart,299,onTap,navigation,onTap: () =>
+lib/features/location_owner/widgets/location_owner_shell.dart,306,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/location_owner/widgets/location_owner_shell.dart,332,onTap,navigation,onTap: () {
+lib/features/media_equipment/screens/me01_provider_dashboard_screen.dart,94,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me01_provider_dashboard_screen.dart,106,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me01_provider_dashboard_screen.dart,140,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me01_provider_dashboard_screen.dart,225,onTap,navigation,onTap: () {
+lib/features/media_equipment/screens/me01_provider_dashboard_screen.dart,239,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me01_provider_dashboard_screen.dart,250,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me02_provider_profile_screen.dart,144,onTap,review,"onTap: () => _showEditSheet(context),"
+lib/features/media_equipment/screens/me02_provider_profile_screen.dart,156,onTap,server_candidate,onTap: () {
+lib/features/media_equipment/screens/me02_provider_profile_screen.dart,209,onTap,local_state,onTap: () {
+lib/features/media_equipment/screens/me02_provider_profile_screen.dart,243,onTap,review,onTap: () => showDialog<void>(
+lib/features/media_equipment/screens/me02_provider_profile_screen.dart,286,onTap,navigation,"onTap: () => Navigator.pop(dialogContext),"
+lib/features/media_equipment/screens/me02_provider_profile_screen.dart,329,onTap,server_candidate,onTap: () async {
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,80,onChanged,local_state,"onChanged: (value) => setState(() => _query = value)),"
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,99,onTap,server_candidate,"onTap: () => store.setInventoryFilter(filter),"
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,110,onTap,local_state,onTap: () {
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,129,onAction,server_candidate,"onAction: store.addDemoInventoryItem,"
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,152,onTap,review,onTap: () async {
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,239,onTap,navigation,onTap: () {
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,259,onChanged,review,"onChanged: onChanged,"
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,354,onTap,review,"onTap: onOpen,"
+lib/features/media_equipment/screens/me03_inventory_manager_screen.dart,363,onTap,server_candidate,"onTap: onAvailability,"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,108,onTap,navigation,onTap: store.packageStep == 1
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,128,onTap,server_candidate,"onTap: _publishing ? null : () => _advance(store),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,181,onTap,server_candidate,onTap: () {
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,237,onTap,local_state,onTap: () => setState(() {
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,256,onTap,server_candidate,"onTap: () => store.togglePackageItem(item.id),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,267,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,275,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,281,onChanged,local_state,"onChanged: (value) => setState(() => _operatorIncluded = value),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,293,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,300,onTap,server_candidate,"onTap: () => mediaSnack(context, 'Cover image refreshed'),"
+lib/features/media_equipment/screens/me04_package_builder_screen.dart,395,onTap,review,"onTap: onTap,"
+lib/features/media_equipment/screens/me05_availability_calendar_screen.dart,59,onTap,local_state,"onTap: () => setState(() => _selectedDay = day),"
+lib/features/media_equipment/screens/me05_availability_calendar_screen.dart,72,onTap,server_candidate,onTap: () {
+lib/features/media_equipment/screens/me05_availability_calendar_screen.dart,137,onTap,server_candidate,onTap: () => store.setCalendarStatus(
+lib/features/media_equipment/screens/me05_availability_calendar_screen.dart,149,onTap,server_candidate,onTap: () => store.setCalendarStatus(
+lib/features/media_equipment/screens/me05_availability_calendar_screen.dart,188,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me05_availability_calendar_screen.dart,263,onTap,review,"onTap: onTap,"
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,126,onTap,server_candidate,"onTap: () => _showPublishOtp(context, store),"
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,141,onTap,server_candidate,onTap: () {
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,151,onTap,server_candidate,onTap: () {
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,188,onTap,server_candidate,onTap: () async {
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,280,onPressed,server_candidate,"onPressed: onMinus,"
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,286,onPressed,review,"onPressed: onPlus,"
+lib/features/media_equipment/screens/me06_rate_terms_screen.dart,289,onChanged,review,"Switch.adaptive(value: term.enabled, onChanged: onEnabled),"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,56,onChanged,local_state,"onChanged: (value) => setState(() => _query = value)),"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,73,onTap,server_candidate,"onTap: () => store.setRequestFilter(filter),"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,89,onAction,local_state,onAction: () {
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,175,onTap,navigation,onTap: () {
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,209,onTap,navigation,"onTap: () => Navigator.pop(context),"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,217,onTap,navigation,onTap: () {
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,241,onChanged,review,"onChanged: onChanged,"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,351,onTap,review,"onTap: onDetails,"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,360,onTap,review,"onTap: onCounter,"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,373,onTap,server_candidate,"onTap: onReject,"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,382,onTap,review,"onTap: onAccept,"
+lib/features/media_equipment/screens/me07_booking_requests_screen.dart,392,onTap,review,"onTap: onDetails,"
+lib/features/media_equipment/screens/me08_handover_checklist_screen.dart,140,onTap,review,onTap: () {
+lib/features/media_equipment/screens/me08_handover_checklist_screen.dart,251,onTap,review,"onTap: locked ? null : onIssue,"
+lib/features/media_equipment/screens/me08_handover_checklist_screen.dart,260,onTap,review,"onTap: locked ? null : onCapture,"
+lib/features/media_equipment/screens/me09_return_checklist_screen.dart,78,onTap,review,"onTap: () => _showClaimSheet(context, store),"
+lib/features/media_equipment/screens/me09_return_checklist_screen.dart,87,onTap,review,onTap: () {
+lib/features/media_equipment/screens/me09_return_checklist_screen.dart,174,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/media_equipment/screens/me09_return_checklist_screen.dart,216,onTap,server_candidate,onTap: () {
+lib/features/media_equipment/screens/me09_return_checklist_screen.dart,327,onTap,review,"onTap: locked ? null : onMissing,"
+lib/features/media_equipment/screens/me09_return_checklist_screen.dart,336,onTap,server_candidate,"onTap: locked ? null : onVerified,"
+lib/features/media_equipment/screens/me10_earnings_ratings_screen.dart,97,onTap,local_state,onTap: () {
+lib/features/media_equipment/screens/me10_earnings_ratings_screen.dart,141,onTap,navigation,onTap: () =>
+lib/features/media_equipment/screens/me10_earnings_ratings_screen.dart,184,onTap,review,"onTap: onTap,"
+lib/features/media_equipment/screens/me10_earnings_ratings_screen.dart,263,onPressed,review,"onPressed: onReceipt,"
+lib/features/media_equipment/screens/me10_earnings_ratings_screen.dart,275,onPressed,review,"onPressed: onIssue,"
+lib/features/media_equipment/widgets/media_equipment_components.dart,142,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/media_equipment/widgets/media_equipment_components.dart,205,onPressed,review,"onPressed: onActionTap,"
+lib/features/media_equipment/widgets/media_equipment_components.dart,297,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/media_equipment/widgets/media_equipment_components.dart,318,onTap,navigation,"onTap: () => Navigator.pushNamed(context, metric.route),"
+lib/features/media_equipment/widgets/media_equipment_components.dart,340,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/media_equipment/widgets/media_equipment_components.dart,524,onTap,navigation,"onTap: () => Navigator.pushNamed(context, task.route),"
+lib/features/media_equipment/widgets/media_equipment_shell.dart,177,onTap,review,onTap: (index) {
+lib/features/media_equipment/widgets/media_equipment_shell.dart,242,onTap,review,"onTap: onMenuTap,"
+lib/features/media_equipment/widgets/media_equipment_shell.dart,263,onTap,review,"onTap: () => _showInventorySwitcher(context),"
+lib/features/media_equipment/widgets/media_equipment_shell.dart,291,onTap,navigation,onTap: () =>
+lib/features/media_equipment/widgets/media_equipment_shell.dart,298,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/media_equipment/widgets/media_equipment_shell.dart,324,onTap,navigation,onTap: () {
+lib/features/model_extension/screens/md01_campaign_categories_screen.dart,211,onTap,server_candidate,"onTap: () => store.toggleCategory(category.id),"
+lib/features/model_extension/screens/md01_campaign_categories_screen.dart,261,onChanged,server_candidate,onChanged: category.selected
+lib/features/model_extension/screens/md02_usage_rights_screen.dart,206,onTap,server_candidate,onTap: locked
+lib/features/model_extension/screens/md02_usage_rights_screen.dart,220,onTap,server_candidate,onTap: locked
+lib/features/model_extension/screens/md03_portfolio_categories_screen.dart,91,onTap,local_state,"onTap: () => setState(() => filter = category),"
+lib/features/model_extension/screens/md03_portfolio_categories_screen.dart,185,onTap,server_candidate,onTap: () {
+lib/features/model_extension/screens/md03_portfolio_categories_screen.dart,197,onTap,server_candidate,onTap: () {
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,122,onTap,server_candidate,"onTap: () => _otpSheet(context),"
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,138,onTap,navigation,onTap: () {
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,165,onTap,server_candidate,onTap: () async {
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,256,onPressed,server_candidate,onPressed: () => store.updateRate(
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,266,onPressed,server_candidate,onPressed: () => store.updateRate(
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,281,onChanged,server_candidate,onChanged: (value) =>
+lib/features/model_extension/screens/md04_rate_by_usage_screen.dart,298,onChanged,server_candidate,onChanged: (value) =>
+lib/features/model_extension/screens/md05_brand_safety_screen.dart,49,onChanged,server_candidate,"onChanged: store.toggleRequireReview,"
+lib/features/model_extension/screens/md05_brand_safety_screen.dart,56,onChanged,server_candidate,"onChanged: store.toggleAutoFlag,"
+lib/features/model_extension/screens/md05_brand_safety_screen.dart,145,onTap,server_candidate,onTap: () async {
+lib/features/model_extension/screens/md05_brand_safety_screen.dart,179,onTap,server_candidate,onTap: () => actorSnack(
+lib/features/model_extension/screens/md05_brand_safety_screen.dart,246,onChanged,review,"Switch(value: value, onChanged: onChanged),"
+lib/features/model_extension/screens/md05_brand_safety_screen.dart,291,onChanged,server_candidate,onChanged: (_) {
+lib/features/role_portals/screens/role_portal_screen.dart,123,onChanged,review,"_StateModeStrip(mode: mode, onChanged: onModeChanged),"
+lib/features/role_portals/screens/role_portal_screen.dart,262,onTap,review,"onTap: () => onChanged(value),"
+lib/features/role_portals/screens/role_portal_screen.dart,452,onTap,review,onTap: () => showCoreSnack(
+lib/features/role_portals/screens/role_portal_screen.dart,464,onTap,review,"onTap: () => _handleScreenAction(context, screen),"
+lib/features/role_portals/screens/role_portal_screen.dart,553,onTap,server_candidate,"onTap: () => showCoreSnack(context, 'Draft saved'),"
+lib/features/role_portals/screens/role_portal_screen.dart,562,onTap,server_candidate,"onTap: _submit,"
+lib/features/role_portals/screens/role_portal_screen.dart,655,onTap,local_state,onTap: () {
+lib/features/role_portals/screens/role_portal_screen.dart,741,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.ledger),"
+lib/features/role_portals/screens/role_portal_screen.dart,792,onTap,review,"onTap: onTap,"
+lib/features/role_portals/widgets/role_portal_components.dart,53,onPressed,review,"onPressed: onActionTap,"
+lib/features/role_portals/widgets/role_portal_components.dart,195,onPressed,server_candidate,"onPressed: onShortlist,"
+lib/features/role_portals/widgets/role_portal_components.dart,230,onTap,review,"onTap: onSecondary,"
+lib/features/role_portals/widgets/role_portal_components.dart,239,onTap,review,"onTap: onPrimary,"
+lib/features/role_portals/widgets/role_portal_components.dart,275,onChanged,review,"onChanged: onQueryChanged,"
+lib/features/role_portals/widgets/role_portal_components.dart,310,onTap,review,"onTap: () => onFilterChanged(filter),"
+lib/features/role_portals/widgets/role_portal_shell.dart,90,onTap,review,"onTap: wide ? () => navigateCoreBack(context) : onMenuTap,"
+lib/features/role_portals/widgets/role_portal_shell.dart,141,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/role_portals/widgets/role_portal_shell.dart,148,onTap,navigation,"onTap: () => Navigator.pushNamed(context, '/notifications'),"
+lib/features/role_portals/widgets/role_portal_shell.dart,174,onTap,review,"onTap: onTap,"
+lib/features/role_portals/widgets/role_portal_shell.dart,247,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/role_portals/widgets/role_portal_shell.dart,274,onTap,review,"onTap: onTap,"
+lib/features/role_portals/widgets/role_portal_shell.dart,346,onTap,review,onTap: (index) {
+lib/features/super_admin/screens/admin_portal/admin_analytics_screen.dart,158,onSelected,local_state,"onSelected: (value) => setState(() => _tab = value),"
+lib/features/super_admin/screens/admin_portal/admin_analytics_screen.dart,181,onTap,review,"onTap: onTap,"
+lib/features/super_admin/screens/admin_portal/admin_analytics_screen.dart,188,onTap,review,"onTap: () => showCoreSnack(context, 'Comparison enabled')),"
+lib/features/super_admin/screens/admin_portal/admin_analytics_screen.dart,192,onTap,review,onTap: () =>
+lib/features/super_admin/screens/admin_portal/admin_analytics_screen.dart,271,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),"
+lib/features/super_admin/screens/admin_portal/admin_dashboard_screen.dart,25,onTap,navigation,"onTap: (route) => Navigator.pushNamed(context, route),"
+lib/features/super_admin/screens/admin_portal/admin_dashboard_screen.dart,59,onTap,navigation,"onTap: () => Navigator.pushNamed(context, SuperAdminRoutes.analytics),"
+lib/features/super_admin/screens/admin_portal/admin_dashboard_screen.dart,195,onTap,server_candidate,"onTap: () => onTap(SuperAdminRoutes.paymentReview),"
+lib/features/super_admin/screens/admin_portal/admin_dashboard_screen.dart,202,onTap,server_candidate,"onTap: () => onTap(SuperAdminRoutes.verificationDetail),"
+lib/features/super_admin/screens/admin_portal/admin_dashboard_screen.dart,209,onTap,server_candidate,"onTap: () => onTap(SuperAdminRoutes.disputeCase),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,156,onPressed,review,"onPressed: onTap,"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,224,onChanged,review,"onChanged: (next) => onChanged(next ?? value),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,286,onTap,server_candidate,"onTap: () => assign('Ayesha'),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,293,onTap,server_candidate,"onTap: () => assign('Raamiz'),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,300,onTap,server_candidate,"onTap: () => assign('Mahnoor'),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,330,onChanged,review,"onChanged: (_) => setDialogState(() {}),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,335,onPressed,navigation,"onPressed: () => Navigator.pop(dialogContext),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,339,onPressed,navigation,onPressed: controller.text.trim().isEmpty
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,362,onConfirm,server_candidate,"onConfirm: () => showCoreSnack(context, '$title confirmed'),"
+lib/features/super_admin/screens/admin_portal/admin_screen_helpers.dart,377,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/super_admin/screens/admin_portal/audit_log_explorer_screen.dart,30,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/booking_detail_screen.dart,106,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/super_admin/screens/admin_portal/booking_detail_screen.dart,113,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/super_admin/screens/admin_portal/booking_detail_screen.dart,120,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.chat),"
+lib/features/super_admin/screens/admin_portal/booking_detail_screen.dart,126,onTap,review,onTap: _flagged
+lib/features/super_admin/screens/admin_portal/booking_detail_screen.dart,131,onSave,local_state,"onSave: () => setState(() => _flagged = true),"
+lib/features/super_admin/screens/admin_portal/booking_detail_screen.dart,137,onTap,navigation,onTap: () =>
+lib/features/super_admin/screens/admin_portal/booking_monitor_screen.dart,29,onSelected,local_state,onSelected: (value) {
+lib/features/super_admin/screens/admin_portal/booking_monitor_screen.dart,49,onSave,local_state,"onSave: () => setState(() => _flagged.add(booking.id)),"
+lib/features/super_admin/screens/admin_portal/booking_monitor_screen.dart,83,onTap,review,"onTap: onOpen,"
+lib/features/super_admin/screens/admin_portal/booking_monitor_screen.dart,160,onTap,review,"_ReviewOutlineButton(label: 'Open', onTap: onOpen),"
+lib/features/super_admin/screens/admin_portal/booking_monitor_screen.dart,163,onTap,review,"onTap: onFlag,"
+lib/features/super_admin/screens/admin_portal/broadcast_announcements_screen.dart,114,onChanged,local_state,"onChanged: (_) => setState(() {})),"
+lib/features/super_admin/screens/admin_portal/broadcast_announcements_screen.dart,121,onChanged,local_state,"onChanged: (_) => setState(() {})),"
+lib/features/super_admin/screens/admin_portal/commission_fee_screen.dart,52,onTap,review,"onTap: () => showCoreSnack(context, 'Invoice generated')),"
+lib/features/super_admin/screens/admin_portal/commission_fee_screen.dart,57,onTap,review,onTap: () =>
+lib/features/super_admin/screens/admin_portal/commission_fee_screen.dart,63,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/super_admin/screens/admin_portal/commission_fee_screen.dart,109,onTap,local_state,onTap: () => _noteDialog(
+lib/features/super_admin/screens/admin_portal/commission_fee_screen.dart,112,onSave,local_state,"onSave: () => setState(() => _preview += 25000),"
+lib/features/super_admin/screens/admin_portal/content_moderation_queue_screen.dart,64,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/content_moderation_queue_screen.dart,70,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/content_moderation_screen.dart,34,onSelected,local_state,"onSelected: (value) => setState(() => _tab = value),"
+lib/features/super_admin/screens/admin_portal/content_moderation_screen.dart,143,onSelected,review,onSelected: (value) {
+lib/features/super_admin/screens/admin_portal/contract_template_detail_screen.dart,86,onTap,server_candidate,"onTap: () => showCoreSnack(context, 'Template published'),"
+lib/features/super_admin/screens/admin_portal/contract_template_detail_screen.dart,92,onTap,server_candidate,"onTap: () => showCoreSnack(context, 'Draft saved'),"
+lib/features/super_admin/screens/admin_portal/contract_template_detail_screen.dart,98,onTap,review,"onTap: () => showCoreSnack(context, 'Template duplicated'),"
+lib/features/super_admin/screens/admin_portal/contract_template_manager_screen.dart,45,onTap,local_state,"onTap: () => setState(() => _selected = index),"
+lib/features/super_admin/screens/admin_portal/contract_template_manager_screen.dart,181,onTap,review,"onTap: onTap,"
+lib/features/super_admin/screens/admin_portal/dispute_case_file_screen.dart,78,onSelected,local_state,"onSelected: (value) => setState(() => _tab = value),"
+lib/features/super_admin/screens/admin_portal/dispute_case_file_screen.dart,94,onTap,navigation,onTap: () =>
+lib/features/super_admin/screens/admin_portal/dispute_case_file_screen.dart,112,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/super_admin/screens/admin_portal/dispute_case_file_screen.dart,142,onChanged,local_state,"onChanged: (value) => setState(() => _notify = value),"
+lib/features/super_admin/screens/admin_portal/dispute_case_file_screen.dart,170,onTap,review,onTap: () {
+lib/features/super_admin/screens/admin_portal/dispute_center_screen.dart,63,onSelected,local_state,"onSelected: (value) => setState(() => _tab = value),"
+lib/features/super_admin/screens/admin_portal/dispute_center_screen.dart,208,onTap,review,"onTap: onOpen,"
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,72,onTap,local_state,onTap: () => setState(() {
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,161,onTap,navigation,onTap: () =>
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,169,onTap,navigation,"onTap: () => Navigator.pushNamed(context, CoreRoutes.kyc),"
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,192,onSelected,local_state,"onSelected: (value) => setState(() => _document = value),"
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,214,onTap,local_state,onTap: () =>
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,221,onTap,local_state,onTap: () =>
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,228,onTap,review,"onTap: () => showCoreSnack(context, 'Document rotated'),"
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,233,onTap,review,"onTap: () => showCoreSnack(context, 'Document marked clear'),"
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,239,onTap,review,"onTap: () => showCoreSnack(context, 'Document marked unclear'),"
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,273,onChanged,local_state,onChanged: (value) {
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,296,onTap,server_candidate,onTap: _savingDecision
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,310,onTap,server_candidate,onTap: _savingDecision
+lib/features/super_admin/screens/admin_portal/kyc_review_detail_screen.dart,324,onTap,review,onTap: _savingDecision
+lib/features/super_admin/screens/admin_portal/listings_moderation_screen.dart,44,onSelected,local_state,"onSelected: (value) => setState(() => _tab = value),"
+lib/features/super_admin/screens/admin_portal/listings_moderation_screen.dart,178,onSelected,review,onSelected: (value) {
+lib/features/super_admin/screens/admin_portal/listings_review_queue_screen.dart,67,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/listings_review_queue_screen.dart,73,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/listings_review_queue_screen.dart,199,onTap,review,"onTap: () => _previewListing(context, listing),"
+lib/features/super_admin/screens/admin_portal/listings_review_queue_screen.dart,204,onSelected,server_candidate,onSelected: (value) {
+lib/features/super_admin/screens/admin_portal/payment_review_detail_screen.dart,215,onTap,server_candidate,"onTap: _deciding ? null : () => _decide('approved')),"
+lib/features/super_admin/screens/admin_portal/payment_review_detail_screen.dart,220,onTap,server_candidate,onTap: _deciding
+lib/features/super_admin/screens/admin_portal/payment_review_detail_screen.dart,225,onSave,server_candidate,onSave: () => _decide(
+lib/features/super_admin/screens/admin_portal/payment_review_detail_screen.dart,234,onTap,review,onTap: _deciding
+lib/features/super_admin/screens/admin_portal/payment_review_detail_screen.dart,239,onSave,server_candidate,onSave: () => _decide(
+lib/features/super_admin/screens/admin_portal/payment_review_detail_screen.dart,249,onTap,local_state,onTap: _deciding
+lib/features/super_admin/screens/admin_portal/payment_verification_queue_screen.dart,152,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/payment_verification_queue_screen.dart,159,onTap,local_state,"onTap: () => setState(() => _sortValue = !_sortValue),"
+lib/features/super_admin/screens/admin_portal/payment_verification_queue_screen.dart,217,onTap,review,"onTap: onReview,"
+lib/features/super_admin/screens/admin_portal/payment_verification_queue_screen.dart,290,onTap,review,"_ReviewOutlineButton(label: 'Review', onTap: onReview),"
+lib/features/super_admin/screens/admin_portal/payments_hub_screen.dart,137,onAction,navigation,onAction: () =>
+lib/features/super_admin/screens/admin_portal/payments_hub_screen.dart,166,onAction,navigation,onAction: () => Navigator.pushNamed(
+lib/features/super_admin/screens/admin_portal/payments_hub_screen.dart,188,onAction,navigation,onAction: () =>
+lib/features/super_admin/screens/admin_portal/people_verification_queue_screen.dart,66,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/people_verification_queue_screen.dart,72,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/people_verification_queue_screen.dart,156,onSelected,server_candidate,onSelected: (value) {
+lib/features/super_admin/screens/admin_portal/people_verification_queue_screen.dart,196,onTap,navigation,onTap: () => Navigator.pushNamed(
+lib/features/super_admin/screens/admin_portal/receipts_ledger_admin_screen.dart,98,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/receipts_ledger_admin_screen.dart,104,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/revenue_settings_screen.dart,57,onChanged,local_state,"onChanged: (v) => setState(() => _autoInvoice = v),"
+lib/features/super_admin/screens/admin_portal/revenue_settings_screen.dart,65,onChanged,local_state,"onChanged: (v) => setState(() => _autoSettlement = v),"
+lib/features/super_admin/screens/admin_portal/revenue_settings_screen.dart,73,onChanged,local_state,"onChanged: (v) => setState(() => _holdHighValue = v),"
+lib/features/super_admin/screens/admin_portal/revenue_settings_screen.dart,87,onTap,server_candidate,"onTap: () => showCoreSnack(context, 'Revenue settings saved'),"
+lib/features/super_admin/screens/admin_portal/revenue_settings_screen.dart,93,onTap,navigation,onTap: () =>
+lib/features/super_admin/screens/admin_portal/revenue_settings_screen.dart,142,onChanged,review,"onChanged: onChanged,"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,408,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,437,onAction,review,"onAction: onViewAll,"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,554,onTap,review,"_ReviewOutlineButton(label: 'Review', onTap: onReview),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,644,onAction,review,"onAction: onViewAll,"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,770,onTap,review,"child: _ReviewOutlineButton(label: 'Open', onTap: onOpen),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,801,onAction,review,"onAction: onViewAll,"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,920,onTap,server_candidate,"onTap: () => showCoreSnack(context, '${item.title} approved'),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,926,onTap,server_candidate,"onTap: () => _noteDialog(context, 'Removal reason'),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,932,onTap,review,"onTap: () => _noteDialog(context, 'Warning template'),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,938,onTap,navigation,"onTap: () => Navigator.pushNamed(context, SuperAdminRoutes.users),"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,965,onTap,review,"onTap: onTap,"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,1015,onPressed,review,"onPressed: onAction,"
+lib/features/super_admin/screens/admin_portal/review_hub_screen.dart,1060,onTap,review,"onTap: onTap,"
+lib/features/super_admin/screens/admin_portal/support_crm_screen.dart,50,onSelected,local_state,"onSelected: (value) => setState(() => _tab = value),"
+lib/features/super_admin/screens/admin_portal/support_crm_screen.dart,68,onTap,local_state,"onTap: () => setState(() => _selected = ticket),"
+lib/features/super_admin/screens/admin_portal/support_crm_screen.dart,96,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/user_management_screen.dart,45,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/user_management_screen.dart,60,onSelected,local_state,"onSelected: (value) => setState(() => _filter = value),"
+lib/features/super_admin/screens/admin_portal/user_verification_queue_screen.dart,73,onChanged,local_state,"onChanged: (_) => setState(() {}),"
+lib/features/super_admin/screens/admin_portal/user_verification_queue_screen.dart,88,onSelected,local_state,"onSelected: (value) => setState(() => _role = value),"
+lib/features/super_admin/screens/admin_portal/user_verification_queue_screen.dart,116,onTap,review,"onTap: _refresh,"
+lib/features/super_admin/screens/admin_portal/user_verification_queue_screen.dart,151,onTap,review,"onTap: _refresh,"
+lib/features/super_admin/widgets/admin_widgets.dart,126,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/super_admin/widgets/admin_widgets.dart,175,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/super_admin/widgets/admin_widgets.dart,208,onTap,review,"onTap: onNavTap ?? () => navigateCoreBack(context),"
+lib/features/super_admin/widgets/admin_widgets.dart,220,onTap,review,"onTap: () => showAdminCommandSheet(context),"
+lib/features/super_admin/widgets/admin_widgets.dart,229,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/features/super_admin/widgets/admin_widgets.dart,236,onTap,navigation,onTap: () =>
+lib/features/super_admin/widgets/admin_widgets.dart,266,onTap,review,"onTap: () => showCoreSnack(context, 'Profile menu simulated'),"
+lib/features/super_admin/widgets/admin_widgets.dart,318,onTap,review,onTap: (index) {
+lib/features/super_admin/widgets/admin_widgets.dart,392,onTap,review,"onTap: onClose,"
+lib/features/super_admin/widgets/admin_widgets.dart,522,onTap,review,"onTap: onClose,"
+lib/features/super_admin/widgets/admin_widgets.dart,584,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/features/super_admin/widgets/admin_widgets.dart,647,onTap,local_state,"onTap: widget.onTap,"
+lib/features/super_admin/widgets/admin_widgets.dart,989,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.verifications),"
+lib/features/super_admin/widgets/admin_widgets.dart,997,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.payments),"
+lib/features/super_admin/widgets/admin_widgets.dart,1005,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.disputes),"
+lib/features/super_admin/widgets/admin_widgets.dart,1013,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.bookingsMonitor),"
+lib/features/super_admin/widgets/admin_widgets.dart,1021,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.reviewHub),"
+lib/features/super_admin/widgets/admin_widgets.dart,1029,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.paymentQueue),"
+lib/features/super_admin/widgets/admin_widgets.dart,1037,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.disputes),"
+lib/features/super_admin/widgets/admin_widgets.dart,1045,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.bookingsMonitor),"
+lib/features/super_admin/widgets/admin_widgets.dart,1053,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.auditLogs),"
+lib/features/super_admin/widgets/admin_widgets.dart,1061,onTap,review,"onTap: () => onRouteTap?.call(SuperAdminRoutes.analytics),"
+lib/features/super_admin/widgets/admin_widgets.dart,1154,onSelected,review,"onSelected: onSelected,"
+lib/features/super_admin/widgets/admin_widgets.dart,1199,onTap,review,"onTap: onTap,"
+lib/features/super_admin/widgets/admin_widgets.dart,1256,onTap,review,"onTap: onTap,"
+lib/features/super_admin/widgets/admin_widgets.dart,1282,onTap,review,"onTap: onTap,"
+lib/features/super_admin/widgets/admin_widgets.dart,1334,onTap,review,"onTap: onTap,"
+lib/features/super_admin/widgets/admin_widgets.dart,1394,onTap,review,"onTap: onResolve,"
+lib/features/super_admin/widgets/admin_widgets.dart,1633,onPressed,server_candidate,"onPressed: protected ? null : () => onToggle(key),"
+lib/features/super_admin/widgets/admin_widgets.dart,1765,onTap,review,"return GestureDetector(onTap: onTap, child: content);"
+lib/features/super_admin/widgets/admin_widgets.dart,1909,onPressed,navigation,"onPressed: () => Navigator.pop(context),"
+lib/features/super_admin/widgets/admin_widgets.dart,1913,onPressed,navigation,onPressed: () {
+lib/features/super_admin/widgets/admin_widgets.dart,1947,onTap,navigation,onTap: () {
+lib/screens/dashboard_screen.dart,119,onTap,local_state,"onTap: () => setState(() => _category = i),"
+lib/screens/dashboard_screen.dart,146,onChanged,local_state,"onChanged: (v) => setState(() => _verifiedOnly = v),"
+lib/screens/dashboard_screen.dart,217,onTap,local_state,"onTap: (index) => setState(() => _tab = index),"
+lib/shared/cards/detail_summary_card.dart,29,onTap,review,"onTap: onTap,"
+lib/shared/cards/metric_action_card.dart,39,onTap,review,"onTap: item.onTap,"
+lib/shared/layout/admin_section_header.dart,98,onTap,review,"onTap: onActionTap,"
+lib/shared/layout/floating_portal_menu.dart,70,onTap,review,"onTap: onClose,"
+lib/shared/layout/floating_portal_menu.dart,214,onTap,review,"onTap: onClose,"
+lib/shared/layout/floating_portal_menu.dart,276,onTap,review,"onTap: () => onRouteTap(item.route),"
+lib/shared/layout/floating_portal_menu.dart,344,onTap,local_state,"onTap: widget.onTap,"
+lib/shared/sections/admin_action_feed_section.dart,75,onTap,review,"onTap: item.onTap,"
+lib/shared/sections/admin_filter_bar.dart,29,onTap,review,"onTap: () => onSelected(filter),"
+lib/shared/sections/admin_live_monitoring_section.dart,77,onTap,review,"onTap: onActionTap,"
+lib/shared/widgets/app_header.dart,142,onTap,review,"onTap: () => navigateCoreBack(context),"
+lib/shared/widgets/app_header.dart,178,onTap,local_state,"onTap: controller.toggleTheme,"
+lib/shared/widgets/app_header.dart,217,onTap,review,"onTap: () => logoutToLogin(context),"
+lib/shared/widgets/app_scaffold.dart,37,onTap,review,"onTap: onNavTap,"
+lib/shared/widgets/app_search_bar.dart,152,onTap,review,"onTap: onTap,"
+lib/shared/widgets/bottom_nav_bar.dart,27,onTap,review,"onTap: onTap,"
+lib/shared/widgets/bottom_nav_bar.dart,146,onTap,review,"onTap: () => onTap?.call(0),"
+lib/shared/widgets/bottom_nav_bar.dart,156,onTap,review,"onTap: () => onTap?.call(1),"
+lib/shared/widgets/bottom_nav_bar.dart,167,onTap,review,"onTap: () => onTap?.call(3),"
+lib/shared/widgets/bottom_nav_bar.dart,177,onTap,review,"onTap: () => onTap?.call(4),"
+lib/shared/widgets/bottom_nav_bar.dart,217,onTap,review,"onTap: () => onTap?.call(2),"
+lib/shared/widgets/bottom_nav_bar.dart,253,onTap,review,"onTap: onTap,"
+lib/shared/widgets/bottom_nav_bar.dart,350,onTap,review,"onTap: onTap,"
+lib/shared/widgets/casting_call_banner.dart,171,onTap,review,"onTap: onTap,"
+lib/shared/widgets/category_chip.dart,29,onTap,review,"onTap: onTap,"
+lib/shared/widgets/featured_talent_card.dart,2056,onTap,review,"onTap: onTap,"
+lib/shared/widgets/featured_talent_card.dart,2111,onTap,review,"onTap: onTap,"
+lib/shared/widgets/featured_talent_card.dart,2159,onTap,review,"onTap: onTap,"
+lib/shared/widgets/filter_chip_button.dart,31,onTap,review,"onTap: onTap,"
+lib/shared/widgets/filter_chip_button.dart,100,onChanged,review,"trailing: GoldSwitch(value: value, onChanged: onChanged),"
+lib/shared/widgets/filter_chip_button.dart,101,onTap,review,"onTap: () => onChanged?.call(!value),"
+lib/shared/widgets/filter_chip_button.dart,131,onTap,review,"onTap: () => onChanged?.call(!value),"
+lib/shared/widgets/premium_data_table.dart,71,onTap,review,"onTap: rowActions == null ? null : rowActions![index],"
+lib/shared/widgets/talent_tabs_bar.dart,51,onTap,review,"onTap: () => onTap?.call(index),"
+lib/shared/widgets/talent_tabs_bar.dart,81,onTap,review,"onTap: onTap,"

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../trust_safety/trust_safety_controller.dart';
+import '../../trust_safety/trust_safety_models.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
 import '../widgets/core_widgets.dart';
@@ -16,13 +19,120 @@ class NotificationCenterScreen extends StatefulWidget {
 
 class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   int _tab = 0;
-  late List<CoreNotification> _notifications =
-      List.of(SharedMockData.notifications);
+  bool _loadedLive = false;
+  bool _loadingLive = false;
+  String? _notice;
+  late List<CoreNotification> _notifications = List.of(
+    SharedMockData.notifications,
+  );
 
   List<CoreNotification> get _filtered {
     if (_tab == 0) return _notifications;
     final category = CoreNotificationCategory.values[_tab - 1];
     return _notifications.where((item) => item.category == category).toList();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadedLive) {
+      _loadedLive = true;
+      _loadLiveNotifications();
+    }
+  }
+
+  Future<void> _loadLiveNotifications() async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null) return;
+    setState(() {
+      _loadingLive = true;
+      _notice = null;
+    });
+    try {
+      final data = await trustSafety.notifications(force: true);
+      if (!mounted) return;
+      setState(() {
+        if (data.notifications.isNotEmpty) {
+          _notifications = data.notifications.map(_mapNotification).toList();
+          _notice = '${data.unreadCount} unread live notifications loaded.';
+        } else {
+          _notice = 'No live notifications yet — showing preview examples.';
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _notice = 'Live notifications unavailable — showing preview examples.';
+      });
+    } finally {
+      if (mounted) setState(() => _loadingLive = false);
+    }
+  }
+
+  CoreNotification _mapNotification(NotificationDto item) {
+    final category = switch (item.category) {
+      'booking' || 'bookings' || 'reviews' => CoreNotificationCategory.bookings,
+      'payment' || 'payments' => CoreNotificationCategory.payments,
+      'contract' || 'contracts' => CoreNotificationCategory.contracts,
+      _ => CoreNotificationCategory.system,
+    };
+    return CoreNotification(
+      icon: switch (category) {
+        CoreNotificationCategory.bookings => Icons.event_available_outlined,
+        CoreNotificationCategory.payments =>
+          Icons.account_balance_wallet_outlined,
+        CoreNotificationCategory.contracts => Icons.description_outlined,
+        CoreNotificationCategory.system => Icons.notifications_none_rounded,
+      },
+      title: item.title,
+      message: item.body,
+      time: item.publicId,
+      category: category,
+      routeName: item.routeName ?? CoreRoutes.notifications,
+      unread: item.unread,
+    );
+  }
+
+  Future<void> _markAllRead() async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    try {
+      if (trustSafety != null) {
+        await trustSafety.markAllNotificationsRead();
+        await _loadLiveNotifications();
+      } else {
+        setState(() {
+          _notifications = _notifications
+              .map(
+                (item) => CoreNotification(
+                  icon: item.icon,
+                  title: item.title,
+                  message: item.message,
+                  time: item.time,
+                  category: item.category,
+                  routeName: item.routeName,
+                  unread: false,
+                ),
+              )
+              .toList();
+        });
+      }
+      if (mounted) showCoreSnack(context, 'All notifications marked as read');
+    } catch (_) {
+      if (mounted) showCoreSnack(context, 'Could not update notifications');
+    }
+  }
+
+  Future<void> _openNotification(CoreNotification item) async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety != null && item.unread && item.time.startsWith('NTF-')) {
+      try {
+        await trustSafety.markNotificationRead(item.time);
+      } catch (_) {
+        // Opening the destination is still useful if the read receipt fails.
+      }
+    }
+    if (!mounted) return;
+    Navigator.pushNamed(context, item.routeName);
   }
 
   @override
@@ -41,28 +151,25 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               CoreIconButton(
                 icon: Icons.done_all_rounded,
                 tooltip: 'Mark all as read',
-                onTap: () {
-                  setState(() {
-                    _notifications = _notifications
-                        .map(
-                          (item) => CoreNotification(
-                            icon: item.icon,
-                            title: item.title,
-                            message: item.message,
-                            time: item.time,
-                            category: item.category,
-                            routeName: item.routeName,
-                            unread: false,
-                          ),
-                        )
-                        .toList();
-                  });
-                  showCoreSnack(context, 'All notifications marked as read');
-                },
+                onTap: _markAllRead,
               ),
             ],
           ),
           const SizedBox(height: 20),
+          if (_loadingLive)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          if (_notice != null) ...[
+            InlineNotice(
+              message: _notice!,
+              tone: _notice!.startsWith('Live')
+                  ? CoreStatusTone.warning
+                  : CoreStatusTone.info,
+            ),
+            const SizedBox(height: 12),
+          ],
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -91,8 +198,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                       return NotificationCard(
                         key: ValueKey(item.title + item.time),
                         notification: item,
-                        onTap: () =>
-                            Navigator.pushNamed(context, item.routeName),
+                        onTap: () => _openNotification(item),
                       );
                     },
                   ),
@@ -191,8 +297,9 @@ class NotificationCard extends StatelessWidget {
                       ),
                       Text(
                         notification.time,
-                        style: AppTextStyles.caption
-                            .copyWith(color: colors.textTertiary),
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textTertiary,
+                        ),
                       ),
                     ],
                   ),

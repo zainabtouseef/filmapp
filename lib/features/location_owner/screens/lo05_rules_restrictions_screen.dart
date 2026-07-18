@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
@@ -164,12 +165,43 @@ class LO05RulesRestrictionsScreen extends StatelessWidget {
           CorePrimaryButton(
             icon: Icons.sync_rounded,
             label: 'Sync rules',
-            onTap: () {
+            onTap: () async {
               if (otp.text.trim().length != 6) {
                 locationSnack(context, 'Enter a 6-digit OTP');
                 return;
               }
+              final operations = OperationsScope.maybeOf(context);
+              if (operations != null) {
+                try {
+                  final properties =
+                      await operations.locationProperties(force: true);
+                  final propertyId =
+                      properties.isEmpty ? null : properties.first.publicId;
+                  if (propertyId == null || propertyId.isEmpty) {
+                    if (context.mounted) {
+                      locationSnack(
+                        context,
+                        'Live rules skipped: create a location first',
+                      );
+                    }
+                  } else {
+                    for (final rule in store.rules) {
+                      await operations.createLocationRule(propertyId, {
+                        'rule_type': rule.id,
+                        'label': rule.label,
+                        'note': rule.note,
+                        'allowed': rule.allowed,
+                      });
+                    }
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    locationSnack(context, 'Live rules skipped: $error');
+                  }
+                }
+              }
               store.syncRulesToContract();
+              if (!context.mounted) return;
               Navigator.pop(context);
               locationSnack(context, 'Rules synced to contract');
             },

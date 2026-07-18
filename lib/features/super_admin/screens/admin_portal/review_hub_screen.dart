@@ -172,6 +172,8 @@ class ReviewHubScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const _LiveReviewHubStrip(),
+        const SizedBox(height: 16),
         _ReviewSummaryStrip(
           items: _summary,
           onRouteTap: (route) => Navigator.pushNamed(context, route),
@@ -211,6 +213,84 @@ class ReviewHubScreen extends StatelessWidget {
               Navigator.pushNamed(context, SuperAdminRoutes.reviewHubContent),
         ),
       ],
+    );
+  }
+}
+
+class _LiveReviewHubStrip extends StatefulWidget {
+  const _LiveReviewHubStrip();
+
+  @override
+  State<_LiveReviewHubStrip> createState() => _LiveReviewHubStripState();
+}
+
+class _LiveReviewHubStripState extends State<_LiveReviewHubStrip> {
+  late Future<Map<String, int>> _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    _future = trustSafety == null
+        ? Future.value(const {'moderation': 0, 'disputes': 0, 'support': 0})
+        : _load(trustSafety);
+  }
+
+  Future<Map<String, int>> _load(TrustSafetyController trustSafety) async {
+    final moderation = await trustSafety
+        .adminModerationCases(force: true)
+        .catchError((_) => const <ModerationCaseDto>[]);
+    final disputes = await trustSafety
+        .adminDisputes(force: true)
+        .catchError((_) => const <DisputeDto>[]);
+    final support = await trustSafety
+        .adminSupportTickets(force: true)
+        .catchError((_) => const <SupportTicketDto>[]);
+    return {
+      'moderation': moderation.length,
+      'disputes': disputes.length,
+      'support': support.length,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, int>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError) {
+          return const InlineNotice(
+            message:
+                'Live review hub counts unavailable — showing preview review workload.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final data = snapshot.data ?? const {};
+        return AdminSurface(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              AdminStatusBadge(
+                label: '${data['moderation'] ?? 0} live moderation',
+                tone: AdminDecisionTone.info,
+              ),
+              AdminStatusBadge(
+                label: '${data['disputes'] ?? 0} live disputes',
+                tone: AdminDecisionTone.warning,
+              ),
+              AdminStatusBadge(
+                label: '${data['support'] ?? 0} live support',
+                tone: AdminDecisionTone.success,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

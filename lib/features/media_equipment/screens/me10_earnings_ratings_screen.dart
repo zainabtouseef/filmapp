@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -173,15 +174,14 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        CorePrimaryButton(
-                          icon: Icons.file_download_outlined,
+                        ExportActionButton(
+                          exportType: 'ledger',
                           label: 'Export report',
-                          compact: true,
-                          onTap: () => showCoreSuccessDialog(
-                            context,
-                            title: 'Report export ready',
-                            message:
-                                'A demo utilization and earnings report was generated.',
+                          builder: (context, onTap, label) => CorePrimaryButton(
+                            icon: Icons.file_download_outlined,
+                            label: label,
+                            compact: true,
+                            onTap: onTap,
                           ),
                         ),
                       ],

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../core/theme/app_text_styles.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/projects/project_models.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../data/director_producer_demo_data.dart';
+import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
+import '../widgets/dp_empty_state.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -11,7 +15,9 @@ import '../widgets/dp_requirement_card.dart';
 import '../widgets/dp_status_chip.dart';
 
 class DPRequirementBuilderScreen extends StatefulWidget {
-  const DPRequirementBuilderScreen({super.key});
+  final String? projectId;
+
+  const DPRequirementBuilderScreen({super.key, this.projectId});
 
   @override
   State<DPRequirementBuilderScreen> createState() =>
@@ -20,21 +26,60 @@ class DPRequirementBuilderScreen extends StatefulWidget {
 
 class _DPRequirementBuilderScreenState
     extends State<DPRequirementBuilderScreen> {
+  final _title = TextEditingController(text: 'Lead actor, 28-34');
+  final _summary = TextEditingController(
+    text: 'Urdu/Pashto, athletic, winter exterior comfort',
+  );
+  final _budgetMin = TextEditingController(text: '1200000');
+  final _budgetMax = TextEditingController(text: '1800000');
   String _category = 'Roles';
+  Future<List<ProjectRequirement>>? _requirementsFuture;
+  bool _started = false;
+  bool _saving = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _reload();
+    }
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _summary.dispose();
+    _budgetMin.dispose();
+    _budgetMax.dispose();
+    super.dispose();
+  }
+
+  void _reload() {
+    final controller = ProjectsScope.maybeOf(context);
+    final projectId = widget.projectId;
+    setState(() {
+      _requirementsFuture = controller == null || projectId == null
+          ? Future<List<ProjectRequirement>>.error(
+              const ApiException(
+                code: 'project.missing',
+                message: 'Project id is required.',
+              ),
+            )
+          : controller.requirements(projectId);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final requirements = DirectorProducerDemoData.requirements
-        .where((req) => req.category == _category)
-        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         dpHeaderAction(
           context,
           icon: Icons.add_circle_outline_rounded,
-          label: 'Add',
-          onTap: () => dpSnack(context, 'Requirement saved for demo'),
+          label: _saving ? 'Saving...' : 'Add',
+          onTap: _saving ? () {} : _saveRequirement,
         ),
         const SizedBox(height: 6),
         Wrap(
@@ -60,25 +105,33 @@ class _DPRequirementBuilderScreenState
         const SizedBox(height: 12),
         DPGlassCard(
           child: Column(
-            children: const [
-              _RequirementInput(
+            children: [
+              CoreTextField(
+                controller: _title,
                 label: 'Requirement title',
                 icon: Icons.title_rounded,
-                value: 'Lead actor, 28-34',
               ),
-              SizedBox(height: 10),
-              _RequirementInput(
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _summary,
                 label: 'Filters summary / notes',
                 icon: Icons.tune_rounded,
-                value: 'Urdu/Pashto, athletic, winter exterior comfort',
+                maxLines: 3,
               ),
-              SizedBox(height: 10),
-              _RequirementInput(
-                label: 'Fee range and dates',
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _budgetMin,
+                label: 'Minimum fee (PKR)',
                 icon: Icons.payments_outlined,
-                value: 'PKR 1.2M - 1.8M - Aug 7 - Aug 26',
+                keyboardType: TextInputType.number,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _budgetMax,
+                label: 'Maximum fee (PKR)',
+                icon: Icons.savings_outlined,
+                keyboardType: TextInputType.number,
+              ),
             ],
           ),
         ),
@@ -86,80 +139,136 @@ class _DPRequirementBuilderScreenState
         Align(
           alignment: Alignment.centerLeft,
           child: DPHolographicButton(
-            label: 'Save Requirement',
+            label: _saving ? 'Saving Requirement' : 'Save Requirement',
             icon: Icons.save_outlined,
-            onTap: () => dpSnack(context, 'Requirement saved'),
+            onTap: _saving ? null : _saveRequirement,
           ),
         ),
         const SizedBox(height: 14),
-        DPResponsiveGrid(
-          children: requirements
-              .map(
-                (req) => DPRequirementCard(
-                  requirement: req,
-                  onFindMatches: () => Navigator.pushNamed(
-                    context,
-                    DirectorProducerRoutes.marketplace,
-                  ),
-                ),
-              )
-              .toList(),
+        FutureBuilder<List<ProjectRequirement>>(
+          future: _requirementsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const DPEmptyState(
+                icon: Icons.hourglass_top_rounded,
+                title: 'Loading requirements',
+                message: 'Fetching project requirements from the server.',
+              );
+            }
+            if (snapshot.hasError) {
+              final requirements = DirectorProducerDemoData.requirements
+                  .where((req) => req.category == _category)
+                  .toList();
+              return _RequirementGrid(
+                requirements: requirements,
+                warning:
+                    'Live requirements unavailable — showing preview requirements.',
+              );
+            }
+            final requirements = (snapshot.data ?? const [])
+                .map((item) => item.toDpRequirement())
+                .where((req) => req.category == _category)
+                .toList();
+            return _RequirementGrid(requirements: requirements);
+          },
         ),
       ],
     );
   }
+
+  Future<void> _saveRequirement() async {
+    final controller = ProjectsScope.maybeOf(context);
+    final projectId = widget.projectId;
+    if (controller == null || projectId == null) {
+      dpSnack(context, 'Open a live project before adding requirements');
+      return;
+    }
+    if (_title.text.trim().length < 2) {
+      dpSnack(context, 'Requirement title is required');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await controller.createRequirement(
+        projectId: projectId,
+        category: _backendCategory(_category),
+        title: _title.text.trim(),
+        summary: _summary.text.trim(),
+        budgetMinMinor: _parseMinor(_budgetMin.text),
+        budgetMaxMinor: _parseMinor(_budgetMax.text),
+      );
+      if (!mounted) return;
+      dpSnack(context, 'Requirement saved');
+      _reload();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  int? _parseMinor(String value) {
+    final whole = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (whole == null) return null;
+    return whole * 100;
+  }
+
+  String _backendCategory(String value) {
+    return switch (value) {
+      'Roles' || 'Models' => 'talent',
+      'Locations' => 'location',
+      'Media & Equipment' => 'equipment',
+      'Crew' => 'crew',
+      _ => 'service',
+    };
+  }
 }
 
-class _RequirementInput extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final String value;
+class _RequirementGrid extends StatelessWidget {
+  final List<DpRequirement> requirements;
+  final String? warning;
 
-  const _RequirementInput({
-    required this.label,
-    required this.icon,
-    required this.value,
-  });
+  const _RequirementGrid({required this.requirements, this.warning});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: colors.isLight ? 0.5 : 0.22),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: colors.goldDark, size: 18),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (warning != null) ...[
+          DPGlassCard(
+            child: Row(
               children: [
-                Text(
-                  label,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                const Icon(Icons.info_outline_rounded, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: dpText(context, warning!)),
               ],
             ),
           ),
+          const SizedBox(height: 12),
         ],
-      ),
+        if (requirements.isEmpty)
+          const DPEmptyState(
+            icon: Icons.rule_folder_outlined,
+            title: 'No requirements yet',
+            message: 'Save a requirement to start matching people and vendors.',
+          )
+        else
+          DPResponsiveGrid(
+            children: requirements
+                .map(
+                  (req) => DPRequirementCard(
+                    requirement: req,
+                    onFindMatches: () => Navigator.pushNamed(
+                      context,
+                      DirectorProducerRoutes.marketplace,
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
     );
   }
 }

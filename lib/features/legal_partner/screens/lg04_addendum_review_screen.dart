@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/contracts/contract_models.dart' as contract_models;
+import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -21,6 +23,16 @@ class LG04AddendumReviewScreen extends StatefulWidget {
 
 class _LG04AddendumReviewScreenState extends State<LG04AddendumReviewScreen> {
   String _tab = 'All';
+  Future<List<contract_models.CineContract>>? _contractsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts != null) {
+      _contractsFuture ??= contracts.contracts(force: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +104,32 @@ class _LG04AddendumReviewScreenState extends State<LG04AddendumReviewScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_contractsFuture != null)
+              FutureBuilder<List<contract_models.CineContract>>(
+                future: _contractsFuture,
+                builder: (context, snapshot) {
+                  final rows = (snapshot.data ?? const [])
+                      .expand((contract) => contract.addendums.map(
+                            (addendum) =>
+                                (contract: contract, addendum: addendum),
+                          ))
+                      .toList();
+                  if (!snapshot.hasError && rows.isNotEmpty) {
+                    return LegalResponsiveGrid(
+                      minWidth: 320,
+                      children: [
+                        for (final row in rows)
+                          _LiveAddendumCard(
+                            contract: row.contract,
+                            addendum: row.addendum,
+                          ),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            if (_contractsFuture != null) const SizedBox(height: 12),
             if (addendums.isEmpty)
               CoreEmptyState(
                 icon: Icons.post_add_outlined,
@@ -190,6 +228,65 @@ class _LG04AddendumReviewScreenState extends State<LG04AddendumReviewScreen> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveAddendumCard extends StatelessWidget {
+  final contract_models.CineContract contract;
+  final contract_models.ContractAddendum addendum;
+
+  const _LiveAddendumCard({
+    required this.contract,
+    required this.addendum,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GlassSectionCard(
+      radius: 20,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  addendum.reason,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              StatusBadge(label: addendum.status.toUpperCase()),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            addendum.content,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style:
+                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          CoreSecondaryButton(
+            icon: Icons.description_outlined,
+            label: 'Open contract',
+            compact: true,
+            onTap: () => Navigator.pushNamed(
+              context,
+              CoreRoutes.contract,
+              arguments: {'contract_id': contract.publicId, 'addendum': true},
+            ),
           ),
         ],
       ),
