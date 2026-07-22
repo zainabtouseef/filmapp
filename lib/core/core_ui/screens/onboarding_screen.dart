@@ -49,8 +49,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _goRoleSelection() {
-    Navigator.pushNamed(context, CoreRoutes.roleSelection);
+  // Leads with sign-in — the app has no anonymous browsing, so returning
+  // users should land straight on "Welcome Back"; "Create an account" on
+  // that screen is the fallback path for anyone without one yet.
+  void _goSignIn() {
+    Navigator.pushNamed(context, CoreRoutes.login);
   }
 
   @override
@@ -60,6 +63,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return CoreScreenScaffold(
       scrollable: false,
       showGlobalControls: false,
+      showBackdrop: false,
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
       child: Column(
         children: [
@@ -67,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               const Expanded(child: CoreBrandMark()),
               TextButton(
-                onPressed: _goRoleSelection,
+                onPressed: _goSignIn,
                 child: Text(
                   'Skip',
                   style: AppTextStyles.label.copyWith(color: colors.goldDark),
@@ -111,7 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             label: _index == _slides.length - 1 ? 'Get Started' : 'Next',
             onTap: () {
               if (_index == _slides.length - 1) {
-                _goRoleSelection();
+                _goSignIn();
               } else {
                 _controller.nextPage(
                   duration: const Duration(milliseconds: 320),

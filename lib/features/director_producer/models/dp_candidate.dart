@@ -10,6 +10,10 @@ class DpCandidate {
   final List<String> skills;
   final String avatarLabel;
   final String notes;
+  final int joinedDaysAgo;
+  final int completedBookings;
+  final String instagramHandle;
+  final int instagramFollowers;
 
   const DpCandidate({
     required this.id,
@@ -23,5 +27,11 @@ class DpCandidate {
     required this.skills,
     required this.avatarLabel,
     required this.notes,
+    this.joinedDaysAgo = 45,
+    this.completedBookings = 18,
+    this.instagramHandle = '@cineconnect.profile',
+    this.instagramFollowers = 12800,
   });
+
+  bool get isNew => joinedDaysAgo < 30;
 }

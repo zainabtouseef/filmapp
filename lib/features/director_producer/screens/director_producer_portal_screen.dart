@@ -6,6 +6,7 @@ import '../../../core/core_payment/screens/receipts_ledger_screen.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../routes/director_producer_routes.dart';
+import '../widgets/dashboard/dp_assistant_orb.dart';
 import '../widgets/dp_shell.dart';
 import 'dp_bargaining_center_screen.dart';
 import 'dp_booking_request_form_screen.dart';
@@ -36,12 +37,21 @@ class DirectorProducerPortalScreen extends StatelessWidget {
     this.arguments,
   });
 
+  bool get _isDashboard =>
+      routeName == DirectorProducerRoutes.console ||
+      routeName == DirectorProducerRoutes.home;
+
   @override
   Widget build(BuildContext context) {
     final auth = AuthScope.maybeOf(context);
     final content = DPShell(
       title: _title(routeName),
       currentRoute: routeName,
+      showHeading: !_isDashboard,
+      floatingActionBuilder: _isDashboard
+          ? (context, wide, bottomInset) =>
+              DPAssistantOrb(bottomInset: bottomInset)
+          : null,
       child: _content(routeName),
     );
     if (auth == null) return content;
@@ -53,11 +63,14 @@ class DirectorProducerPortalScreen extends StatelessWidget {
 
   String _title(String route) {
     return switch (route) {
+      DirectorProducerRoutes.console => 'Dashboard',
       DirectorProducerRoutes.home => 'Dashboard',
+      DirectorProducerRoutes.projectsAlias => 'Projects',
       DirectorProducerRoutes.projects => 'Projects',
       DirectorProducerRoutes.createProject => 'Create Project',
       DirectorProducerRoutes.projectDetail => 'Project Hub',
       DirectorProducerRoutes.requirements => 'Requirements',
+      DirectorProducerRoutes.discover => 'Marketplace',
       DirectorProducerRoutes.marketplace => 'Marketplace',
       DirectorProducerRoutes.filters => 'Smart Filters',
       DirectorProducerRoutes.profile => 'Stakeholder Profile',
@@ -76,23 +89,46 @@ class DirectorProducerPortalScreen extends StatelessWidget {
   }
 
   Widget _content(String route) {
-    final id = arguments is String ? arguments as String : null;
+    final id = _stringArg('id') ??
+        _stringArg('projectId') ??
+        _stringArg('candidateId') ??
+        (arguments is String ? arguments as String : null);
+    final projectId = _stringArg('projectId') ??
+        (route == DirectorProducerRoutes.projectDetail ? id : null);
+    final candidateId = _stringArg('candidateId') ??
+        (route == DirectorProducerRoutes.profile ? id : null);
+    final category = _stringArg('category') ?? _stringArg('type');
+    final tab = _stringArg('tab');
     return switch (route) {
+      DirectorProducerRoutes.console => const DPHomeDashboardScreen(),
+      DirectorProducerRoutes.projectsAlias => const DPProjectsListScreen(),
       DirectorProducerRoutes.projects => const DPProjectsListScreen(),
       DirectorProducerRoutes.createProject =>
         const DPCreateProjectWizardScreen(),
       DirectorProducerRoutes.projectDetail =>
-        DPProjectDetailScreen(projectId: id),
+        DPProjectDetailScreen(projectId: projectId, initialTab: tab),
       DirectorProducerRoutes.requirements =>
         DPRequirementBuilderScreen(projectId: id),
-      DirectorProducerRoutes.marketplace =>
-        const DPMarketplaceDiscoveryScreen(),
+      DirectorProducerRoutes.discover => DPMarketplaceDiscoveryScreen(
+          initialCategory: category,
+          projectId: projectId,
+        ),
+      DirectorProducerRoutes.marketplace => DPMarketplaceDiscoveryScreen(
+          initialCategory: category,
+          projectId: projectId,
+        ),
       DirectorProducerRoutes.filters => const DPSmartFiltersSheet(),
-      DirectorProducerRoutes.profile =>
-        DPStakeholderProfileScreen(candidateId: id),
+      DirectorProducerRoutes.profile => DPStakeholderProfileScreen(
+          candidateId: candidateId,
+          profileType: category,
+          projectId: projectId,
+        ),
       DirectorProducerRoutes.shortlist => const DPShortlistBoardScreen(),
-      DirectorProducerRoutes.bookingRequest =>
-        const DPBookingRequestFormScreen(),
+      DirectorProducerRoutes.bookingRequest => DPBookingRequestFormScreen(
+          candidateId: candidateId,
+          projectId: projectId,
+          category: category,
+        ),
       DirectorProducerRoutes.bargaining => const DPBargainingCenterScreen(),
       DirectorProducerRoutes.negotiationThread =>
         DPNegotiationThreadScreen(negotiationId: id),
@@ -104,6 +140,12 @@ class DirectorProducerPortalScreen extends StatelessWidget {
       DirectorProducerRoutes.reports => const DPReportsExportScreen(),
       _ => const DPHomeDashboardScreen(),
     };
+  }
+
+  String? _stringArg(String key) {
+    final args = arguments;
+    if (args is Map && args[key] is String) return args[key] as String;
+    return null;
   }
 }
 

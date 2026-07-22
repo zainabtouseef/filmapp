@@ -86,8 +86,7 @@ class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: _verifiedOnly,
-                  onChanged: (value) =>
-                      setState(() => _verifiedOnly = value),
+                  onChanged: (value) => setState(() => _verifiedOnly = value),
                   title: const Text('Verified only'),
                 ),
                 const SizedBox(height: 14),

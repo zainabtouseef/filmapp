@@ -119,37 +119,18 @@ class BrandSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GlassSectionCard(
-      padding: const EdgeInsets.all(14),
-      selected: selected,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: colors.goldDark, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.sectionHeading.copyWith(
-                    color: colors.textPrimary,
-                    fontSize: 15.5,
-                    letterSpacing: 1.45,
-                  ),
-                ),
-              ),
-              if (actionText != null)
-                TextButton(onPressed: onActionTap, child: Text(actionText!)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
+    return SectionContainer(
+      title: title,
+      leading: IconBadge(
+        icon: icon,
+        tone: CineTone.premium,
+        compact: true,
       ),
+      action: actionText == null
+          ? null
+          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
+      treatment: selected ? SectionTreatment.elevated : SectionTreatment.open,
+      child: child,
     );
   }
 }
@@ -261,15 +242,15 @@ class BrandTaskRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MetricActionRail(
+    return QuickActionRail(
       items: [
         for (final task in tasks)
-          MetricActionItem(
+          QuickActionItem(
             icon: task.icon,
-            value: 'Open',
             title: task.title,
-            subtitle: task.subtitle,
-            accentColor: brandToneColor(context, task.tone),
+            description: task.subtitle,
+            tone:
+                cineToneFromColor(context, brandToneColor(context, task.tone)),
             onTap: () => Navigator.pushNamed(context, task.route),
           ),
       ],
@@ -446,13 +427,12 @@ class BrandTaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 148,
-      child: MetricActionCard(
-        item: MetricActionItem(
+      child: QuickActionCard(
+        item: QuickActionItem(
           icon: task.icon,
-          value: 'Open',
           title: task.title,
-          subtitle: task.subtitle,
-          accentColor: brandToneColor(context, task.tone),
+          description: task.subtitle,
+          tone: cineToneFromColor(context, brandToneColor(context, task.tone)),
           onTap: () => Navigator.pushNamed(context, task.route),
         ),
       ),

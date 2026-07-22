@@ -33,6 +33,22 @@ class _AT03PortfolioShowreelScreenState
   bool _uploading = false;
   String? _busyItemId;
 
+  static const _portfolioCategories = [
+    'All',
+    'Headshots',
+    'Full-length',
+    'Editorial',
+    'On-set',
+    'Dramas',
+    'Films / Movies',
+    'TVCs / Ads',
+    'Music Videos',
+    'Web Series',
+    'Theatre',
+    'Modeling / Fashion',
+    'Self-tapes / Intro',
+  ];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -63,13 +79,7 @@ class _AT03PortfolioShowreelScreenState
         ActorSearchFilterBar(
           query: query,
           onQueryChanged: (value) => setState(() => query = value),
-          filters: const [
-            'All',
-            'Headshots',
-            'Drama Clips',
-            'Ads',
-            'Voice Samples',
-          ],
+          filters: _portfolioCategories,
           selectedFilter: filter,
           onFilterChanged: (value) => setState(() => filter = value),
         ),
@@ -111,7 +121,9 @@ class _AT03PortfolioShowreelScreenState
                   for (final item in items)
                     _PortfolioCard(
                       title: item.title,
-                      category: item.displayCategory,
+                      category: _normalizePortfolioCategory(
+                        item.displayCategory,
+                      ),
                       duration: item.durationLabel,
                       status: item.displayStatus,
                       imageUrl: item.thumbnailFile?.downloadUrl ??
@@ -122,7 +134,9 @@ class _AT03PortfolioShowreelScreenState
                       busy: _busyItemId == item.publicId,
                       onPreview: () => _showPreview(
                         title: item.title,
-                        category: item.displayCategory,
+                        category: _normalizePortfolioCategory(
+                          item.displayCategory,
+                        ),
                         duration: item.durationLabel,
                         imageUrl: item.thumbnailFile?.downloadUrl ??
                             item.file?.downloadUrl ??
@@ -147,10 +161,11 @@ class _AT03PortfolioShowreelScreenState
     List<MarketplacePortfolioItem> items,
   ) {
     return items.where((item) {
-      final haystack = '${item.title} ${item.displayCategory}'.toLowerCase();
+      final category = _normalizePortfolioCategory(item.displayCategory);
+      final haystack = '${item.title} $category'.toLowerCase();
       final matchQuery =
           query.trim().isEmpty || haystack.contains(query.toLowerCase());
-      final matchFilter = filter == 'All' || item.displayCategory == filter;
+      final matchFilter = filter == 'All' || category == filter;
       return matchQuery && matchFilter;
     }).toList();
   }
@@ -172,7 +187,7 @@ class _AT03PortfolioShowreelScreenState
 
     final mimeType = _mimeTypeFor(picked);
     final title = _titleFor(picked.name);
-    final category = _categoryFor(mimeType);
+    final category = _categoryFor(picked, mimeType);
     setState(() => _uploading = true);
     try {
       final uploaded = await controller.uploadFile(
@@ -332,9 +347,43 @@ class _AT03PortfolioShowreelScreenState
     };
   }
 
-  String _categoryFor(String mimeType) {
-    if (mimeType.startsWith('image/')) return 'headshot';
-    return 'showreel';
+  String _categoryFor(PlatformFile file, String mimeType) {
+    final name = file.name.toLowerCase();
+    if (mimeType.startsWith('image/')) {
+      if (name.contains('full')) return 'Full-length';
+      if (name.contains('editorial')) return 'Editorial';
+      if (name.contains('onset') || name.contains('on-set')) return 'On-set';
+      return 'Headshots';
+    }
+    if (name.contains('drama')) return 'Dramas';
+    if (name.contains('film') || name.contains('movie')) {
+      return 'Films / Movies';
+    }
+    if (name.contains('tvc') || name.contains('ad')) return 'TVCs / Ads';
+    if (name.contains('music')) return 'Music Videos';
+    if (name.contains('web')) return 'Web Series';
+    if (name.contains('theatre') || name.contains('theater')) return 'Theatre';
+    if (name.contains('model') || name.contains('fashion')) {
+      return 'Modeling / Fashion';
+    }
+    return 'Self-tapes / Intro';
+  }
+
+  String _normalizePortfolioCategory(String category) {
+    final lower = category.toLowerCase();
+    if (lower == 'headshot' || lower == 'headshots') return 'Headshots';
+    if (lower == 'showreel' ||
+        lower == 'self-intro' ||
+        lower == 'self intro' ||
+        lower == 'self-tape') {
+      return 'Self-tapes / Intro';
+    }
+    if (lower == 'drama clips' || lower == 'drama') return 'Dramas';
+    if (lower == 'ads' || lower == 'ad' || lower == 'tvc') {
+      return 'TVCs / Ads';
+    }
+    if (lower == 'voice samples') return 'Self-tapes / Intro';
+    return category;
   }
 
   String _titleFor(String filename) {

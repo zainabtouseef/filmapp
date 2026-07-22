@@ -15,8 +15,6 @@ import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_section_header.dart' as shared_layout;
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/sections/admin_filter_bar.dart' as shared_filters;
-import '../../../shared/sections/admin_quick_actions_section.dart'
-    as shared_sections;
 import '../../../shared/widgets/premium_data_table.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
@@ -978,91 +976,105 @@ class DashboardMetricCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final cards = [
-      shared_metric.MetricActionItem(
+    final metrics = [
+      shared_metric.MetricStripItem(
         icon: Icons.verified_user_outlined,
         value: '42',
-        title: 'Verifications',
-        subtitle: '+9 today',
-        accentColor: colors.infoBlue,
+        label: 'Verifications',
+        trend: '+9 today',
+        tone: shared_metric.CineTone.information,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.verifications),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.MetricStripItem(
         icon: Icons.payments_outlined,
         value: '18',
-        title: 'Payments',
-        subtitle: 'PKR 4.2M',
-        accentColor: colors.infoPurple,
+        label: 'Payments',
+        contextLabel: 'PKR 4.2M',
+        tone: shared_metric.CineTone.information,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.payments),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.MetricStripItem(
         icon: Icons.gpp_maybe_outlined,
         value: '7',
-        title: 'Disputes',
-        subtitle: '+2 today',
-        accentColor: colors.danger,
+        label: 'Disputes',
+        trend: '+2 today',
+        tone: shared_metric.CineTone.critical,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.disputes),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.MetricStripItem(
         icon: Icons.groups_rounded,
         value: '126',
-        title: 'Active Negotiations',
-        subtitle: '+15 today',
-        accentColor: colors.infoBlue,
+        label: 'Active negotiations',
+        trend: '+15 today',
+        tone: shared_metric.CineTone.positive,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.bookingsMonitor),
       ),
-      shared_metric.MetricActionItem(
+    ];
+    final actions = [
+      shared_metric.QuickActionItem(
         icon: Icons.fact_check_outlined,
-        value: 'Open',
-        title: 'Reviews',
-        subtitle: 'Review hub',
-        accentColor: colors.goldMid,
+        title: 'Review content',
+        description: 'Open the review hub',
+        tone: shared_metric.CineTone.premium,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.reviewHub),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.QuickActionItem(
         icon: Icons.payments_outlined,
-        value: 'Verify',
-        title: 'Payments',
-        subtitle: 'Queue',
-        accentColor: colors.infoPurple,
+        title: 'Verify payments',
+        description: 'Open the proof queue',
+        tone: shared_metric.CineTone.information,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.paymentQueue),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.QuickActionItem(
         icon: Icons.gpp_maybe_outlined,
-        value: 'Open',
-        title: 'Disputes',
-        subtitle: 'Cases',
-        accentColor: colors.infoBlue,
+        title: 'Resolve disputes',
+        description: 'Review open cases',
+        tone: shared_metric.CineTone.warning,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.disputes),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.QuickActionItem(
         icon: Icons.calendar_month_outlined,
-        value: 'View',
-        title: 'Bookings',
-        subtitle: 'Monitor',
-        accentColor: colors.success,
+        title: 'Monitor bookings',
+        description: 'Inspect active bookings',
+        tone: shared_metric.CineTone.positive,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.bookingsMonitor),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.QuickActionItem(
         icon: Icons.manage_search_outlined,
-        value: 'Open',
-        title: 'Audit Logs',
-        subtitle: 'System trail',
-        accentColor: colors.goldMid,
+        title: 'Inspect audit logs',
+        description: 'Trace system activity',
+        tone: shared_metric.CineTone.neutral,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.auditLogs),
       ),
-      shared_metric.MetricActionItem(
+      shared_metric.QuickActionItem(
         icon: Icons.analytics_outlined,
-        value: 'Run',
-        title: 'Analytics',
-        subtitle: 'Live insights',
-        accentColor: colors.infoBlue,
+        title: 'Run analytics',
+        description: 'Open live insights',
+        tone: shared_metric.CineTone.information,
         onTap: () => onRouteTap?.call(SuperAdminRoutes.analytics),
       ),
     ];
 
-    return shared_sections.AdminQuickActionsSection(items: cards);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        shared_metric.MetricStrip(
+          title: 'Operational pulse',
+          items: metrics,
+          compact: true,
+        ),
+        const SizedBox(height: 12),
+        shared_metric.SectionContainer(
+          title: 'Quick actions',
+          leading: const shared_metric.IconBadge(
+            icon: Icons.flash_on_rounded,
+            tone: shared_metric.CineTone.premium,
+            compact: true,
+          ),
+          child: shared_metric.QuickActionRail(items: actions),
+        ),
+      ],
+    );
   }
 }
 
@@ -1556,30 +1568,20 @@ class AdminChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return AdminSurface(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.label.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            subtitle,
-            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 150,
-            child:
-                bars ? _BarChart(values: values) : _LineChart(values: values),
-          ),
-        ],
+    final peak = values.isEmpty
+        ? 0.0
+        : values.fold<double>(
+            values.first,
+            (current, value) => value > current ? value : current,
+          );
+    return shared_metric.ChartCard(
+      title: title,
+      summary: subtitle,
+      value: peak.toStringAsFixed(peak == peak.roundToDouble() ? 0 : 1),
+      timeframe: bars ? 'Comparison' : 'Trend',
+      chart: SizedBox(
+        height: 150,
+        child: bars ? _BarChart(values: values) : _LineChart(values: values),
       ),
     );
   }

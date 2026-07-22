@@ -6,6 +6,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
@@ -73,16 +74,7 @@ String locationCalendarLabel(LocationCalendarStatus status) {
 }
 
 String locationMoney(int amount) {
-  final text = amount.toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < text.length; i++) {
-    final fromEnd = text.length - i;
-    buffer.write(text[i]);
-    if (fromEnd > 1 && fromEnd % 3 == 1) {
-      buffer.write(',');
-    }
-  }
-  return 'PKR ${buffer.toString()}';
+  return CineFormat.currency(amount);
 }
 
 void locationSnack(BuildContext context, String message) {
@@ -178,43 +170,18 @@ class LocationSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GlassSectionCard(
-      padding: const EdgeInsets.all(14),
-      selected: selected,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: colors.goldDark, size: 17),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.panelLabel.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              if (actionText != null)
-                TextButton(
-                  onPressed: onActionTap,
-                  child: Text(
-                    actionText!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
+    return SectionContainer(
+      title: title,
+      leading: IconBadge(
+        icon: icon,
+        tone: CineTone.premium,
+        compact: true,
       ),
+      action: actionText == null
+          ? null
+          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
+      treatment: selected ? SectionTreatment.elevated : SectionTreatment.open,
+      child: child,
     );
   }
 }
@@ -336,15 +303,17 @@ class LocationTaskRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MetricActionRail(
+    return QuickActionRail(
       items: [
         for (final task in tasks)
-          MetricActionItem(
+          QuickActionItem(
             icon: task.icon,
-            value: 'Open',
             title: task.title,
-            subtitle: task.subtitle,
-            accentColor: locationToneColor(context, task.tone),
+            description: task.subtitle,
+            tone: cineToneFromColor(
+              context,
+              locationToneColor(context, task.tone),
+            ),
             onTap: () => Navigator.pushNamed(context, task.route),
           ),
       ],
@@ -527,13 +496,15 @@ class LocationTaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 148,
-      child: MetricActionCard(
-        item: MetricActionItem(
+      child: QuickActionCard(
+        item: QuickActionItem(
           icon: task.icon,
-          value: 'Open',
           title: task.title,
-          subtitle: task.subtitle,
-          accentColor: locationToneColor(context, task.tone),
+          description: task.subtitle,
+          tone: cineToneFromColor(
+            context,
+            locationToneColor(context, task.tone),
+          ),
           onTap: () => Navigator.pushNamed(context, task.route),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_breakpoints.dart';
 import '../../screens/dashboard_screen.dart';
 import '../../features/actor_talent/routes/actor_talent_routes.dart';
 import '../../features/actor_talent/screens/actor_talent_portal_screen.dart';
@@ -42,6 +43,7 @@ import 'screens/role_selection_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/utility_screens.dart';
 import 'screens/verification_screens.dart';
+import 'widgets/auth_split_scaffold.dart';
 
 class CoreRoutes {
   CoreRoutes._();
@@ -71,6 +73,9 @@ class CoreRoutes {
   static const dashboard = '/portal/dashboard';
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
+    final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
+    final contractDeepLinkId = _singleIdPath(routeSettings.name, 'contract');
+    final paymentDeepLinkId = _singleIdPath(routeSettings.name, 'payment');
     Widget page;
     switch (routeSettings.name) {
       case splash:
@@ -107,6 +112,8 @@ class CoreRoutes {
               ? routeSettings.arguments! as String
               : null,
         );
+      case _ when contractDeepLinkId != null:
+        page = ContractViewerScreen(contractId: contractDeepLinkId);
       case contract:
         page = ContractViewerScreen(
           contractId: routeSettings.arguments is String
@@ -117,6 +124,8 @@ class CoreRoutes {
           showAddendumBanner: routeSettings.arguments is Map &&
               ((routeSettings.arguments! as Map)['addendum'] == true),
         );
+      case _ when paymentDeepLinkId != null:
+        page = PaymentProofUploadScreen(milestoneId: paymentDeepLinkId);
       case paymentProof:
         page = PaymentProofUploadScreen(
           milestoneId: routeSettings.arguments is String
@@ -167,12 +176,26 @@ class CoreRoutes {
         page = const MaintenanceModeScreen();
       case dashboard:
         page = const DashboardScreen();
+      case _ when directorDeepLink != null:
+        page = DirectorProducerPortalScreen(
+          routeName: directorDeepLink.routeName,
+          arguments: {
+            ...directorDeepLink.arguments,
+            if (routeSettings.arguments is Map)
+              ...(routeSettings.arguments! as Map),
+            if (routeSettings.arguments is String)
+              'id': routeSettings.arguments! as String,
+          },
+        );
+      case DirectorProducerRoutes.console:
+      case DirectorProducerRoutes.projectsAlias:
       case DirectorProducerRoutes.home:
       case DirectorProducerRoutes.projects:
       case DirectorProducerRoutes.createProject:
       case DirectorProducerRoutes.projectDetail:
       case DirectorProducerRoutes.requirements:
       case DirectorProducerRoutes.marketplace:
+      case DirectorProducerRoutes.discover:
       case DirectorProducerRoutes.filters:
       case DirectorProducerRoutes.profile:
       case DirectorProducerRoutes.shortlist:
@@ -280,9 +303,99 @@ class CoreRoutes {
         );
     }
 
+    if (_authShellRoutes.contains(routeSettings.name)) {
+      final shellPage = AuthSplitScaffold(content: page);
+      return PageRouteBuilder<void>(
+        settings: routeSettings,
+        transitionDuration: const Duration(milliseconds: 420),
+        pageBuilder: (_, __, ___) => shellPage,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final wide =
+              MediaQuery.sizeOf(context).width >= AppBreakpoints.tablet;
+          final begin = wide ? const Offset(1, 0) : const Offset(0, 1);
+          return SlideTransition(
+            position: Tween<Offset>(begin: begin, end: Offset.zero).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
+            child: child,
+          );
+        },
+      );
+    }
+
     return MaterialPageRoute(
       builder: (_) => page,
       settings: routeSettings,
     );
   }
+
+  // Screens that share the persistent split brand panel — the first-run
+  // account flow, not the wider portal surface.
+  static const _authShellRoutes = {
+    onboarding,
+    roleSelection,
+    login,
+    signup,
+    forgotPassword,
+  };
+
+  static _DirectorDeepLink? _directorProducerDeepLink(String? name) {
+    final segments = _pathSegments(name);
+    if (segments.isEmpty) return null;
+
+    return switch (segments.first) {
+      'console' => const _DirectorDeepLink(DirectorProducerRoutes.console),
+      'projects' => const _DirectorDeepLink(DirectorProducerRoutes.projects),
+      'discover' => _DirectorDeepLink(
+          DirectorProducerRoutes.marketplace,
+          arguments: {
+            if (segments.length > 1) 'category': segments[1],
+          },
+        ),
+      'project' when segments.length >= 2 => _DirectorDeepLink(
+          DirectorProducerRoutes.projectDetail,
+          arguments: {
+            'projectId': segments[1],
+            'id': segments[1],
+            if (segments.length > 2) 'tab': segments[2],
+          },
+        ),
+      'profile' when segments.length >= 3 => _DirectorDeepLink(
+          DirectorProducerRoutes.profile,
+          arguments: {
+            'type': segments[1],
+            'category': segments[1],
+            'candidateId': segments[2],
+            'id': segments[2],
+          },
+        ),
+      'booking' when segments.length >= 2 => _DirectorDeepLink(
+          DirectorProducerRoutes.bookingRequest,
+          arguments: {
+            'candidateId': segments[1],
+            'id': segments[1],
+            if (segments.length > 2) 'projectId': segments[2],
+          },
+        ),
+      _ => null,
+    };
+  }
+
+  static String? _singleIdPath(String? name, String root) {
+    final segments = _pathSegments(name);
+    if (segments.length != 2 || segments.first != root) return null;
+    return segments[1];
+  }
+
+  static List<String> _pathSegments(String? name) {
+    if (name == null || !name.startsWith('/')) return const [];
+    return Uri.tryParse(name)?.pathSegments ?? const [];
+  }
+}
+
+class _DirectorDeepLink {
+  final String routeName;
+  final Map<String, Object?> arguments;
+
+  const _DirectorDeepLink(this.routeName, {this.arguments = const {}});
 }

@@ -10,14 +10,17 @@ class AppBreakpoints {
   AppBreakpoints._();
 
   /// Below this: narrow phones (iPhone SE class). Tightest layout.
-  static const double compactPhone = 360;
+  static const double compactPhone = 375;
 
   /// Below this: phones in general. Single-column, bottom-nav shell.
   static const double phone = 600;
 
+  /// Larger phones where two-column KPI layouts remain comfortable.
+  static const double largePhone = 430;
+
   /// Below this: tablets (portrait and small landscape). Two-column,
   /// collapsible side nav.
-  static const double tablet = 900;
+  static const double tablet = 1024;
 
   /// Below this: laptop / narrow desktop. Full side nav, capped
   /// content width.
@@ -25,10 +28,10 @@ class AppBreakpoints {
 
   /// At or above this: wide desktop. Content stays capped via
   /// [maxContentWidth] rather than stretching further.
-  static const double wideDesktop = 1440;
+  static const double wideDesktop = 1600;
 
   /// Max width a content column should grow to on very wide screens.
-  static const double maxContentWidth = 1180;
+  static const double maxContentWidth = 1440;
 }
 
 enum DeviceClass { mobile, tablet, desktop }

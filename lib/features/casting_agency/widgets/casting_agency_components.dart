@@ -134,36 +134,18 @@ class AgencySectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GlassSectionCard(
-      padding: const EdgeInsets.all(14),
-      selected: selected,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: colors.goldDark, size: 17),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.panelLabel.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              if (actionText != null)
-                TextButton(onPressed: onActionTap, child: Text(actionText!)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
+    return SectionContainer(
+      title: title,
+      leading: IconBadge(
+        icon: icon,
+        tone: CineTone.premium,
+        compact: true,
       ),
+      action: actionText == null
+          ? null
+          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
+      treatment: selected ? SectionTreatment.elevated : SectionTreatment.open,
+      child: child,
     );
   }
 }
@@ -275,15 +257,17 @@ class AgencyTaskRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MetricActionRail(
+    return QuickActionRail(
       items: [
         for (final task in tasks)
-          MetricActionItem(
+          QuickActionItem(
             icon: task.icon,
-            value: 'Open',
             title: task.title,
-            subtitle: task.subtitle,
-            accentColor: agencyToneColor(context, task.tone),
+            description: task.subtitle,
+            tone: cineToneFromColor(
+              context,
+              agencyToneColor(context, task.tone),
+            ),
             onTap: () => Navigator.pushNamed(context, task.route),
           ),
       ],
@@ -461,13 +445,15 @@ class AgencyTaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 148,
-      child: MetricActionCard(
-        item: MetricActionItem(
+      child: QuickActionCard(
+        item: QuickActionItem(
           icon: task.icon,
-          value: 'Open',
           title: task.title,
-          subtitle: task.subtitle,
-          accentColor: agencyToneColor(context, task.tone),
+          description: task.subtitle,
+          tone: cineToneFromColor(
+            context,
+            agencyToneColor(context, task.tone),
+          ),
           onTap: () => Navigator.pushNamed(context, task.route),
         ),
       ),

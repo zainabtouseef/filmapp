@@ -104,6 +104,12 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
                   tone: DpTone.success,
                   icon: Icons.verified_outlined,
                 ),
+              if (candidate.isNew)
+                const DPStatusChip(
+                  label: 'NEW',
+                  tone: DpTone.warning,
+                  icon: Icons.fiber_new_outlined,
+                ),
               DPStatusChip(label: '${candidate.rating}', tone: DpTone.warning),
             ],
           ),

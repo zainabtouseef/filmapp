@@ -16,32 +16,30 @@ class AppTextStyles {
   static const String sans = 'Inter';
   static const String dashboard = 'Inter';
 
-  static TextStyle _serif(TextStyle style) =>
-      GoogleFonts.playfairDisplay(textStyle: style);
   static TextStyle _sans(TextStyle style) =>
       GoogleFonts.inter(textStyle: style);
   static TextStyle _dashboard(TextStyle style) =>
       GoogleFonts.inter(textStyle: style);
 
-  // ---- Display / serif headings -----------------------------------------
-  static TextStyle get displayLarge => _serif(const TextStyle(
-        fontSize: 40,
+  // ---- Display headings --------------------------------------------------
+  static TextStyle get displayLarge => _dashboard(const TextStyle(
+        fontSize: 38,
         fontWeight: FontWeight.w700,
-        height: 1.05,
-        color: AppColors.textPrimary,
-        letterSpacing: 0.2,
-      ));
-
-  static TextStyle get heading => _serif(const TextStyle(
-        fontSize: 26,
-        fontWeight: FontWeight.w700,
-        height: 1.1,
+        height: 1.08,
         color: AppColors.textPrimary,
       ));
 
-  static TextStyle get sectionTitle => _serif(const TextStyle(
-        fontSize: 24,
+  static TextStyle get heading => _dashboard(const TextStyle(
+        fontSize: 30,
         fontWeight: FontWeight.w700,
+        height: 1.12,
+        color: AppColors.textPrimary,
+      ));
+
+  static TextStyle get sectionTitle => _dashboard(const TextStyle(
+        fontSize: 19,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
         color: AppColors.textPrimary,
       ));
 
@@ -100,18 +98,18 @@ class AppTextStyles {
 
   // ---- Premium admin dashboard ------------------------------------------
   static TextStyle get dashboardTitleStyle => _dashboard(const TextStyle(
-        fontSize: 30,
-        fontWeight: FontWeight.w800,
-        height: 1.05,
+        fontSize: 34,
+        fontWeight: FontWeight.w700,
+        height: 1.1,
         letterSpacing: 0,
         color: AppColors.textPrimary,
       ));
 
   static TextStyle get sectionHeaderStyle => _dashboard(const TextStyle(
         fontSize: 18,
-        fontWeight: FontWeight.w700,
-        height: 1.05,
-        letterSpacing: 1.8,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+        letterSpacing: 0,
         color: AppColors.textPrimary,
       ));
 
@@ -131,11 +129,12 @@ class AppTextStyles {
       ));
 
   static TextStyle get metricNumberStyle => _dashboard(const TextStyle(
-        fontSize: 34,
-        fontWeight: FontWeight.w800,
-        height: 0.95,
+        fontSize: 32,
+        fontWeight: FontWeight.w700,
+        height: 1,
         letterSpacing: 0,
         color: AppColors.textPrimary,
+        fontFeatures: [FontFeature.tabularFigures()],
       ));
 
   static TextStyle get smallMetaStyle => _dashboard(const TextStyle(
@@ -161,9 +160,10 @@ class AppTextStyles {
   static TextStyle get smallMetricNumber => _dashboard(const TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w700,
-        height: 0.96,
+        height: 1,
         letterSpacing: 0,
         color: AppColors.textPrimary,
+        fontFeatures: [FontFeature.tabularFigures()],
       ));
 
   static TextStyle get smallMeta => smallMetaStyle;
@@ -201,9 +201,10 @@ class AppTextStyles {
   /// reserved for dedicated metric tiles.
   static TextStyle get metricNumberCompact => _dashboard(const TextStyle(
         fontSize: 20,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         height: 1.0,
         color: AppColors.textPrimary,
+        fontFeatures: [FontFeature.tabularFigures()],
       ));
 
   // ---- Price -------------------------------------------------------------

@@ -126,7 +126,7 @@ class _DistributionTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final compact = MediaQuery.sizeOf(context).width < 700;
+    final compact = !wide;
     return AdminTopBarFrame(
       compact: compact,
       child: Row(

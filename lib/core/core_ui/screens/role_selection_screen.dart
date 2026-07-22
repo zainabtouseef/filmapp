@@ -52,6 +52,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
+      showBackdrop: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

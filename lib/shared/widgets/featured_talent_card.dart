@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/talent.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../formatters/cine_format.dart';
 import 'portrait_image.dart';
 
 /// The large premium featured-talent card.
@@ -13,8 +14,8 @@ class FeaturedTalentCard extends StatelessWidget {
 
   const FeaturedTalentCard({super.key, required this.talent});
 
-  static const double _radius = 28;
-  static const double _borderWidth = 1.2;
+  static const double _radius = 22;
+  static const double _borderWidth = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -2411,13 +2412,5 @@ double _scale(
 }
 
 String _formatCurrency(int value) {
-  final digits = value.toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[i]);
-  }
-  return buffer.toString();
+  return CineFormat.count(value);
 }

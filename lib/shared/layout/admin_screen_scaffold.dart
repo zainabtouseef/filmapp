@@ -33,6 +33,16 @@ typedef AdminFloatingMenuBuilder = Widget Function(
   ValueChanged<String> onRouteTap,
 );
 
+/// [bottomInset] is the distance already reserved below the content by the
+/// bottom nav (mobile) or page padding (desktop) — pass it straight to a
+/// `Positioned(bottom: ...)` so a persistent floating control never sits
+/// under the nav bar.
+typedef AdminFloatingActionBuilder = Widget Function(
+  BuildContext context,
+  bool wide,
+  double bottomInset,
+);
+
 class AdminScreenScaffold extends StatefulWidget {
   final String title;
   final String currentRoute;
@@ -41,7 +51,13 @@ class AdminScreenScaffold extends StatefulWidget {
   final AdminSideNavBuilder? sideNavBuilder;
   final AdminBottomNavBuilder? bottomNavBuilder;
   final AdminFloatingMenuBuilder? floatingMenuBuilder;
+  final AdminFloatingActionBuilder? floatingActionBuilder;
   final void Function(BuildContext context, String route) onRouteSelected;
+
+  /// Set false to suppress the default centered [AdminScreenHeading] —
+  /// used by screens (like the DP dashboard) that render their own
+  /// compact command header as part of the content instead.
+  final bool showHeading;
 
   const AdminScreenScaffold({
     super.key,
@@ -53,6 +69,8 @@ class AdminScreenScaffold extends StatefulWidget {
     this.sideNavBuilder,
     this.bottomNavBuilder,
     this.floatingMenuBuilder,
+    this.floatingActionBuilder,
+    this.showHeading = true,
   });
 
   @override
@@ -106,15 +124,17 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                 wide,
                                 _openMenu,
                               ),
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                  AppSpacing.pageHorizontal,
-                                  headingTopGap,
-                                  AppSpacing.pageHorizontal,
-                                  0,
+                              if (widget.showHeading)
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    AppSpacing.pageHorizontal,
+                                    headingTopGap,
+                                    AppSpacing.pageHorizontal,
+                                    0,
+                                  ),
+                                  child:
+                                      AdminScreenHeading(title: widget.title),
                                 ),
-                                child: AdminScreenHeading(title: widget.title),
-                              ),
                               Expanded(
                                 child: SingleChildScrollView(
                                   padding: EdgeInsets.fromLTRB(
@@ -130,8 +150,8 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                   ),
                                   child: ConstrainedBox(
                                     constraints: BoxConstraints(
-                                        maxWidth: AppBreakpoints
-                                            .maxContentWidth),
+                                        maxWidth:
+                                            AppBreakpoints.maxContentWidth),
                                     child: widget.child,
                                   ),
                                 ),
@@ -156,6 +176,16 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                         widget.currentRoute,
                         _closeMenu,
                         _go,
+                      ),
+                    if (widget.floatingActionBuilder != null)
+                      widget.floatingActionBuilder!(
+                        context,
+                        wide,
+                        wide
+                            ? 24.0
+                            : reservedNavHeight +
+                                MediaQuery.paddingOf(context).bottom +
+                                16,
                       ),
                   ],
                 );

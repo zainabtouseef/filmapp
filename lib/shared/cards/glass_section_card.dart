@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_color_scheme.dart';
-import '../widgets/glass_card.dart';
+import 'cine_card_system.dart';
 
 class GlassSectionCard extends StatelessWidget {
   final Widget child;
@@ -19,18 +18,13 @@ class GlassSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GlassContainer(
+    return CardShell(
+      variant: CardVariant.standard,
+      density: CardDensity.standard,
       radius: radius,
       padding: padding,
-      borderColor: selected ? colors.goldMid : colors.border,
-      shadows: [
-        BoxShadow(
-          color: colors.shadow.withValues(alpha: colors.isLight ? 0.12 : 0.38),
-          blurRadius: 22,
-          offset: const Offset(0, 12),
-        ),
-      ],
+      selected: selected,
+      tone: CineTone.premium,
       child: child,
     );
   }

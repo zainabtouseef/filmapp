@@ -26,39 +26,18 @@ class PortalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GlassSectionCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: colors.goldDark, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.sectionHeaderStyle.copyWith(
-                    color: colors.textPrimary,
-                    fontSize: 15,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-              ),
-              if (actionText != null)
-                TextButton(
-                  onPressed: onActionTap,
-                  child: Text(actionText!),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
+    return SectionContainer(
+      title: title,
+      leading: IconBadge(
+        icon: icon,
+        tone: CineTone.premium,
+        compact: true,
       ),
+      action: actionText == null
+          ? null
+          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
+      treatment: SectionTreatment.open,
+      child: child,
     );
   }
 }

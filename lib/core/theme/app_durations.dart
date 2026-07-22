@@ -1,3 +1,5 @@
+import 'package:flutter/animation.dart';
+
 /// Canonical animation durations used across CineConnect screens.
 ///
 /// Pick the token that matches what's animating rather than a bespoke
@@ -35,4 +37,6 @@ class AppDurations {
 
   /// Holographic sweep on featured/selected cards — slow and limited.
   static const holographicSweep = Duration(milliseconds: 2600);
+
+  static const Curve standardCurve = Curves.easeOutCubic;
 }

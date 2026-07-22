@@ -87,7 +87,7 @@ class CineConnectApp extends StatelessWidget {
               statusBarIconBrightness:
                   isDark ? Brightness.light : Brightness.dark,
               systemNavigationBarColor:
-                  isDark ? const Color(0xFF0A0A0B) : const Color(0xFFFBFAF7),
+                  isDark ? const Color(0xFF171817) : const Color(0xFFF8F5EF),
               systemNavigationBarIconBrightness:
                   isDark ? Brightness.light : Brightness.dark,
             ),
@@ -99,17 +99,10 @@ class CineConnectApp extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: controller.themeMode,
+            themeAnimationDuration: Duration.zero,
             home: homeOverride,
             initialRoute: homeOverride == null ? initialRoute : null,
             onGenerateRoute: CoreRoutes.onGenerateRoute,
-            builder: (context, child) {
-              return AnimatedTheme(
-                data: Theme.of(context),
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOutCubic,
-                child: child ?? const SizedBox.shrink(),
-              );
-            },
           );
         },
       ),

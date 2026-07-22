@@ -217,80 +217,119 @@ class _PaymentProofRow extends StatelessWidget {
       onTap: onReview,
       child: AdminSurface(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final identity = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${proof.bookingId} - ${proof.contractId}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.label.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${proof.payer} -> ${proof.payee}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.micro.copyWith(
+                    color: colors.textSecondary,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            );
+            final statuses = Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                AdminStatusBadge(
+                  label: proof.milestone,
+                  tone: AdminDecisionTone.neutral,
+                ),
+                AdminStatusBadge(
+                  label: 'Exp ${proof.expectedAmount}',
+                  tone: AdminDecisionTone.neutral,
+                ),
+                AdminStatusBadge(
+                  label: 'Claim ${proof.claimedAmount}',
+                  tone: proof.expectedAmount == proof.claimedAmount
+                      ? AdminDecisionTone.success
+                      : AdminDecisionTone.danger,
+                ),
+              ],
+            );
+            final reviewControls = Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                AdminRiskBadge(label: proof.risk, risk: risk),
+                AdminSlaBadge(age: proof.age),
+                _ReviewOutlineButton(label: 'Review', onTap: onReview),
+              ],
+            );
+            final receiptIcon = Container(
               width: 46,
               height: 46,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 color: colors.goldGlow.withValues(alpha: 0.16),
               ),
-              child: Icon(Icons.receipt_long_outlined,
-                  color: colors.goldDark, size: 22),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: Icon(
+                Icons.receipt_long_outlined,
+                color: colors.goldDark,
+                size: 22,
+              ),
+            );
+
+            if (constraints.maxWidth < 380) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${proof.bookingId} - ${proof.contractId}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${proof.payer} -> ${proof.payee}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.micro.copyWith(
-                      color: colors.textSecondary,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
+                  Row(
                     children: [
-                      AdminStatusBadge(
-                          label: proof.milestone,
-                          tone: AdminDecisionTone.neutral),
-                      AdminStatusBadge(
-                        label: 'Exp ${proof.expectedAmount}',
-                        tone: AdminDecisionTone.neutral,
-                      ),
-                      AdminStatusBadge(
-                        label: 'Claim ${proof.claimedAmount}',
-                        tone: proof.expectedAmount == proof.claimedAmount
-                            ? AdminDecisionTone.success
-                            : AdminDecisionTone.danger,
-                      ),
+                      receiptIcon,
+                      const SizedBox(width: 10),
+                      Expanded(child: identity),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  statuses,
+                  const SizedBox(height: 10),
+                  reviewControls,
                 ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AdminRiskBadge(label: proof.risk, risk: risk),
-                const SizedBox(height: 6),
-                AdminSlaBadge(age: proof.age),
-                const SizedBox(height: 6),
-                _ReviewOutlineButton(label: 'Review', onTap: onReview),
+                receiptIcon,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      identity,
+                      const SizedBox(height: 6),
+                      statuses,
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 190),
+                  child: reviewControls,
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

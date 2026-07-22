@@ -396,7 +396,7 @@ class _ReviewSummaryStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdminQuickActionsSection(
+    return MetricActionRail(
       items: items
           .map(
             (item) => MetricActionItem(

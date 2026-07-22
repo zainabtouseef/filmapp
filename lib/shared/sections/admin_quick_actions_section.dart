@@ -12,6 +12,17 @@ class AdminQuickActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MetricActionRail(items: items);
+    return QuickActionRail(
+      items: [
+        for (final item in items)
+          QuickActionItem(
+            icon: item.icon,
+            title: item.title,
+            description: item.subtitle,
+            tone: cineToneFromColor(context, item.accentColor),
+            onTap: item.onTap,
+          ),
+      ],
+    );
   }
 }

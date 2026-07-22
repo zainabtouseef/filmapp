@@ -4,7 +4,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import 'dp_glass_card.dart';
+import '../../../shared/cards/cine_card_system.dart';
 
 class DPResponsiveGrid extends StatelessWidget {
   final List<Widget> children;
@@ -104,40 +104,18 @@ class DPSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 15, color: colors.textSecondary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.panelLabel
-                      .copyWith(color: colors.textSecondary),
-                ),
-              ),
-              if (actionText != null)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onActionTap,
-                  child: Text(
-                    actionText!,
-                    style: AppTextStyles.caption
-                        .copyWith(color: colors.goldDark, fontWeight: FontWeight.w700),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
+    return SectionContainer(
+      title: title,
+      treatment: SectionTreatment.open,
+      leading: IconBadge(
+        icon: icon,
+        tone: CineTone.premium,
+        compact: true,
       ),
+      action: actionText == null
+          ? null
+          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
+      child: child,
     );
   }
 }

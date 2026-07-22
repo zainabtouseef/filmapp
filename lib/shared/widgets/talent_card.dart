@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/talent.dart';
+import '../formatters/cine_format.dart';
 import 'portrait_image.dart';
 
 /// Small portrait card used in the horizontal talent carousel.
@@ -399,13 +400,5 @@ class _LowerPalette {
 }
 
 String _formatCurrency(int value) {
-  final digits = value.toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) {
-      buffer.write(',');
-    }
-    buffer.write(digits[i]);
-  }
-  return buffer.toString();
+  return CineFormat.count(value);
 }

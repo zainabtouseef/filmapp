@@ -24,7 +24,6 @@ import '../../../shared/cards/mini_trend_card.dart';
 import '../../../shared/sections/admin_action_feed_section.dart'
     as shared_action;
 import '../../../shared/sections/admin_live_monitoring_section.dart';
-import '../../../shared/sections/admin_quick_actions_section.dart';
 import '../../../shared/sections/admin_queue_snapshot_section.dart'
     as shared_queue;
 import '../../../shared/sections/admin_recent_activity_section.dart';

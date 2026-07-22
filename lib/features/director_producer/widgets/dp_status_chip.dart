@@ -11,7 +11,7 @@ Color dpToneColor(BuildContext context, DpTone tone) {
     DpTone.neutral => colors.textSecondary,
     DpTone.info => colors.infoBlue,
     DpTone.success => colors.success,
-    DpTone.warning => colors.goldMid,
+    DpTone.warning => colors.warning,
     DpTone.danger => colors.danger,
     DpTone.purple => colors.infoPurple,
   };

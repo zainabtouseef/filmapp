@@ -5,21 +5,24 @@
 class AppRadius {
   AppRadius._();
 
-  /// Small controls: thumbnails, filter chips.
+  /// Small controls and icon containers.
   static const double sm = 10;
 
-  /// Buttons, input fields.
+  /// Buttons and input fields.
+  static const double control = 12;
+
+  /// Compact cards.
   static const double md = 14;
 
-  /// Trust-badge strip, glass containers.
+  /// Standard cards.
   static const double lg = 18;
 
-  /// Primary cards (search bar-scale glass panels).
+  /// Feature cards.
   static const double xl = 22;
 
-  /// Hero cards (Featured Talent).
-  static const double xxl = 28;
+  /// Large section containers.
+  static const double xxl = 24;
 
-  /// Fully-rounded pills (chips, tags, avatars).
-  static const double pill = 30;
+  /// Fully-rounded pills.
+  static const double pill = 999;
 }

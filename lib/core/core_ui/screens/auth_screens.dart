@@ -24,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool _showPassword = false;
   bool _biometric = false;
+  bool _showDemoTools = false;
   bool _loading = false;
   String _demoLoginAs = 'Director / Producer';
   String? _identityError;
@@ -204,6 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final colors = context.appColors;
 
     return CoreScreenScaffold(
+      showBackdrop: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -288,54 +290,75 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: _showDemoRolePicker,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => setState(
+                      () => _showDemoTools = !_showDemoTools,
                     ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: colors.border),
-                      color: colors.surface.withValues(alpha: 0.4),
+                    icon: Icon(
+                      _showDemoTools
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.badge_outlined,
-                          size: 18,
-                          color: colors.goldDark,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Demo login as',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                              Text(
-                                _demoLoginAs,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.label.copyWith(
-                                  color: colors.textPrimary,
-                                ),
-                              ),
-                            ],
+                    label: const Text('Demo accounts'),
+                  ),
+                ),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 180),
+                  firstChild: GestureDetector(
+                    onTap: _showDemoRolePicker,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: colors.border),
+                        color: colors.surface.withValues(alpha: 0.4),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.badge_outlined,
+                            size: 18,
+                            color: colors.goldDark,
                           ),
-                        ),
-                        Icon(
-                          Icons.expand_more_rounded,
-                          color: colors.iconMuted,
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Preview portal as',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                                Text(
+                                  _demoLoginAs,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.label.copyWith(
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.expand_more_rounded,
+                            color: colors.iconMuted,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                  secondChild: const SizedBox.shrink(),
+                  crossFadeState: _showDemoTools
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
                 ),
                 const SizedBox(height: 14),
                 CorePrimaryButton(
@@ -472,6 +495,7 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
+      showBackdrop: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -726,6 +750,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
+      showBackdrop: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

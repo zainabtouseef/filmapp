@@ -11,11 +11,6 @@ class AdminDashboardScreen extends StatelessWidget {
       children: [
         const _LiveAdminDashboardPanel(),
         const SizedBox(height: 12),
-        const DashboardSectionHeader(
-          title: 'Quick Actions',
-          icon: Icons.flash_on_rounded,
-        ),
-        const SizedBox(height: 8),
         DashboardMetricCards(
           onRouteTap: (route) => Navigator.pushNamed(context, route),
         ),
@@ -91,7 +86,7 @@ class _LiveAdminDashboardPanelState extends State<_LiveAdminDashboardPanel> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LinearProgressIndicator(minHeight: 2);
+          return const SkeletonCard(height: 92, density: CardDensity.compact);
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return const InlineNotice(
@@ -101,39 +96,71 @@ class _LiveAdminDashboardPanelState extends State<_LiveAdminDashboardPanel> {
           );
         }
         final data = snapshot.data!;
-        return AdminSurface(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              AdminStatusBadge(
-                label: '${data.pendingKycCount} pending KYC',
-                tone: AdminDecisionTone.warning,
+        return MetricStrip(
+          title: 'Platform health',
+          compact: true,
+          items: [
+            MetricStripItem(
+              icon: Icons.manage_accounts_outlined,
+              label: 'Pending KYC',
+              value: '${data.pendingKycCount}',
+              tone: CineTone.warning,
+              onTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.verifications,
               ),
-              AdminStatusBadge(
-                label: '${data.pendingPaymentProofs} payment proofs',
-                tone: AdminDecisionTone.info,
+            ),
+            MetricStripItem(
+              icon: Icons.receipt_long_outlined,
+              label: 'Payment proofs',
+              value: '${data.pendingPaymentProofs}',
+              tone: CineTone.information,
+              onTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.paymentQueue,
               ),
-              AdminStatusBadge(
-                label: '${data.openDisputes} open disputes',
-                tone: AdminDecisionTone.danger,
+            ),
+            MetricStripItem(
+              icon: Icons.gpp_maybe_outlined,
+              label: 'Open disputes',
+              value: '${data.openDisputes}',
+              tone: CineTone.critical,
+              onTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.disputes,
               ),
-              AdminStatusBadge(
-                label: '${data.openSupportTickets} support tickets',
-                tone: AdminDecisionTone.info,
+            ),
+            MetricStripItem(
+              icon: Icons.support_agent_outlined,
+              label: 'Support tickets',
+              value: '${data.openSupportTickets}',
+              tone: CineTone.information,
+              onTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.support,
               ),
-              AdminStatusBadge(
-                label: '${data.totalUsers} users',
-                tone: AdminDecisionTone.success,
+            ),
+            MetricStripItem(
+              icon: Icons.groups_2_outlined,
+              label: 'Platform users',
+              value: '${data.totalUsers}',
+              tone: CineTone.positive,
+              onTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.users,
               ),
-              AdminStatusBadge(
-                label:
-                    '${(data.conversionRate * 100).toStringAsFixed(1)}% conversion',
-                tone: AdminDecisionTone.success,
+            ),
+            MetricStripItem(
+              icon: Icons.analytics_outlined,
+              label: 'Conversion',
+              value: '${(data.conversionRate * 100).round()}%',
+              tone: CineTone.positive,
+              onTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.analytics,
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

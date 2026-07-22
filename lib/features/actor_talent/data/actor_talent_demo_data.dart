@@ -187,7 +187,7 @@ class ActorTalentDemoData {
     ActorPortfolioItem(
       id: 'pf-drama',
       title: 'Drama Reel',
-      category: 'Drama Clips',
+      category: 'Dramas',
       duration: '02:10',
       status: 'Moderation',
       imageUrl:
@@ -196,7 +196,7 @@ class ActorTalentDemoData {
     ActorPortfolioItem(
       id: 'pf-ad',
       title: 'Bank TVC',
-      category: 'Ads',
+      category: 'TVCs / Ads',
       duration: '00:42',
       status: 'Public',
       imageUrl:
@@ -204,12 +204,30 @@ class ActorTalentDemoData {
     ),
     ActorPortfolioItem(
       id: 'pf-voice',
-      title: 'Urdu Voice Sample',
-      category: 'Voice Samples',
+      title: 'Urdu Self-tape Intro',
+      category: 'Self-tapes / Intro',
       duration: '01:15',
       status: 'Private',
       imageUrl:
           'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+    ),
+    ActorPortfolioItem(
+      id: 'pf-editorial',
+      title: 'Editorial Character Stills',
+      category: 'Editorial',
+      duration: 'Gallery',
+      status: 'Public',
+      imageUrl:
+          'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80',
+    ),
+    ActorPortfolioItem(
+      id: 'pf-film',
+      title: 'Independent Film Scene',
+      category: 'Films / Movies',
+      duration: '01:38',
+      status: 'Public',
+      imageUrl:
+          'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1200&q=80',
     ),
   ];
 
@@ -344,6 +362,12 @@ class ActorTalentDemoStore extends ChangeNotifier {
   String profileLanguages = 'Urdu, Punjabi, English';
   String profileSkills = 'Drama, commercial, theatre, voice';
   String profileCredits = '2 dramas, 4 TVCs, 1 theatre tour';
+  String profileInstagram = '@ali.raza.actor';
+  String profileFollowers = '42k';
+  String profileWorkHistory =
+      'ARY drama supporting lead, bank TVC, theatre tour';
+  String profileAgeRange = '25-35';
+  String profileHeight = '5 ft 10 in';
   String agency = 'Independent';
   String preferredCities = 'Lahore, Islamabad';
   String travelRadius = 'Domestic with notice';
@@ -400,6 +424,11 @@ class ActorTalentDemoStore extends ChangeNotifier {
     required String languages,
     required String skills,
     required String credits,
+    required String instagram,
+    required String followers,
+    required String workHistory,
+    required String ageRange,
+    required String height,
     required String agencyName,
   }) {
     profileStageName = stageName;
@@ -408,6 +437,11 @@ class ActorTalentDemoStore extends ChangeNotifier {
     profileLanguages = languages;
     profileSkills = skills;
     profileCredits = credits;
+    profileInstagram = instagram;
+    profileFollowers = followers;
+    profileWorkHistory = workHistory;
+    profileAgeRange = ageRange;
+    profileHeight = height;
     agency = agencyName;
     profileCompleteness = 92;
     profileSubmittedForReview = true;
@@ -421,6 +455,11 @@ class ActorTalentDemoStore extends ChangeNotifier {
     required String languages,
     required String skills,
     required String credits,
+    required String instagram,
+    required String followers,
+    required String workHistory,
+    required String ageRange,
+    required String height,
     required String agencyName,
   }) {
     profileStageName = stageName;
@@ -429,6 +468,11 @@ class ActorTalentDemoStore extends ChangeNotifier {
     profileLanguages = languages;
     profileSkills = skills;
     profileCredits = credits;
+    profileInstagram = instagram;
+    profileFollowers = followers;
+    profileWorkHistory = workHistory;
+    profileAgeRange = ageRange;
+    profileHeight = height;
     agency = agencyName;
     notifyListeners();
   }
@@ -508,7 +552,7 @@ class ActorTalentDemoStore extends ChangeNotifier {
       ActorPortfolioItem(
         id: 'pf-new-${portfolioItems.length + 1}',
         title: 'Self Intro Video',
-        category: 'Self-intro',
+        category: 'Self-tapes / Intro',
         duration: '00:55',
         status: 'Moderation',
         imageUrl:

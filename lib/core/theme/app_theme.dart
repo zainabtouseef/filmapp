@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_color_scheme.dart';
+import 'app_radius.dart';
 import 'app_text_styles.dart';
 
 /// Global ThemeData for CineConnect.
@@ -59,6 +60,67 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(color: colors.iconMuted, size: 22),
       dividerColor: colors.border,
+      dividerTheme: DividerThemeData(
+        color: colors.borderMuted,
+        thickness: 1,
+        space: 1,
+      ),
+      cardTheme: CardThemeData(
+        color: colors.elevatedSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: colors.border),
+        ),
+      ),
+      focusColor: colors.focusRing.withValues(alpha: 0.16),
+      hoverColor: colors.holographicTeal.withValues(alpha: 0.05),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colors.elevatedSurface,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          borderSide: BorderSide(color: colors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          borderSide: BorderSide(color: colors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          borderSide: BorderSide(color: colors.focusRing, width: 1.5),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.control),
+          ),
+          textStyle: AppTextStyles.label,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          side: BorderSide(color: colors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.control),
+          ),
+          textStyle: AppTextStyles.label,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          foregroundColor: colors.goldDark,
+          textStyle: AppTextStyles.label,
+        ),
+      ),
     );
   }
 
@@ -67,7 +129,7 @@ class AppTheme {
   /// Glass card look: subtle translucent fill + theme border.
   static BoxDecoration glassCard(
     BuildContext context, {
-    double radius = 20,
+    double radius = 18,
     bool goldBorder = false,
     bool glow = false,
   }) {
@@ -84,8 +146,8 @@ class AppTheme {
           ? [
               BoxShadow(
                 color: colors.goldGlow,
-                blurRadius: 30,
-                spreadRadius: -6,
+                blurRadius: 14,
+                spreadRadius: -7,
               ),
             ]
           : null,
@@ -103,15 +165,7 @@ class AppTheme {
         color: active ? colors.goldMid : colors.border,
         width: 1,
       ),
-      boxShadow: active
-          ? [
-              BoxShadow(
-                color: colors.goldGlow,
-                blurRadius: 16,
-                spreadRadius: -4,
-              ),
-            ]
-          : null,
+      boxShadow: null,
     );
   }
 }

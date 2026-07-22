@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/cinematic_backdrop.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/dark_outline_button.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -24,6 +25,15 @@ class CoreScreenScaffold extends StatelessWidget {
   /// phones. Leave false for ordinary content screens.
   final bool centerContent;
 
+  /// Set false to skip the dark [CinematicBackdrop] — use when this
+  /// scaffold is embedded inside a lighter host layout (e.g. the split
+  /// auth shell) that provides its own background.
+  final bool showBackdrop;
+
+  /// Only used when [showBackdrop] is false; falls back to the theme's
+  /// background color when omitted.
+  final Color? backgroundColor;
+
   const CoreScreenScaffold({
     super.key,
     required this.child,
@@ -32,6 +42,8 @@ class CoreScreenScaffold extends StatelessWidget {
     this.bottomBar,
     this.showGlobalControls = true,
     this.centerContent = false,
+    this.showBackdrop = true,
+    this.backgroundColor,
   });
 
   @override
@@ -76,9 +88,12 @@ class CoreScreenScaffold extends StatelessWidget {
     );
 
     return Scaffold(
+      backgroundColor: showBackdrop
+          ? null
+          : (backgroundColor ?? context.appColors.background),
       body: Stack(
         children: [
-          const Positioned.fill(child: CinematicBackdrop()),
+          if (showBackdrop) const Positioned.fill(child: CinematicBackdrop()),
           SafeArea(
             child: Column(
               children: [
@@ -356,27 +371,11 @@ class CoreGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GlassContainer(
-      radius: 22,
+    return CardShell(
+      variant: CardVariant.standard,
       padding: padding,
-      borderColor: selected ? colors.goldMid : colors.border,
-      shadows: selected
-          ? [
-              BoxShadow(
-                color: colors.goldGlow,
-                blurRadius: 24,
-                spreadRadius: -6,
-              ),
-            ]
-          : [
-              BoxShadow(
-                color: colors.shadow
-                    .withValues(alpha: colors.isLight ? 0.12 : 0.36),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+      selected: selected,
+      tone: CineTone.premium,
       child: child,
     );
   }
@@ -396,39 +395,11 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final color = switch (tone) {
-      CoreStatusTone.success => colors.success,
-      CoreStatusTone.warning => colors.goldMid,
-      CoreStatusTone.info => colors.infoBlue,
-      CoreStatusTone.danger => colors.danger,
-      CoreStatusTone.neutral => colors.textSecondary,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: colors.isLight ? 0.11 : 0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 15, color: color),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            label,
-            style: AppTextStyles.micro.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
+    return CineStatusBadge(
+      label: label,
+      icon: icon,
+      tone: _coreTone(tone),
+      showDot: icon == null,
     );
   }
 }
@@ -455,21 +426,13 @@ class InlineNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final color = switch (tone) {
-      CoreStatusTone.success => colors.success,
-      CoreStatusTone.warning => colors.goldMid,
-      CoreStatusTone.info => colors.infoBlue,
-      CoreStatusTone.danger => colors.danger,
-      CoreStatusTone.neutral => colors.textSecondary,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: colors.isLight ? 0.08 : 0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-      ),
+    final cardTone = _coreTone(tone);
+    final color = cineToneColor(context, cardTone);
+    return CardShell(
+      variant: CardVariant.alert,
+      density: CardDensity.compact,
+      tone: cardTone,
+      accentEdge: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -489,6 +452,14 @@ class InlineNotice extends StatelessWidget {
     );
   }
 }
+
+CineTone _coreTone(CoreStatusTone tone) => switch (tone) {
+      CoreStatusTone.success => CineTone.positive,
+      CoreStatusTone.warning => CineTone.warning,
+      CoreStatusTone.info => CineTone.information,
+      CoreStatusTone.danger => CineTone.critical,
+      CoreStatusTone.neutral => CineTone.neutral,
+    };
 
 class CoreTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -795,47 +766,12 @@ class CoreEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return CoreGlassCard(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.goldMid.withValues(alpha: 0.12),
-            ),
-            child: Icon(icon, color: colors.goldMid, size: 30),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.sectionTitle
-                .copyWith(color: colors.textPrimary, fontSize: 19),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMuted.copyWith(
-              color: colors.textSecondary,
-              height: 1.45,
-            ),
-          ),
-          if (actionLabel != null) ...[
-            const SizedBox(height: 20),
-            CorePrimaryButton(
-              icon: Icons.arrow_forward_rounded,
-              label: actionLabel!,
-              compact: true,
-              onTap: onAction,
-            ),
-          ],
-        ],
-      ),
+    return EmptyStateCard(
+      icon: icon,
+      title: title,
+      message: message,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 }

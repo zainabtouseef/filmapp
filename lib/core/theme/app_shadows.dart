@@ -7,29 +7,23 @@ import 'package:flutter/material.dart';
 class AppShadows {
   AppShadows._();
 
-  /// Deep elevation + gold glow used behind the Featured Talent card.
+  /// Soft ambient separation for feature cards.
   static const card = [
     BoxShadow(
-      color: Color(0x33C88A1E),
-      blurRadius: 30,
+      color: Color(0x18131A20),
+      blurRadius: 18,
       spreadRadius: -8,
-      offset: Offset(0, 12),
-    ),
-    BoxShadow(
-      color: Color(0x99000000),
-      blurRadius: 24,
-      spreadRadius: -12,
-      offset: Offset(0, 18),
+      offset: Offset(0, 8),
     ),
   ];
 
   /// Lighter elevation for buttons, chips, and small controls.
   static const control = [
     BoxShadow(
-      color: Color(0x22C88A1E),
-      blurRadius: 18,
-      spreadRadius: -8,
-      offset: Offset(0, 8),
+      color: Color(0x14131A20),
+      blurRadius: 12,
+      spreadRadius: -6,
+      offset: Offset(0, 5),
     ),
   ];
 }

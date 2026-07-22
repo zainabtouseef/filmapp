@@ -6,7 +6,6 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../../../shared/sections/admin_quick_actions_section.dart';
 import '../data/director_producer_demo_data.dart';
 import '../models/dp_payment.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -107,7 +106,7 @@ class _PaymentCenterContent extends StatelessWidget {
           onTap: () => Navigator.pushNamed(context, CoreRoutes.ledger),
         ),
         const SizedBox(height: 8),
-        AdminQuickActionsSection(
+        MetricActionRail(
           items: [
             MetricActionItem(
               icon: Icons.pending_actions_rounded,

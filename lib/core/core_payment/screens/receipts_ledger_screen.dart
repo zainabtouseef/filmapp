@@ -6,9 +6,9 @@ import '../../core_ui/models/shared_models.dart';
 import '../../core_ui/widgets/core_widgets.dart';
 import '../../payments/payment_models.dart';
 import '../../payments/payments_controller.dart';
-import '../../theme/app_breakpoints.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 
 class ReceiptsLedgerScreen extends StatefulWidget {
   const ReceiptsLedgerScreen({super.key});
@@ -132,7 +132,7 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Column(
                 children: [
-                  for (var i = 0; i < _rows.length; i++)
+                  for (var i = 0; i < rows.length; i++)
                     LedgerRowCard(
                       row: rows[i],
                       onTap: () => _details(rows[i]),
@@ -161,73 +161,38 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
   }
 
   Widget _summaryGrid(BuildContext context) {
-    final items = const [
-      ('Total paid', 'PKR 227k', Icons.north_east_rounded),
-      ('Total received', 'PKR 190k', Icons.south_west_rounded),
-      ('Pending verification', 'PKR 72k', Icons.hourglass_top_rounded),
-      ('Disputed amount', 'PKR 50k', Icons.gpp_maybe_outlined),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= AppBreakpoints.phone ? 4 : 2;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.55,
-          ),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return _SummaryTile(label: item.$1, value: item.$2, icon: item.$3);
-          },
-        );
-      },
-    );
-  }
-}
-
-class _SummaryTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-
-  const _SummaryTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return CoreGlassCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: colors.goldDark),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.sectionTitle.copyWith(
-              color: colors.textPrimary,
-              fontSize: 20,
-            ),
-          ),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
-          ),
-        ],
-      ),
+    return MetricStrip(
+      title: 'Financial overview',
+      items: [
+        MetricStripItem(
+          label: 'Total paid',
+          value: 'PKR 227K',
+          icon: Icons.north_east_rounded,
+          tone: CineTone.neutral,
+          onTap: () => setState(() => _filter = 'Outgoing'),
+        ),
+        MetricStripItem(
+          label: 'Total received',
+          value: 'PKR 190K',
+          icon: Icons.south_west_rounded,
+          tone: CineTone.positive,
+          onTap: () => setState(() => _filter = 'Incoming'),
+        ),
+        MetricStripItem(
+          label: 'Pending verification',
+          value: 'PKR 72K',
+          icon: Icons.hourglass_top_rounded,
+          tone: CineTone.warning,
+          onTap: () => setState(() => _filter = 'Pending'),
+        ),
+        MetricStripItem(
+          label: 'Disputed amount',
+          value: 'PKR 50K',
+          icon: Icons.gpp_maybe_outlined,
+          tone: CineTone.critical,
+          onTap: () => setState(() => _filter = 'Disputed'),
+        ),
+      ],
     );
   }
 }

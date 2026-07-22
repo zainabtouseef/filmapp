@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_color_scheme.dart';
+import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/models/actor_talent_models.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
@@ -29,9 +30,5 @@ Color modelToneColor(BuildContext context, ActorTone tone) {
 }
 
 String modelMoney(int amount) {
-  if (amount >= 1000000) {
-    return 'PKR ${(amount / 1000000).toStringAsFixed(1)}M';
-  }
-  if (amount >= 100000) return 'PKR ${(amount / 1000).round()}k';
-  return 'PKR $amount';
+  return CineFormat.currency(amount, compact: true);
 }

@@ -6,6 +6,8 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/director_producer_demo_data.dart';
 import '../models/dp_candidate.dart';
+import '../models/dp_project.dart';
+import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_candidate_card.dart';
 import '../widgets/dp_glass_card.dart';
@@ -14,7 +16,14 @@ import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
-  const DPMarketplaceDiscoveryScreen({super.key});
+  final String? initialCategory;
+  final String? projectId;
+
+  const DPMarketplaceDiscoveryScreen({
+    super.key,
+    this.initialCategory,
+    this.projectId,
+  });
 
   @override
   State<DPMarketplaceDiscoveryScreen> createState() =>
@@ -23,12 +32,15 @@ class DPMarketplaceDiscoveryScreen extends StatefulWidget {
 
 class _DPMarketplaceDiscoveryScreenState
     extends State<DPMarketplaceDiscoveryScreen> {
-  String _category = 'All';
+  late String _category = widget.initialCategory ?? 'All';
+  String _trustFilter = 'All';
+  String? _projectId;
   Future<List<DpCandidate>>? _candidatesFuture;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _projectId ??= widget.projectId;
     _candidatesFuture ??= _load();
   }
 
@@ -43,9 +55,25 @@ class _DPMarketplaceDiscoveryScreenState
   }
 
   List<DpCandidate> _fallbackRows() {
-    return DirectorProducerDemoData.candidates.where((candidate) {
-      return _category == 'All' || candidate.category == _category;
-    }).toList();
+    final rows = DirectorProducerDemoData.candidates.where(_matchesFilters);
+    return rows.toList()
+      ..sort((a, b) {
+        final verified = b.verified.toString().compareTo(a.verified.toString());
+        if (verified != 0) return verified;
+        final rating = b.rating.compareTo(a.rating);
+        if (rating != 0) return rating;
+        return a.joinedDaysAgo.compareTo(b.joinedDaysAgo);
+      });
+  }
+
+  bool _matchesFilters(DpCandidate candidate) {
+    final categoryMatch = _category == 'All' || candidate.category == _category;
+    final trustMatch = switch (_trustFilter) {
+      'Verified' => candidate.verified,
+      'New' => candidate.isNew,
+      _ => true,
+    };
+    return categoryMatch && trustMatch;
   }
 
   void _setCategory(String category) {
@@ -70,6 +98,45 @@ class _DPMarketplaceDiscoveryScreenState
         const SizedBox(height: 6),
         _MarketplaceSearchBar(
           onSaveSearch: _saveCurrentSearch,
+        ),
+        const SizedBox(height: 10),
+        if (_projectId != null) ...[
+          DPGlassCard(
+            padding: const EdgeInsets.all(11),
+            child: Row(
+              children: [
+                const Icon(Icons.account_tree_outlined, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: dpText(
+                    context,
+                    'Discover is scoped to ${_projectTitle(_projectId)}. Returning from profiles keeps these filters alive.',
+                    strong: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final chip in const ['All', 'Verified', 'New'])
+              GestureDetector(
+                onTap: () => setState(() => _trustFilter = chip),
+                child: DPStatusChip(
+                  label: chip,
+                  tone: _trustFilter == chip ? DpTone.warning : DpTone.neutral,
+                  icon: chip == 'Verified'
+                      ? Icons.verified_outlined
+                      : chip == 'New'
+                          ? Icons.fiber_new_outlined
+                          : null,
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 10),
         SingleChildScrollView(
@@ -109,7 +176,9 @@ class _DPMarketplaceDiscoveryScreenState
                     (snapshot.data ?? const []).isEmpty);
             final candidates = usingFallback
                 ? _fallbackRows()
-                : snapshot.data ?? const <DpCandidate>[];
+                : (snapshot.data ?? const <DpCandidate>[])
+                    .where(_matchesFilters)
+                    .toList();
             if (snapshot.connectionState != ConnectionState.done &&
                 candidates.isEmpty) {
               return const DPGlassCard(
@@ -137,11 +206,20 @@ class _DPMarketplaceDiscoveryScreenState
                           onProfile: () => Navigator.pushNamed(
                             context,
                             DirectorProducerRoutes.profile,
-                            arguments: candidate.id,
+                            arguments: {
+                              'candidateId': candidate.id,
+                              'type': candidate.category,
+                              'projectId': _projectId,
+                            },
                           ),
                           onRequest: () => Navigator.pushNamed(
                             context,
                             DirectorProducerRoutes.bookingRequest,
+                            arguments: {
+                              'candidateId': candidate.id,
+                              'projectId': _projectId,
+                              'category': candidate.category,
+                            },
                           ),
                           onShortlist: () => _shortlistCandidate(candidate),
                         ),
@@ -179,15 +257,22 @@ class _DPMarketplaceDiscoveryScreenState
   }
 
   Future<bool> _shortlistCandidate(DpCandidate candidate) async {
+    final selection = await _pickShortlistTarget(candidate);
+    if (selection == null) return false;
+    if (!mounted) return false;
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) {
-      _showSnack('Sign in to save shortlists.');
-      return false;
+      _showSnack(
+        '${candidate.name} staged for ${selection.project.title} → ${selection.requirement.title}. Sign in to save.',
+      );
+      return true;
     }
     try {
       await auth.addToDefaultShortlist(candidate.id);
       if (!mounted) return false;
-      _showSnack('${candidate.name} added to shortlist.');
+      _showSnack(
+        '${candidate.name} added to ${selection.project.title} → ${selection.requirement.title}.',
+      );
       return true;
     } on ApiException catch (exception) {
       if (!mounted) return false;
@@ -205,6 +290,157 @@ class _DPMarketplaceDiscoveryScreenState
       SnackBar(content: Text(message)),
     );
   }
+
+  String _projectTitle(String? projectId) {
+    if (projectId == null) return 'All projects';
+    return DirectorProducerDemoData.projects
+        .firstWhere(
+          (project) => project.id == projectId,
+          orElse: () => DirectorProducerDemoData.projects.first,
+        )
+        .title;
+  }
+
+  Future<_ShortlistTarget?> _pickShortlistTarget(DpCandidate candidate) {
+    var selectedProjectId =
+        _projectId ?? DirectorProducerDemoData.projects.first.id;
+    final initialRequirements = DirectorProducerDemoData.requirements
+        .where((requirement) => requirement.projectId == selectedProjectId)
+        .toList();
+    String? selectedRequirementId =
+        initialRequirements.isEmpty ? null : initialRequirements.first.id;
+    return showModalBottomSheet<_ShortlistTarget>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final project = DirectorProducerDemoData.projects.firstWhere(
+              (item) => item.id == selectedProjectId,
+            );
+            final requirements = DirectorProducerDemoData.requirements
+                .where((item) => item.projectId == selectedProjectId)
+                .toList();
+            if (!requirements.any((item) => item.id == selectedRequirementId)) {
+              selectedRequirementId =
+                  requirements.isEmpty ? null : requirements.first.id;
+            }
+            final requirement = selectedRequirementId == null
+                ? null
+                : requirements.firstWhere(
+                    (item) => item.id == selectedRequirementId,
+                  );
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+              ),
+              child: DPGlassCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Shortlist ${candidate.name}',
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: context.appColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    dpText(
+                      context,
+                      'Choose the project and requirement this candidate belongs to.',
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(selectedProjectId),
+                      initialValue: selectedProjectId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Project',
+                        prefixIcon: Icon(Icons.movie_creation_outlined),
+                      ),
+                      items: [
+                        for (final item in DirectorProducerDemoData.projects)
+                          DropdownMenuItem(
+                            value: item.id,
+                            child: Text(
+                              item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setSheetState(() {
+                          selectedProjectId = value;
+                          final projectRequirements = DirectorProducerDemoData
+                              .requirements
+                              .where((item) => item.projectId == value)
+                              .toList();
+                          selectedRequirementId = projectRequirements.isEmpty
+                              ? null
+                              : projectRequirements.first.id;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String?>(
+                      key:
+                          ValueKey('$selectedProjectId-$selectedRequirementId'),
+                      initialValue: selectedRequirementId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Requirement',
+                        prefixIcon: Icon(Icons.rule_folder_outlined),
+                      ),
+                      items: [
+                        for (final item in requirements)
+                          DropdownMenuItem<String?>(
+                            value: item.id,
+                            child: Text(
+                              item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setSheetState(() => selectedRequirementId = value);
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    DPHolographicButton(
+                      label: 'Add to project shortlist',
+                      icon: Icons.favorite_rounded,
+                      onTap: requirement == null
+                          ? null
+                          : () => Navigator.pop(
+                                sheetContext,
+                                _ShortlistTarget(project, requirement),
+                              ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ShortlistTarget {
+  final DpProject project;
+  final DpRequirement requirement;
+
+  const _ShortlistTarget(this.project, this.requirement);
 }
 
 class _MarketplaceSearchBar extends StatelessWidget {

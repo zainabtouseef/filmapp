@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_color_scheme.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../cards/glass_section_card.dart';
-import '../layout/admin_section_header.dart';
-import '../widgets/status_chip.dart';
+import '../cards/cine_card_system.dart';
 
 class ActionFeedItem {
   final String label;
@@ -42,17 +38,14 @@ class AdminActionFeedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassSectionCard(
-      padding: const EdgeInsets.all(13),
+    return SectionContainer(
+      title: '$title · ${items.length}',
+      leading: IconBadge(icon: icon, tone: CineTone.warning, compact: true),
+      action: actionText == null
+          ? null
+          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
       child: Column(
         children: [
-          AdminSectionHeader(
-            title: title,
-            icon: icon,
-            actionText: actionText,
-            onActionTap: onActionTap,
-          ),
-          const SizedBox(height: 8),
           for (var index = 0; index < items.length; index++) ...[
             _ActionFeedRow(item: items[index]),
             if (index != items.length - 1) const SizedBox(height: 8),
@@ -70,60 +63,13 @@ class _ActionFeedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
+    return PriorityActionCard(
+      title: item.title,
+      metadata: item.subtitle,
+      priority: item.label,
+      icon: item.icon ?? Icons.bolt_rounded,
+      tone: cineToneFromColor(context, item.accentColor),
       onTap: item.onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: colors.borderMuted),
-        ),
-        child: Row(
-          children: [
-            StatusChip(
-              label: item.label,
-              icon: item.icon,
-              color: item.accentColor,
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: colors.textPrimary,
-                      fontSize: 13,
-                      height: 1.08,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.statusText.copyWith(
-                      color: colors.textSecondary,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: colors.iconMuted,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -19,19 +19,23 @@ class DPShell extends StatelessWidget {
   final String title;
   final String currentRoute;
   final Widget child;
+  final bool showHeading;
+  final AdminFloatingActionBuilder? floatingActionBuilder;
 
   const DPShell({
     super.key,
     required this.title,
     required this.currentRoute,
     required this.child,
+    this.showHeading = true,
+    this.floatingActionBuilder,
   });
 
   static const navItems = [
     DpNavItem(
-      label: 'Home',
+      label: 'Console',
       icon: Icons.dashboard_customize_rounded,
-      route: DirectorProducerRoutes.home,
+      route: DirectorProducerRoutes.console,
     ),
     DpNavItem(
       label: 'Projects',
@@ -90,6 +94,8 @@ class DPShell extends StatelessWidget {
     return AdminScreenScaffold(
       title: title,
       currentRoute: currentRoute,
+      showHeading: showHeading,
+      floatingActionBuilder: floatingActionBuilder,
       topBarBuilder: (context, wide, onMenuTap) => _DPTopBar(
         wide: wide,
         onMenuTap: onMenuTap,
@@ -132,7 +138,7 @@ class _DPTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 700;
+    final compact = !wide;
     final colors = context.appColors;
     return AdminTopBarFrame(
       compact: compact,
@@ -355,7 +361,7 @@ class _DPBottomNav extends StatelessWidget {
   });
 
   static const _destinations = [
-    CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
+    CineBottomNavDestination(label: 'Console', icon: Icons.home_outlined),
     CineBottomNavDestination(label: 'Projects', icon: Icons.movie_outlined),
     CineBottomNavDestination(label: 'Find', icon: Icons.search_rounded),
     CineBottomNavDestination(label: 'Deals', icon: Icons.handshake_outlined),

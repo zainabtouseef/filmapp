@@ -4,15 +4,21 @@ class DirectorProducerRoutes {
   DirectorProducerRoutes._();
 
   static const home = '/director';
+  static const console = '/console';
+  static const projectsAlias = '/projects';
   static const projects = '/director/projects';
   static const createProject = '/director/projects/create';
   static const projectDetail = '/director/projects/:id';
+  static const projectPathPrefix = '/project/';
   static const requirements = '/director/projects/:id/requirements';
   static const marketplace = '/director/marketplace';
+  static const discover = '/discover';
   static const filters = '/director/marketplace/filters';
   static const profile = '/director/profile/:id';
+  static const profilePathPrefix = '/profile/';
   static const shortlist = '/director/shortlist';
   static const bookingRequest = '/director/booking-request';
+  static const bookingPathPrefix = '/booking/';
   static const bargaining = '/director/bargaining';
   static const negotiationThread = '/director/bargaining/:id';
   static const contracts = '/director/contracts';
@@ -24,11 +30,14 @@ class DirectorProducerRoutes {
 
   static const allRoutes = [
     home,
+    console,
+    projectsAlias,
     projects,
     createProject,
     projectDetail,
     requirements,
     marketplace,
+    discover,
     filters,
     profile,
     shortlist,

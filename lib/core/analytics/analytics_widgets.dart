@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/cards/metric_action_card.dart';
+import '../../shared/formatters/cine_format.dart';
 import '../core_ui/core_routes.dart';
 import '../core_ui/widgets/core_widgets.dart';
 import '../theme/app_color_scheme.dart';
@@ -39,7 +40,7 @@ class _PersonalDashboardKpiStripState extends State<PersonalDashboardKpiStrip> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LinearProgressIndicator(minHeight: 2);
+          return const SkeletonCard(height: 92, density: CardDensity.compact);
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return InlineNotice(
@@ -90,14 +91,7 @@ class _PersonalDashboardKpiStripState extends State<PersonalDashboardKpiStrip> {
   }
 
   String _money(int minor) {
-    final whole = minor ~/ 100;
-    if (whole >= 1000000) {
-      return 'PKR ${(whole / 1000000).toStringAsFixed(1)}M';
-    }
-    if (whole >= 1000) {
-      return 'PKR ${(whole / 1000).toStringAsFixed(0)}k';
-    }
-    return 'PKR $whole';
+    return CineFormat.currency(minor ~/ 100, compact: true);
   }
 }
 

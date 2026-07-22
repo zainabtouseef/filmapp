@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
@@ -22,14 +23,15 @@ class DPCreateProjectWizardScreen extends StatefulWidget {
 
 class _DPCreateProjectWizardScreenState
     extends State<DPCreateProjectWizardScreen> {
-  final _title = TextEditingController(text: 'Aurora Biscuit TVC');
-  final _type = TextEditingController(text: 'tvc');
-  final _description = TextEditingController(
-    text: 'Premium family brand film with warm interiors.',
-  );
-  final _startDate = TextEditingController(text: '2026-08-18');
-  final _endDate = TextEditingController(text: '2026-08-22');
-  final _budget = TextEditingController(text: '8500000');
+  final _title = TextEditingController();
+  final _type = TextEditingController();
+  final _description = TextEditingController();
+  final _cities = TextEditingController();
+  final _startDate = TextEditingController();
+  final _endDate = TextEditingController();
+  final _budgetMin = TextEditingController();
+  final _budgetMax = TextEditingController();
+  final List<String> _scripts = [];
   int _step = 0;
   bool _saving = false;
 
@@ -38,15 +40,23 @@ class _DPCreateProjectWizardScreenState
     _title.dispose();
     _type.dispose();
     _description.dispose();
+    _cities.dispose();
     _startDate.dispose();
     _endDate.dispose();
-    _budget.dispose();
+    _budgetMin.dispose();
+    _budgetMax.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final steps = ['Type + Info', 'Dates', 'Budget', 'Review'];
+    final steps = [
+      'Type + Info',
+      'Cities + Dates',
+      'Budget',
+      'Script',
+      'Review',
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -100,7 +110,7 @@ class _DPCreateProjectWizardScreenState
             const SizedBox(height: 12),
             CoreTextField(
               controller: _title,
-              label: 'Project title',
+              label: 'Project title (e.g., Ramadan Telefilm 2027)',
               icon: Icons.title_rounded,
             ),
             const SizedBox(height: 12),
@@ -114,6 +124,12 @@ class _DPCreateProjectWizardScreenState
         ),
       1 => Column(
           children: [
+            CoreTextField(
+              controller: _cities,
+              label: 'City / cities (e.g., Lahore, Karachi)',
+              icon: Icons.location_on_outlined,
+            ),
+            const SizedBox(height: 12),
             CoreTextField(
               controller: _startDate,
               label: 'Start date (YYYY-MM-DD)',
@@ -134,13 +150,70 @@ class _DPCreateProjectWizardScreenState
       2 => Column(
           children: [
             CoreTextField(
-              controller: _budget,
-              label: 'Estimated budget (PKR)',
+              controller: _budgetMin,
+              label: 'Budget minimum (PKR)',
               icon: Icons.payments_outlined,
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 12),
+            CoreTextField(
+              controller: _budgetMax,
+              label: 'Budget maximum (PKR)',
+              icon: Icons.account_balance_wallet_outlined,
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 14),
-            const DPBudgetHealthBar(value: .62, label: 'Budget health preview'),
+            const DPBudgetHealthBar(value: .18, label: 'Budget starts empty'),
+          ],
+        ),
+      3 => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Script vault',
+              style: AppTextStyles.cardTitle.copyWith(
+                color: context.appColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            dpText(
+              context,
+              'Upload PDF, DOCX, or TXT. Scripts stay private to invited team members until specific pages are shared.',
+            ),
+            const SizedBox(height: 12),
+            if (_scripts.isEmpty)
+              const DPStatusChip(
+                label: 'No script attached yet',
+                tone: DpTone.neutral,
+              )
+            else
+              Column(
+                children: [
+                  for (final script in _scripts)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _ReviewRow(label: 'Script version', value: script),
+                    ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                DPHolographicButton(
+                  label: 'Add Script',
+                  icon: Icons.upload_file_outlined,
+                  onTap: _pickScript,
+                ),
+                DPHolographicButton(
+                  label: 'Breakdown with AI - coming soon',
+                  icon: Icons.auto_awesome_outlined,
+                  onTap: null,
+                  secondary: true,
+                ),
+              ],
+            ),
           ],
         ),
       _ => Column(
@@ -150,12 +223,22 @@ class _DPCreateProjectWizardScreenState
             const SizedBox(height: 10),
             _ReviewRow(label: 'Type', value: _type.text),
             const SizedBox(height: 10),
+            _ReviewRow(label: 'Cities', value: _cities.text),
+            const SizedBox(height: 10),
             _ReviewRow(
               label: 'Dates',
               value: '${_startDate.text} → ${_endDate.text}',
             ),
             const SizedBox(height: 10),
-            _ReviewRow(label: 'Budget', value: 'PKR ${_budget.text}'),
+            _ReviewRow(
+              label: 'Budget range',
+              value: 'PKR ${_budgetMin.text} - ${_budgetMax.text}',
+            ),
+            const SizedBox(height: 10),
+            _ReviewRow(
+              label: 'Script',
+              value: _scripts.isEmpty ? 'Add later' : _scripts.join(', '),
+            ),
             const SizedBox(height: 12),
             DPHolographicButton(
               label: _saving ? 'Creating Project' : 'Create Project',
@@ -168,11 +251,22 @@ class _DPCreateProjectWizardScreenState
   }
 
   void _next() {
-    if (_step < 3) {
+    if (_step < 4) {
       setState(() => _step++);
     } else {
       _createProject();
     }
+  }
+
+  Future<void> _pickScript() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'docx', 'txt'],
+      withData: false,
+    );
+    final file = result?.files.single;
+    if (file == null) return;
+    setState(() => _scripts.add(file.name));
   }
 
   Future<void> _createProject() async {
@@ -193,7 +287,7 @@ class _DPCreateProjectWizardScreenState
         description: _description.text.trim(),
         startDate: _startDate.text.trim(),
         endDate: _endDate.text.trim(),
-        estimatedBudgetMinor: _parseBudgetMinor(_budget.text),
+        estimatedBudgetMinor: _parseBudgetMinor(_budgetMax.text),
       );
       if (!mounted) return;
       dpSnack(context, 'Project created');

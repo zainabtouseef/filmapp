@@ -319,23 +319,29 @@ class _CommissionRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           AgencyStatusChip(status: status),
-          IconButton(
-            tooltip: 'Verify',
-            visualDensity: VisualDensity.compact,
-            onPressed: onVerify,
-            icon: Icon(Icons.verified_outlined, color: colors.success),
-          ),
-          IconButton(
-            tooltip: 'Receipt',
-            visualDensity: VisualDensity.compact,
-            onPressed: onReceipt,
-            icon: Icon(Icons.receipt_long_outlined, color: colors.goldDark),
-          ),
-          IconButton(
-            tooltip: 'Issue',
-            visualDensity: VisualDensity.compact,
-            onPressed: onIssue,
-            icon: Icon(Icons.report_problem_outlined, color: colors.iconMuted),
+          CardMenu<String>(
+            items: const [
+              CardMenuItem(
+                value: 'verify',
+                label: 'Verify',
+                icon: Icons.verified_outlined,
+              ),
+              CardMenuItem(
+                value: 'receipt',
+                label: 'Receipt',
+                icon: Icons.receipt_long_outlined,
+              ),
+              CardMenuItem(
+                value: 'issue',
+                label: 'Report issue',
+                icon: Icons.report_problem_outlined,
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'verify') onVerify();
+              if (value == 'receipt') onReceipt();
+              if (value == 'issue') onIssue();
+            },
           ),
         ],
       ),

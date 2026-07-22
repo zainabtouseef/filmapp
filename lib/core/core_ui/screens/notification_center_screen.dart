@@ -4,6 +4,7 @@ import '../../trust_safety/trust_safety_controller.dart';
 import '../../trust_safety/trust_safety_models.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
@@ -243,82 +244,77 @@ class NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final category = _categoryLabel(notification.category);
-    return GestureDetector(
+    return CardShell(
       onTap: onTap,
-      child: CoreGlassCard(
-        selected: notification.unread,
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: colors.goldMid.withValues(alpha: 0.12),
-                  ),
-                  child: Icon(notification.icon, color: colors.goldMid),
-                ),
-                if (notification.unread)
-                  Positioned(
-                    right: -1,
-                    top: -1,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: colors.success,
-                        border: Border.all(color: colors.background, width: 2),
-                      ),
+      selected: notification.unread,
+      tone: notification.unread ? CineTone.information : CineTone.neutral,
+      density: CardDensity.compact,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconBadge(
+                icon: notification.icon,
+                tone: notification.unread
+                    ? CineTone.information
+                    : CineTone.neutral,
+              ),
+              if (notification.unread)
+                Positioned(
+                  right: -1,
+                  top: -1,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.success,
+                      border: Border.all(color: colors.background, width: 2),
                     ),
                   ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        notification.title,
+                        style: AppTextStyles.label.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      notification.time,
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  notification.message,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                StatusBadge(label: category, tone: CoreStatusTone.info),
               ],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: AppTextStyles.label.copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        notification.time,
-                        style: AppTextStyles.caption.copyWith(
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    notification.message,
-                    style: AppTextStyles.caption.copyWith(
-                      color: colors.textSecondary,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  StatusBadge(label: category, tone: CoreStatusTone.info),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: colors.iconMuted),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

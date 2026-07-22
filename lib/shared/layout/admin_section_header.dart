@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../cards/cine_card_system.dart';
 
 class AdminScreenHeading extends StatelessWidget {
   final String title;
@@ -14,21 +15,14 @@ class AdminScreenHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Center(
+    return Align(
+      alignment: Alignment.centerLeft,
       child: Text(
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: AppTextStyles.screenTitle.copyWith(
-          color: colors.textPrimary,
-          shadows: [
-            Shadow(
-              color: colors.textPrimary.withValues(alpha: 0.12),
-              blurRadius: 8,
-            ),
-          ],
-        ),
+        textAlign: TextAlign.left,
+        style: AppTextStyles.screenTitle.copyWith(color: colors.textPrimary),
       ),
     );
   }
@@ -57,55 +51,38 @@ class AdminSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final resolvedIconColor = iconColor ?? colors.goldDark;
     final resolvedActionColor = actionColor ?? colors.goldDark;
     final resolvedTitleColor = titleColor ?? colors.textPrimary;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(
-          icon,
-          color: resolvedIconColor,
-          size: 22,
-          shadows: [
-            Shadow(
-              color: resolvedIconColor.withValues(alpha: 0.2),
-              blurRadius: 7,
-            ),
-          ],
+        IconBadge(
+          icon: icon,
+          tone: iconColor == colors.infoBlue
+              ? CineTone.information
+              : CineTone.premium,
+          compact: true,
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            title.toUpperCase(),
+            title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.sectionHeading.copyWith(
               color: resolvedTitleColor,
-              shadows: [
-                Shadow(
-                  color: resolvedTitleColor.withValues(alpha: 0.14),
-                  blurRadius: 6,
-                ),
-              ],
             ),
           ),
         ),
         if (actionText != null) ...[
           const SizedBox(width: 8),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onActionTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
-              child: Text(
-                actionText!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.sectionAction.copyWith(
-                  color: resolvedActionColor,
-                ),
-              ),
+          TextButton(
+            onPressed: onActionTap,
+            style: TextButton.styleFrom(foregroundColor: resolvedActionColor),
+            child: Text(
+              actionText!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

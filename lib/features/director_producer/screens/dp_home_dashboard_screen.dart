@@ -1,211 +1,219 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/analytics/analytics_widgets.dart';
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../shared/sections/admin_live_monitoring_section.dart';
-import '../../../shared/sections/admin_quick_actions_section.dart';
-import '../../../shared/cards/metric_action_card.dart';
-import '../../../shared/cards/mini_trend_card.dart';
-import '../data/director_producer_demo_data.dart';
+import '../../../core/theme/app_breakpoints.dart';
 import '../routes/director_producer_routes.dart';
-import '../widgets/dp_action_required_strip.dart';
+import '../widgets/dashboard/dp_activity_feed.dart';
+import '../widgets/dashboard/dp_command_header.dart';
+import '../widgets/dashboard/dp_deal_pipeline.dart';
+import '../widgets/dashboard/dp_discovery_snapshot.dart';
+import '../widgets/dashboard/dp_financial_centre.dart';
+import '../widgets/dashboard/dp_dashboard_insights.dart';
+import '../widgets/dashboard/dp_priority_actions.dart';
+import '../widgets/dashboard/dp_project_deck.dart';
+import '../widgets/dashboard/dp_pulse_strip.dart';
+import '../widgets/dashboard/dp_today_timeline.dart';
 import '../widgets/dp_layout_helpers.dart';
-import '../widgets/dp_section_header.dart';
-import '../widgets/dp_status_chip.dart';
 
+/// The Director/Producer command dashboard — a compact, cinematic
+/// production-management console. Mobile gets a single scrolling
+/// column; desktop splits into a dominant operational column plus a
+/// contextual side rail, alongside the shell's own nav rail/top bar.
 class DPHomeDashboardScreen extends StatelessWidget {
   const DPHomeDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final projects = DirectorProducerDemoData.projects;
-    return Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= AppBreakpoints.tablet;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DPCommandHeader(),
+            const SizedBox(height: 14),
+            const DPPulseStrip(),
+            const SizedBox(height: 14),
+            if (wide) const _WideBody() else const _CompactBody(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _WideBody extends StatelessWidget {
+  const _WideBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DPSectionHeader(
-          title: 'Action Required',
-          icon: Icons.priority_high_rounded,
-          actionText: 'New Project',
-          onActionTap: () => Navigator.pushNamed(
-              context, DirectorProducerRoutes.createProject),
-        ),
-        const SizedBox(height: 8),
-        DPActionRequiredStrip(
-          items: [
-            DPActionRequiredItem(
-              icon: Icons.draw_outlined,
-              count: '3',
-              title: 'Contracts to sign',
-              timer: 'Due today',
-              tone: DpTone.warning,
-              onTap: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.contracts),
-            ),
-            DPActionRequiredItem(
-              icon: Icons.upload_file_rounded,
-              count: '4',
-              title: 'Payments to upload',
-              timer: 'Oldest 6h',
-              tone: DpTone.danger,
-              onTap: () =>
-                  Navigator.pushNamed(context, DirectorProducerRoutes.payments),
-            ),
-            DPActionRequiredItem(
-              icon: Icons.handshake_outlined,
-              count: '6',
-              title: 'Offers awaiting response',
-              timer: '18h left',
-              tone: DpTone.info,
-              onTap: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.bargaining),
-            ),
-            DPActionRequiredItem(
-              icon: Icons.timer_outlined,
-              count: '2',
-              title: 'Expiring negotiations',
-              timer: 'Under 9h',
-              tone: DpTone.warning,
-              onTap: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.bargaining),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        const PersonalDashboardKpiStrip(),
-        const SizedBox(height: 14),
-        AdminQuickActionsSection(
-          items: [
-            MetricActionItem(
-              icon: Icons.movie_creation_outlined,
-              value: '${projects.length}',
-              title: 'Active Projects',
-              subtitle: '+2 this week',
-              accentColor: colors.infoBlue,
-              onTap: () =>
-                  Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-            ),
-            MetricActionItem(
-              icon: Icons.handshake_outlined,
-              value: '${DirectorProducerDemoData.negotiations.length}',
-              title: 'Negotiations',
-              subtitle: '2 your move',
-              accentColor: colors.infoPurple,
-              onTap: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.bargaining),
-            ),
-            MetricActionItem(
-              icon: Icons.article_outlined,
-              value: '3',
-              title: 'Pending Contracts',
-              subtitle: 'Signature needed',
-              accentColor: colors.goldMid,
-              onTap: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.contracts),
-            ),
-            MetricActionItem(
-              icon: Icons.payments_outlined,
-              value: '5',
-              title: 'Milestones Due',
-              subtitle: 'PKR 1.2M',
-              accentColor: colors.success,
-              onTap: () =>
-                  Navigator.pushNamed(context, DirectorProducerRoutes.payments),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        DPTwoColumn(
-          left: DPSectionCard(
-            title: 'Active Projects',
-            icon: Icons.movie_filter_outlined,
-            actionText: 'View all',
-            onActionTap: () =>
-                Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-            child: Column(
-              children: projects
-                  .take(3)
-                  .map(
-                    (project) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      onTap: () => Navigator.pushNamed(
-                          context, DirectorProducerRoutes.projectDetail),
-                      title: dpText(context, project.title, strong: true),
-                      subtitle: dpText(
-                          context, '${project.city} - ${project.status}'),
-                      trailing: DPStatusChip(
-                        label: '${project.pendingActions} actions',
-                        tone: project.pendingActions > 7
-                            ? DpTone.danger
-                            : DpTone.success,
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          right: DPSectionCard(
-            title: 'Upcoming Shoot Days',
-            icon: Icons.calendar_month_outlined,
-            actionText: 'Schedule',
-            onActionTap: () =>
-                Navigator.pushNamed(context, DirectorProducerRoutes.schedule),
-            child: Column(
-              children: DirectorProducerDemoData.schedule
-                  .take(5)
-                  .map(
-                    (item) => ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: dpText(context, item.project, strong: true),
-                      subtitle:
-                          dpText(context, '${item.date} - ${item.location}'),
-                      trailing: DPStatusChip(
-                        label: item.status,
-                        tone: item.conflict ? DpTone.danger : DpTone.success,
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
+        const Expanded(
+          flex: 7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _TodaySection(),
+              SizedBox(height: 14),
+              _ProjectDeckSection(),
+              SizedBox(height: 14),
+              _FinancialSection(),
+              SizedBox(height: 14),
+              _PipelineSection(),
+              SizedBox(height: 14),
+              _DiscoverySection(),
+            ],
           ),
         ),
-        const SizedBox(height: 14),
-        AdminLiveMonitoringSection(
-          title: 'Production Pulse',
-          quiet: true,
-          actionText: 'Reports',
-          onActionTap: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.reports),
-          metrics: [
-            MiniTrendMetric(
-              label: 'Bookings Locked',
-              value: '41',
-              trendValues: const [.2, .28, .24, .38, .48, .52, .62, .7],
-              accentColor: colors.success,
-            ),
-            MiniTrendMetric(
-              label: 'Budget Usage',
-              value: '64%',
-              trendValues: const [.15, .32, .35, .4, .48, .54, .6, .64],
-              accentColor: colors.goldMid,
-            ),
-            MiniTrendMetric(
-              label: 'Open Offers',
-              value: '18',
-              trendValues: const [.5, .42, .46, .52, .44, .38, .34, .3],
-              accentColor: colors.infoPurple,
-            ),
-            MiniTrendMetric(
-              label: 'Shoot Holds',
-              value: '7',
-              trendValues: const [.2, .25, .18, .28, .4, .36, .42, .5],
-              accentColor: colors.infoBlue,
-            ),
-          ],
+        const SizedBox(width: 14),
+        const Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _PrioritySection(),
+              SizedBox(height: 14),
+              _ActivitySection(),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _CompactBody extends StatelessWidget {
+  const _CompactBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PrioritySection(),
+        SizedBox(height: 14),
+        _TodaySection(),
+        SizedBox(height: 14),
+        _ProjectDeckSection(),
+        SizedBox(height: 14),
+        _FinancialSection(),
+        SizedBox(height: 14),
+        _PipelineSection(),
+        SizedBox(height: 14),
+        _DiscoverySection(),
+        SizedBox(height: 14),
+        _ActivitySection(),
+      ],
+    );
+  }
+}
+
+class _PrioritySection extends StatelessWidget {
+  const _PrioritySection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Needs your attention · ${dpPriorityItems().length}',
+      icon: Icons.priority_high_rounded,
+      child: const DPPriorityActions(),
+    );
+  }
+}
+
+class _TodaySection extends StatelessWidget {
+  const _TodaySection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: "Today's Production Timeline",
+      icon: Icons.today_outlined,
+      actionText: 'Full schedule',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.schedule),
+      child: const DPTodayTimeline(),
+    );
+  }
+}
+
+class _ProjectDeckSection extends StatelessWidget {
+  const _ProjectDeckSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Project Command Deck',
+      icon: Icons.dashboard_customize_rounded,
+      actionText: 'View all',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.projects),
+      child: const DPProjectDeck(),
+    );
+  }
+}
+
+class _FinancialSection extends StatelessWidget {
+  const _FinancialSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Financial Command Centre',
+      icon: Icons.account_balance_wallet_outlined,
+      actionText: 'View payments',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.payments),
+      child: const DPFinancialCentre(),
+    );
+  }
+}
+
+class _PipelineSection extends StatelessWidget {
+  const _PipelineSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Deals & Contracts Pipeline',
+      icon: Icons.handshake_outlined,
+      actionText: 'View all',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
+      child: const DPDealPipeline(),
+    );
+  }
+}
+
+class _DiscoverySection extends StatelessWidget {
+  const _DiscoverySection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Discover & Quick Links',
+      icon: Icons.travel_explore_outlined,
+      actionText: 'Open marketplace',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
+      child: const DPDiscoverySnapshot(),
+    );
+  }
+}
+
+class _ActivitySection extends StatelessWidget {
+  const _ActivitySection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Team & Activity',
+      icon: Icons.forum_outlined,
+      actionText: 'Open room',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.room),
+      child: const DPActivityFeed(),
     );
   }
 }

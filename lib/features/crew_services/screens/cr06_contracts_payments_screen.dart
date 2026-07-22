@@ -290,29 +290,23 @@ class _LedgerRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           CrewStatusChip(status: item.status),
-          IconButton(
-            tooltip: 'Receipt',
-            constraints: const BoxConstraints.tightFor(width: 34, height: 34),
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onPressed: onReceipt,
-            icon: Icon(
-              Icons.receipt_long_outlined,
-              color: colors.goldDark,
-              size: 20,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Issue',
-            constraints: const BoxConstraints.tightFor(width: 34, height: 34),
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onPressed: onIssue,
-            icon: Icon(
-              Icons.report_problem_outlined,
-              color: colors.iconMuted,
-              size: 20,
-            ),
+          CardMenu<String>(
+            items: const [
+              CardMenuItem(
+                value: 'receipt',
+                label: 'Receipt',
+                icon: Icons.receipt_long_outlined,
+              ),
+              CardMenuItem(
+                value: 'issue',
+                label: 'Report issue',
+                icon: Icons.report_problem_outlined,
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'receipt') onReceipt();
+              if (value == 'issue') onIssue();
+            },
           ),
         ],
       ),

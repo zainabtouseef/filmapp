@@ -26,6 +26,11 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   late final TextEditingController languages;
   late final TextEditingController skills;
   late final TextEditingController credits;
+  late final TextEditingController instagram;
+  late final TextEditingController followers;
+  late final TextEditingController workHistory;
+  late final TextEditingController ageRange;
+  late final TextEditingController height;
   late final TextEditingController agency;
   String? error;
   String? remoteStatus;
@@ -45,6 +50,11 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     languages = TextEditingController(text: store.profileLanguages);
     skills = TextEditingController(text: store.profileSkills);
     credits = TextEditingController(text: store.profileCredits);
+    instagram = TextEditingController(text: store.profileInstagram);
+    followers = TextEditingController(text: store.profileFollowers);
+    workHistory = TextEditingController(text: store.profileWorkHistory);
+    ageRange = TextEditingController(text: store.profileAgeRange);
+    height = TextEditingController(text: store.profileHeight);
     agency = TextEditingController(text: store.agency);
   }
 
@@ -65,6 +75,11 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     languages.dispose();
     skills.dispose();
     credits.dispose();
+    instagram.dispose();
+    followers.dispose();
+    workHistory.dispose();
+    ageRange.dispose();
+    height.dispose();
     agency.dispose();
     super.dispose();
   }
@@ -130,6 +145,58 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                   icon: Icons.workspace_premium_outlined,
                   maxLines: 3,
                   onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: workHistory,
+                  label: 'Work history',
+                  icon: Icons.history_edu_outlined,
+                  maxLines: 3,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: ageRange,
+                        label: 'Playable age',
+                        icon: Icons.face_retouching_natural_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: height,
+                        label: 'Height',
+                        icon: Icons.height_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: instagram,
+                        label: 'Instagram',
+                        icon: Icons.alternate_email_rounded,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: followers,
+                        label: 'Followers',
+                        icon: Icons.people_alt_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 CoreTextField(
@@ -203,6 +270,11 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             stageName: stageName.text,
             city: city.text,
             languages: languages.text,
+            instagram: instagram.text,
+            followers: followers.text,
+            workHistory: workHistory.text,
+            ageRange: ageRange.text,
+            height: height.text,
             agency: agency.text,
           ),
         );
@@ -273,6 +345,11 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       languages: languages.text.trim(),
       skills: skills.text.trim(),
       credits: credits.text.trim(),
+      instagram: instagram.text.trim(),
+      followers: followers.text.trim(),
+      workHistory: workHistory.text.trim(),
+      ageRange: ageRange.text.trim(),
+      height: height.text.trim(),
       agencyName: agency.text.trim(),
     );
     actorSnack(context, 'Profile draft saved');
@@ -301,6 +378,11 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       languages: languages.text.trim(),
       skills: skills.text.trim(),
       credits: credits.text.trim(),
+      instagram: instagram.text.trim(),
+      followers: followers.text.trim(),
+      workHistory: workHistory.text.trim(),
+      ageRange: ageRange.text.trim(),
+      height: height.text.trim(),
       agencyName:
           agency.text.trim().isEmpty ? 'Independent' : agency.text.trim(),
     );
@@ -436,6 +518,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     final parts = <String>[
       if (skills.text.trim().isNotEmpty) 'Skills: ${skills.text.trim()}',
       if (credits.text.trim().isNotEmpty) 'Credits: ${credits.text.trim()}',
+      if (workHistory.text.trim().isNotEmpty)
+        'Work history: ${workHistory.text.trim()}',
+      if (ageRange.text.trim().isNotEmpty)
+        'Playable age: ${ageRange.text.trim()}',
+      if (height.text.trim().isNotEmpty) 'Height: ${height.text.trim()}',
+      if (instagram.text.trim().isNotEmpty)
+        'Instagram: ${instagram.text.trim()}',
       if (agency.text.trim().isNotEmpty) 'Agency: ${agency.text.trim()}',
     ];
     return parts.join('\n');
@@ -445,8 +534,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     final parts = <String>[
       if (skills.text.trim().isNotEmpty) skills.text.trim(),
       if (credits.text.trim().isNotEmpty) credits.text.trim(),
+      if (workHistory.text.trim().isNotEmpty) workHistory.text.trim(),
       if (languages.text.trim().isNotEmpty)
         'Languages: ${languages.text.trim()}',
+      if (instagram.text.trim().isNotEmpty) 'Social: ${instagram.text.trim()}',
     ];
     final summary = parts.join('\n');
     if (summary.trim().length >= 10) return summary;
@@ -458,12 +549,22 @@ class _ProfilePreview extends StatelessWidget {
   final String stageName;
   final String city;
   final String languages;
+  final String instagram;
+  final String followers;
+  final String workHistory;
+  final String ageRange;
+  final String height;
   final String agency;
 
   const _ProfilePreview({
     required this.stageName,
     required this.city,
     required this.languages,
+    required this.instagram,
+    required this.followers,
+    required this.workHistory,
+    required this.ageRange,
+    required this.height,
     required this.agency,
   });
 
@@ -510,6 +611,28 @@ class _ProfilePreview extends StatelessWidget {
                         icon: Icons.translate_rounded,
                         label: 'Languages',
                         value: languages.isEmpty ? 'Languages' : languages,
+                      ),
+                      ActorInfoRow(
+                        icon: Icons.face_retouching_natural_outlined,
+                        label: 'Playable age',
+                        value: ageRange.isEmpty ? 'Not set' : ageRange,
+                      ),
+                      ActorInfoRow(
+                        icon: Icons.height_outlined,
+                        label: 'Height',
+                        value: height.isEmpty ? 'Not set' : height,
+                      ),
+                      ActorInfoRow(
+                        icon: Icons.alternate_email_rounded,
+                        label: 'Instagram',
+                        value: instagram.isEmpty
+                            ? 'Not connected'
+                            : '$instagram • ${followers.isEmpty ? 'followers not set' : followers}',
+                      ),
+                      ActorInfoRow(
+                        icon: Icons.history_edu_outlined,
+                        label: 'Work history',
+                        value: workHistory.isEmpty ? 'Not set' : workHistory,
                       ),
                       ActorInfoRow(
                         icon: Icons.apartment_outlined,
@@ -569,6 +692,23 @@ class _ProfilePreview extends StatelessWidget {
             icon: Icons.verified_user_outlined,
             label: 'Verification',
             value: verificationLabel,
+          ),
+          ActorInfoRow(
+            icon: Icons.face_retouching_natural_outlined,
+            label: 'Playable age',
+            value: ageRange.isEmpty ? 'Not set' : ageRange,
+          ),
+          ActorInfoRow(
+            icon: Icons.alternate_email_rounded,
+            label: 'Instagram',
+            value: instagram.isEmpty
+                ? 'Not connected'
+                : '$instagram • ${followers.isEmpty ? 'followers not set' : followers}',
+          ),
+          ActorInfoRow(
+            icon: Icons.history_edu_outlined,
+            label: 'Work history',
+            value: workHistory.isEmpty ? 'Not set' : workHistory,
           ),
           ActorInfoRow(
             icon: Icons.apartment_outlined,
