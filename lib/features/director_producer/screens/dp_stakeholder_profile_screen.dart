@@ -242,6 +242,9 @@ class _ProfileTemplate extends StatelessWidget {
     if (normalized.contains('model')) {
       return _ModelProfile(candidate: candidate);
     }
+    if (normalized.contains('agenc') || normalized.contains('partner')) {
+      return _AgencyProfile(candidate: candidate);
+    }
     return _ActorProfile(candidate: candidate);
   }
 }
@@ -260,24 +263,42 @@ class _ActorProfile extends StatelessWidget {
           right: _SnapshotSection(candidate: candidate),
         ),
         const SizedBox(height: 12),
-        _VideoRailsSection(
-          categories: const [
-            'Dramas',
-            'Films / Movies',
-            'TVCs / Ads',
-            'Music Videos',
-            'Web Series',
-            'Theatre',
-            'Self-tapes / Intro',
+        const _GallerySection(
+          title: 'Categorized video portfolio',
+          icon: Icons.video_library_outlined,
+          filters: ['Dramas (4)', 'Films / Movies (4)', 'Web Series (2)'],
+          tiles: [
+            'Dramas · Lead · 2026',
+            'Dramas · Supporting · 2025',
+            'Films · Lead · 2025',
+            'Films · Cameo · 2024',
+            'Web Series · Lead · 2026',
+            'Web Series · Supporting · 2025',
           ],
         ),
         const SizedBox(height: 12),
-        _PhotoGallerySection(
-          categories: const ['Headshots', 'Full-length', 'Editorial', 'On-set'],
+        const _GallerySection(
+          title: 'Photo gallery',
+          filters: ['Headshots', 'Full-length', 'Editorial', 'On-set'],
+          tiles: [
+            'Headshots',
+            'Full-length',
+            'Editorial',
+            'On-set',
+            'Headshots',
+            'Full-length',
+          ],
         ),
         const SizedBox(height: 12),
         DPTwoColumn(
-          left: _CreditsSection(candidate: candidate),
+          left: _WorkHistorySection(
+            title: 'Work history / credits',
+            rows: const [
+              ('Northern Sky · Drama', 'Supporting Lead · 2026 · Ayaan Films'),
+              ('Bank Forward · TVC', 'Principal · 2025 · Orbit Brands'),
+              ('Stage Line · Theatre', 'Lead · 2024 · Lahore Arts'),
+            ],
+          ),
           right: _SocialsRateAvailabilitySection(candidate: candidate),
         ),
       ],
@@ -295,116 +316,59 @@ class _ModelProfile extends StatelessWidget {
     return Column(
       children: [
         DPTwoColumn(
-          left: _PhotoGallerySection(
-            categories: const [
-              'Comp card',
-              'Editorial',
-              'Ramp',
-              'Ethnic',
-              'Western',
-              'Product',
-            ],
+          left: _ShowreelSection(
+            candidate: candidate,
+            title: 'Featured reel',
+            caption: 'Runway + editorial reel • in-app playback',
           ),
-          right: _ProfileSection(
-            title: 'Usage rights & brand safety',
-            icon: Icons.verified_user_outlined,
-            children: [
-              const DPDetailRow(
-                  label: 'Digital campaign', value: 'PKR 180k / 6 months'),
-              const DPDetailRow(
-                  label: 'Billboard / OOH', value: 'PKR 320k / 3 months'),
-              const DPDetailRow(
-                  label: 'Category conflicts', value: 'No tobacco, politics'),
-              DPDetailRow(label: 'Instagram', value: candidate.instagramHandle),
+          right: const _InfoSection(
+            title: 'Comp card',
+            icon: Icons.straighten_outlined,
+            rows: [
+              ('Height', "5'9\""),
+              ('Bust · Waist · Hip', '34-24-35'),
+              ('Shoe size', '8 (US)'),
+              ('Hair · Eyes', 'Black · Brown'),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        DPTwoColumn(
-          left: _CreditsSection(candidate: candidate),
-          right: _SocialsRateAvailabilitySection(candidate: candidate),
+        const _GallerySection(
+          title: 'Portfolio',
+          filters: ['Editorial (5)', 'Commercial (3)', 'Runway (4)'],
+          tiles: [
+            'Editorial',
+            'Editorial',
+            'Commercial',
+            'Commercial',
+            'Runway',
+            'Runway'
+          ],
         ),
-      ],
-    );
-  }
-}
-
-class _LocationProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _LocationProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _PhotoGallerySection(
-            categories: const ['Exterior', 'Kitchen', 'Holding', 'Parking'],
-          ),
-          right: _ProfileSection(
-            title: 'Property specs',
-            icon: Icons.location_city_outlined,
-            children: const [
-              DPDetailRow(label: 'Capacity', value: '45 crew + cast'),
-              DPDetailRow(label: 'Parking', value: '8 cars, 1 truck'),
-              DPDetailRow(label: 'Power', value: '3-phase, generator allowed'),
-              DPDetailRow(
-                  label: 'Exact address', value: 'Locked until booking'),
-            ],
-          ),
+        const SizedBox(height: 12),
+        const _GallerySection(
+          title: 'Photo gallery',
+          filters: ['Headshots', 'Full-length', 'Beauty'],
+          tiles: [
+            'Headshots',
+            'Full-length',
+            'Beauty',
+            'Headshots',
+            'Full-length',
+            'Beauty'
+          ],
         ),
         const SizedBox(height: 12),
         DPTwoColumn(
-          left: _ProfileSection(
-            title: 'Rules',
-            icon: Icons.rule_outlined,
-            children: const [
-              DPDetailRow(label: 'Night shoot', value: 'Until 11 PM'),
-              DPDetailRow(label: 'Food / smoke', value: 'No open flame'),
-              DPDetailRow(label: 'Cleaning', value: 'PKR 12k mandatory'),
+          left: _WorkHistorySection(
+            title: 'Work history / credits',
+            rows: const [
+              ('Noor Couture Campaign', 'Editorial model · 2026'),
+              ('Lahore Fashion Week', 'Runway · 2025'),
+              ('City Mag Cover', 'Editorial · 2024'),
             ],
           ),
           right: _SocialsRateAvailabilitySection(candidate: candidate),
-        ),
-      ],
-    );
-  }
-}
-
-class _EquipmentProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _EquipmentProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _ProfileSection(
-            title: 'Inventory & condition',
-            icon: Icons.video_camera_back_outlined,
-            children: const [
-              DPDetailRow(label: 'Camera', value: 'Alexa Mini LF, serviced'),
-              DPDetailRow(label: 'Lighting', value: 'Aputure 600D x4'),
-              DPDetailRow(label: 'Grip', value: 'Slider, jib, stands'),
-              DPDetailRow(label: 'Insurance', value: 'Active equipment cover'),
-            ],
-          ),
-          right: _ProfileSection(
-            title: 'Packages',
-            icon: Icons.inventory_2_outlined,
-            children: const [
-              DPDetailRow(label: 'TVC day package', value: 'PKR 240k/day'),
-              DPDetailRow(label: 'Deposit', value: '30% refundable hold'),
-              DPDetailRow(label: 'Coverage cities', value: 'Karachi, Lahore'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _PhotoGallerySection(
-          categories: const ['Camera bodies', 'Lenses', 'Lighting', 'Truck'],
         ),
       ],
     );
@@ -421,24 +385,276 @@ class _CrewProfile extends StatelessWidget {
     return Column(
       children: [
         DPTwoColumn(
-          left: _CreditsSection(candidate: candidate),
-          right: _ProfileSection(
-            title: 'Service, kit, day rate',
+          left: _InfoSection(
+            title: 'Department & specialty',
             icon: Icons.groups_2_outlined,
-            children: [
-              DPDetailRow(
-                  label: 'Service category', value: candidate.skills.first),
-              const DPDetailRow(
-                  label: 'Kit owned', value: 'Monitor, meters, radio set'),
-              DPDetailRow(label: 'Day rate', value: candidate.rateRange),
-              const DPDetailRow(
-                  label: 'Availability', value: 'Open for selected dates'),
+            rows: [
+              ('Department', candidate.skills.first),
+              ('Specialty', candidate.notes),
+              ('Kit owned', 'Yes — full package'),
+              ('Crew size', 'Solo + 1 assistant'),
+            ],
+          ),
+          right: _InfoSection(
+            title: 'Rate card',
+            icon: Icons.receipt_long_outlined,
+            rows: [
+              ('Day rate', candidate.rateRange),
+              (
+                'Overtime',
+                '${_pkr((dpMoneyFromLabel(candidate.rateRange) * 0.14).round())} / hr'
+              ),
+              (
+                'Kit fee',
+                '${_pkr((dpMoneyFromLabel(candidate.rateRange) * 0.3).round())} / day'
+              ),
+              ('Travel', 'Billed at cost'),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        _VideoRailsSection(
-            categories: const ['Drama', 'TVC', 'BTS', 'Night work']),
+        const _GallerySection(
+          title: 'Showreel & stills',
+          filters: ['Feature', 'TVC', 'Documentary'],
+          tiles: [
+            'Feature',
+            'Feature',
+            'TVC',
+            'TVC',
+            'Documentary',
+            'Documentary'
+          ],
+        ),
+        const SizedBox(height: 12),
+        _WorkHistorySection(
+          title: 'Work history / credits',
+          rows: const [
+            ('Jhelum Drama Pilot', 'DOP · 2026'),
+            ('Echo Street Music Video', 'DOP · 2026'),
+            ('Northern Sky', 'Camera operator · 2025'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _InfoSection(
+          title: 'Socials, availability, reviews',
+          icon: Icons.public_outlined,
+          rows: [
+            (
+              'Instagram',
+              '${candidate.instagramHandle} · ${(candidate.instagramFollowers / 1000).toStringAsFixed(1)}k',
+            ),
+            (
+              'Availability',
+              candidate.available ? 'Open for selected dates' : 'Limited dates',
+            ),
+            ('Reviews', '${candidate.rating}/5'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LocationProfile extends StatelessWidget {
+  final DpCandidate candidate;
+
+  const _LocationProfile({required this.candidate});
+
+  @override
+  Widget build(BuildContext context) {
+    final dayRate = dpMoneyFromLabel(candidate.rateRange);
+    return Column(
+      children: [
+        const _GallerySection(
+          title: 'Photo gallery',
+          filters: ['Main hall', 'Cyclorama', 'Green room', 'Exterior'],
+          tiles: [
+            'Main hall',
+            'Cyclorama',
+            'Green room',
+            'Exterior',
+            'Main hall',
+            'Cyclorama'
+          ],
+        ),
+        const SizedBox(height: 12),
+        DPTwoColumn(
+          left: const _InfoSection(
+            title: 'Specs',
+            icon: Icons.location_city_outlined,
+            rows: [
+              ('Size', '4,200 sq ft'),
+              ('Ceiling height', '18 ft'),
+              ('Power', '3-phase, 200A'),
+              ('Parking', '12 vehicles'),
+            ],
+          ),
+          right: _InfoSection(
+            title: 'Rate card',
+            icon: Icons.receipt_long_outlined,
+            rows: [
+              ('Half day', _pkr((dayRate * 0.6).round())),
+              ('Full day', _pkr(dayRate)),
+              ('Weekly', _pkr((dayRate * 5.5).round())),
+              ('Permits', 'Included'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _WorkHistorySection(
+          title: 'Recent bookings',
+          rows: const [
+            ('Aurora Biscuit TVC', 'Pre-production · Jul 2026'),
+            ('Echo Street Music Video', 'Wrapped · Jul 2026'),
+            ('Bank Forward TVC', 'Wrapped · 2025'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _InfoSection(
+          title: 'Address, availability, reviews',
+          icon: Icons.public_outlined,
+          rows: [
+            ('Address', '${candidate.city} · exact address on booking'),
+            (
+              'Availability',
+              candidate.available ? 'Open weekdays' : 'Limited dates',
+            ),
+            ('Reviews', '${candidate.rating}/5'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _EquipmentProfile extends StatelessWidget {
+  final DpCandidate candidate;
+
+  const _EquipmentProfile({required this.candidate});
+
+  @override
+  Widget build(BuildContext context) {
+    final dayRate = dpMoneyFromLabel(candidate.rateRange);
+    return Column(
+      children: [
+        DPTwoColumn(
+          left: _InfoSection(
+            title: 'Spec sheet',
+            icon: Icons.video_camera_back_outlined,
+            rows: [
+              ('Kit', candidate.skills.join(', ')),
+              ('Output', 'HMI equivalent'),
+              ('Accessories', 'Stands, diffusion, gel kit'),
+              ('Power draw', '2.4kW total'),
+            ],
+          ),
+          right: _InfoSection(
+            title: 'Rate card',
+            icon: Icons.receipt_long_outlined,
+            rows: [
+              ('Day', _pkr(dayRate)),
+              ('Week', _pkr((dayRate * 5).round())),
+              ('Deposit', '${_pkr((dayRate * 1.2).round())} refundable'),
+              ('Insurance', 'Included'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const _GallerySection(
+          title: 'Photos',
+          filters: ['Kit', 'On-set', 'Case'],
+          tiles: ['Kit', 'Kit', 'On-set', 'On-set', 'Case', 'Case'],
+        ),
+        const SizedBox(height: 12),
+        _WorkHistorySection(
+          title: 'Recent rentals',
+          rows: const [
+            ('Echo Street Music Video', 'Jul 2026'),
+            ('Noor Couture Campaign', 'Jul 2026'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _InfoSection(
+          title: 'Condition, availability, reviews',
+          icon: Icons.public_outlined,
+          rows: [
+            ('Condition', 'Excellent — serviced monthly'),
+            (
+              'Availability',
+              candidate.available ? 'Available now' : 'Limited dates',
+            ),
+            ('Reviews', '${candidate.rating}/5'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AgencyProfile extends StatelessWidget {
+  final DpCandidate candidate;
+
+  const _AgencyProfile({required this.candidate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const _GallerySection(
+          title: 'Roster preview',
+          filters: ['Lead talent', 'Background', 'Kids'],
+          tiles: [
+            'Talent 01',
+            'Talent 02',
+            'Talent 03',
+            'Talent 04',
+            'Talent 05',
+            'Talent 06'
+          ],
+        ),
+        const SizedBox(height: 12),
+        DPTwoColumn(
+          left: _InfoSection(
+            title: 'Agency details',
+            icon: Icons.corporate_fare_outlined,
+            rows: [
+              ('Roster size', '120 talents'),
+              ('Specialties', candidate.skills.join(', ')),
+              ('Response time', '4h median'),
+              ('Active contracts', '${candidate.completedBookings ~/ 3}'),
+            ],
+          ),
+          right: _InfoSection(
+            title: 'Rate & terms',
+            icon: Icons.receipt_long_outlined,
+            rows: [
+              ('Commission', '12% standard'),
+              ('Casting fee', candidate.rateRange),
+              ('Payment terms', '50% upfront'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _WorkHistorySection(
+          title: 'Recent placements',
+          rows: const [
+            ('Aurora Biscuit TVC', 'Casting · Jul 2026'),
+            ('Hunza Winter Film', 'Casting · Jul 2026'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _InfoSection(
+          title: 'Office, availability, reviews',
+          icon: Icons.public_outlined,
+          rows: [
+            ('Office', '${candidate.city} · exact address on booking'),
+            ('Reviews', '${candidate.rating}/5'),
+            (
+              'Availability',
+              candidate.available ? 'Accepting new briefs' : 'Limited capacity',
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -446,14 +662,20 @@ class _CrewProfile extends StatelessWidget {
 
 class _ShowreelSection extends StatelessWidget {
   final DpCandidate candidate;
+  final String title;
+  final String? caption;
 
-  const _ShowreelSection({required this.candidate});
+  const _ShowreelSection({
+    required this.candidate,
+    this.title = 'Featured showreel',
+    this.caption,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return _ProfileSection(
-      title: 'Featured showreel',
+      title: title,
       icon: Icons.play_circle_outline_rounded,
       children: [
         AspectRatio(
@@ -471,7 +693,10 @@ class _ShowreelSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        dpText(context, '${candidate.name} selected reel • in-app playback'),
+        dpText(
+          context,
+          caption ?? '${candidate.name} selected reel • in-app playback',
+        ),
       ],
     );
   }
@@ -497,68 +722,34 @@ class _SnapshotSection extends StatelessWidget {
   }
 }
 
-class _VideoRailsSection extends StatelessWidget {
-  final List<String> categories;
+/// One reusable gallery shape (filter chips + tile grid) covering every
+/// "gallery" style section across categories — video portfolios, photo
+/// galleries, showreels & stills, roster previews all render identically.
+class _GallerySection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<String> filters;
+  final List<String> tiles;
 
-  const _VideoRailsSection({required this.categories});
-
-  @override
-  Widget build(BuildContext context) {
-    return _ProfileSection(
-      title: 'Categorized video portfolio',
-      icon: Icons.video_library_outlined,
-      children: [
-        for (final category in categories.take(5)) ...[
-          Row(
-            children: [
-              Expanded(
-                  child: dpText(context, '$category (${_countFor(category)})',
-                      strong: true)),
-              const DPStatusChip(label: 'Moderated', tone: DpTone.success),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (var i = 0; i < 3; i++) ...[
-                  _MediaThumb(
-                    title: '$category work ${i + 1}',
-                    subtitle: i == 0 ? 'Lead • 2026' : 'Supporting • 2025',
-                    icon: Icons.play_arrow_rounded,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ],
-    );
-  }
-
-  int _countFor(String category) => category.length % 4 + 2;
-}
-
-class _PhotoGallerySection extends StatelessWidget {
-  final List<String> categories;
-
-  const _PhotoGallerySection({required this.categories});
+  const _GallerySection({
+    required this.title,
+    this.icon = Icons.photo_library_outlined,
+    required this.filters,
+    required this.tiles,
+  });
 
   @override
   Widget build(BuildContext context) {
     return _ProfileSection(
-      title: 'Photo gallery',
-      icon: Icons.photo_library_outlined,
+      title: title,
+      icon: icon,
       children: [
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final category in categories)
-              DPStatusChip(label: category, tone: DpTone.info),
+            for (final filter in filters)
+              DPStatusChip(label: filter, tone: DpTone.info),
           ],
         ),
         const SizedBox(height: 10),
@@ -566,8 +757,7 @@ class _PhotoGallerySection extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (var i = 0; i < 8; i++)
-              _PhotoTile(label: categories[i % categories.length]),
+            for (final tile in tiles) _PhotoTile(label: tile),
           ],
         ),
       ],
@@ -575,31 +765,47 @@ class _PhotoGallerySection extends StatelessWidget {
   }
 }
 
-class _CreditsSection extends StatelessWidget {
-  final DpCandidate candidate;
+/// Plain label/value rows section — used for specs, rate cards, comp
+/// cards, and the socials/availability/reviews block per category.
+class _InfoSection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<(String, String)> rows;
 
-  const _CreditsSection({required this.candidate});
+  const _InfoSection({
+    required this.title,
+    required this.icon,
+    required this.rows,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final credits = [
-      ['Northern Sky', 'Drama', 'Supporting Lead', '2026', 'Ayaan Films'],
-      ['Bank Forward', 'TVC', 'Principal', '2025', 'Orbit Brands'],
-      ['Stage Lines', 'Theatre', 'Lead', '2024', 'Lahore Arts'],
-    ];
     return _ProfileSection(
-      title: 'Work history / credits',
+      title: title,
+      icon: icon,
+      children: [
+        for (final row in rows) DPDetailRow(label: row.$1, value: row.$2),
+      ],
+    );
+  }
+}
+
+/// Same label/value row shape as [_InfoSection], used for work history,
+/// recent bookings/rentals/placements — kept as a separate name to match
+/// the design's distinct "history" section type.
+class _WorkHistorySection extends StatelessWidget {
+  final String title;
+  final List<(String, String)> rows;
+
+  const _WorkHistorySection({required this.title, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ProfileSection(
+      title: title,
       icon: Icons.workspace_premium_outlined,
       children: [
-        for (final credit in credits)
-          DPDetailRow(
-            label: '${credit[0]} • ${credit[1]}',
-            value: '${credit[2]} • ${credit[3]} • ${credit[4]}',
-          ),
-        DPDetailRow(
-          label: 'CineConnect verified bookings',
-          value: '${candidate.completedBookings} stamped records',
-        ),
+        for (final row in rows) DPDetailRow(label: row.$1, value: row.$2),
       ],
     );
   }
@@ -619,22 +825,24 @@ class _SocialsRateAvailabilitySection extends StatelessWidget {
         DPDetailRow(
           label: 'Instagram',
           value:
-              '${candidate.instagramHandle} • ${(candidate.instagramFollowers / 1000).toStringAsFixed(1)}k followers',
+              '${candidate.instagramHandle} · ${(candidate.instagramFollowers / 1000).toStringAsFixed(1)}k',
         ),
-        const DPDetailRow(
-            label: 'Social preview', value: '6 recent tiles • self-reported'),
         DPDetailRow(label: 'Rate card', value: candidate.rateRange),
         DPDetailRow(
           label: 'Availability',
           value:
               candidate.available ? 'Open for selected dates' : 'Limited dates',
         ),
-        DPDetailRow(
-            label: 'Reviews',
-            value: '${candidate.rating}/5 • detailed breakdown'),
+        DPDetailRow(label: 'Reviews', value: '${candidate.rating}/5'),
       ],
     );
   }
+}
+
+String _pkr(int amount) {
+  if (amount >= 1000000) return 'PKR ${(amount / 1000000).toStringAsFixed(1)}M';
+  if (amount >= 1000) return 'PKR ${(amount / 1000).round()}k';
+  return 'PKR $amount';
 }
 
 class _ProfileSection extends StatelessWidget {
@@ -656,49 +864,6 @@ class _ProfileSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,
-      ),
-    );
-  }
-}
-
-class _MediaThumb extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-
-  const _MediaThumb({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      width: 174,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: colors.cardGradient,
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 72,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: colors.goldGlow.withValues(alpha: 0.22),
-            ),
-            child: Center(child: Icon(icon, color: colors.goldDark, size: 28)),
-          ),
-          const SizedBox(height: 8),
-          dpText(context, title, strong: true),
-          const SizedBox(height: 3),
-          dpText(context, subtitle),
-        ],
       ),
     );
   }
