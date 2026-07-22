@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart'
+    show EntityAvatar, AvatarStack;
 import '../models/dp_booking.dart';
 import '../models/dp_contract.dart';
 import '../models/dp_payment.dart';
 import '../models/dp_project.dart';
+import '../routes/director_producer_routes.dart';
 import '../widgets/dp_booking_status_spine.dart';
 import '../widgets/dp_budget_health_bar.dart';
 import '../widgets/dp_glass_card.dart';
@@ -63,6 +66,18 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DPProjectBreadcrumbs(project: project, current: _tabs[_tab]),
+        const SizedBox(height: 6),
+        DPPageHeader(
+          eyebrow: '${project.status} · ${project.city}',
+          title: 'Project Hub',
+          actionLabel: 'Open Room',
+          actionIcon: Icons.forum_outlined,
+          onActionTap: () => Navigator.pushNamed(
+            context,
+            DirectorProducerRoutes.room,
+            arguments: project.id,
+          ),
+        ),
         const SizedBox(height: 10),
         _ProjectHeader(
           project: project,
@@ -78,12 +93,10 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
               for (var i = 0; i < _tabs.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
+                  child: DpDotChip(
+                    label: _tabs[i],
+                    active: _tab == i,
                     onTap: () => setState(() => _tab = i),
-                    child: DPStatusChip(
-                      label: _tabs[i],
-                      tone: _tab == i ? DpTone.warning : DpTone.neutral,
-                    ),
                   ),
                 ),
             ],
@@ -156,19 +169,13 @@ class _ProjectHeader extends StatelessWidget {
                         fontSize: 22,
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 8),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 14,
+                      runSpacing: 6,
                       children: [
-                        DPStatusChip(label: project.type, tone: DpTone.warning),
-                        DPStatusChip(label: project.status, tone: DpTone.info),
-                        DPStatusChip(label: project.city, tone: DpTone.neutral),
-                        DPStatusChip(
-                          label: project.dateRange,
-                          tone: DpTone.neutral,
-                          icon: Icons.date_range_outlined,
-                        ),
+                        DpDotLabel(label: project.type, tone: DpTone.warning),
+                        DpDotLabel(label: project.status, tone: DpTone.info),
                       ],
                     ),
                   ],
@@ -177,35 +184,94 @@ class _ProjectHeader extends StatelessWidget {
               _ProgressRing(value: project.progress),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
+              DPStatusChip(label: project.city, tone: DpTone.neutral),
               DPStatusChip(
-                label:
-                    'Budget PKR ${(project.estimatedBudget / 1000000).toStringAsFixed(1)}M',
-                tone: DpTone.purple,
+                label: project.dateRange,
+                tone: DpTone.neutral,
+                icon: Icons.date_range_outlined,
               ),
-              DPStatusChip(
-                label:
-                    'Committed PKR ${(project.confirmedCost / 1000000).toStringAsFixed(1)}M',
-                tone: DpTone.warning,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: colors.borderMuted),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 18,
+                  runSpacing: 10,
+                  children: [
+                    _BudgetStat(
+                      label: 'Budget',
+                      value:
+                          'PKR ${(project.estimatedBudget / 1000000).toStringAsFixed(1)}M',
+                    ),
+                    _BudgetStat(
+                      label: 'Committed',
+                      value:
+                          'PKR ${(project.confirmedCost / 1000000).toStringAsFixed(1)}M',
+                      color: colors.goldDark,
+                    ),
+                    _BudgetStat(
+                      label: 'Paid',
+                      value: 'PKR ${(paid / 1000).round()}K',
+                      color: colors.success,
+                    ),
+                    _BudgetStat(
+                      label: 'Signed',
+                      value: '$signed/${contracts.length}',
+                    ),
+                  ],
+                ),
               ),
-              DPStatusChip(
-                label: 'Paid PKR ${(paid / 1000).round()}k',
-                tone: DpTone.success,
+              AvatarStack(
+                avatars: [
+                  for (final member in project.team.take(4))
+                    EntityAvatar(label: member, size: 26),
+                ],
               ),
-              DPStatusChip(
-                label: 'Signed $signed/${contracts.length}',
-                tone: DpTone.success,
-              ),
-              for (final member in project.team.take(4))
-                DPStatusChip(label: member, tone: DpTone.neutral),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BudgetStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+
+  const _BudgetStat({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: AppTextStyles.cardLabel.copyWith(
+            color: color ?? colors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }

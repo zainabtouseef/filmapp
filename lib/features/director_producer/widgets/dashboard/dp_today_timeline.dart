@@ -2,134 +2,127 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/cards/cine_card_system.dart';
 import '../../data/director_producer_demo_data.dart';
 import '../../models/dp_schedule_item.dart';
 import '../../routes/director_producer_routes.dart';
-import '../dp_project_console_widgets.dart';
-import '../dp_status_chip.dart';
+import '../dp_glass_card.dart';
 
-/// Compact vertical "today, across every production" timeline.
+CineTone _eventTone(DpScheduleItem event) {
+  if (event.conflict) return CineTone.critical;
+  final status = event.status.toLowerCase();
+  if (status.contains('confirmed')) return CineTone.positive;
+  if (status.contains('pending') || status.contains('hold')) {
+    return CineTone.information;
+  }
+  return CineTone.warning;
+}
+
+/// Today's production timeline — the next three events, with the full
+/// schedule available from the parent section action.
 class DPTodayTimeline extends StatelessWidget {
   const DPTodayTimeline({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final events = DirectorProducerDemoData.schedule
         .where((event) => event.date == 'Today' || event.date == 'Jul 21')
         .toList();
     final rows = events.isEmpty
-        ? DirectorProducerDemoData.schedule.take(4).toList()
+        ? DirectorProducerDemoData.schedule.take(3).toList()
         : events;
+    final previewRows = rows.take(3).toList();
 
-    if (rows.isEmpty) {
-      final colors = context.appColors;
+    if (previewRows.isEmpty) {
       return Text(
         'No production events scheduled today.',
         style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
       );
     }
 
-    return Column(
-      children: [
-        for (var i = 0; i < rows.length; i++)
-          _TimelineRow(event: rows[i], isLast: i == rows.length - 1),
-      ],
+    return DPGlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Column(
+        children: [
+          for (var i = 0; i < previewRows.length; i++)
+            _TimelineRow(event: previewRows[i], showDivider: i > 0),
+        ],
+      ),
     );
   }
 }
 
 class _TimelineRow extends StatelessWidget {
   final DpScheduleItem event;
-  final bool isLast;
+  final bool showDivider;
 
-  const _TimelineRow({required this.event, required this.isLast});
+  const _TimelineRow({required this.event, required this.showDivider});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final dotColor = event.conflict
-        ? colors.danger
-        : event.status.toLowerCase().contains('pending')
-            ? colors.infoBlue
-            : colors.goldMid;
+    final tone = _eventTone(event);
+    final color = cineToneColor(context, tone);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () =>
           Navigator.pushNamed(context, DirectorProducerRoutes.schedule),
-      child: IntrinsicHeight(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(top: BorderSide(color: colors.borderMuted))
+              : null,
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
               width: 62,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  event.time,
-                  style: AppTextStyles.caption.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
+              child: Text(
+                event.time,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            Column(
-              children: [
-                Container(
-                  width: 9,
-                  height: 9,
-                  margin: const EdgeInsets.only(top: 4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: dotColor,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 1.4,
-                      margin: const EdgeInsets.symmetric(vertical: 2),
-                      color: colors.borderMuted,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 10),
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            event.location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.cardLabel
-                                .copyWith(color: colors.textPrimary),
-                          ),
-                        ),
-                        DPStatusChip(
-                          label: event.status,
-                          tone: event.conflict
-                              ? DpTone.danger
-                              : dpToneForStatus(event.status),
-                        ),
-                      ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${event.project} — ${event.location}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.cardTitle.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 13.5,
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${event.project} • ${event.stakeholders.join(', ')}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.smallMeta
-                          .copyWith(color: colors.textSecondary),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    event.stakeholders.join(', '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.smallMeta
+                        .copyWith(color: colors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              event.status,
+              style: AppTextStyles.caption.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

@@ -39,14 +39,20 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: colors.goldGlow.withValues(alpha: 0.2),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: colors.softSurface,
+                ),
+                alignment: Alignment.center,
                 child: Text(
                   candidate.avatarLabel,
                   style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
+                    color: colors.goldDark,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -67,7 +73,7 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${candidate.city} - ${candidate.rateRange}',
+                      '${candidate.city} · ${candidate.rateRange}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.smallMeta.copyWith(
@@ -88,29 +94,27 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 9),
           Wrap(
-            spacing: 7,
-            runSpacing: 7,
+            spacing: 14,
+            runSpacing: 6,
             children: [
-              DPStatusChip(label: candidate.category, tone: DpTone.info),
-              DPStatusChip(
+              DpDotLabel(label: candidate.category, tone: DpTone.info),
+              DpDotLabel(
                 label: candidate.available ? 'Available' : 'Limited',
                 tone: candidate.available ? DpTone.success : DpTone.warning,
               ),
               if (candidate.verified)
-                const DPStatusChip(
-                  label: 'Verified',
-                  tone: DpTone.success,
-                  icon: Icons.verified_outlined,
-                ),
+                const DpDotLabel(label: 'Verified', tone: DpTone.warning),
               if (candidate.isNew)
-                const DPStatusChip(
-                  label: 'NEW',
-                  tone: DpTone.warning,
-                  icon: Icons.fiber_new_outlined,
+                const DpDotLabel(label: 'New', tone: DpTone.warning),
+              Text(
+                '★ ${candidate.rating}',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textTertiary,
+                  fontWeight: FontWeight.w700,
                 ),
-              DPStatusChip(label: '${candidate.rating}', tone: DpTone.warning),
+              ),
             ],
           ),
           const SizedBox(height: 9),

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
-import '../../../shared/cards/metric_action_card.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../data/director_producer_demo_data.dart';
 import '../models/dp_payment.dart';
+import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_milestone_board.dart';
+import '../widgets/dp_status_chip.dart';
 
 class DPPaymentCenterScreen extends StatefulWidget {
   const DPPaymentCenterScreen({super.key});
@@ -20,6 +21,7 @@ class DPPaymentCenterScreen extends StatefulWidget {
 
 class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
   Future<PaymentDashboardDto>? _future;
+  String _tab = 'Ledger';
 
   @override
   void didChangeDependencies() {
@@ -44,16 +46,23 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
           if (!snapshot.hasError && snapshot.data != null) {
             return _PaymentCenterContent(
               payments: _toDpPayments(snapshot.data!.schedules),
-              dashboard: snapshot.data!,
+              tab: _tab,
+              onTab: (value) => setState(() => _tab = value),
             );
           }
           return _PaymentCenterContent(
             payments: DirectorProducerDemoData.payments,
+            tab: _tab,
+            onTab: (value) => setState(() => _tab = value),
           );
         },
       );
     }
-    return _PaymentCenterContent(payments: DirectorProducerDemoData.payments);
+    return _PaymentCenterContent(
+      payments: DirectorProducerDemoData.payments,
+      tab: _tab,
+      onTab: (value) => setState(() => _tab = value),
+    );
   }
 
   List<DpPayment> _toDpPayments(List<PaymentScheduleDto> schedules) {
@@ -86,63 +95,233 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
 
 class _PaymentCenterContent extends StatelessWidget {
   final List<DpPayment> payments;
-  final PaymentDashboardDto? dashboard;
+  final String tab;
+  final ValueChanged<String> onTab;
 
-  const _PaymentCenterContent({required this.payments, this.dashboard});
+  const _PaymentCenterContent({
+    required this.payments,
+    required this.tab,
+    required this.onTab,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final due = payments.where((p) => p.status == 'Due').toList();
+    final proof = payments.where((p) => p.status == 'Proof Uploaded').toList();
+    final verified = payments.where((p) => p.status == 'Verified').toList();
+    final rejected = payments.where((p) => p.status == 'Rejected').toList();
+    final dueTotal = due.fold<int>(0, (sum, payment) => sum + payment.amount);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DPPageHeader(
+          eyebrow: '${payments.length} milestones · ${due.length} due',
+          title: 'Payments',
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            DpDotChip(
+              label: 'Ledger',
+              active: tab == 'Ledger',
+              onTap: () => onTab('Ledger'),
+            ),
+            const SizedBox(width: 8),
+            DpDotChip(
+              label: 'History',
+              active: tab == 'History',
+              onTap: () => onTab('History'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _StatGrid(
+          dueCount: due.length,
+          dueTotal: dueTotal,
+          proofCount: proof.length,
+          verifiedCount: verified.length,
+          rejectedCount: rejected.length,
+        ),
+        const SizedBox(height: 14),
+        if (tab == 'Ledger')
+          DPMilestoneBoard(payments: payments)
+        else
+          _HistoryList(items: [...verified, ...rejected]),
+      ],
+    );
+  }
+}
+
+class _StatGrid extends StatelessWidget {
+  final int dueCount;
+  final int dueTotal;
+  final int proofCount;
+  final int verifiedCount;
+  final int rejectedCount;
+
+  const _StatGrid({
+    required this.dueCount,
+    required this.dueTotal,
+    required this.proofCount,
+    required this.verifiedCount,
+    required this.rejectedCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final dueTotal = payments
-        .where((payment) => payment.status == 'Due')
-        .fold<int>(0, (sum, payment) => sum + payment.amount);
+    return DPGlassCard(
+      accentColor: colors.goldDark,
+      padding: const EdgeInsets.all(16),
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 14,
+        childAspectRatio: 2.6,
+        children: [
+          _StatCell(
+            label: 'Due',
+            value: '$dueCount',
+            subtitle: 'PKR $dueTotal',
+            color: colors.goldDark,
+          ),
+          _StatCell(
+            label: 'Proof uploaded',
+            value: '$proofCount',
+            subtitle: 'Awaiting verification',
+            color: colors.infoBlue,
+          ),
+          _StatCell(
+            label: 'Verified',
+            value: '$verifiedCount',
+            subtitle: 'Milestones clear',
+            color: colors.success,
+          ),
+          _StatCell(
+            label: 'Rejected',
+            value: '$rejectedCount',
+            subtitle: 'Needs fresh proof',
+            color: colors.danger,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  final String label;
+  final String value;
+  final String subtitle;
+  final Color color;
+
+  const _StatCell({
+    required this.label,
+    required this.value,
+    required this.subtitle,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        dpHeaderAction(
-          context,
-          icon: Icons.receipt_long_outlined,
-          label: 'Ledger',
-          onTap: () => Navigator.pushNamed(context, CoreRoutes.ledger),
-        ),
-        const SizedBox(height: 8),
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              icon: Icons.pending_actions_rounded,
-              value: "${payments.where((p) => p.status == 'Due').length}",
-              title: 'Due',
-              subtitle: dashboard == null
-                  ? 'PKR $dueTotal'
-                  : 'Paid PKR ${dashboard!.debitMinor ~/ 100}',
-              accentColor: colors.goldMid,
+        Row(
+          children: [
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
             ),
-            MetricActionItem(
-              icon: Icons.upload_file_rounded,
-              value:
-                  "${payments.where((p) => p.status == 'Proof Uploaded').length}",
-              title: 'Proof Uploaded',
-              subtitle: 'Awaiting verification',
-              accentColor: colors.infoBlue,
-            ),
-            MetricActionItem(
-              icon: Icons.verified_rounded,
-              value: "${payments.where((p) => p.status == 'Verified').length}",
-              title: 'Verified',
-              subtitle: 'Milestones clear',
-              accentColor: colors.success,
-            ),
-            MetricActionItem(
-              icon: Icons.error_outline_rounded,
-              value: "${payments.where((p) => p.status == 'Rejected').length}",
-              title: 'Rejected',
-              subtitle: 'Needs fresh proof',
-              accentColor: colors.danger,
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style:
+                  AppTextStyles.caption.copyWith(color: colors.textSecondary),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        DPMilestoneBoard(payments: payments),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: AppTextStyles.cardTitle
+              .copyWith(color: colors.textPrimary, fontSize: 21),
+        ),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+        ),
+      ],
+    );
+  }
+}
+
+class _HistoryList extends StatelessWidget {
+  final List<DpPayment> items;
+
+  const _HistoryList({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    if (items.isEmpty) {
+      return Text(
+        'No verified or rejected payments yet.',
+        style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+      );
+    }
+    return Column(
+      children: [
+        for (final item in items) ...[
+          DPGlassCard(
+            accentColor:
+                item.status == 'Verified' ? colors.success : colors.danger,
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.booking,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cardLabel.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${item.stakeholder} · PKR ${item.amount} · ${item.dueDate}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.smallMeta
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                DPStatusChip(
+                  label: item.status,
+                  tone: item.status == 'Verified'
+                      ? DpTone.success
+                      : DpTone.danger,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }

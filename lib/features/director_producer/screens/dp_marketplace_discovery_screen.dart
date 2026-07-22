@@ -15,6 +15,16 @@ import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 
+const _categoryKeys = [
+  'All',
+  'Talent',
+  'Models',
+  'Crew',
+  'Locations',
+  'Media & Equipment',
+  'Agencies',
+];
+
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
   final String? initialCategory;
   final String? projectId;
@@ -33,9 +43,17 @@ class DPMarketplaceDiscoveryScreen extends StatefulWidget {
 class _DPMarketplaceDiscoveryScreenState
     extends State<DPMarketplaceDiscoveryScreen> {
   late String _category = widget.initialCategory ?? 'All';
-  String _trustFilter = 'All';
+  bool _verifiedOnly = false;
+  bool _newOnly = false;
+  final _search = TextEditingController();
   String? _projectId;
   Future<List<DpCandidate>>? _candidatesFuture;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -68,12 +86,14 @@ class _DPMarketplaceDiscoveryScreenState
 
   bool _matchesFilters(DpCandidate candidate) {
     final categoryMatch = _category == 'All' || candidate.category == _category;
-    final trustMatch = switch (_trustFilter) {
-      'Verified' => candidate.verified,
-      'New' => candidate.isNew,
-      _ => true,
-    };
-    return categoryMatch && trustMatch;
+    final trustMatch = (!_verifiedOnly || candidate.verified) &&
+        (!_newOnly || candidate.isNew);
+    final query = _search.text.trim().toLowerCase();
+    final queryMatch = query.isEmpty ||
+        candidate.name.toLowerCase().contains(query) ||
+        candidate.city.toLowerCase().contains(query) ||
+        candidate.category.toLowerCase().contains(query);
+    return categoryMatch && trustMatch && queryMatch;
   }
 
   void _setCategory(String category) {
@@ -85,18 +105,26 @@ class _DPMarketplaceDiscoveryScreenState
 
   @override
   Widget build(BuildContext context) {
+    final total = DirectorProducerDemoData.candidates.length;
+    final verifiedCount =
+        DirectorProducerDemoData.candidates.where((c) => c.verified).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        dpHeaderAction(
-          context,
-          icon: Icons.tune_rounded,
-          label: 'Filters',
-          onTap: () =>
+        DPPageHeader(
+          eyebrow: '$total listings · $verifiedCount verified',
+          title: 'Marketplace',
+          actionLabel: 'Smart Filters',
+          actionIcon: Icons.tune_rounded,
+          onActionTap: () =>
               Navigator.pushNamed(context, DirectorProducerRoutes.filters),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 14),
         _MarketplaceSearchBar(
+          controller: _search,
+          onChanged: () => setState(() {}),
+          onFilters: () =>
+              Navigator.pushNamed(context, DirectorProducerRoutes.filters),
           onSaveSearch: _saveCurrentSearch,
         ),
         const SizedBox(height: 10),
@@ -119,53 +147,37 @@ class _DPMarketplaceDiscoveryScreenState
           ),
           const SizedBox(height: 10),
         ],
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final chip in const ['All', 'Verified', 'New'])
-              GestureDetector(
-                onTap: () => setState(() => _trustFilter = chip),
-                child: DPStatusChip(
-                  label: chip,
-                  tone: _trustFilter == chip ? DpTone.warning : DpTone.neutral,
-                  icon: chip == 'Verified'
-                      ? Icons.verified_outlined
-                      : chip == 'New'
-                          ? Icons.fiber_new_outlined
-                          : null,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 10),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (final category in const [
-                'All',
-                'Talent',
-                'Models',
-                'Crew',
-                'Locations',
-                'Media & Equipment',
-                'Agencies',
-              ])
+              for (final category in _categoryKeys)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
+                  child: DpDotChip(
+                    label: category,
+                    active: _category == category,
                     onTap: () => _setCategory(category),
-                    child: DPStatusChip(
-                      label: category,
-                      tone: _category == category
-                          ? DpTone.warning
-                          : DpTone.neutral,
-                    ),
                   ),
                 ),
             ],
           ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            DpDotChip(
+              label: 'Verified only',
+              active: _verifiedOnly,
+              onTap: () => setState(() => _verifiedOnly = !_verifiedOnly),
+            ),
+            const SizedBox(width: 8),
+            DpDotChip(
+              label: 'New this week',
+              active: _newOnly,
+              onTap: () => setState(() => _newOnly = !_newOnly),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         FutureBuilder<List<DpCandidate>>(
@@ -199,7 +211,6 @@ class _DPMarketplaceDiscoveryScreenState
                 DPResponsiveGrid(
                   minWidth: 300,
                   children: candidates
-                      .take(12)
                       .map(
                         (candidate) => DPCandidateCard(
                           candidate: candidate,
@@ -444,37 +455,103 @@ class _ShortlistTarget {
 }
 
 class _MarketplaceSearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onChanged;
+  final VoidCallback onFilters;
   final VoidCallback onSaveSearch;
 
-  const _MarketplaceSearchBar({required this.onSaveSearch});
+  const _MarketplaceSearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onFilters,
+    required this.onSaveSearch,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return DPGlassCard(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      child: Row(
-        children: [
-          Icon(Icons.search_rounded, color: colors.goldDark, size: 19),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Search talent, crew, locations, media, agencies...',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
-              ),
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            decoration: BoxDecoration(
+              gradient: colors.searchGradient,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: colors.border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search_rounded, color: colors.goldDark, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    onChanged: (_) => onChanged(),
+                    style: AppTextStyles.smallMeta
+                        .copyWith(color: colors.textPrimary),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      hintText: 'Search talent, crew, locations…',
+                      hintStyle: AppTextStyles.smallMeta
+                          .copyWith(color: colors.textSecondary),
+                    ),
+                  ),
+                ),
+                if (controller.text.isNotEmpty)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      controller.clear();
+                      onChanged();
+                    },
+                    child: Icon(Icons.close_rounded,
+                        color: colors.iconMuted, size: 18),
+                  ),
+              ],
             ),
           ),
-          DPHolographicButton(
-            label: 'Save Search',
-            icon: Icons.bookmark_add_outlined,
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: 'Save search',
+          child: GestureDetector(
             onTap: onSaveSearch,
-            secondary: true,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(13),
+                color: colors.surface
+                    .withValues(alpha: colors.isLight ? 0.7 : 0.2),
+                border: Border.all(color: colors.border),
+              ),
+              child: Icon(Icons.bookmark_add_outlined,
+                  color: colors.icon, size: 19),
+            ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: 'Filters',
+          child: GestureDetector(
+            onTap: onFilters,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(13),
+                color: colors.surface
+                    .withValues(alpha: colors.isLight ? 0.7 : 0.2),
+                border: Border.all(color: colors.border),
+              ),
+              child: Icon(Icons.tune_rounded, color: colors.icon, size: 19),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

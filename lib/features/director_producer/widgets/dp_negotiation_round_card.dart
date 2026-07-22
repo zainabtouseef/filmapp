@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/dp_negotiation.dart';
-import 'dp_status_chip.dart';
+import 'dp_glass_card.dart';
 
 class DPNegotiationRoundCard extends StatelessWidget {
   final DpNegotiationRound round;
@@ -18,50 +18,69 @@ class DPNegotiationRoundCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(bottom: BorderSide(color: colors.borderMuted))
-            : null,
-      ),
+    final terms = [
+      round.schedule,
+      round.conditions,
+      round.message,
+    ].where((term) => term.trim().isNotEmpty).toList();
+    return Padding(
+      padding: EdgeInsets.only(bottom: showDivider ? 10 : 0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              DPStatusChip(label: 'Round ${round.round}', tone: DpTone.warning),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  round.sentBy,
+          DPGlassCard(
+            accentColor: colors.goldDark,
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colors.goldDark,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Round ${round.round} — ${round.sentBy}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.goldDark,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      round.timestamp,
+                      style: AppTextStyles.caption
+                          .copyWith(color: colors.textTertiary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${round.rate} · ${round.dates}',
                   style: AppTextStyles.cardLabel.copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              ),
-              Text(
-                round.timestamp,
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${round.rate} - ${round.dates}',
-            style: AppTextStyles.cardLabel.copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${round.schedule}\n${round.conditions}\n${round.message}',
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-              height: 1.3,
+                for (final term in terms) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    term,
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

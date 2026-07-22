@@ -4,7 +4,107 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/cards/cine_card_system.dart';
+import 'dp_glass_card.dart';
+import 'dp_holographic_button.dart';
+
+class DPPageHeader extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String? actionLabel;
+  final IconData? actionIcon;
+  final VoidCallback? onActionTap;
+  final Widget? trailing;
+
+  const DPPageHeader({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    this.actionLabel,
+    this.actionIcon,
+    this.onActionTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final action = trailing ??
+        (actionLabel == null || actionIcon == null
+            ? null
+            : DPHolographicButton(
+                label: actionLabel!,
+                icon: actionIcon!,
+                onTap: onActionTap,
+              ));
+
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.micro.copyWith(
+            color: colors.goldDark,
+            letterSpacing: 1.1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.heroSerifNumber.copyWith(
+            color: colors.textPrimary,
+            fontSize: 30,
+          ),
+        ),
+      ],
+    );
+
+    if (action == null) return heading;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stackAction =
+            constraints.maxWidth < (trailing == null ? 340 : 620);
+        if (stackAction) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              heading,
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth,
+                    minHeight: 44,
+                  ),
+                  child: action,
+                ),
+              ),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: heading),
+            const SizedBox(width: 12),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: trailing == null ? 260 : 360,
+                minHeight: 44,
+              ),
+              child: action,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 class DPResponsiveGrid extends StatelessWidget {
   final List<Widget> children;
@@ -104,18 +204,39 @@ class DPSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionContainer(
-      title: title,
-      treatment: SectionTreatment.open,
-      leading: IconBadge(
-        icon: icon,
-        tone: CineTone.premium,
-        compact: true,
+    final colors = context.appColors;
+    return DPGlassCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: colors.goldDark),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (actionText != null)
+                TextButton(onPressed: onActionTap, child: Text(actionText!)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: colors.borderMuted),
+          const SizedBox(height: 14),
+          child,
+        ],
       ),
-      action: actionText == null
-          ? null
-          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
-      child: child,
     );
   }
 }
@@ -163,29 +284,14 @@ Widget dpHeaderAction(
   required String label,
   required VoidCallback onTap,
 }) {
-  final colors = context.appColors;
   return Align(
     alignment: Alignment.centerRight,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: colors.goldDark),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: AppTextStyles.sectionAction.copyWith(
-                  color: colors.goldDark,
-                ),
-              ),
-            ],
-          ),
-        ),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 280, minHeight: 44),
+      child: DPHolographicButton(
+        label: label,
+        icon: icon,
+        onTap: onTap,
       ),
     ),
   );

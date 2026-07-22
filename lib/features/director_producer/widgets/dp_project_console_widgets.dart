@@ -352,12 +352,16 @@ class ProductionCalendar extends StatefulWidget {
 
 class _ProductionCalendarState extends State<ProductionCalendar> {
   late ProductionCalendarMode _mode = widget.initialMode;
+  int? _selectedDay;
 
   @override
   void didUpdateWidget(covariant ProductionCalendar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.projectId != widget.projectId) {
-      setState(() => _mode = ProductionCalendarMode.today);
+      setState(() {
+        _mode = ProductionCalendarMode.today;
+        _selectedDay = null;
+      });
     }
   }
 
@@ -376,7 +380,11 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
         const SizedBox(height: 12),
         switch (_mode) {
           ProductionCalendarMode.today => _TodayTimeline(events: events),
-          ProductionCalendarMode.month => _MonthCalendar(events: events),
+          ProductionCalendarMode.month => _MonthCalendar(
+              events: events,
+              selectedDay: _selectedDay,
+              onDaySelected: (day) => setState(() => _selectedDay = day),
+            ),
           ProductionCalendarMode.list =>
             _AgendaList(events: events.take(widget.listLimit).toList()),
         },
@@ -482,28 +490,69 @@ class _AgendaList extends StatelessWidget {
 
 class _MonthCalendar extends StatelessWidget {
   final List<DpScheduleItem> events;
+  final int? selectedDay;
+  final ValueChanged<int> onDaySelected;
 
-  const _MonthCalendar({required this.events});
+  const _MonthCalendar({
+    required this.events,
+    required this.selectedDay,
+    required this.onDaySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final days = List<int>.generate(35, (index) => index + 1);
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: days.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7,
-        mainAxisSpacing: 6,
-        crossAxisSpacing: 6,
-        childAspectRatio: 1.05,
-      ),
-      itemBuilder: (context, index) {
-        final day = days[index];
-        final matches =
-            events.where((event) => event.date.endsWith(' $day')).toList();
-        return _CalendarDayTile(day: day, events: matches);
-      },
+    final selectedEvents = selectedDay == null
+        ? const <DpScheduleItem>[]
+        : events
+            .where((event) => event.date.endsWith(' $selectedDay'))
+            .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: days.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
+            childAspectRatio: 1.05,
+          ),
+          itemBuilder: (context, index) {
+            final day = days[index];
+            final matches =
+                events.where((event) => event.date.endsWith(' $day')).toList();
+            return _CalendarDayTile(
+              day: day,
+              events: matches,
+              selected: selectedDay == day,
+              onTap: () => onDaySelected(day),
+            );
+          },
+        ),
+        if (selectedDay != null) ...[
+          const SizedBox(height: 10),
+          Container(height: 1, color: colors.borderMuted),
+          const SizedBox(height: 10),
+          Text(
+            'Day $selectedDay',
+            style:
+                AppTextStyles.panelLabel.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          if (selectedEvents.isEmpty)
+            Text(
+              'No events on this day.',
+              style:
+                  AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+            )
+          else
+            for (final event in selectedEvents) _CalendarEventRow(event: event),
+        ],
+      ],
     );
   }
 }
@@ -511,52 +560,71 @@ class _MonthCalendar extends StatelessWidget {
 class _CalendarDayTile extends StatelessWidget {
   final int day;
   final List<DpScheduleItem> events;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _CalendarDayTile({required this.day, required this.events});
+  const _CalendarDayTile({
+    required this.day,
+    required this.events,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.all(7),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: colors.surface.withValues(alpha: colors.isLight ? 0.72 : 0.18),
-        border: Border.all(
-          color: events.isEmpty ? colors.borderMuted : colors.goldMid,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: selected ? colors.goldGradient : null,
+          color: selected
+              ? null
+              : colors.surface.withValues(alpha: colors.isLight ? 0.72 : 0.18),
+          border: Border.all(
+            color: selected
+                ? colors.goldMid
+                : events.isEmpty
+                    ? colors.borderMuted
+                    : colors.goldMid,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$day',
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w800,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$day',
+              style: AppTextStyles.caption.copyWith(
+                color: selected ? colors.onGold : colors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          const Spacer(),
-          Wrap(
-            spacing: 3,
-            runSpacing: 3,
-            children: [
-              for (final event in events.take(3))
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: event.conflict
-                        ? colors.danger
-                        : event.status.toLowerCase().contains('pending')
-                            ? colors.infoBlue
-                            : colors.goldMid,
+            const Spacer(),
+            Wrap(
+              spacing: 3,
+              runSpacing: 3,
+              children: [
+                for (final event in events.take(3))
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected
+                          ? colors.onGold
+                          : event.conflict
+                              ? colors.danger
+                              : event.status.toLowerCase().contains('pending')
+                                  ? colors.infoBlue
+                                  : colors.goldMid,
+                    ),
                   ),
-                ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -767,6 +835,12 @@ class _StageSpec {
     if (category == 'Media & Equipment') return 'lighting';
     return label.split(' ').first;
   }
+
+  String get monogram {
+    final words = label.split(RegExp(r'[\s/]+')).where((w) => w.isNotEmpty);
+    final letters = words.take(2).map((w) => w[0]).join();
+    return letters.toUpperCase();
+  }
 }
 
 class _ProductionStageCard extends StatelessWidget {
@@ -804,11 +878,23 @@ class _ProductionStageCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(stage.icon,
-                    size: 18,
-                    color: dpToneColor(
-                        context, complete ? DpTone.success : DpTone.warning)),
-                const SizedBox(width: 8),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    color: context.appColors.softSurface,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    stage.monogram,
+                    style: AppTextStyles.caption.copyWith(
+                      color: context.appColors.goldDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: dpText(
                     context,
@@ -822,16 +908,19 @@ class _ProductionStageCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 9),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(value: progress, minHeight: 3),
+            ),
             const SizedBox(height: 9),
             Wrap(
-              spacing: 7,
-              runSpacing: 7,
+              spacing: 14,
+              runSpacing: 6,
               children: [
-                DPStatusChip(
+                DpDotLabel(
                     label: '$shortlisted shortlisted', tone: DpTone.info),
-                DPStatusChip(
+                DpDotLabel(
                   label: '$negotiating negotiating',
                   tone: negotiating > 0 ? DpTone.warning : DpTone.neutral,
                 ),

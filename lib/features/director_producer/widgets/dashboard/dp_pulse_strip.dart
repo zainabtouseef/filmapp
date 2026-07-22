@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../../../shared/cards/cine_card_system.dart';
+import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/formatters/cine_format.dart';
 import '../../data/director_producer_demo_data.dart';
 import '../../routes/director_producer_routes.dart';
+import '../dp_glass_card.dart';
 
-/// Compact, business-wide metric strip — the dashboard's "Production
-/// Pulse". Every value is computed live from demo-data state.
+/// The dashboard's "Production Pulse" — the exact 3-tile plain glass
+/// grid from the source design (Active productions / Paid-pending /
+/// Bookings secured), values computed live from demo-data state.
 class DPPulseStrip extends StatelessWidget {
   const DPPulseStrip({super.key});
 
@@ -14,86 +17,106 @@ class DPPulseStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final projects = DirectorProducerDemoData.projects;
     final bookings = DirectorProducerDemoData.bookings;
-    final contracts = DirectorProducerDemoData.contracts;
     final payments = DirectorProducerDemoData.payments;
-    final negotiations = DirectorProducerDemoData.negotiations;
 
-    final totalCommitted =
-        projects.fold<int>(0, (sum, project) => sum + project.confirmedCost);
     final paid = payments
         .where((payment) => payment.status == 'Verified')
         .fold<int>(0, (sum, payment) => sum + payment.amount);
     final pending = payments
         .where((payment) => payment.status != 'Verified')
         .fold<int>(0, (sum, payment) => sum + payment.amount);
-    final dealsInProgress = negotiations
-        .where((n) => n.status != 'Accepted' && n.status != 'Withdrawn')
-        .length;
 
-    final stats = [
-      MetricStripItem(
+    final tiles = [
+      _PulseTile(
         label: 'Active productions',
         value: '${projects.where((p) => p.status != 'Closed').length}',
-        icon: Icons.movie_filter_outlined,
-        tone: CineTone.information,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.projects),
       ),
-      MetricStripItem(
-        label: 'Deals in progress',
-        value: '$dealsInProgress',
-        icon: Icons.handshake_outlined,
-        tone: CineTone.warning,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
-      ),
-      MetricStripItem(
-        label: 'Pending signatures',
-        value:
-            '${contracts.where((c) => c.status == 'Pending Signature').length}',
-        icon: Icons.draw_outlined,
-        tone: CineTone.warning,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.contracts),
-      ),
-      MetricStripItem(
-        label: 'Payment proofs',
-        value: '${payments.where((p) => p.status == 'Proof Uploaded').length}',
-        icon: Icons.upload_file_outlined,
-        tone: CineTone.warning,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.payments),
-      ),
-      MetricStripItem(
-        label: 'Committed budget',
-        value: CineFormat.currency(totalCommitted, compact: true),
-        icon: Icons.account_balance_wallet_outlined,
-        tone: CineTone.premium,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.accounts),
-      ),
-      MetricStripItem(
+      _PulseTile(
         label: 'Paid / pending',
         value:
             '${CineFormat.count(paid, compact: true)} / ${CineFormat.count(pending, compact: true)}',
-        icon: Icons.receipt_long_outlined,
-        tone: CineTone.positive,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.payments),
       ),
-      MetricStripItem(
+      _PulseTile(
         label: 'Bookings secured',
         value: '${bookings.where((b) => b.statusIndex >= 8).length}',
-        icon: Icons.verified_outlined,
-        tone: CineTone.positive,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       ),
     ];
 
-    return MetricStrip(
-      title: 'Production pulse',
-      items: stats,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 9.0;
+        final columns = constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth < 700
+                ? 2
+                : 3;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tile in tiles) SizedBox(width: width, child: tile),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PulseTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _PulseTile({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = switch (label) {
+      'Active productions' => colors.infoBlue,
+      'Paid / pending' => colors.warning,
+      'Bookings secured' => colors.success,
+      _ => colors.goldDark,
+    };
+    return GestureDetector(
+      onTap: onTap,
+      child: DPGlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 12),
+        accentColor: accent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.cardLabel.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 15.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

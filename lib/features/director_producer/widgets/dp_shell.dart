@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -13,6 +14,7 @@ import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../routes/director_producer_routes.dart';
+import 'dp_layout_helpers.dart';
 import 'dp_status_chip.dart';
 
 class DPShell extends StatelessWidget {
@@ -91,10 +93,20 @@ class DPShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final routedChild = showHeading
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DPRouteHeading(title: title, route: currentRoute),
+              const SizedBox(height: 14),
+              child,
+            ],
+          )
+        : child;
     return AdminScreenScaffold(
       title: title,
       currentRoute: currentRoute,
-      showHeading: showHeading,
+      showHeading: false,
       floatingActionBuilder: floatingActionBuilder,
       topBarBuilder: (context, wide, onMenuTap) => _DPTopBar(
         wide: wide,
@@ -122,8 +134,42 @@ class DPShell extends StatelessWidget {
         onRouteTap: onRouteTap,
       ),
       onRouteSelected: (context, route) => Navigator.pushNamed(context, route),
-      child: child,
+      child: routedChild,
     );
+  }
+}
+
+class _DPRouteHeading extends StatelessWidget {
+  final String title;
+  final String route;
+
+  const _DPRouteHeading({required this.title, required this.route});
+
+  @override
+  Widget build(BuildContext context) {
+    return DPPageHeader(
+      eyebrow: _eyebrow,
+      title: title,
+    );
+  }
+
+  String get _eyebrow {
+    return switch (route) {
+      DirectorProducerRoutes.requirements => 'Project brief · requirements',
+      DirectorProducerRoutes.filters => 'Discovery controls · saved view',
+      DirectorProducerRoutes.profile => 'Verified profile · booking ready',
+      DirectorProducerRoutes.shortlist => 'Shortlists · saved talent',
+      DirectorProducerRoutes.bookingRequest => 'Booking composer · live terms',
+      DirectorProducerRoutes.negotiationThread =>
+        'Offer thread · counter terms',
+      DirectorProducerRoutes.contracts => 'Agreements · signatures',
+      DirectorProducerRoutes.payments => 'Ledger · proofs',
+      DirectorProducerRoutes.schedule => 'Calendar · call sheets',
+      DirectorProducerRoutes.accounts => 'Budgets · committed cost',
+      DirectorProducerRoutes.room => 'Team room · decisions',
+      DirectorProducerRoutes.reports => 'Exports · analytics',
+      _ => 'Producer Console',
+    };
   }
 }
 
@@ -139,74 +185,37 @@ class _DPTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = !wide;
-    final colors = context.appColors;
+    final canGoBack = wide || Navigator.canPop(context);
     return AdminTopBarFrame(
       compact: compact,
       child: Row(
         children: [
           _DPTopIcon(
-            icon: wide ? Icons.arrow_back_rounded : Icons.menu_rounded,
-            tooltip: wide ? 'Back' : 'Menu',
-            onTap: wide ? () => navigateCoreBack(context) : onMenuTap,
+            icon: canGoBack ? Icons.arrow_back_rounded : Icons.menu_rounded,
+            tooltip: canGoBack ? 'Back' : 'Menu',
+            onTap: canGoBack ? () => navigateCoreBack(context) : onMenuTap,
           ),
           const SizedBox(width: 10),
-          if (!compact) ...[
-            Icon(Icons.movie_filter_rounded, color: colors.goldDark, size: 21),
-            const SizedBox(width: 8),
-            Text(
-              'PRODUCTION PORTAL',
-              style: AppTextStyles.sectionHeaderStyle.copyWith(
-                color: colors.textPrimary,
-                fontSize: 13,
-                letterSpacing: 1.4,
-              ),
-            ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 11),
-              decoration: BoxDecoration(
-                gradient: colors.searchGradient,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: colors.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.search_rounded, color: colors.goldDark, size: 19),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      compact
-                          ? 'Search...'
-                          : 'Search projects, people, locations, bookings...',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _DPBrandLockup(compact: compact),
+          SizedBox(width: compact ? 8 : 16),
+          Expanded(child: _DPSearchPill(compact: compact)),
           const SizedBox(width: 10),
-          ThemeToggleButton(size: compact ? 34 : 38),
-          const SizedBox(width: 10),
-          _DPTopIcon(
-            icon: Icons.logout_rounded,
-            tooltip: 'Logout',
-            onTap: () => logoutToLogin(context),
+          _DPNotificationIcon(
+            hasUnread: true,
+            onTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),
           ),
-          if (!compact) ...[
+          SizedBox(width: compact ? 8 : 10),
+          _DPAvatarButton(
+            onTap: () => Navigator.pushNamed(context, CoreRoutes.profileRoles),
+          ),
+          if (wide) ...[
+            const SizedBox(width: 10),
+            ThemeToggleButton(size: 38),
             const SizedBox(width: 10),
             _DPTopIcon(
-              icon: Icons.notifications_none_rounded,
-              tooltip: 'Notifications',
-              onTap: () =>
-                  Navigator.pushNamed(context, CoreRoutes.notifications),
+              icon: Icons.logout_rounded,
+              tooltip: 'Logout',
+              onTap: () => logoutToLogin(context),
             ),
             const SizedBox(width: 10),
             const DPStatusChip(
@@ -215,6 +224,97 @@ class _DPTopBar extends StatelessWidget {
               icon: Icons.workspace_premium_outlined,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DPBrandLockup extends StatelessWidget {
+  final bool compact;
+
+  const _DPBrandLockup({required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: compact ? 96 : 166,
+        maxWidth: compact ? 116 : 190,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RichText(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              style: AppTextStyles.sectionHeaderStyle.copyWith(
+                color: colors.textPrimary,
+                fontSize: compact ? 17 : 22,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+              ),
+              children: [
+                const TextSpan(text: 'Cine'),
+                TextSpan(
+                  text: 'Connect',
+                  style: TextStyle(color: colors.goldDark),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Producer Console',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.copyWith(
+              color: colors.textSecondary,
+              fontSize: compact ? 10.5 : 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DPSearchPill extends StatelessWidget {
+  final bool compact;
+
+  const _DPSearchPill({required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      height: compact ? 38 : 44,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 13),
+      decoration: BoxDecoration(
+        gradient: colors.searchGradient,
+        borderRadius: BorderRadius.circular(compact ? 15 : 18),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.search_rounded,
+              color: colors.icon, size: compact ? 18 : 21),
+          SizedBox(width: compact ? 7 : 9),
+          Expanded(
+            child: Text(
+              compact ? 'Search...' : 'Search productions, talent...',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textSecondary,
+                fontSize: compact ? 12 : 13,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -244,6 +344,92 @@ class _DPTopIcon extends StatelessWidget {
           height: 38,
           radius: 19,
           child: Icon(icon, color: colors.icon, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
+class _DPNotificationIcon extends StatelessWidget {
+  final bool hasUnread;
+  final VoidCallback onTap;
+
+  const _DPNotificationIcon({required this.hasUnread, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Notifications',
+      child: GestureDetector(
+        onTap: onTap,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Icon(Icons.notifications_none_rounded,
+                  color: colors.icon, size: 22),
+              if (hasUnread)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: colors.warning,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DPAvatarButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _DPAvatarButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Profile',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.border),
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              AppAssets.bilalAbbas,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: colors.softSurface,
+                alignment: Alignment.center,
+                child: Text(
+                  'P',
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.goldDark,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -362,7 +548,7 @@ class _DPBottomNav extends StatelessWidget {
 
   static const _destinations = [
     CineBottomNavDestination(label: 'Console', icon: Icons.home_outlined),
-    CineBottomNavDestination(label: 'Projects', icon: Icons.movie_outlined),
+    CineBottomNavDestination(label: 'Productions', icon: Icons.movie_outlined),
     CineBottomNavDestination(label: 'Find', icon: Icons.search_rounded),
     CineBottomNavDestination(label: 'Deals', icon: Icons.handshake_outlined),
     CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),

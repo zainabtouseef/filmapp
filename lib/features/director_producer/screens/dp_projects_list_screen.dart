@@ -6,12 +6,22 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/director_producer_demo_data.dart';
+import '../models/dp_project.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_project_card.dart';
 import '../widgets/dp_status_chip.dart';
+
+const _filterKeys = [
+  'All',
+  'Pre-production',
+  'Casting',
+  'Negotiating',
+  'Shooting',
+  'Draft',
+];
 
 class DPProjectsListScreen extends StatefulWidget {
   const DPProjectsListScreen({super.key});
@@ -25,6 +35,7 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
   final _search = TextEditingController();
   Future<List<Project>>? _projectsFuture;
   bool _started = false;
+  ProjectsController? _controller;
 
   @override
   void didChangeDependencies() {
@@ -32,11 +43,17 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
     if (!_started) {
       _started = true;
       _reload();
+      // Re-fetch reactively whenever the controller's project list
+      // changes elsewhere (e.g. a project created from the wizard) —
+      // no manual pull-to-refresh needed to see it here.
+      _controller = ProjectsScope.maybeOf(context);
+      _controller?.addListener(_reload);
     }
   }
 
   @override
   void dispose() {
+    _controller?.removeListener(_reload);
     _search.dispose();
     super.dispose();
   }
@@ -51,90 +68,79 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
                 message: 'Sign in to load projects.',
               ),
             )
-          : controller.projects(force: true);
+          : controller.projects();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        dpHeaderAction(
-          context,
-          icon: Icons.add_circle_outline_rounded,
-          label: 'New Project',
-          onTap: () => Navigator.pushNamed(
-              context, DirectorProducerRoutes.createProject),
-        ),
-        const SizedBox(height: 6),
-        _ProjectSearchRow(
-            controller: _search, onChanged: () => setState(() {})),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+    return FutureBuilder<List<Project>>(
+      future: _projectsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _ProjectsLoadingState();
+        }
+        final warning =
+            snapshot.hasError ? _friendlyError(snapshot.error) : null;
+        final allProjects = snapshot.hasError
+            ? DirectorProducerDemoData.projects
+            : (snapshot.data ?? const <Project>[])
+                .map((p) => p.toDpProject())
+                .toList();
+        final filtered = _filterProjects(allProjects);
+        final needingAction =
+            allProjects.where((p) => p.pendingActions > 0).length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final filter in const [
-              'All',
-              'Pre-production',
-              'Casting',
-              'Negotiating',
-              'Shooting',
-              'Draft',
-            ])
-              GestureDetector(
-                onTap: () => setState(() => _filter = filter),
-                child: DPStatusChip(
-                  label: filter,
-                  tone: _filter == filter ? DpTone.warning : DpTone.neutral,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        FutureBuilder<List<Project>>(
-          future: _projectsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const _ProjectsLoadingState();
-            }
-            if (snapshot.hasError) {
-              return _ProjectFallbackGrid(
-                filter: _filter,
-                query: _search.text,
-                warning: _friendlyError(snapshot.error),
-              );
-            }
-            final projects = _filterProjects(snapshot.data ?? const []);
-            if (projects.isEmpty) {
-              return const DPEmptyState(
+            _HeaderRow(
+              total: allProjects.length,
+              needingAction: needingAction,
+            ),
+            const SizedBox(height: 14),
+            _ProjectSearchRow(
+              controller: _search,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            _FilterChips(
+              value: _filter,
+              onChanged: (value) => setState(() => _filter = value),
+            ),
+            const SizedBox(height: 14),
+            if (warning != null) ...[
+              _InlineWarning(message: warning),
+              const SizedBox(height: 12),
+            ],
+            if (filtered.isEmpty)
+              const DPEmptyState(
                 icon: Icons.movie_filter_outlined,
                 title: 'No matching projects',
                 message: 'Try a different search term or status filter.',
-              );
-            }
-            return DPResponsiveGrid(
-              children: projects
-                  .map(
-                    (project) => DPProjectCard(
-                      project: project.toDpProject(),
-                      onOpen: () => Navigator.pushNamed(
-                        context,
-                        DirectorProducerRoutes.projectDetail,
-                        arguments: project.publicId,
+              )
+            else
+              DPResponsiveGrid(
+                children: filtered
+                    .map(
+                      (project) => DPProjectCard(
+                        project: project,
+                        onOpen: () => Navigator.pushNamed(
+                          context,
+                          DirectorProducerRoutes.projectDetail,
+                          arguments: project.id,
+                        ),
                       ),
-                    ),
-                  )
-                  .toList(),
-            );
-          },
-        ),
-      ],
+                    )
+                    .toList(),
+              ),
+          ],
+        );
+      },
     );
   }
 
-  List<Project> _filterProjects(List<Project> projects) {
+  List<DpProject> _filterProjects(List<DpProject> projects) {
     final query = _search.text.toLowerCase();
     return projects.where((project) {
       final status = project.status.toLowerCase();
@@ -143,7 +149,7 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
           status.contains(_filter.toLowerCase());
       final queryMatch = query.isEmpty ||
           project.title.toLowerCase().contains(query) ||
-          (project.city?.name.toLowerCase().contains(query) ?? false) ||
+          project.city.toLowerCase().contains(query) ||
           status.contains(query);
       return statusMatch && queryMatch;
     }).toList();
@@ -164,55 +170,49 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
   }
 }
 
-class _ProjectFallbackGrid extends StatelessWidget {
-  final String filter;
-  final String query;
-  final String warning;
+class _HeaderRow extends StatelessWidget {
+  final int total;
+  final int needingAction;
 
-  const _ProjectFallbackGrid({
-    required this.filter,
-    required this.query,
-    required this.warning,
-  });
+  const _HeaderRow({required this.total, required this.needingAction});
 
   @override
   Widget build(BuildContext context) {
-    final search = query.toLowerCase();
-    final projects = DirectorProducerDemoData.projects.where((project) {
-      final statusMatch = filter == 'All' || project.status.contains(filter);
-      final queryMatch = search.isEmpty ||
-          project.title.toLowerCase().contains(search) ||
-          project.city.toLowerCase().contains(search) ||
-          project.status.toLowerCase().contains(search);
-      return statusMatch && queryMatch;
-    }).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _InlineWarning(message: warning),
-        const SizedBox(height: 12),
-        if (projects.isEmpty)
-          const DPEmptyState(
-            icon: Icons.movie_filter_outlined,
-            title: 'No matching projects',
-            message: 'Try a different search term or status filter.',
-          )
-        else
-          DPResponsiveGrid(
-            children: projects
-                .map(
-                  (project) => DPProjectCard(
-                    project: project,
-                    onOpen: () => Navigator.pushNamed(
-                      context,
-                      DirectorProducerRoutes.projectDetail,
-                      arguments: project.id,
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-      ],
+    return DPPageHeader(
+      eyebrow: needingAction == 0
+          ? '$total productions'
+          : '$total productions · $needingAction need action',
+      title: 'Projects',
+      actionLabel: 'New Project',
+      actionIcon: Icons.add_rounded,
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.createProject),
+    );
+  }
+}
+
+class _FilterChips extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  const _FilterChips({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final key in _filterKeys) ...[
+            DpDotChip(
+              label: key,
+              active: value == key,
+              onTap: () => onChanged(key),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
     );
   }
 }

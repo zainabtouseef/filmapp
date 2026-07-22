@@ -20,6 +20,8 @@ class AppTextStyles {
       GoogleFonts.inter(textStyle: style);
   static TextStyle _dashboard(TextStyle style) =>
       GoogleFonts.inter(textStyle: style);
+  static TextStyle _editorial(TextStyle style) =>
+      GoogleFonts.newsreader(textStyle: style);
 
   // ---- Display headings --------------------------------------------------
   static TextStyle get displayLarge => _dashboard(const TextStyle(
@@ -205,6 +207,30 @@ class AppTextStyles {
         height: 1.0,
         color: AppColors.textPrimary,
         fontFeatures: [FontFeature.tabularFigures()],
+      ));
+
+  // ---- Editorial serif (hero moments only) --------------------------------
+  /// Italic serif for one-off "hero" copy (dashboard greeting) — every
+  /// other heading in the app uses [heading]/[sectionTitle] (Inter); this
+  /// is reserved for the handful of places that want editorial warmth.
+  static TextStyle get heroSerifHeadline => _editorial(const TextStyle(
+        fontSize: 23,
+        fontWeight: FontWeight.w500,
+        fontStyle: FontStyle.italic,
+        height: 1.3,
+        color: AppColors.textPrimary,
+      ));
+
+  /// Italic serif for a hero figure (committed budget, a deal-stage
+  /// count) — the tabular-numeral [metricNumber] remains the default for
+  /// ordinary stat tiles; this is for the one or two figures per screen
+  /// meant to read as a headline rather than a metric.
+  static TextStyle get heroSerifNumber => _editorial(const TextStyle(
+        fontSize: 30,
+        fontWeight: FontWeight.w500,
+        fontStyle: FontStyle.italic,
+        height: 1.15,
+        color: AppColors.textPrimary,
       ));
 
   // ---- Price -------------------------------------------------------------

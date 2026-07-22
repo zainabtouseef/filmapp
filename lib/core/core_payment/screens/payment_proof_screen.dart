@@ -20,10 +20,27 @@ class PaymentProofUploadScreen extends StatefulWidget {
   /// this shared screen depending on any portal-specific store.
   final VoidCallback? onSubmitted;
 
+  /// Renders content only (no [CoreScreenScaffold]/backdrop/global
+  /// controls) — use when embedding this screen inside a bottom sheet
+  /// instead of navigating to it as a full page.
+  final bool embedded;
+
+  /// Shown as a close (X) action in the header when embedded.
+  final VoidCallback? onClose;
+
+  /// Replaces the default "View Ledger" action on the success dialog —
+  /// use to pop back to a hosting sheet instead of navigating away.
+  final VoidCallback? onDone;
+  final String doneLabel;
+
   const PaymentProofUploadScreen({
     super.key,
     this.milestoneId,
     this.onSubmitted,
+    this.embedded = false,
+    this.onClose,
+    this.onDone,
+    this.doneLabel = 'View Ledger',
   });
 
   @override
@@ -159,137 +176,148 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
       context,
       title: 'Payment proof submitted',
       message: 'Super Admin will verify it before the booking can close.',
-      buttonLabel: 'View Ledger',
-      onDone: () => Navigator.pushNamed(context, CoreRoutes.ledger),
+      buttonLabel: widget.doneLabel,
+      onDone: widget.onDone ??
+          () => Navigator.pushNamed(context, CoreRoutes.ledger),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return CoreScreenScaffold(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CoreAppHeader(
-            title: 'Payment Proof Upload',
-            subtitle: 'Submit payer-side proof for admin verification.',
-            icon: Icons.payments_outlined,
-          ),
-          const SizedBox(height: 18),
-          _summary(context),
-          const SizedBox(height: 18),
-          CoreGlassCard(
-            child: Column(
-              children: [
-                if (_schedulesFuture != null)
-                  FutureBuilder<List<PaymentScheduleDto>>(
-                    future: _schedulesFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const InlineNotice(
-                          message: 'Loading live payment schedule...',
-                          icon: Icons.hourglass_top_rounded,
-                          tone: CoreStatusTone.info,
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                if (_schedulesFuture != null) const SizedBox(height: 10),
-                if (_liveMilestones.isNotEmpty)
-                  CoreDropdownField<PaymentMilestoneDto>(
-                    value: _liveMilestone ?? _liveMilestones.first,
-                    values: _liveMilestones,
-                    label: 'Milestone',
-                    icon: Icons.flag_outlined,
-                    labelBuilder: (value) =>
-                        '${value.name} · ${value.amountLabel}',
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _liveMilestone = value;
-                        _amount.text = '${value.amountMinor ~/ 100}';
-                      });
-                    },
-                  )
-                else
-                  CoreDropdownField<PaymentMilestone>(
-                    value: _milestone,
-                    values: SharedMockData.milestones,
-                    label: 'Milestone',
-                    icon: Icons.flag_outlined,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _milestone = value;
-                        _amount.text = value.amount.toString();
-                      });
-                    },
-                  ),
-                const SizedBox(height: 14),
-                CoreTextField(
-                  controller: _amount,
-                  label: 'Amount',
-                  icon: Icons.money_rounded,
-                  keyboardType: TextInputType.number,
-                  onChanged: (_) => setState(() {}),
-                ),
-                if (_amountMismatch) ...[
-                  const SizedBox(height: 10),
-                  const InlineNotice(
-                    message:
-                        'Amount mismatch: admin may request clarification.',
-                    icon: Icons.warning_amber_rounded,
-                    tone: CoreStatusTone.warning,
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CoreAppHeader(
+          title: 'Payment Proof Upload',
+          subtitle: 'Submit payer-side proof for admin verification.',
+          icon: Icons.payments_outlined,
+          actions: widget.onClose == null
+              ? const []
+              : [
+                  CoreIconButton(
+                    icon: Icons.close_rounded,
+                    tooltip: 'Close',
+                    onTap: widget.onClose!,
                   ),
                 ],
-                const SizedBox(height: 14),
-                CoreDropdownField<String>(
-                  value: _method,
-                  values: const [
-                    'Bank Transfer',
-                    'Card Sandbox',
-                  ],
-                  label: 'Payment method',
-                  icon: Icons.account_balance_wallet_outlined,
-                  onChanged: (value) =>
-                      setState(() => _method = value ?? _method),
+        ),
+        const SizedBox(height: 18),
+        _summary(context),
+        const SizedBox(height: 18),
+        CoreGlassCard(
+          child: Column(
+            children: [
+              if (_schedulesFuture != null)
+                FutureBuilder<List<PaymentScheduleDto>>(
+                  future: _schedulesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const InlineNotice(
+                        message: 'Loading live payment schedule...',
+                        icon: Icons.hourglass_top_rounded,
+                        tone: CoreStatusTone.info,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
                 ),
-                const SizedBox(height: 14),
-                CoreTextField(
-                  controller: _transaction,
-                  label: 'Transaction ID',
-                  icon: Icons.receipt_long_outlined,
+              if (_schedulesFuture != null) const SizedBox(height: 10),
+              if (_liveMilestones.isNotEmpty)
+                CoreDropdownField<PaymentMilestoneDto>(
+                  value: _liveMilestone ?? _liveMilestones.first,
+                  values: _liveMilestones,
+                  label: 'Milestone',
+                  icon: Icons.flag_outlined,
+                  labelBuilder: (value) =>
+                      '${value.name} · ${value.amountLabel}',
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _liveMilestone = value;
+                      _amount.text = '${value.amountMinor ~/ 100}';
+                    });
+                  },
+                )
+              else
+                CoreDropdownField<PaymentMilestone>(
+                  value: _milestone,
+                  values: SharedMockData.milestones,
+                  label: 'Milestone',
+                  icon: Icons.flag_outlined,
+                  labelBuilder: (value) =>
+                      '${value.name} · PKR ${value.amount}',
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _milestone = value;
+                      _amount.text = value.amount.toString();
+                    });
+                  },
                 ),
-                const SizedBox(height: 14),
-                UploadCard(
-                  title: 'Proof upload',
-                  subtitle: _uploadedFileId == null
-                      ? 'Attach image or PDF receipt'
-                      : 'Uploaded $_uploadedFileId',
-                  uploaded: _uploaded,
-                  onTap: _pickProof,
-                ),
-                const SizedBox(height: 14),
-                CoreTextField(
-                  controller: _notes,
-                  label: 'Notes',
-                  icon: Icons.notes_outlined,
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 18),
-                CorePrimaryButton(
-                  icon: Icons.verified_outlined,
-                  label: 'Submit Proof for Verification',
-                  loading: _submitting,
-                  onTap: _submit,
+              const SizedBox(height: 14),
+              CoreTextField(
+                controller: _amount,
+                label: 'Amount',
+                icon: Icons.money_rounded,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+              ),
+              if (_amountMismatch) ...[
+                const SizedBox(height: 10),
+                const InlineNotice(
+                  message: 'Amount mismatch: admin may request clarification.',
+                  icon: Icons.warning_amber_rounded,
+                  tone: CoreStatusTone.warning,
                 ),
               ],
-            ),
+              const SizedBox(height: 14),
+              CoreDropdownField<String>(
+                value: _method,
+                values: const [
+                  'Bank Transfer',
+                  'Card Sandbox',
+                ],
+                label: 'Payment method',
+                icon: Icons.account_balance_wallet_outlined,
+                onChanged: (value) =>
+                    setState(() => _method = value ?? _method),
+              ),
+              const SizedBox(height: 14),
+              CoreTextField(
+                controller: _transaction,
+                label: 'Transaction ID',
+                icon: Icons.receipt_long_outlined,
+              ),
+              const SizedBox(height: 14),
+              UploadCard(
+                title: 'Proof upload',
+                subtitle: _uploadedFileId == null
+                    ? 'Attach image or PDF receipt'
+                    : 'Uploaded $_uploadedFileId',
+                uploaded: _uploaded,
+                onTap: _pickProof,
+              ),
+              const SizedBox(height: 14),
+              CoreTextField(
+                controller: _notes,
+                label: 'Notes',
+                icon: Icons.notes_outlined,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 18),
+              CorePrimaryButton(
+                icon: Icons.verified_outlined,
+                label: 'Submit Proof for Verification',
+                loading: _submitting,
+                onTap: _submit,
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
+    if (widget.embedded) return content;
+    return CoreScreenScaffold(child: content);
   }
 
   Widget _summary(BuildContext context) {

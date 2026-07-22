@@ -246,7 +246,9 @@ class BottomNavItem extends StatelessWidget {
     final colors = context.appColors;
     final color = active ? colors.goldDark : colors.textTertiary;
     final iconSize = wide ? 42.0 : (dense ? 25.0 : 29.0);
-    final labelSize = wide ? 22.0 : (dense ? 13.0 : 14.5);
+    final baseLabelSize = wide ? 22.0 : (dense ? 13.0 : 14.5);
+    final labelSize =
+        !wide && label.length > 9 ? (dense ? 11.2 : 12.6) : baseLabelSize;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

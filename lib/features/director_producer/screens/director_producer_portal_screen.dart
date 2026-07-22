@@ -6,7 +6,6 @@ import '../../../core/core_payment/screens/receipts_ledger_screen.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../routes/director_producer_routes.dart';
-import '../widgets/dashboard/dp_assistant_orb.dart';
 import '../widgets/dp_shell.dart';
 import 'dp_bargaining_center_screen.dart';
 import 'dp_booking_request_form_screen.dart';
@@ -37,9 +36,22 @@ class DirectorProducerPortalScreen extends StatelessWidget {
     this.arguments,
   });
 
-  bool get _isDashboard =>
-      routeName == DirectorProducerRoutes.console ||
-      routeName == DirectorProducerRoutes.home;
+  /// Routes whose screen renders its own command header (eyebrow +
+  /// serif title), so the shell's generic centered heading would just
+  /// duplicate it.
+  static const _ownHeaderRoutes = {
+    DirectorProducerRoutes.console,
+    DirectorProducerRoutes.home,
+    DirectorProducerRoutes.projects,
+    DirectorProducerRoutes.projectsAlias,
+    DirectorProducerRoutes.projectDetail,
+    DirectorProducerRoutes.marketplace,
+    DirectorProducerRoutes.discover,
+    DirectorProducerRoutes.bargaining,
+    DirectorProducerRoutes.createProject,
+    DirectorProducerRoutes.payments,
+    DirectorProducerRoutes.schedule,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +59,7 @@ class DirectorProducerPortalScreen extends StatelessWidget {
     final content = DPShell(
       title: _title(routeName),
       currentRoute: routeName,
-      showHeading: !_isDashboard,
-      floatingActionBuilder: _isDashboard
-          ? (context, wide, bottomInset) =>
-              DPAssistantOrb(bottomInset: bottomInset)
-          : null,
+      showHeading: !_ownHeaderRoutes.contains(routeName),
       child: _content(routeName),
     );
     if (auth == null) return content;

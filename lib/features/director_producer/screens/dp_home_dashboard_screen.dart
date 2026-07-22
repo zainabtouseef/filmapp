@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/core_ui/core_routes.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../routes/director_producer_routes.dart';
-import '../widgets/dashboard/dp_activity_feed.dart';
 import '../widgets/dashboard/dp_command_header.dart';
 import '../widgets/dashboard/dp_deal_pipeline.dart';
-import '../widgets/dashboard/dp_discovery_snapshot.dart';
 import '../widgets/dashboard/dp_financial_centre.dart';
 import '../widgets/dashboard/dp_dashboard_insights.dart';
 import '../widgets/dashboard/dp_priority_actions.dart';
@@ -61,22 +60,13 @@ class _WideBody extends StatelessWidget {
               _FinancialSection(),
               SizedBox(height: 14),
               _PipelineSection(),
-              SizedBox(height: 14),
-              _DiscoverySection(),
             ],
           ),
         ),
         const SizedBox(width: 14),
         const Expanded(
           flex: 4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PrioritySection(),
-              SizedBox(height: 14),
-              _ActivitySection(),
-            ],
-          ),
+          child: _PrioritySection(),
         ),
       ],
     );
@@ -100,10 +90,6 @@ class _CompactBody extends StatelessWidget {
         _FinancialSection(),
         SizedBox(height: 14),
         _PipelineSection(),
-        SizedBox(height: 14),
-        _DiscoverySection(),
-        SizedBox(height: 14),
-        _ActivitySection(),
       ],
     );
   }
@@ -117,6 +103,8 @@ class _PrioritySection extends StatelessWidget {
     return DPSectionCard(
       title: 'Needs your attention · ${dpPriorityItems().length}',
       icon: Icons.priority_high_rounded,
+      actionText: 'View all',
+      onActionTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),
       child: const DPPriorityActions(),
     );
   }
@@ -182,38 +170,6 @@ class _PipelineSection extends StatelessWidget {
       onActionTap: () =>
           Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       child: const DPDealPipeline(),
-    );
-  }
-}
-
-class _DiscoverySection extends StatelessWidget {
-  const _DiscoverySection();
-
-  @override
-  Widget build(BuildContext context) {
-    return DPSectionCard(
-      title: 'Discover & Quick Links',
-      icon: Icons.travel_explore_outlined,
-      actionText: 'Open marketplace',
-      onActionTap: () =>
-          Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
-      child: const DPDiscoverySnapshot(),
-    );
-  }
-}
-
-class _ActivitySection extends StatelessWidget {
-  const _ActivitySection();
-
-  @override
-  Widget build(BuildContext context) {
-    return DPSectionCard(
-      title: 'Team & Activity',
-      icon: Icons.forum_outlined,
-      actionText: 'Open room',
-      onActionTap: () =>
-          Navigator.pushNamed(context, DirectorProducerRoutes.room),
-      child: const DPActivityFeed(),
     );
   }
 }
