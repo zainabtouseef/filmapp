@@ -846,6 +846,11 @@ class _DPCreateProjectWizardScreenState
               );
             },
           ),
+        if (_errors['requirements'] != null) ...[
+          const SizedBox(height: 10),
+          Text(_errors['requirements']!,
+              style: AppTextStyles.caption.copyWith(color: colors.danger)),
+        ],
       ],
     );
   }
@@ -957,6 +962,14 @@ class _DPCreateProjectWizardScreenState
       setState(() => _step = 0);
       return;
     }
+    if (!_validateStep(1)) {
+      setState(() => _step = 1);
+      return;
+    }
+    if (!_validateRequirementDates()) {
+      setState(() => _step = 5);
+      return;
+    }
     final controller = ProjectsScope.maybeOf(context);
     if (controller == null) {
       setState(() => _errors['submit'] = 'Sign in to create projects.');
@@ -991,7 +1004,10 @@ class _DPCreateProjectWizardScreenState
               .join(' — '),
           budgetMinMinor: _parseMinor(requirement.budget),
           budgetMaxMinor: _parseMinor(requirement.budget),
-          endDate: requirement.deadline.isEmpty ? null : requirement.deadline,
+          startDate: _apiDate(_startDate),
+          endDate: requirement.deadline.isEmpty
+              ? _apiDate(_endDate)
+              : _apiDate(_parseDateOnly(requirement.deadline)),
         );
       }
 
@@ -1070,6 +1086,54 @@ class _DPCreateProjectWizardScreenState
   String? _apiDate(DateTime? value) {
     if (value == null) return null;
     return value.toIso8601String().split('T').first;
+  }
+
+  DateTime? _parseDateOnly(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+    final parsed = DateTime.tryParse(trimmed);
+    if (parsed == null) return null;
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  bool _validateRequirementDates() {
+    final projectStart = _startDate == null ? null : _dateOnly(_startDate!);
+    final projectEnd = _endDate == null ? null : _dateOnly(_endDate!);
+
+    for (final requirement in _requirements) {
+      final deadlineText = requirement.deadline.trim();
+      if (deadlineText.isEmpty) continue;
+
+      final deadline = _parseDateOnly(deadlineText);
+      if (deadline == null) {
+        setState(() {
+          _errors['requirements'] =
+              'Requirement "${requirement.name}" has an invalid deadline. Open Requirements and choose the date again.';
+        });
+        return false;
+      }
+
+      if (projectStart != null && deadline.isBefore(projectStart)) {
+        setState(() {
+          _errors['requirements'] =
+              'Requirement "${requirement.name}" deadline must be on or after project start date ${_formatDate(projectStart)}.';
+        });
+        return false;
+      }
+
+      if (projectEnd != null && deadline.isAfter(projectEnd)) {
+        setState(() {
+          _errors['requirements'] =
+              'Requirement "${requirement.name}" deadline must be on or before project end date ${_formatDate(projectEnd)}.';
+        });
+        return false;
+      }
+    }
+
+    return true;
   }
 
   String _friendlyApiError(ApiException error) {
