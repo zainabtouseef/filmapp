@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/trust_safety/trust_safety_controller.dart';
+import '../../../core/trust_safety/trust_safety_models.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
@@ -10,81 +14,176 @@ import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
 
 /// AT-11 Reputation & Reviews
-class AT11ReputationReviewsScreen extends StatelessWidget {
+class AT11ReputationReviewsScreen extends StatefulWidget {
   const AT11ReputationReviewsScreen({super.key});
+
+  @override
+  State<AT11ReputationReviewsScreen> createState() =>
+      _AT11ReputationReviewsScreenState();
+}
+
+class _AT11ReputationReviewsScreenState
+    extends State<AT11ReputationReviewsScreen> {
+  Future<UserReviewsDto>? _reviewsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reviewsFuture ??= _loadReviews();
+  }
+
+  Future<UserReviewsDto>? _loadReviews() {
+    final auth = AuthScope.maybeOf(context);
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    final userId = auth?.user?.publicId;
+    if (auth == null ||
+        trustSafety == null ||
+        !auth.isAuthenticated ||
+        userId == null) {
+      return null;
+    }
+    return trustSafety.userReviews(userId);
+  }
+
+  void _refresh() {
+    setState(() => _reviewsFuture = _loadReviews());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_reviewsFuture == null) return const _PreviewReputation();
+    return FutureBuilder<UserReviewsDto>(
+      future: _reviewsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SkeletonCard(height: 460);
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return _ReviewsLoadError(onRetry: _refresh);
+        }
+        return _LiveReputation(data: snapshot.data!);
+      },
+    );
+  }
+}
+
+class _LiveReputation extends StatelessWidget {
+  final UserReviewsDto data;
+
+  const _LiveReputation({required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         ActorSectionCard(
-          title: 'Rating Breakdown',
+          title: 'Public Reputation',
           icon: Icons.stars_outlined,
-          child: Column(
-            children: const [
-              _RatingBar(label: 'Punctuality', value: 0.96),
-              _RatingBar(label: 'Response time', value: 0.88),
-              _RatingBar(label: 'Professionalism', value: 0.94),
-              _RatingBar(label: 'On-set collaboration', value: 0.91),
-            ],
+          tone: data.reviewCount == 0 ? ActorTone.blue : ActorTone.gold,
+          child: _RatingSummary(
+            rating: data.ratingAverage,
+            reviewCount: data.reviewCount,
           ),
         ),
         const SizedBox(height: 12),
         ActorTwoColumn(
           left: ActorSectionCard(
-            title: 'Director Reviews',
+            title: 'Published Reviews',
             icon: Icons.rate_review_outlined,
-            child: Column(
-              children: [
-                for (final review in ActorTalentDemoData.reviews)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _ReviewCard(review: review),
+            child: data.reviews.isEmpty
+                ? const CoreEmptyState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: 'No published reviews',
+                    message:
+                        'Reviews appear after a secured booking is completed.',
+                  )
+                : Column(
+                    children: [
+                      for (var i = 0; i < data.reviews.length; i++)
+                        _LiveReviewCard(
+                          review: data.reviews[i],
+                          showDivider: i != data.reviews.length - 1,
+                        ),
+                    ],
                   ),
-              ],
+          ),
+          right: const _ReputationGuidance(),
+        ),
+      ],
+    );
+  }
+}
+
+class _RatingSummary extends StatelessWidget {
+  final double rating;
+  final int reviewCount;
+
+  const _RatingSummary({
+    required this.rating,
+    required this.reviewCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Container(
+          width: 76,
+          height: 76,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.goldMid.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: colors.goldMid.withValues(alpha: 0.35),
             ),
           ),
-          right: ActorSectionCard(
-            title: 'Trust Signals',
-            icon: Icons.workspace_premium_outlined,
-            child: Column(
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    StatusChip(
-                        label: 'Verified KYC',
-                        color: context.appColors.success),
-                    StatusChip(
-                        label: 'Fast reply', color: context.appColors.infoBlue),
-                    StatusChip(
-                        label: 'Repeat hire', color: context.appColors.goldMid),
-                    StatusChip(
-                        label: 'Safe conduct',
-                        color: context.appColors.infoPurple),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const ActorInfoRow(
-                  icon: Icons.repeat_rounded,
-                  label: 'Repeat-booking score',
-                  value: '68%',
-                ),
-                const ActorInfoRow(
-                  icon: Icons.lightbulb_outline,
-                  label: 'Tip',
-                  value: 'Add one fresh reel',
-                ),
-                CorePrimaryButton(
-                  icon: Icons.add_photo_alternate_outlined,
-                  label: 'Improve portfolio',
-                  compact: true,
-                  onTap: () =>
-                      Navigator.pushNamed(context, ActorTalentRoutes.portfolio),
-                ),
-              ],
+          child: Text(
+            reviewCount == 0 ? '-' : rating.toStringAsFixed(1),
+            style: AppTextStyles.metricNumber.copyWith(
+              color: colors.textPrimary,
+              fontSize: 30,
             ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 2,
+                children: [
+                  for (var i = 1; i <= 5; i++)
+                    Icon(
+                      i <= rating.round()
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      size: 21,
+                      color: colors.goldMid,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 7),
+              Text(
+                reviewCount == 0
+                    ? 'No public rating yet'
+                    : '$reviewCount verified booking ${reviewCount == 1 ? 'review' : 'reviews'}',
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Only published reviews from completed CineConnect bookings count.',
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: colors.textSecondary,
+                  height: 1.3,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -92,22 +191,27 @@ class AT11ReputationReviewsScreen extends StatelessWidget {
   }
 }
 
-class _RatingBar extends StatelessWidget {
-  final String label;
-  final double value;
+class _LiveReviewCard extends StatelessWidget {
+  final ReviewDto review;
+  final bool showDivider;
 
-  const _RatingBar({required this.label, required this.value});
+  const _LiveReviewCard({
+    required this.review,
+    required this.showDivider,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final color = value >= 0.9
-        ? colors.success
-        : value >= 0.7
-            ? colors.goldMid
-            : colors.danger;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    final reviewText = review.text?.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: showDivider
+            ? Border(bottom: BorderSide(color: colors.borderMuted))
+            : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -115,28 +219,79 @@ class _RatingBar extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  label,
+                  review.reviewer.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
                     color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              Text(
-                '${(value * 100).round()}%',
-                style: AppTextStyles.smallMeta.copyWith(color: color),
+              StatusChip(
+                label: '${review.rating} / 5',
+                icon: Icons.star_rounded,
+                color: colors.goldMid,
               ),
             ],
           ),
-          const SizedBox(height: 7),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 7,
-              backgroundColor: colors.border,
-              color: color,
+          const SizedBox(height: 4),
+          Text(
+            'Verified booking ${review.bookingId}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
             ),
+          ),
+          if (reviewText != null && reviewText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              reviewText,
+              style: AppTextStyles.body.copyWith(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReputationGuidance extends StatelessWidget {
+  const _ReputationGuidance();
+
+  @override
+  Widget build(BuildContext context) {
+    return ActorSectionCard(
+      title: 'Profile Strength',
+      icon: Icons.workspace_premium_outlined,
+      child: Column(
+        children: [
+          const ActorInfoRow(
+            icon: Icons.schedule_rounded,
+            label: 'Offer responses',
+            value: 'Reply before expiry',
+          ),
+          const ActorInfoRow(
+            icon: Icons.event_available_outlined,
+            label: 'Availability',
+            value: 'Keep shoot dates current',
+          ),
+          const ActorInfoRow(
+            icon: Icons.video_library_outlined,
+            label: 'Casting media',
+            value: 'Lead with current work',
+          ),
+          const SizedBox(height: 8),
+          CorePrimaryButton(
+            icon: Icons.add_photo_alternate_outlined,
+            label: 'Improve portfolio',
+            compact: true,
+            onTap: () =>
+                Navigator.pushNamed(context, ActorTalentRoutes.portfolio),
           ),
         ],
       ),
@@ -144,19 +299,96 @@ class _RatingBar extends StatelessWidget {
   }
 }
 
-class _ReviewCard extends StatelessWidget {
+class _ReviewsLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _ReviewsLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return ActorSectionCard(
+      title: 'Reviews unavailable',
+      icon: Icons.cloud_off_outlined,
+      tone: ActorTone.danger,
+      child: Column(
+        children: [
+          const CoreEmptyState(
+            icon: Icons.sync_problem_outlined,
+            title: 'Could not load published reviews',
+            message: 'Check your connection and try again.',
+          ),
+          const SizedBox(height: 10),
+          CoreSecondaryButton(
+            icon: Icons.refresh_rounded,
+            label: 'Try again',
+            compact: true,
+            onTap: onRetry,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewReputation extends StatelessWidget {
+  const _PreviewReputation();
+
+  @override
+  Widget build(BuildContext context) {
+    final reviews = ActorTalentDemoData.reviews;
+    final average = reviews.isEmpty
+        ? 0.0
+        : reviews.fold<double>(
+              0,
+              (sum, review) => sum + review.rating,
+            ) /
+            reviews.length;
+    return Column(
+      children: [
+        ActorSectionCard(
+          title: 'Public Reputation',
+          icon: Icons.stars_outlined,
+          child: _RatingSummary(
+            rating: average,
+            reviewCount: reviews.length,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ActorTwoColumn(
+          left: ActorSectionCard(
+            title: 'Published Reviews',
+            icon: Icons.rate_review_outlined,
+            child: Column(
+              children: [
+                for (final review in reviews)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _PreviewReviewCard(review: review),
+                  ),
+              ],
+            ),
+          ),
+          right: const _ReputationGuidance(),
+        ),
+      ],
+    );
+  }
+}
+
+class _PreviewReviewCard extends StatelessWidget {
   final ActorReview review;
 
-  const _ReviewCard({required this.review});
+  const _PreviewReviewCard({required this.review});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: colors.inactiveChipGradient,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.softSurface,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.border),
       ),
       child: Column(
@@ -173,14 +405,19 @@ class _ReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusChip(label: '${review.rating}', color: colors.goldMid),
+              StatusChip(
+                label: '${review.rating} / 5',
+                icon: Icons.star_rounded,
+                color: colors.goldMid,
+              ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             '${review.project} - ${review.date}',
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
           const SizedBox(height: 8),
           Text(

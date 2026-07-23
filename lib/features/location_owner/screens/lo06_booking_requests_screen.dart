@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/bookings/booking_models.dart';
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../data/location_owner_demo_data.dart';
-import '../models/location_owner_models.dart';
 import '../widgets/location_owner_components.dart';
+import '../widgets/location_owner_live.dart';
 
 class LO06BookingRequestsScreen extends StatefulWidget {
   final String? initialRequestId;
@@ -20,206 +23,411 @@ class LO06BookingRequestsScreen extends StatefulWidget {
 }
 
 class _LO06BookingRequestsScreenState extends State<LO06BookingRequestsScreen> {
+  BookingsController? _bookings;
+  Future<List<Booking>>? _future;
   String _query = '';
+  String _filter = 'All';
   String _sort = 'Newest';
+  String? _busyBookingId;
 
   @override
   void initState() {
     super.initState();
-    final id = widget.initialRequestId;
-    if (id != null) {
-      final match = LocationOwnerDemoData.requests
-          .where((request) => request.id == id)
-          .toList();
-      if (match.isNotEmpty) {
-        _query = match.first.project;
-      }
-    }
+    _query = widget.initialRequestId ?? '';
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null || identical(bookings, _bookings)) return;
+    _bookings = bookings;
+    _future = _load();
+  }
+
+  Future<List<Booking>> _load({bool force = false}) async {
+    final rows = await _bookings!.bookings(role: 'provider', force: force);
+    return rows.where((booking) => booking.category == 'location').toList();
+  }
+
+  void _reload() {
+    if (_bookings == null) return;
+    setState(() => _future = _load(force: true));
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = LocationOwnerDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final requests = _filteredRequests(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _RequestCommandBar(
-              query: _query,
-              selectedFilter: store.requestFilter,
-              selectedSort: _sort,
-              onQueryChanged: (value) => setState(() => _query = value),
-              onFilterChanged: store.setRequestFilter,
-              onSortChanged: (value) {
-                setState(() => _sort = value);
-                locationSnack(context, '$value sorting applied');
-              },
-            ),
-            const SizedBox(height: 12),
-            if (requests.isEmpty)
-              CoreEmptyState(
-                icon: Icons.search_off_rounded,
+    if (_future == null) return _buildPreview();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _RequestCommandBar(
+          query: _query,
+          selectedFilter: _filter,
+          selectedSort: _sort,
+          onQueryChanged: (value) => setState(() => _query = value),
+          onFilterChanged: (value) => setState(() => _filter = value),
+          onSortChanged: (value) => setState(() => _sort = value),
+          onRefresh: _reload,
+        ),
+        const SizedBox(height: 12),
+        FutureBuilder<List<Booking>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              return CoreEmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Requests unavailable',
+                message: locationApiMessage(snapshot.error!),
+                actionLabel: 'Try again',
+                onAction: _reload,
+              );
+            }
+            final rows = _filtered(snapshot.data ?? const []);
+            if (rows.isEmpty) {
+              return CoreEmptyState(
+                icon: Icons.inbox_outlined,
                 title: 'No matching requests',
-                message:
-                    'Change the filter or search text to show seeded jobs.',
-                actionLabel: 'Clear filters',
-                onAction: () {
-                  setState(() => _query = '');
-                  store.setRequestFilter('All');
-                },
-              )
-            else
-              LocationResponsiveGrid(
-                minWidth: 320,
-                children: [
-                  for (final request in requests)
-                    _RequestCard(
-                      request: request,
-                      status: store.requestStatus(request),
-                      onDetails: () => _showRequestDetails(context, request),
-                      onAccept: () {
-                        store.acceptRequest(request.id);
-                        locationSnack(
-                          context,
-                          '${request.project} moved to contract pending',
-                        );
-                      },
-                      onCounter: () {
-                        store.counterRequest(request.id);
-                        Navigator.pushNamed(context, CoreRoutes.chat);
-                      },
-                      onReject: () => _confirmReject(context, store, request),
-                    ),
-                ],
-              ),
-          ],
-        );
-      },
+                message: snapshot.data?.isEmpty == true
+                    ? 'Location booking requests will appear here after a producer sends an offer.'
+                    : 'Change the search or status filter.',
+                actionLabel:
+                    snapshot.data?.isEmpty == true ? null : 'Clear filters',
+                onAction: snapshot.data?.isEmpty == true
+                    ? null
+                    : () => setState(() {
+                          _query = '';
+                          _filter = 'All';
+                        }),
+              );
+            }
+            return LocationResponsiveGrid(
+              minWidth: 320,
+              children: [
+                for (final booking in rows)
+                  _LiveRequestCard(
+                    booking: booking,
+                    currentUserId: AuthScope.maybeOf(context)?.user?.publicId,
+                    busy: _busyBookingId == booking.publicId,
+                    onDetails: () => _showDetails(booking),
+                    onAccept: () => _accept(booking),
+                    onCounter: () => _counter(booking),
+                    onReject: () => _reject(booking),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Iterable<LocationBookingRequest> _filteredRequests(
-    LocationOwnerDemoStore store,
-  ) {
-    final lowerQuery = _query.trim().toLowerCase();
-    final result = LocationOwnerDemoData.requests.where((request) {
-      final status = store.requestStatus(request);
-      final matchesFilter = switch (store.requestFilter) {
-        'Urgent' => status == LocationBookingStatus.requestReceived,
-        'Negotiation' => status == LocationBookingStatus.underNegotiation,
-        'Secured' => status == LocationBookingStatus.secured ||
-            status == LocationBookingStatus.contractPending,
+  List<Booking> _filtered(List<Booking> rows) {
+    final query = _query.trim().toLowerCase();
+    final filtered = rows.where((booking) {
+      final matchesFilter = switch (_filter) {
+        'New' => {'sent', 'viewed'}.contains(booking.status),
+        'Negotiation' => booking.status == 'under_negotiation',
+        'Accepted' => {'accepted', 'secured'}.contains(booking.status),
+        'Closed' =>
+          {'rejected', 'cancelled', 'completed'}.contains(booking.status),
         _ => true,
       };
-      final haystack =
-          '${request.project} ${request.producer} ${request.purpose}'
-              .toLowerCase();
-      return matchesFilter && haystack.contains(lowerQuery);
+      final haystack = '${booking.publicId} ${booking.projectId} '
+              '${booking.requester.displayName} ${booking.status}'
+          .toLowerCase();
+      return matchesFilter && haystack.contains(query);
     }).toList();
-    if (_sort == 'Budget') {
-      result.sort((a, b) => _budgetValue(b.budget) - _budgetValue(a.budget));
+    if (_sort == 'Fee') {
+      filtered.sort((a, b) {
+        final left = a.activeOffer?.feeMinor ?? a.agreedAmountMinor ?? 0;
+        final right = b.activeOffer?.feeMinor ?? b.agreedAmountMinor ?? 0;
+        return right.compareTo(left);
+      });
+    } else {
+      filtered.sort((a, b) => b.startAt.compareTo(a.startAt));
     }
-    return result;
+    return filtered;
   }
 
-  int _budgetValue(String budget) {
-    final digits = budget.replaceAll(RegExp(r'[^0-9]'), '');
-    return int.tryParse(digits) ?? 0;
+  Future<void> _accept(Booking booking) async {
+    final offer = booking.activeOffer;
+    final currentUserId = AuthScope.maybeOf(context)?.user?.publicId;
+    if (offer == null || offer.recipient.publicId != currentUserId) {
+      locationSnack(context, 'There is no active offer for you to accept');
+      return;
+    }
+    setState(() => _busyBookingId = booking.publicId);
+    try {
+      await _bookings!.acceptOffer(offer.publicId);
+      if (!mounted) return;
+      locationSnack(context, 'Offer accepted and dates secured');
+      _reload();
+    } catch (error) {
+      if (!mounted) return;
+      locationSnack(context, locationApiMessage(error));
+    } finally {
+      if (mounted) setState(() => _busyBookingId = null);
+    }
   }
 
-  void _showRequestDetails(
-    BuildContext context,
-    LocationBookingRequest request,
-  ) {
+  void _counter(Booking booking) {
+    final fee = TextEditingController(
+      text:
+          ((booking.activeOffer?.feeMinor ?? booking.agreedAmountMinor ?? 0) ~/
+                  100)
+              .toString(),
+    );
+    final conditions = TextEditingController(
+      text: booking.activeOffer?.conditions ?? '',
+    );
+    final message = TextEditingController();
     showLocationSheet(
       context,
-      title: request.project,
+      title: 'Counteroffer',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CoreTextField(
+            controller: fee,
+            label: 'Location fee (PKR)',
+            icon: Icons.payments_outlined,
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 10),
+          CoreTextField(
+            controller: conditions,
+            label: 'Conditions and access terms',
+            icon: Icons.rule_folder_outlined,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 10),
+          CoreTextField(
+            controller: message,
+            label: 'Message to producer',
+            icon: Icons.chat_bubble_outline_rounded,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          CorePrimaryButton(
+            icon: Icons.send_outlined,
+            label: 'Send counteroffer',
+            onTap: () async {
+              final amount = int.tryParse(fee.text.trim()) ?? 0;
+              if (amount <= 0) {
+                locationSnack(context, 'Enter a valid location fee');
+                return;
+              }
+              Navigator.pop(context);
+              await _sendCounter(
+                booking,
+                amountMinor: amount * 100,
+                conditions: conditions.text.trim(),
+                message: message.text.trim(),
+              );
+            },
+          ),
+        ],
+      ),
+    ).whenComplete(() {
+      fee.dispose();
+      conditions.dispose();
+      message.dispose();
+    });
+  }
+
+  Future<void> _sendCounter(
+    Booking booking, {
+    required int amountMinor,
+    required String conditions,
+    required String message,
+  }) async {
+    setState(() => _busyBookingId = booking.publicId);
+    try {
+      await _bookings!.createCounterOffer(
+        bookingId: booking.publicId,
+        feeMinor: amountMinor,
+        conditions: conditions.isEmpty ? null : conditions,
+        message: message.isEmpty ? null : message,
+      );
+      if (!mounted) return;
+      locationSnack(context, 'Counteroffer sent');
+      _reload();
+    } catch (error) {
+      if (!mounted) return;
+      locationSnack(context, locationApiMessage(error));
+    } finally {
+      if (mounted) setState(() => _busyBookingId = null);
+    }
+  }
+
+  void _reject(Booking booking) {
+    final reason = TextEditingController();
+    showLocationSheet(
+      context,
+      title: 'Decline request',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CoreTextField(
+            controller: reason,
+            label: 'Reason for the producer',
+            icon: Icons.edit_note_outlined,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 12),
+          CorePrimaryButton(
+            icon: Icons.block_rounded,
+            label: 'Decline request',
+            onTap: () async {
+              if (reason.text.trim().length < 3) {
+                locationSnack(context, 'Add a short decline reason');
+                return;
+              }
+              Navigator.pop(context);
+              await _sendReject(booking, reason.text.trim());
+            },
+          ),
+        ],
+      ),
+    ).whenComplete(reason.dispose);
+  }
+
+  Future<void> _sendReject(Booking booking, String reason) async {
+    setState(() => _busyBookingId = booking.publicId);
+    try {
+      await _bookings!.rejectBooking(booking.publicId, reason: reason);
+      if (!mounted) return;
+      locationSnack(context, 'Request declined');
+      _reload();
+    } catch (error) {
+      if (!mounted) return;
+      locationSnack(context, locationApiMessage(error));
+    } finally {
+      if (mounted) setState(() => _busyBookingId = null);
+    }
+  }
+
+  void _showDetails(Booking booking) {
+    final offer = booking.activeOffer;
+    showLocationSheet(
+      context,
+      title: 'Booking ${booking.publicId}',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           LocationInfoRow(
             icon: Icons.business_outlined,
             label: 'Producer',
-            value: request.producer,
+            value: booking.requester.displayName,
+          ),
+          LocationInfoRow(
+            icon: Icons.movie_creation_outlined,
+            label: 'Project',
+            value: booking.projectId,
           ),
           LocationInfoRow(
             icon: Icons.calendar_today_outlined,
             label: 'Requested dates',
-            value: request.dates,
-          ),
-          LocationInfoRow(
-            icon: Icons.groups_2_outlined,
-            label: 'Crew size',
-            value: request.crewSize,
+            value: locationBookingDates(booking),
           ),
           LocationInfoRow(
             icon: Icons.payments_outlined,
-            label: 'Budget',
-            value: request.budget,
+            label: 'Current fee',
+            value: locationBookingAmount(booking),
+          ),
+          LocationInfoRow(
+            icon: Icons.rule_folder_outlined,
+            label: 'Conditions',
+            value: offer?.conditions?.isNotEmpty == true
+                ? offer!.conditions!
+                : 'No special conditions',
           ),
           const SizedBox(height: 8),
-          CorePrimaryButton(
+          CoreSecondaryButton(
             icon: Icons.chat_bubble_outline_rounded,
-            label: 'Open negotiation',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, CoreRoutes.chat);
-            },
+            label: booking.conversationId == null
+                ? 'Chat unavailable'
+                : 'Open chat',
+            onTap: booking.conversationId == null
+                ? null
+                : () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(
+                      context,
+                      CoreRoutes.chat,
+                      arguments: booking.conversationId,
+                    );
+                  },
           ),
         ],
       ),
     );
   }
 
-  void _confirmReject(
-    BuildContext context,
-    LocationOwnerDemoStore store,
-    LocationBookingRequest request,
-  ) {
-    showLocationSheet(
-      context,
-      title: 'Reject request',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Reject ${request.project}? The producer action center will update immediately.',
-            style: AppTextStyles.body.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.close_rounded,
-                  label: 'Cancel',
-                  onTap: () => Navigator.pop(context),
+  Widget _buildPreview() {
+    final store = LocationOwnerDemoStore.instance;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _RequestCommandBar(
+          query: '',
+          selectedFilter: 'All',
+          selectedSort: 'Newest',
+          onQueryChanged: _noopString,
+          onFilterChanged: _noopString,
+          onSortChanged: _noopString,
+          onRefresh: _noop,
+        ),
+        const SizedBox(height: 12),
+        LocationResponsiveGrid(
+          minWidth: 320,
+          children: [
+            for (final request in LocationOwnerDemoData.requests)
+              GlassSectionCard(
+                radius: 18,
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.project,
+                      style: AppTextStyles.cardLabel.copyWith(
+                        color: context.appColors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${request.producer} · ${request.dates}',
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: context.appColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    LocationBookingStatusChip(
+                      status: store.requestStatus(request),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.block_rounded,
-                  label: 'Reject',
-                  onTap: () {
-                    store.rejectRequest(request.id);
-                    Navigator.pop(context);
-                    locationSnack(context, 'Request rejected');
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }
+
+void _noopString(String _) {}
+void _noop() {}
 
 class _RequestCommandBar extends StatelessWidget {
   final String query;
@@ -228,6 +436,7 @@ class _RequestCommandBar extends StatelessWidget {
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<String> onFilterChanged;
   final ValueChanged<String> onSortChanged;
+  final VoidCallback onRefresh;
 
   const _RequestCommandBar({
     required this.query,
@@ -236,6 +445,7 @@ class _RequestCommandBar extends StatelessWidget {
     required this.onQueryChanged,
     required this.onFilterChanged,
     required this.onSortChanged,
+    required this.onRefresh,
   });
 
   @override
@@ -245,33 +455,22 @@ class _RequestCommandBar extends StatelessWidget {
       title: 'Request inbox',
       icon: Icons.move_to_inbox_outlined,
       selected: true,
+      actionText: 'Refresh',
+      onActionTap: onRefresh,
       child: Column(
         children: [
-          TextField(
+          TextFormField(
+            key: ValueKey(query),
+            initialValue: query,
             onChanged: onQueryChanged,
             style: AppTextStyles.body.copyWith(color: colors.textPrimary),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Search project, producer, purpose...',
-              hintStyle: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
-              ),
+              hintText: 'Search booking, project or producer...',
               prefixIcon:
                   Icon(Icons.search_rounded, color: colors.goldDark, size: 20),
-              filled: true,
-              fillColor: colors.surface
-                  .withValues(alpha: colors.isLight ? 0.74 : 0.36),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: colors.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: colors.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: colors.goldMid),
               ),
             ),
           ),
@@ -282,9 +481,10 @@ class _RequestCommandBar extends StatelessWidget {
               children: [
                 for (final filter in [
                   'All',
-                  'Urgent',
+                  'New',
                   'Negotiation',
-                  'Secured',
+                  'Accepted',
+                  'Closed',
                 ])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -295,7 +495,7 @@ class _RequestCommandBar extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
-                for (final sort in ['Newest', 'Budget'])
+                for (final sort in ['Newest', 'Fee'])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: CoreChip(
@@ -314,17 +514,19 @@ class _RequestCommandBar extends StatelessWidget {
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  final LocationBookingRequest request;
-  final LocationBookingStatus status;
+class _LiveRequestCard extends StatelessWidget {
+  final Booking booking;
+  final String? currentUserId;
+  final bool busy;
   final VoidCallback onDetails;
   final VoidCallback onAccept;
   final VoidCallback onCounter;
   final VoidCallback onReject;
 
-  const _RequestCard({
-    required this.request,
-    required this.status,
+  const _LiveRequestCard({
+    required this.booking,
+    required this.currentUserId,
+    required this.busy,
     required this.onDetails,
     required this.onAccept,
     required this.onCounter,
@@ -334,28 +536,22 @@ class _RequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final actionable = status == LocationBookingStatus.requestReceived ||
-        status == LocationBookingStatus.underNegotiation;
+    final mutable =
+        {'sent', 'viewed', 'under_negotiation'}.contains(booking.status);
+    final canAccept = mutable &&
+        booking.activeOffer?.status == 'active' &&
+        booking.activeOffer?.recipient.publicId == currentUserId;
     return GlassSectionCard(
-      radius: 20,
+      radius: 18,
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LocationMediaFrame(
-            imageUrl: request.imageUrl,
-            title: request.project,
-            badge: request.dates,
-            fallbackIcon: Icons.movie_filter_outlined,
-            aspectRatio: 16 / 9,
-            compact: true,
-          ),
-          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  request.project,
+                  'Project ${booking.projectId}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -364,12 +560,15 @@ class _RequestCard extends StatelessWidget {
                   ),
                 ),
               ),
-              LocationBookingStatusChip(status: status),
+              LocationBookingStatusChip(
+                status: locationBookingStatusFromBooking(booking),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            '${request.producer} - ${request.crewSize} - ${request.budget}',
+            '${booking.requester.displayName} · '
+            '${locationBookingDates(booking)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.smallMeta.copyWith(
@@ -378,65 +577,60 @@ class _RequestCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            request.purpose,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
+            locationBookingAmount(booking),
+            style: AppTextStyles.statusText.copyWith(
+              color: colors.goldDark,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 11),
-          if (actionable) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: CoreSecondaryButton(
-                    icon: Icons.info_outline_rounded,
-                    label: 'Details',
-                    compact: true,
-                    onTap: onDetails,
-                  ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: CoreSecondaryButton(
+                  icon: Icons.info_outline_rounded,
+                  label: 'Review',
+                  compact: true,
+                  onTap: busy ? null : onDetails,
                 ),
+              ),
+              if (mutable) ...[
                 const SizedBox(width: 8),
                 Expanded(
                   child: CoreSecondaryButton(
                     icon: Icons.edit_note_outlined,
                     label: 'Counter',
                     compact: true,
-                    onTap: onCounter,
+                    onTap: busy ? null : onCounter,
                   ),
                 ),
               ],
-            ),
+            ],
+          ),
+          if (mutable) ...[
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: CoreSecondaryButton(
                     icon: Icons.block_rounded,
-                    label: 'Reject',
+                    label: 'Decline',
                     compact: true,
-                    onTap: onReject,
+                    onTap: busy ? null : onReject,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: CorePrimaryButton(
                     icon: Icons.check_circle_outline,
-                    label: 'Accept',
+                    label: busy ? 'Working...' : 'Accept',
                     compact: true,
-                    onTap: onAccept,
+                    onTap: busy || !canAccept ? null : onAccept,
                   ),
                 ),
               ],
             ),
-          ] else
-            CoreSecondaryButton(
-              icon: Icons.info_outline_rounded,
-              label: 'Details',
-              compact: true,
-              onTap: onDetails,
-            ),
+          ],
         ],
       ),
     );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/core_ui/core_routes.dart';
 import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -121,25 +120,13 @@ class _HeroCard extends StatelessWidget {
                       AppTextStyles.heroSerifNumber.copyWith(color: budgetInk),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DPHolographicButton(
-                        label: 'New Project',
-                        icon: Icons.add_rounded,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          DirectorProducerRoutes.createProject,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    _NotificationButton(
-                      hasUnread: actionCount > 0,
-                      onTap: () => Navigator.pushNamed(
-                          context, CoreRoutes.notifications),
-                    ),
-                  ],
+                DPHolographicButton(
+                  label: 'New Project',
+                  icon: Icons.add_rounded,
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    DirectorProducerRoutes.createProject,
+                  ),
                 ),
               ],
             ),
@@ -202,52 +189,6 @@ class _FoilLineState extends State<_FoilLine>
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _NotificationButton extends StatelessWidget {
-  final bool hasUnread;
-  final VoidCallback onTap;
-
-  const _NotificationButton({required this.hasUnread, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Tooltip(
-      message: 'Notifications',
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 46,
-          height: 44,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: colors.border),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(Icons.notifications_none_rounded,
-                  color: colors.textSecondary, size: 20),
-              if (hasUnread)
-                Positioned(
-                  top: 9,
-                  right: 11,
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colors.danger,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }

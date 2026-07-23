@@ -8,220 +8,206 @@ class AdminAnalyticsScreen extends StatefulWidget {
 }
 
 class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
-  String _tab = 'Marketplace Growth';
-  String _range = 'This month';
+  String _range = '30 days';
   Future<AdminAnalyticsDto>? _future;
 
   int get _rangeDays => switch (_range) {
-        'Year' => 90,
-        'Quarter' => 90,
-        'Last month' => 30,
+        '7 days' => 7,
+        '90 days' => 90,
         _ => 30,
       };
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _load();
+    _future ??= _load();
   }
 
-  void _load() {
-    final analytics = AnalyticsScope.maybeOf(context);
-    if (analytics != null) {
-      _future = analytics.adminAnalytics(force: true, days: _rangeDays);
-    }
+  Future<AdminAnalyticsDto> _load() {
+    return AnalyticsScope.of(context).adminAnalytics(
+      force: true,
+      days: _rangeDays,
+    );
+  }
+
+  void _changeRange(String value) {
+    setState(() {
+      _range = value;
+      _future = _load();
+    });
+  }
+
+  void _refresh() {
+    setState(() => _future = _load());
   }
 
   @override
   Widget build(BuildContext context) {
-    final metrics = switch (_tab) {
-      'Demand' => const [
-          ('Active producers', '312', Icons.movie_creation_outlined),
-          ('Projects created', '91', Icons.add_box_outlined),
-          ('Requests sent', '1.8k', Icons.send_outlined),
-          ('Top category', 'Actors', Icons.theater_comedy_outlined),
-        ],
-      'Conversion Funnel' => const [
-          ('Requests', '100%', Icons.flag_outlined),
-          ('Negotiations', '68%', Icons.swap_horiz_rounded),
-          ('Terms approved', '44%', Icons.check_circle_outline),
-          ('Contracts signed', '37%', Icons.draw_outlined),
-          ('Payments verified', '31%', Icons.payments_outlined),
-          ('Closed bookings', '26%', Icons.lock_outline),
-        ],
-      'Trust Metrics' => const [
-          ('Avg verification time', '11h', Icons.verified_user_outlined),
-          ('Dispute rate', '2.4%', Icons.gpp_maybe_outlined),
-          ('Cancellation rate', '4.8%', Icons.cancel_outlined),
-          ('Fake-profile rejection', '8.1%', Icons.person_off_outlined),
-          ('Payment verification time', '5h', Icons.timer_outlined),
-        ],
-      'Revenue' => const [
-          ('Commission revenue', 'PKR 2.8M', Icons.percent_rounded),
-          ('Subscription revenue', 'PKR 680k', Icons.card_membership_outlined),
-          ('Verification fees', 'PKR 310k', Icons.verified_outlined),
-          ('Featured listings', 'PKR 490k', Icons.workspace_premium_outlined),
-          ('Premium tools', 'PKR 180k', Icons.auto_awesome_outlined),
-        ],
-      'Retention' => const [
-          ('Repeat producers', '41%', Icons.repeat_rounded),
-          ('Repeat bookings', '33%', Icons.loop_rounded),
-          ('Active listings', '418', Icons.storefront_outlined),
-          ('Monthly active users', '9.4k', Icons.groups_outlined),
-        ],
-      _ => const [
-          ('Verified actors', '1,280', Icons.theater_comedy_outlined),
-          ('Verified models', '740', Icons.style_outlined),
-          ('Locations live', '312', Icons.location_city_outlined),
-          ('Media providers', '224', Icons.videocam_outlined),
-          ('Crew accounts', '950', Icons.groups_2_outlined),
-          ('Partner accounts', '68', Icons.handshake_outlined),
-        ],
-    };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_future != null) ...[
-          FutureBuilder<AdminAnalyticsDto>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: LinearProgressIndicator(minHeight: 2),
-                );
-              }
-              if (snapshot.hasError || !snapshot.hasData) {
-                return const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: InlineNotice(
-                    message:
-                        'Live analytics unavailable — showing preview analytics below.',
-                    tone: CoreStatusTone.warning,
-                  ),
-                );
-              }
-              final live = snapshot.data!;
-              final users = live.newUsersByDay.values.fold<int>(
-                0,
-                (sum, value) => sum + value,
-              );
-              final bookings = live.newBookingsByDay.values.fold<int>(
-                0,
-                (sum, value) => sum + value,
-              );
-              final secured = live.securedBookingsByDay.values.fold<int>(
-                0,
-                (sum, value) => sum + value,
-              );
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: AdminSurface(
-                  padding: const EdgeInsets.all(12),
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+    return FutureBuilder<AdminAnalyticsDto>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
+              children: [
+                AdminEmptyState(
+                  icon: Icons.analytics_outlined,
+                  title: 'Platform analytics unavailable',
+                  message: error is ApiException
+                      ? error.message
+                      : 'Check the backend connection and try again.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
+              ],
+            ),
+          );
+        }
+        final data = snapshot.data!;
+        final users = data.newUsersByDay.values.fold<int>(
+          0,
+          (sum, value) => sum + value,
+        );
+        final bookings = data.newBookingsByDay.values.fold<int>(
+          0,
+          (sum, value) => sum + value,
+        );
+        final secured = data.securedBookingsByDay.values.fold<int>(
+          0,
+          (sum, value) => sum + value,
+        );
+        final conversion = bookings == 0 ? 0 : secured / bookings;
+        final userSeries =
+            data.newUsersByDay.values.map((value) => value.toDouble()).toList();
+        final bookingSeries = data.newBookingsByDay.values
+            .map((value) => value.toDouble())
+            .toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AdminSurface(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final controls = Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      AdminStatusBadge(
-                        label: '${live.rangeDays} day live range',
-                        tone: AdminDecisionTone.info,
+                      ExportActionButton(
+                        exportType: 'bookings',
+                        label: 'Export bookings',
+                        builder: (context, onTap, label) => AdminActionButton(
+                          icon: Icons.download_outlined,
+                          label: label,
+                          secondary: true,
+                          onTap: onTap,
+                        ),
                       ),
-                      AdminStatusBadge(
-                        label: '$users new users',
-                        tone: AdminDecisionTone.success,
+                      ExportActionButton(
+                        exportType: 'admin_disputes',
+                        label: 'Export disputes',
+                        builder: (context, onTap, label) => AdminActionButton(
+                          icon: Icons.gavel_outlined,
+                          label: label,
+                          secondary: true,
+                          onTap: onTap,
+                        ),
                       ),
-                      AdminStatusBadge(
-                        label: '$bookings new bookings',
-                        tone: AdminDecisionTone.warning,
-                      ),
-                      AdminStatusBadge(
-                        label: '$secured secured bookings',
-                        tone: AdminDecisionTone.success,
+                      AdminActionButton(
+                        icon: Icons.refresh_rounded,
+                        label: 'Refresh',
+                        secondary: true,
+                        onTap: _refresh,
                       ),
                     ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-        AdminFilterBar(
-          filters: const [
-            'Marketplace Growth',
-            'Demand',
-            'Conversion Funnel',
-            'Trust Metrics',
-            'Revenue',
-            'Retention'
-          ],
-          selected: _tab,
-          onSelected: (value) => setState(() => _tab = value),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            _dropdown(
-                context,
-                'Date range',
-                _range,
-                const ['This month', 'Last month', 'Quarter', 'Year'],
-                (v) => setState(() {
-                      _range = v;
-                      _load();
-                    })),
-            ExportActionButton(
-              exportType: 'admin_disputes',
-              label: 'Export report',
-              builder: (context, onTap, label) => AdminActionButton(
-                icon: Icons.download_outlined,
-                label: label,
-                secondary: true,
-                onTap: onTap,
+                  );
+                  final range = _dropdown(
+                    context,
+                    'Date range',
+                    _range,
+                    const ['7 days', '30 days', '90 days'],
+                    _changeRange,
+                  );
+                  if (constraints.maxWidth < 680) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        range,
+                        const SizedBox(height: 10),
+                        controls,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      range,
+                      const Spacer(),
+                      controls,
+                    ],
+                  );
+                },
               ),
             ),
-            AdminActionButton(
-                icon: Icons.compare_arrows_rounded,
-                label: 'Compare month',
-                secondary: true,
-                onTap: () => showCoreSnack(context, 'Comparison enabled')),
-            AdminActionButton(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'Investor summary',
-                onTap: () =>
-                    showCoreSnack(context, 'Investor summary downloaded')),
+            const SizedBox(height: 16),
+            _ResponsiveGrid(
+              minTileWidth: 190,
+              childAspectRatio: 2.6,
+              children: [
+                AdminMetricTile(
+                  label: 'New users',
+                  value: '$users',
+                  icon: Icons.person_add_alt_1_outlined,
+                  tone: AdminDecisionTone.success,
+                ),
+                AdminMetricTile(
+                  label: 'New bookings',
+                  value: '$bookings',
+                  icon: Icons.work_outline_rounded,
+                  tone: AdminDecisionTone.info,
+                ),
+                AdminMetricTile(
+                  label: 'Secured bookings',
+                  value: '$secured',
+                  icon: Icons.lock_outline_rounded,
+                  tone: AdminDecisionTone.warning,
+                ),
+                AdminMetricTile(
+                  label: 'Booking conversion',
+                  value: '${(conversion * 100).toStringAsFixed(1)}%',
+                  icon: Icons.trending_up_rounded,
+                  tone: conversion >= 0.3
+                      ? AdminDecisionTone.success
+                      : AdminDecisionTone.warning,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _TwoPane(
+              left: AdminChartCard(
+                title: 'New users by day',
+                subtitle: '${data.rangeDays}-day verified registration trend',
+                values: userSeries.isEmpty ? const [0] : userSeries,
+                bars: false,
+              ),
+              right: AdminChartCard(
+                title: 'Bookings by day',
+                subtitle: 'New booking requests and secured activity',
+                values: bookingSeries.isEmpty ? const [0] : bookingSeries,
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 18),
-        _ResponsiveGrid(
-          minTileWidth: 190,
-          childAspectRatio: 2.6,
-          children: metrics
-              .map((m) => AdminMetricTile(
-                  label: m.$1,
-                  value: m.$2,
-                  icon: m.$3,
-                  tone: AdminDecisionTone.info))
-              .toList(),
-        ),
-        const SizedBox(height: 18),
-        _TwoPane(
-          leftFlex: 3,
-          rightFlex: 2,
-          left: AdminChartCard(
-            title: 'Category growth',
-            subtitle: 'Verified supply indexed by week - $_range',
-            values: const [20, 28, 35, 42, 58, 62, 74, 88],
-            bars: false,
-          ),
-          right: const AdminChartCard(
-            title: 'City distribution',
-            subtitle: 'Lahore, Karachi, Islamabad, Rawalpindi, Multan',
-            values: [72, 64, 45, 28, 22],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -246,29 +232,49 @@ class NotificationCardPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.all(15),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: colors.inactiveChipGradient,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          AdminStatusBadge(
-              label: '$priority - $status', tone: AdminDecisionTone.warning),
-          const SizedBox(height: 12),
-          _headline(context, title),
-          const SizedBox(height: 6),
-          _text(context, body),
-          const SizedBox(height: 12),
-          AdminStatusBadge(label: segment, tone: AdminDecisionTone.info),
-          const SizedBox(height: 12),
-          AdminActionButton(
-            icon: Icons.notifications_none_rounded,
-            label: 'Open SC-10 Notification Center',
-            secondary: true,
-            onTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 5,
+            child: ColoredBox(color: colors.goldMid),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 15, 15, 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AdminStatusBadge(
+                  label: '$priority · $status',
+                  tone: AdminDecisionTone.warning,
+                ),
+                const SizedBox(height: 12),
+                _headline(context, title),
+                const SizedBox(height: 6),
+                _text(context, body),
+                const SizedBox(height: 12),
+                AdminStatusBadge(
+                  label: segment,
+                  tone: AdminDecisionTone.info,
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.notifications_none_rounded,
+                  label: 'Open notification center',
+                  secondary: true,
+                  onTap: () =>
+                      Navigator.pushNamed(context, CoreRoutes.notifications),
+                ),
+              ],
+            ),
           ),
         ],
       ),

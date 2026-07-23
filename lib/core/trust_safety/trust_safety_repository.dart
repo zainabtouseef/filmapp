@@ -126,6 +126,14 @@ class TrustSafetyRepository {
         .toList();
   }
 
+  Future<DisputeDto> adminDispute(String disputeId) async {
+    final response = await _client.get('/admin/disputes/$disputeId');
+    return DisputeDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['dispute']
+          as Map<String, dynamic>,
+    );
+  }
+
   Future<DisputeDto> decideDispute({
     required String disputeId,
     required String decision,

@@ -49,7 +49,15 @@ class _AT09ContractSigningScreenState extends State<AT09ContractSigningScreen> {
           if (!snapshot.hasError && rows.isNotEmpty) {
             return _LiveContracts(rows: rows, onRefresh: _refresh);
           }
-          return _DemoContracts();
+          if (snapshot.hasError) {
+            return _ContractLoadError(onRetry: _refresh);
+          }
+          return const CoreEmptyState(
+            icon: Icons.article_outlined,
+            title: 'No contracts yet',
+            message:
+                'Accepted booking terms will appear here when a producer issues a contract.',
+          );
         },
       );
     }
@@ -104,12 +112,17 @@ class _LiveContracts extends StatelessWidget {
             _LiveContractPreview(contract: primary),
             const SizedBox(height: 12),
             Text(
-              'These records come from the deployed contract endpoint and stay linked to the accepted booking.',
+              'Review every clause before signing. Corrections stay attached to the same booking and contract history.',
               style: AppTextStyles.body.copyWith(
                 color: context.appColors.textSecondary,
                 height: 1.35,
               ),
             ),
+            if (rows.length > 1) ...[
+              const SizedBox(height: 14),
+              for (final contract in rows.skip(1).take(4))
+                _ContractQueueRow(contract: contract),
+            ],
           ],
         ),
       ),
@@ -170,7 +183,7 @@ class _DemoContracts extends StatelessWidget {
         final store = ActorTalentDemoStore.instance;
         return ActorTwoColumn(
           left: ActorSectionCard(
-            title: 'SC-12 Stakeholder Contract',
+            title: 'Talent Agreement',
             icon: Icons.draw_outlined,
             selected: !store.contractSigned,
             child: Column(
@@ -263,6 +276,80 @@ class _DemoContracts extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ContractQueueRow extends StatelessWidget {
+  final CineContract contract;
+
+  const _ContractQueueRow({required this.contract});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.borderMuted)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.article_outlined, color: colors.goldDark, size: 18),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              contract.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.cardLabel.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              CoreRoutes.contract,
+              arguments: contract.publicId,
+            ),
+            child: Text(contract.isSigned ? 'View' : 'Review'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContractLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _ContractLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return ActorSectionCard(
+      title: 'Contracts unavailable',
+      icon: Icons.cloud_off_outlined,
+      tone: ActorTone.danger,
+      child: Column(
+        children: [
+          const CoreEmptyState(
+            icon: Icons.sync_problem_outlined,
+            title: 'Could not load contracts',
+            message: 'Check your connection and try again.',
+          ),
+          const SizedBox(height: 10),
+          CoreSecondaryButton(
+            icon: Icons.refresh_rounded,
+            label: 'Try again',
+            compact: true,
+            onTap: onRetry,
+          ),
+        ],
+      ),
     );
   }
 }

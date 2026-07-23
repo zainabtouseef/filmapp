@@ -125,3 +125,17 @@ def test_api_error_handler_serializes_fields(app: Flask) -> None:
 
     assert response.status_code == 422
     assert response.json["error"]["fields"] == {"email": ["Invalid email."]}
+
+
+def test_super_admin_control_routes_are_registered(app: Flask) -> None:
+    routes = {rule.rule for rule in app.url_map.iter_rules()}
+
+    assert {
+        "/api/v1/admin/control/bookings",
+        "/api/v1/admin/control/users",
+        "/api/v1/admin/control/listings",
+        "/api/v1/admin/control/contract-templates",
+        "/api/v1/admin/control/fee-rules",
+        "/api/v1/admin/control/roles",
+        "/api/v1/admin/control/audit-events",
+    }.issubset(routes)

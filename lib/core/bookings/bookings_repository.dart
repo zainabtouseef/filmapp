@@ -141,12 +141,32 @@ class BookingsRepository {
     required String endAt,
     required String status,
     String? note,
+    String? resourceType,
+    String? resourceId,
   }) async {
     final response = await _client.post(
       '/availability',
       body: {
         'start_at': startAt,
         'end_at': endAt,
+        'status': status,
+        if (note != null) 'note': note,
+        if (resourceType != null) 'resource_type': resourceType,
+        if (resourceId != null) 'resource_id': resourceId,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return AvailabilityEntry.fromJson(data['entry'] as Map<String, dynamic>);
+  }
+
+  Future<AvailabilityEntry> updateAvailability({
+    required String entryId,
+    required String status,
+    String? note,
+  }) async {
+    final response = await _client.patch(
+      '/availability/$entryId',
+      body: {
         'status': status,
         if (note != null) 'note': note,
       },

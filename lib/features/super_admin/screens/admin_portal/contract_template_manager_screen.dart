@@ -10,151 +10,347 @@ class ContractTemplateManagerScreen extends StatefulWidget {
 
 class _ContractTemplateManagerScreenState
     extends State<ContractTemplateManagerScreen> {
-  int _selected = 0;
-  bool _hasUsageRights = true;
-  String _version = 'v1.0';
+  Future<List<AdminContractTemplateDto>>? _future;
+  String _filter = 'All';
+  String? _busyId;
 
-  final _templates = const [
-    'Actor Booking Agreement',
-    'Model Release / Campaign Agreement',
-    'Location / Home Booking Agreement',
-    'Media / Equipment Rental Agreement',
-    'Production Crew Agreement',
-    'Sponsorship / Brand Integration Agreement',
-    'Addendum / Change Order',
-    'Cancellation / Rescheduling Agreement',
-    'Damage Claim / Deposit Adjustment Record',
-  ];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= AdminScope.of(context).contractTemplates();
+  }
+
+  void _refresh() {
+    setState(
+      () => _future = AdminScope.of(context).contractTemplates(force: true),
+    );
+  }
+
+  Future<void> _create() async {
+    final values = await _templateFormDialog(context);
+    if (!mounted || values == null) return;
+    try {
+      final template = await AdminScope.of(context).createContractTemplate(
+        name: values.$1,
+        category: values.$2,
+      );
+      if (!mounted) return;
+      showCoreSnack(context, 'Contract template created as a draft.');
+      _refresh();
+      Navigator.pushNamed(
+        context,
+        SuperAdminRoutes.contractTemplatePath(template.publicId),
+      );
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    }
+  }
+
+  Future<void> _setStatus(
+    AdminContractTemplateDto template,
+    String status,
+  ) async {
+    if (_busyId != null) return;
+    setState(() => _busyId = template.publicId);
+    try {
+      await AdminScope.of(context).updateContractTemplate(
+        template.publicId,
+        status: status,
+      );
+      if (!mounted) return;
+      showCoreSnack(context, 'Template changed to $status.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  Future<void> _duplicate(AdminContractTemplateDto template) async {
+    if (_busyId != null) return;
+    setState(() => _busyId = template.publicId);
+    final admin = AdminScope.of(context);
+    try {
+      final copy = await admin.createContractTemplate(
+        name: '${template.name} Copy',
+        category: template.category,
+        jurisdiction: template.jurisdiction,
+      );
+      await admin.updateContractTemplate(
+        copy.publicId,
+        clauses: template.clauses,
+      );
+      if (!mounted) return;
+      showCoreSnack(context, 'Template duplicated as a draft.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _ThreePane(
-      left: AdminSurface(
-        padding: const EdgeInsets.all(12),
-        child: SizedBox(
-          height: 112,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: _templates.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              return _TemplatePill(
-                label: _templates[index],
-                selected: index == _selected,
-                onTap: () => setState(() => _selected = index),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AdminSurface(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final controls = Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  AdminActionButton(
+                    icon: Icons.add_rounded,
+                    label: 'New template',
+                    onTap: _create,
+                  ),
+                  AdminActionButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'Refresh',
+                    secondary: true,
+                    onTap: _refresh,
+                  ),
+                ],
+              );
+              if (constraints.maxWidth < 640) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AdminFilterBar(
+                      filters: const [
+                        'All',
+                        'draft',
+                        'published',
+                        'archived',
+                      ],
+                      selected: _filter,
+                      onSelected: (value) => setState(() => _filter = value),
+                    ),
+                    const SizedBox(height: 12),
+                    controls,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: AdminFilterBar(
+                      filters: const [
+                        'All',
+                        'draft',
+                        'published',
+                        'archived',
+                      ],
+                      selected: _filter,
+                      onSelected: (value) => setState(() => _filter = value),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  controls,
+                ],
               );
             },
           ),
         ),
-      ),
-      center: AdminSurface(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _headline(context, _templates[_selected]),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
+        const SizedBox(height: 16),
+        FutureBuilder<List<AdminContractTemplateDto>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const AdminSurface(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              final error = snapshot.error;
+              return AdminSurface(
+                child: Column(
+                  children: [
+                    AdminEmptyState(
+                      icon: Icons.article_outlined,
+                      title: 'Could not load contract templates',
+                      message: error is ApiException
+                          ? error.message
+                          : 'Check the backend connection and try again.',
+                    ),
+                    const SizedBox(height: 12),
+                    AdminActionButton(
+                      icon: Icons.refresh_rounded,
+                      label: 'Retry',
+                      secondary: true,
+                      onTap: _refresh,
+                    ),
+                  ],
+                ),
+              );
+            }
+            final rows = (snapshot.data ?? const [])
+                .where(
+                  (item) => _filter == 'All' || item.status == _filter,
+                )
+                .toList();
+            if (rows.isEmpty) {
+              return const AdminEmptyState(
+                icon: Icons.article_outlined,
+                title: 'No contract templates',
+                message: 'Create the first governed contract template.',
+              );
+            }
+            return Column(
               children: [
-                AdminStatusBadge(label: _version, tone: AdminDecisionTone.info),
-                const AdminStatusBadge(
-                    label: 'Draft', tone: AdminDecisionTone.warning),
+                for (final template in rows)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _TemplateControlCard(
+                      template: template,
+                      busy: _busyId == template.publicId,
+                      onOpen: () => Navigator.pushNamed(
+                        context,
+                        SuperAdminRoutes.contractTemplatePath(
+                          template.publicId,
+                        ),
+                      ),
+                      onPublish: () => _setStatus(template, 'published'),
+                      onArchive: () => _setStatus(template, 'archived'),
+                      onDuplicate: () => _duplicate(template),
+                    ),
+                  ),
               ],
-            ),
-            const SizedBox(height: 10),
-            ...[
-              'Parties',
-              'Project',
-              'Dates',
-              'Fee',
-              'Payment Schedule',
-              'Deliverables',
-              if (_hasUsageRights) 'Usage Rights',
-              'Cancellation',
-              'Overtime',
-              'Dispute Process',
-              'Special Conditions',
-            ].map((clause) => _clauseEditor(context, clause)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: const [
-                AdminStatusBadge(
-                    label: '{{fee}}', tone: AdminDecisionTone.neutral),
-                AdminStatusBadge(
-                    label: '{{dates}}', tone: AdminDecisionTone.neutral),
-                AdminStatusBadge(
-                    label: '{{usage_rights}}', tone: AdminDecisionTone.neutral),
-                AdminStatusBadge(
-                    label: '{{payment_schedule}}',
-                    tone: AdminDecisionTone.neutral),
-                AdminStatusBadge(
-                    label: '{{deliverables}}', tone: AdminDecisionTone.neutral),
-              ],
-            ),
-          ],
+            );
+          },
         ),
-      ),
-      right: AdminSurface(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ],
+    );
+  }
+}
+
+class _TemplateControlCard extends StatelessWidget {
+  final AdminContractTemplateDto template;
+  final bool busy;
+  final VoidCallback onOpen;
+  final VoidCallback onPublish;
+  final VoidCallback onArchive;
+  final VoidCallback onDuplicate;
+
+  const _TemplateControlCard({
+    required this.template,
+    required this.busy,
+    required this.onOpen,
+    required this.onPublish,
+    required this.onArchive,
+    required this.onDuplicate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final published = template.status == 'published';
+    return AdminSurface(
+      padding: EdgeInsets.zero,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AdminSectionHeader(title: 'Mandatory Rules'),
-            const SizedBox(height: 8),
-            ...const [
-              'Model contracts must include usage rights',
-              'Location contracts must include damage deposit',
-              'Equipment contracts must include handover/return checklist',
-              'Sponsorship contracts must include brand usage and deliverables',
-            ].map((rule) => _bullet(context, rule)),
-            if (!_hasUsageRights) ...[
-              const SizedBox(height: 12),
-              const AdminStatusBadge(
-                label:
-                    'Generation blocked until usage rights block is included.',
-                icon: Icons.block_rounded,
-                tone: AdminDecisionTone.danger,
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                color: published ? colors.success : colors.goldMid,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(8),
+                ),
               ),
-            ],
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _tinyAction(context, 'Save Draft',
-                    () => showCoreSnack(context, 'Draft saved to audit log')),
-                _tinyAction(context, 'Publish Version', () {
-                  if (!_hasUsageRights) {
-                    showCoreSnack(context,
-                        'Generation blocked until usage rights block is included.');
-                    return;
-                  }
-                  setState(() => _version = 'v1.1');
-                  showCoreSnack(
-                      context, 'v1.1 published and audit log written');
-                }),
-                _tinyAction(context, 'Preview Contract',
-                    () => Navigator.pushNamed(context, CoreRoutes.contract)),
-                _tinyAction(
-                    context,
-                    'Open Full Detail',
-                    () => Navigator.pushNamed(
-                        context, SuperAdminRoutes.contractTemplateDetail)),
-                _tinyAction(context, 'Duplicate',
-                    () => showCoreSnack(context, 'Template duplicated')),
-                _tinyAction(context, 'Archive',
-                    () => showCoreSnack(context, 'Template archived')),
-                _tinyAction(context, 'Version History',
-                    () => showCoreSnack(context, 'Version history opened')),
-                _tinyAction(
-                    context,
-                    _hasUsageRights
-                        ? 'Remove Usage Rights'
-                        : 'Restore Usage Rights',
-                    () => setState(() => _hasUsageRights = !_hasUsageRights)),
-              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final details = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          template.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            AdminStatusBadge(
+                              label: template.status,
+                              tone: published
+                                  ? AdminDecisionTone.success
+                                  : AdminDecisionTone.warning,
+                            ),
+                            AdminStatusBadge(
+                              label: 'v${template.versionNumber}',
+                              tone: AdminDecisionTone.info,
+                            ),
+                            AdminStatusBadge(
+                              label: template.category,
+                              tone: AdminDecisionTone.neutral,
+                            ),
+                            AdminStatusBadge(
+                              label: '${template.clauses.length} clauses',
+                              tone: AdminDecisionTone.neutral,
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                    final actions = Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _tinyAction(context, 'Open', busy ? null : onOpen),
+                        _tinyAction(
+                          context,
+                          'Publish',
+                          busy || published ? null : onPublish,
+                        ),
+                        _tinyAction(
+                          context,
+                          'Duplicate',
+                          busy ? null : onDuplicate,
+                        ),
+                        _tinyAction(
+                          context,
+                          'Archive',
+                          busy || template.status == 'archived'
+                              ? null
+                              : onArchive,
+                        ),
+                      ],
+                    );
+                    if (constraints.maxWidth < 720) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          details,
+                          const SizedBox(height: 10),
+                          actions,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: details),
+                        const SizedBox(width: 12),
+                        actions,
+                      ],
+                    );
+                  },
+                ),
+              ),
             ),
           ],
         ),
@@ -163,53 +359,49 @@ class _ContractTemplateManagerScreenState
   }
 }
 
-class _TemplatePill extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _TemplatePill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 152,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: selected
-              ? colors.activeChipGradient
-              : colors.inactiveChipGradient,
-          border: Border.all(
-            color: selected ? colors.goldMid : colors.border,
-            width: selected ? 1.25 : 1,
+Future<(String, String)?> _templateFormDialog(BuildContext context) async {
+  final name = TextEditingController();
+  final category = TextEditingController(text: 'general');
+  final result = await showDialog<(String, String)>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('New contract template'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: name,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Template name'),
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                      color: colors.goldGlow, blurRadius: 16, spreadRadius: -4)
-                ]
-              : null,
-        ),
-        alignment: Alignment.centerLeft,
-        child: Text(
-          label,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.caption.copyWith(
-            color: selected ? colors.goldDark : colors.textPrimary,
-            fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
-            height: 1.25,
+          const SizedBox(height: 12),
+          TextField(
+            controller: category,
+            decoration: const InputDecoration(labelText: 'Category'),
           ),
-        ),
+        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (name.text.trim().isEmpty || category.text.trim().isEmpty) {
+              return;
+            }
+            Navigator.pop(
+              context,
+              (name.text.trim(), category.text.trim()),
+            );
+          },
+          child: const Text('Create'),
+        ),
+      ],
+    ),
+  );
+  name.dispose();
+  category.dispose();
+  return result;
 }

@@ -317,6 +317,7 @@ class LocationOwnerDemoStore extends ChangeNotifier {
   static final instance = LocationOwnerDemoStore._();
 
   String activePropertyId = LocationOwnerDemoData.properties.first.id;
+  String? activeLivePropertyId;
   int listingStep = 1;
   bool listingSubmitted = false;
   bool exactAddressEncrypted = true;
@@ -393,6 +394,12 @@ class LocationOwnerDemoStore extends ChangeNotifier {
 
   void setActiveProperty(String id) {
     activePropertyId = id;
+    notifyListeners();
+  }
+
+  void setActiveLiveProperty(String? id) {
+    if (activeLivePropertyId == id) return;
+    activeLivePropertyId = id;
     notifyListeners();
   }
 

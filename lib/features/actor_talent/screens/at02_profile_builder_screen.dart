@@ -28,9 +28,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   late final TextEditingController credits;
   late final TextEditingController instagram;
   late final TextEditingController followers;
+  late final TextEditingController website;
   late final TextEditingController workHistory;
   late final TextEditingController ageRange;
   late final TextEditingController height;
+  late final TextEditingController genderIdentity;
+  late final TextEditingController experienceYears;
+  late final TextEditingController unionNote;
   late final TextEditingController agency;
   String? error;
   String? remoteStatus;
@@ -52,9 +56,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     credits = TextEditingController(text: store.profileCredits);
     instagram = TextEditingController(text: store.profileInstagram);
     followers = TextEditingController(text: store.profileFollowers);
+    website = TextEditingController();
     workHistory = TextEditingController(text: store.profileWorkHistory);
     ageRange = TextEditingController(text: store.profileAgeRange);
     height = TextEditingController(text: store.profileHeight);
+    genderIdentity = TextEditingController();
+    experienceYears = TextEditingController();
+    unionNote = TextEditingController();
     agency = TextEditingController(text: store.agency);
   }
 
@@ -77,9 +85,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     credits.dispose();
     instagram.dispose();
     followers.dispose();
+    website.dispose();
     workHistory.dispose();
     ageRange.dispose();
     height.dispose();
+    genderIdentity.dispose();
+    experienceYears.dispose();
+    unionNote.dispose();
     agency.dispose();
     super.dispose();
   }
@@ -95,7 +107,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             icon: Icons.badge_outlined,
             child: Column(
               children: [
-                const StepWizardIndicator(currentStep: 2, totalSteps: 4),
+                Text(
+                  'Build the public casting profile directors use for search, shortlisting and booking decisions.',
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
                 if (loadingRemote) ...[
                   const SizedBox(height: 12),
                   const LinearProgressIndicator(minHeight: 2),
@@ -111,9 +129,18 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                 const SizedBox(height: 10),
                 CoreTextField(
                   controller: realName,
-                  label: 'Real name',
+                  label: 'Account name',
                   icon: Icons.person_outline_rounded,
+                  enabled: AuthScope.maybeOf(context)?.isAuthenticated != true,
                   errorText: _fieldError(realName),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: website,
+                  label: 'Portfolio website',
+                  icon: Icons.language_outlined,
+                  keyboardType: TextInputType.url,
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 10),
@@ -152,6 +179,36 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                   label: 'Work history',
                   icon: Icons.history_edu_outlined,
                   maxLines: 3,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: genderIdentity,
+                        label: 'Gender identity',
+                        icon: Icons.diversity_1_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: experienceYears,
+                        label: 'Experience (years)',
+                        icon: Icons.work_history_outlined,
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: unionNote,
+                  label: 'Union / professional membership',
+                  icon: Icons.verified_user_outlined,
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 10),
@@ -244,7 +301,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                     Expanded(
                       child: CorePrimaryButton(
                         icon: Icons.verified_outlined,
-                        label: 'Submit review',
+                        label: 'Save profile',
                         compact: true,
                         loading: savingRemote,
                         onTap: savingRemote ? null : _submit,
@@ -276,6 +333,8 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             ageRange: ageRange.text,
             height: height.text,
             agency: agency.text,
+            completeness: _formCompleteness(),
+            sampleImage: AuthScope.maybeOf(context)?.isAuthenticated != true,
           ),
         );
       },
@@ -290,6 +349,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   Future<void> _loadRemoteProfile() async {
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) return;
+    _clearPreviewValues(auth);
     setState(() {
       loadingRemote = true;
       remoteStatus = 'Loading saved CineConnect profile…';
@@ -305,19 +365,43 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
           .join(', ');
       setState(() {
         supportedCities = cities;
+        if ((auth.user?.displayName ?? '').trim().isNotEmpty) {
+          realName.text = auth.user!.displayName.trim();
+        }
         if ((talent.screenName ?? '').trim().isNotEmpty) {
           stageName.text = talent.screenName!.trim();
         }
         if ((profile.city?.name ?? '').trim().isNotEmpty) {
           city.text = profile.city!.name;
         }
+        website.text = profile.websiteUrl ?? '';
         if (loadedLanguages.isNotEmpty) {
           languages.text = loadedLanguages;
         }
-        if ((profile.bio ?? '').trim().isNotEmpty &&
-            skills.text.trim().isEmpty) {
-          skills.text = profile.bio!.trim();
+        if ((talent.ageRange ?? '').trim().isNotEmpty) {
+          ageRange.text = talent.ageRange!.trim();
         }
+        if (talent.heightCm != null) {
+          height.text = '${talent.heightCm} cm';
+        }
+        if ((talent.genderIdentity ?? '').trim().isNotEmpty) {
+          genderIdentity.text = talent.genderIdentity!.trim();
+        }
+        if (talent.experienceYears != null) {
+          experienceYears.text = '${talent.experienceYears}';
+        }
+        if ((talent.unionNote ?? '').trim().isNotEmpty) {
+          unionNote.text = talent.unionNote!.trim();
+        }
+        final parsedSkills = _bioValue(profile.bio, 'Skills');
+        skills.text = parsedSkills.isNotEmpty || _hasStructuredBio(profile.bio)
+            ? parsedSkills
+            : profile.bio ?? '';
+        credits.text = _bioValue(profile.bio, 'Credits');
+        workHistory.text = _bioValue(profile.bio, 'Work history');
+        instagram.text = _bioValue(profile.bio, 'Instagram');
+        followers.text = _bioValue(profile.bio, 'Followers');
+        agency.text = _bioValue(profile.bio, 'Agency');
         remoteStatus = 'Synced with backend profile';
       });
     } on ApiException catch (exception) {
@@ -403,14 +487,20 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         bio: _bioForBackend(),
         cityId: matchedCity?.publicId,
         visibility: 'public',
+        websiteUrl: website.text.trim(),
       );
       await auth.updateTalentProfile(
         screenName: stageName.text.trim(),
         languages: _languagesForBackend(),
+        ageRange: ageRange.text.trim(),
+        genderIdentity: genderIdentity.text.trim(),
+        heightCm: _heightCmForBackend(),
+        unionNote: unionNote.text.trim(),
+        experienceYears: int.tryParse(experienceYears.text.trim()),
       );
       if (!mounted) return;
       setState(() => remoteStatus = 'Backend profile saved');
-      actorSnack(context, 'Profile saved and sent to moderation');
+      actorSnack(context, 'Casting profile saved');
       Navigator.pushNamed(context, ActorTalentRoutes.portfolio);
     } on ApiException catch (exception) {
       if (!mounted) return;
@@ -460,10 +550,16 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         bio: _bioForBackend(),
         cityId: matchedCity?.publicId,
         visibility: 'public',
+        websiteUrl: website.text.trim(),
       );
       await auth.updateTalentProfile(
         screenName: stageName.text.trim(),
         languages: _languagesForBackend(),
+        ageRange: ageRange.text.trim(),
+        genderIdentity: genderIdentity.text.trim(),
+        heightCm: _heightCmForBackend(),
+        unionNote: unionNote.text.trim(),
+        experienceYears: int.tryParse(experienceYears.text.trim()),
       );
       final listing = await auth.publishMarketplaceListing(
         title: '${stageName.text.trim()} — Actor',
@@ -514,6 +610,56 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         .toList();
   }
 
+  void _clearPreviewValues(AuthController auth) {
+    stageName.clear();
+    realName.text = auth.user?.displayName ?? '';
+    city.clear();
+    languages.clear();
+    skills.clear();
+    credits.clear();
+    instagram.clear();
+    followers.clear();
+    website.clear();
+    workHistory.clear();
+    ageRange.clear();
+    height.clear();
+    genderIdentity.clear();
+    experienceYears.clear();
+    unionNote.clear();
+    agency.clear();
+  }
+
+  String _bioValue(String? bio, String label) {
+    final prefix = '$label:';
+    for (final line in (bio ?? '').split('\n')) {
+      if (line.toLowerCase().startsWith(prefix.toLowerCase())) {
+        return line.substring(prefix.length).trim();
+      }
+    }
+    return '';
+  }
+
+  bool _hasStructuredBio(String? bio) {
+    return RegExp(
+      r'^(Skills|Credits|Work history|Playable age|Height|Instagram|Followers|Membership|Agency):',
+      caseSensitive: false,
+      multiLine: true,
+    ).hasMatch(bio ?? '');
+  }
+
+  int? _heightCmForBackend() {
+    final value = height.text.trim().toLowerCase();
+    final direct = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (value.contains('cm')) return direct;
+    final match = RegExp(r"(\d+)\s*(?:ft|')\s*(\d+)?").firstMatch(value);
+    if (match != null) {
+      final feet = int.tryParse(match.group(1) ?? '') ?? 0;
+      final inches = int.tryParse(match.group(2) ?? '') ?? 0;
+      return ((feet * 12 + inches) * 2.54).round();
+    }
+    return direct != null && direct >= 100 && direct <= 250 ? direct : null;
+  }
+
   String _bioForBackend() {
     final parts = <String>[
       if (skills.text.trim().isNotEmpty) 'Skills: ${skills.text.trim()}',
@@ -525,6 +671,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       if (height.text.trim().isNotEmpty) 'Height: ${height.text.trim()}',
       if (instagram.text.trim().isNotEmpty)
         'Instagram: ${instagram.text.trim()}',
+      if (followers.text.trim().isNotEmpty)
+        'Followers: ${followers.text.trim()}',
+      if (unionNote.text.trim().isNotEmpty)
+        'Membership: ${unionNote.text.trim()}',
       if (agency.text.trim().isNotEmpty) 'Agency: ${agency.text.trim()}',
     ];
     return parts.join('\n');
@@ -543,6 +693,24 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     if (summary.trim().length >= 10) return summary;
     return 'Available actor/talent profile for CineConnect productions.';
   }
+
+  int _formCompleteness() {
+    final fields = [
+      stageName,
+      city,
+      languages,
+      skills,
+      credits,
+      workHistory,
+      ageRange,
+      height,
+      instagram,
+      agency,
+    ];
+    final completed =
+        fields.where((field) => field.text.trim().isNotEmpty).length;
+    return ((completed / fields.length) * 100).round();
+  }
 }
 
 class _ProfilePreview extends StatelessWidget {
@@ -555,6 +723,8 @@ class _ProfilePreview extends StatelessWidget {
   final String ageRange;
   final String height;
   final String agency;
+  final int completeness;
+  final bool sampleImage;
 
   const _ProfilePreview({
     required this.stageName,
@@ -566,18 +736,17 @@ class _ProfilePreview extends StatelessWidget {
     required this.ageRange,
     required this.height,
     required this.agency,
+    required this.completeness,
+    required this.sampleImage,
   });
 
   @override
   Widget build(BuildContext context) {
-    final store = ActorTalentDemoStore.instance;
     final colors = context.appColors;
-    final verificationLabel =
-        store.profileSubmittedForReview ? 'Re-review queued' : 'Verified';
     return ActorSectionCard(
       title: 'Director Preview',
       icon: Icons.visibility_outlined,
-      actionText: 'DP view',
+      actionText: 'Open preview',
       onActionTap: () => showDialog<void>(
         context: context,
         builder: (dialogContext) => Dialog(
@@ -595,9 +764,10 @@ class _ProfilePreview extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ActorMediaFrame(
-                        imageUrl: ActorTalentDemoData.profileImage,
+                        imageUrl:
+                            sampleImage ? ActorTalentDemoData.profileImage : '',
                         title: stageName.isEmpty ? 'Stage name' : stageName,
-                        badge: verificationLabel,
+                        badge: 'Preview',
                         fallbackIcon: Icons.person_outline_rounded,
                         aspectRatio: 4 / 5,
                       ),
@@ -658,9 +828,9 @@ class _ProfilePreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ActorMediaFrame(
-            imageUrl: ActorTalentDemoData.profileImage,
+            imageUrl: sampleImage ? ActorTalentDemoData.profileImage : '',
             title: 'Public headshot',
-            badge: verificationLabel,
+            badge: 'Preview',
             fallbackIcon: Icons.person_outline_rounded,
             aspectRatio: 4 / 5,
           ),
@@ -686,13 +856,7 @@ class _ProfilePreview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          ActorProgressMeter(value: store.profileCompleteness),
-          const SizedBox(height: 10),
-          ActorInfoRow(
-            icon: Icons.verified_user_outlined,
-            label: 'Verification',
-            value: verificationLabel,
-          ),
+          ActorProgressMeter(value: completeness),
           ActorInfoRow(
             icon: Icons.face_retouching_natural_outlined,
             label: 'Playable age',

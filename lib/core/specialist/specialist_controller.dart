@@ -17,6 +17,8 @@ class SpecialistController extends ChangeNotifier {
   List<AuditionDto>? _auditions;
   List<AgencyCommissionDto>? _agencyCommissions;
   List<BrandOpportunityDto>? _brandOpportunities;
+  List<BrandApplicationDto>? _brandApplications;
+  List<CampaignDeliverableDto>? _campaignDeliverables;
   List<ModelUsageRightDto>? _modelUsageRights;
   List<ModelUsageRateDto>? _modelUsageRates;
   List<ModelRestrictedCategoryDto>? _modelRestricted;
@@ -30,6 +32,13 @@ class SpecialistController extends ChangeNotifier {
   factory SpecialistController.fromClient(ApiClient client) {
     return SpecialistController(repository: SpecialistRepository(client));
   }
+
+  BrandProfileDto? get cachedBrandProfile => _brandProfile;
+  List<BrandOpportunityDto>? get cachedBrandOpportunities =>
+      _brandOpportunities;
+  List<BrandApplicationDto>? get cachedBrandApplications => _brandApplications;
+  List<CampaignDeliverableDto>? get cachedCampaignDeliverables =>
+      _campaignDeliverables;
 
   Future<AgencyProfileDto?> agencyProfile({bool force = false}) async {
     if (!force && _agencyProfile != null) return _agencyProfile;
@@ -132,6 +141,112 @@ class SpecialistController extends ChangeNotifier {
     return opportunity;
   }
 
+  Future<BrandOpportunityDto> updateBrandOpportunity(
+    String opportunityId,
+    Map<String, dynamic> body,
+  ) async {
+    final opportunity =
+        await _repository.updateBrandOpportunity(opportunityId, body);
+    await brandOpportunities(force: true);
+    return opportunity;
+  }
+
+  Future<List<BrandApplicationDto>> ownerBrandApplications({
+    String? opportunityId,
+    bool force = false,
+  }) async {
+    if (opportunityId == null && !force && _brandApplications != null) {
+      return _brandApplications!;
+    }
+    final rows = await _repository.ownerBrandApplications(
+      opportunityId: opportunityId,
+    );
+    if (opportunityId == null) {
+      _brandApplications = rows;
+      notifyListeners();
+    }
+    return rows;
+  }
+
+  Future<BrandApplicationDto> brandApplication(String applicationId) {
+    return _repository.brandApplication(applicationId);
+  }
+
+  Future<BrandApplicationDto> updateBrandApplication(
+    String applicationId,
+    Map<String, dynamic> body,
+  ) async {
+    final application =
+        await _repository.updateBrandApplication(applicationId, body);
+    await ownerBrandApplications(force: true);
+    await brandOpportunities(force: true);
+    return application;
+  }
+
+  Future<BrandApplicationDto> createBrandTerms(
+    String applicationId,
+    Map<String, dynamic> body,
+  ) async {
+    final application = await _repository.createBrandTerms(applicationId, body);
+    await ownerBrandApplications(force: true);
+    return application;
+  }
+
+  Future<String> ensureBrandApplicationConversation(String applicationId) {
+    return _repository.ensureBrandApplicationConversation(applicationId);
+  }
+
+  Future<List<CampaignDeliverableDto>> campaignDeliverables({
+    String? opportunityId,
+    bool force = false,
+  }) async {
+    if (opportunityId == null && !force && _campaignDeliverables != null) {
+      return _campaignDeliverables!;
+    }
+    final rows = await _repository.campaignDeliverables(
+      opportunityId: opportunityId,
+    );
+    if (opportunityId == null) {
+      _campaignDeliverables = rows;
+      notifyListeners();
+    }
+    return rows;
+  }
+
+  Future<CampaignDeliverableDto> createCampaignDeliverable(
+    Map<String, dynamic> body,
+  ) async {
+    final deliverable = await _repository.createCampaignDeliverable(body);
+    await campaignDeliverables(force: true);
+    return deliverable;
+  }
+
+  Future<CampaignDeliverableDto> updateCampaignDeliverable(
+    String deliverableId,
+    Map<String, dynamic> body,
+  ) async {
+    final deliverable =
+        await _repository.updateCampaignDeliverable(deliverableId, body);
+    await campaignDeliverables(force: true);
+    return deliverable;
+  }
+
+  Future<CampaignDeliverableDto> approveCampaignDeliverable(
+      String deliverableId) async {
+    final deliverable =
+        await _repository.approveCampaignDeliverable(deliverableId);
+    await campaignDeliverables(force: true);
+    return deliverable;
+  }
+
+  Future<CampaignDeliverableDto> createCampaignMetric(
+    Map<String, dynamic> body,
+  ) async {
+    final deliverable = await _repository.createCampaignMetric(body);
+    await campaignDeliverables(force: true);
+    return deliverable;
+  }
+
   Future<ModelProfileDto?> modelProfile({bool force = false}) async {
     if (!force && _modelProfile != null) return _modelProfile;
     _modelProfile = await _repository.modelProfile();
@@ -168,6 +283,13 @@ class SpecialistController extends ChangeNotifier {
     return right;
   }
 
+  Future<ModelUsageRightDto> updateModelUsageRight(
+      String rightId, Map<String, dynamic> body) async {
+    final right = await _repository.updateModelUsageRight(rightId, body);
+    await modelUsageRights(force: true);
+    return right;
+  }
+
   Future<List<ModelUsageRateDto>> modelUsageRates({bool force = false}) async {
     if (!force && _modelUsageRates != null) return _modelUsageRates!;
     _modelUsageRates = await _repository.modelUsageRates();
@@ -178,6 +300,13 @@ class SpecialistController extends ChangeNotifier {
   Future<ModelUsageRateDto> createModelUsageRate(
       Map<String, dynamic> body) async {
     final rate = await _repository.createModelUsageRate(body);
+    await modelUsageRates(force: true);
+    return rate;
+  }
+
+  Future<ModelUsageRateDto> updateModelUsageRate(
+      String rateId, Map<String, dynamic> body) async {
+    final rate = await _repository.updateModelUsageRate(rateId, body);
     await modelUsageRates(force: true);
     return rate;
   }

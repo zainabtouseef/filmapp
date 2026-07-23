@@ -5,9 +5,8 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/media_equipment_demo_data.dart';
-import '../routes/media_equipment_routes.dart';
 import '../widgets/media_equipment_components.dart';
 
 class ME04PackageBuilderScreen extends StatefulWidget {
@@ -19,128 +18,363 @@ class ME04PackageBuilderScreen extends StatefulWidget {
 }
 
 class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
-  late final TextEditingController _name;
-  late final TextEditingController _price;
-  late final TextEditingController _terms;
-  late bool _operatorIncluded;
-  Future<List<EquipmentItemDto>>? _liveItemsFuture;
-  final Set<String> _selectedLiveItemIds = {};
-  bool _publishing = false;
+  Future<_PackageData>? _dataFuture;
+  String? _busyId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_dataFuture != null) return;
+    _reload();
+  }
+
+  void _reload() {
     final operations = OperationsScope.maybeOf(context);
-    _liveItemsFuture ??= operations?.equipmentItems(force: true);
+    if (operations == null) return;
+    _dataFuture = _load(operations);
   }
 
-  @override
-  void initState() {
-    super.initState();
-    final store = MediaEquipmentDemoStore.instance;
-    _name = TextEditingController(text: store.packageDraftName);
-    _price = TextEditingController(text: store.packageDraftPrice);
-    _terms = TextEditingController(text: store.packageDraftTerms);
-    _operatorIncluded = store.packageDraftOperatorIncluded;
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _price.dispose();
-    _terms.dispose();
-    super.dispose();
+  Future<_PackageData> _load(OperationsController operations) async {
+    final values = await Future.wait([
+      operations.equipmentItems(force: true),
+      operations.equipmentPackages(force: true),
+    ]);
+    return _PackageData(
+      items: values[0] as List<EquipmentItemDto>,
+      packages: values[1] as List<EquipmentPackageDto>,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = MediaEquipmentDemoStore.instance;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final selected = store.inventory
-            .where((item) => store.selectedPackageItems.contains(item.id))
-            .toList();
-        final operatorFee =
-            store.terms.firstWhere((term) => term.id == 'operator').amount;
-        final total = selected.fold<int>(0, (sum, item) => sum + item.dayRate) +
-            (_operatorIncluded ? operatorFee : 0);
-        return MediaTwoColumn(
-          left: MediaSectionCard(
-            title: 'Package builder',
-            icon: Icons.inventory_2_outlined,
-            selected: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StepWizardIndicator(
-                  currentStep: store.packageStep - 1,
-                  totalSteps: 3,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    StatusChip(
-                      label: 'STEP ${store.packageStep} OF 3',
-                      color: colors.goldMid,
-                    ),
-                    StatusChip(
-                      label: store.packageSubmitted ? 'PUBLISHED' : 'DRAFT',
-                      color: store.packageSubmitted
-                          ? colors.success
-                          : colors.infoBlue,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _step(store),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreSecondaryButton(
-                        icon: Icons.arrow_back_rounded,
-                        label: 'Back',
-                        compact: true,
-                        onTap: store.packageStep == 1
-                            ? () => Navigator.pushNamed(
-                                  context,
-                                  MediaEquipmentRoutes.inventory,
-                                )
-                            : () => store.setPackageStep(store.packageStep - 1),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CorePrimaryButton(
-                        icon: store.packageStep == 3
-                            ? Icons.verified_outlined
-                            : Icons.arrow_forward_rounded,
-                        label: _publishing
-                            ? 'Publishing…'
-                            : store.packageStep == 3
-                                ? 'Publish'
-                                : 'Continue',
-                        compact: true,
-                        onTap: _publishing ? null : () => _advance(store),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        MediaSectionCard(
+          title: 'Package Strategy',
+          icon: Icons.inventory_2_outlined,
+          selected: true,
+          child: const MediaResponsiveGrid(
+            minWidth: 220,
+            children: [
+              MediaInfoRow(
+                icon: Icons.video_library_outlined,
+                label: 'Bundle',
+                value: 'Choose live inventory assets',
+              ),
+              MediaInfoRow(
+                icon: Icons.engineering_outlined,
+                label: 'Crew',
+                value: 'Set operator inclusion clearly',
+              ),
+              MediaInfoRow(
+                icon: Icons.rule_folder_outlined,
+                label: 'Contract',
+                value: 'Package terms flow into booking',
+              ),
+            ],
           ),
-          right: MediaSectionCard(
-            title: 'Live package preview',
+        ),
+        const SizedBox(height: 12),
+        if (_dataFuture == null)
+          const InlineNotice(
+            message: 'Preview mode. Sign in to manage rental packages.',
             icon: Icons.visibility_outlined,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _name.text,
+          )
+        else
+          FutureBuilder<_PackageData>(
+            future: _dataFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const InlineNotice(
+                  message: 'Loading inventory and packages...',
+                  icon: Icons.hourglass_top_rounded,
+                );
+              }
+              if (snapshot.hasError) {
+                return InlineNotice(
+                  message: 'Could not load packages: ${snapshot.error}',
+                  icon: Icons.cloud_off_outlined,
+                );
+              }
+              final data = snapshot.data!;
+              return MediaTwoColumn(
+                left: MediaSectionCard(
+                  title: 'Published Packages',
+                  icon: Icons.widgets_outlined,
+                  child: data.packages.isEmpty
+                      ? CoreEmptyState(
+                          icon: Icons.inventory_2_outlined,
+                          title: 'No rental packages',
+                          message:
+                              'Bundle compatible equipment with an operator option and clear terms.',
+                          actionLabel: 'Create package',
+                          onAction: data.items.isEmpty
+                              ? null
+                              : () => _showBuilder(data),
+                        )
+                      : Column(
+                          children: [
+                            for (final package in data.packages)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _PackageCard(
+                                  package: package,
+                                  busy: _busyId == package.publicId,
+                                  onStatus: () => _toggleStatus(package),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+                right: MediaSectionCard(
+                  title: 'Build a Package',
+                  icon: Icons.add_box_outlined,
+                  selected: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      MediaInfoRow(
+                        icon: Icons.inventory_outlined,
+                        label: 'Available inventory',
+                        value:
+                            '${data.items.where((item) => item.status == 'available').length} assets',
+                      ),
+                      MediaInfoRow(
+                        icon: Icons.layers_outlined,
+                        label: 'Existing packages',
+                        value: '${data.packages.length} bundles',
+                      ),
+                      const SizedBox(height: 10),
+                      if (data.items.isEmpty)
+                        const InlineNotice(
+                          message:
+                              'Add inventory before creating a rental package.',
+                          icon: Icons.info_outline,
+                        )
+                      else
+                        CorePrimaryButton(
+                          icon: Icons.add_rounded,
+                          label: 'Create rental package',
+                          compact: true,
+                          onTap: () => _showBuilder(data),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Future<void> _toggleStatus(EquipmentPackageDto package) async {
+    final operations = OperationsScope.maybeOf(context);
+    if (operations == null) return;
+    final next = package.status == 'published' ? 'draft' : 'published';
+    setState(() => _busyId = package.publicId);
+    try {
+      await operations.updateEquipmentPackage(
+        package.publicId,
+        {'status': next},
+      );
+      if (!mounted) return;
+      setState(_reload);
+      mediaSnack(
+        context,
+        next == 'published' ? 'Package published' : 'Package moved to draft',
+      );
+    } catch (error) {
+      if (mounted) mediaSnack(context, 'Could not update package: $error');
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  void _showBuilder(_PackageData data) {
+    final name = TextEditingController();
+    final description = TextEditingController();
+    final price = TextEditingController();
+    final terms = TextEditingController(
+      text: '10-hour rental day. Overtime and transport billed separately.',
+    );
+    final selected = <String>{};
+    var operatorIncluded = false;
+    var publish = true;
+    showMediaSheet(
+      context,
+      title: 'Create rental package',
+      child: StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CoreTextField(
+                controller: name,
+                label: 'Package name',
+                icon: Icons.inventory_2_outlined,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: description,
+                label: 'Producer-facing description',
+                icon: Icons.notes_outlined,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: price,
+                label: 'Package day price in PKR',
+                icon: Icons.payments_outlined,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Included inventory',
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: context.appColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 240),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: data.items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = data.items[index];
+                    final enabled = item.status == 'available';
+                    return CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(item.modelName),
+                      subtitle: Text(
+                        '${item.category} · ${mediaMoney(item.dayRateMinor ~/ 100)}/day',
+                      ),
+                      value: selected.contains(item.publicId),
+                      onChanged: enabled
+                          ? (value) => setSheetState(() {
+                                if (value == true) {
+                                  selected.add(item.publicId);
+                                } else {
+                                  selected.remove(item.publicId);
+                                }
+                              })
+                          : null,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: terms,
+                label: 'Package terms',
+                icon: Icons.rule_folder_outlined,
+                maxLines: 3,
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Operator included'),
+                value: operatorIncluded,
+                onChanged: (value) =>
+                    setSheetState(() => operatorIncluded = value),
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Publish immediately'),
+                value: publish,
+                onChanged: (value) => setSheetState(() => publish = value),
+              ),
+              const SizedBox(height: 10),
+              CorePrimaryButton(
+                icon: publish ? Icons.publish_outlined : Icons.save_outlined,
+                label: publish ? 'Publish package' : 'Save draft',
+                onTap: () async {
+                  final amount = int.tryParse(price.text.trim());
+                  if (name.text.trim().length < 2 ||
+                      amount == null ||
+                      amount <= 0 ||
+                      selected.isEmpty) {
+                    mediaSnack(
+                      context,
+                      'Enter package name, price, and included inventory',
+                    );
+                    return;
+                  }
+                  final operations = OperationsScope.maybeOf(context);
+                  if (operations == null) return;
+                  try {
+                    final package = await operations.createEquipmentPackage({
+                      'name': name.text.trim(),
+                      'description': description.text.trim(),
+                      'operator_included': operatorIncluded,
+                      'price_minor': amount * 100,
+                      'currency': 'PKR',
+                      'terms': terms.text.trim(),
+                      'status': publish ? 'published' : 'draft',
+                    });
+                    for (final itemId in selected) {
+                      await operations.addEquipmentPackageItem(
+                        package.publicId,
+                        itemId,
+                      );
+                    }
+                    if (!mounted || !context.mounted) return;
+                    Navigator.pop(context);
+                    setState(_reload);
+                    mediaSnack(this.context, 'Rental package saved');
+                  } catch (error) {
+                    if (context.mounted) {
+                      mediaSnack(context, 'Could not save package: $error');
+                    }
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    ).whenComplete(() {
+      name.dispose();
+      description.dispose();
+      price.dispose();
+      terms.dispose();
+    });
+  }
+}
+
+class _PackageCard extends StatelessWidget {
+  final EquipmentPackageDto package;
+  final bool busy;
+  final VoidCallback onStatus;
+
+  const _PackageCard({
+    required this.package,
+    required this.busy,
+    required this.onStatus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final published = package.status == 'published';
+    return GlassSectionCard(
+      radius: 8,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.inventory_2_outlined, color: colors.goldDark),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  package.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -148,294 +382,62 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  selected.map((item) => item.modelName).join(', '),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                MediaInfoRow(
-                  icon: Icons.payments_outlined,
-                  label: 'Suggested base',
-                  value: mediaMoney(total),
-                ),
-                MediaInfoRow(
-                  icon: Icons.engineering_outlined,
-                  label: 'Operator',
-                  value: _operatorIncluded ? 'Included' : 'Extra',
-                ),
-                MediaInfoRow(
-                  icon: Icons.rule_folder_outlined,
-                  label: 'Terms',
-                  value: _terms.text,
-                ),
-                const SizedBox(height: 10),
-                CoreSecondaryButton(
-                  icon: Icons.save_outlined,
-                  label: 'Save draft',
-                  compact: true,
-                  onTap: () {
-                    store.savePackageDraft(
-                      name: _name.text.trim(),
-                      price: _price.text.trim(),
-                      terms: _terms.text.trim(),
-                      operatorIncluded: _operatorIncluded,
-                    );
-                    mediaSnack(context, 'Package draft saved');
-                  },
-                ),
-              ],
-            ),
+              ),
+              StatusChip(
+                label: package.status.toUpperCase(),
+                color: published ? colors.success : colors.infoBlue,
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _step(MediaEquipmentDemoStore store) {
-    return switch (store.packageStep) {
-      1 => Column(
-          children: [
-            if (_liveItemsFuture != null)
-              FutureBuilder<List<EquipmentItemDto>>(
-                future: _liveItemsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.only(bottom: 10),
-                      child: InlineNotice(
-                        message: 'Loading live inventory for package items...',
-                        icon: Icons.hourglass_top_rounded,
-                      ),
-                    );
-                  }
-                  final liveItems = snapshot.data ?? const [];
-                  if (liveItems.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: InlineNotice(
-                          message:
-                              'Live inventory connected: select items here to attach them to the backend package.',
-                          icon: Icons.cloud_done_outlined,
-                          tone: CoreStatusTone.success,
-                        ),
-                      ),
-                      for (final item in liveItems)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _SelectableItemRow(
-                            itemName: item.modelName,
-                            serial: item.publicId,
-                            selected:
-                                _selectedLiveItemIds.contains(item.publicId),
-                            onTap: () => setState(() {
-                              if (!_selectedLiveItemIds.add(item.publicId)) {
-                                _selectedLiveItemIds.remove(item.publicId);
-                              }
-                            }),
-                          ),
-                        ),
-                      const SizedBox(height: 4),
-                    ],
-                  );
-                },
-              ),
-            for (final item in store.inventory)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _SelectableItemRow(
-                  itemName: item.modelName,
-                  serial: item.serial,
-                  selected: store.selectedPackageItems.contains(item.id),
-                  onTap: () => store.togglePackageItem(item.id),
-                ),
-              ),
-          ],
-        ),
-      2 => Column(
-          children: [
-            CoreTextField(
-              controller: _name,
-              label: 'Package name',
-              icon: Icons.inventory_2_outlined,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _price,
-              label: 'Package price',
-              icon: Icons.payments_outlined,
-              keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}),
-            ),
-            SwitchListTile.adaptive(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              value: _operatorIncluded,
-              onChanged: (value) => setState(() => _operatorIncluded = value),
-              title: const Text('Operator included'),
-            ),
-          ],
-        ),
-      _ => Column(
-          children: [
-            CoreTextField(
-              controller: _terms,
-              label: 'Package terms',
-              icon: Icons.rule_folder_outlined,
+          if (package.description.isNotEmpty) ...[
+            const SizedBox(height: 7),
+            Text(
+              package.description,
               maxLines: 2,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            UploadCard(
-              title: 'Package cover',
-              subtitle: 'Preview image ready',
-              uploaded: true,
-              onTap: () => mediaSnack(context, 'Cover image refreshed'),
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
           ],
-        ),
-    };
-  }
-
-  Future<void> _advance(MediaEquipmentDemoStore store) async {
-    if (store.packageStep == 1) {
-      if (store.selectedPackageItems.isEmpty && _selectedLiveItemIds.isEmpty) {
-        mediaSnack(context, 'Select at least one inventory item');
-        return;
-      }
-      store.setPackageStep(2);
-      return;
-    }
-    if (store.packageStep == 2) {
-      if (_name.text.trim().isEmpty || int.tryParse(_price.text) == null) {
-        mediaSnack(context, 'Enter package name and valid price');
-        return;
-      }
-      store.setPackageStep(3);
-      return;
-    }
-    setState(() => _publishing = true);
-    try {
-      final operations = OperationsScope.maybeOf(context);
-      if (operations != null) {
-        final packageResponse = await operations.createEquipmentPackage({
-          'name': _name.text.trim(),
-          'description': 'Created from ME-04 package builder',
-          'operator_included': _operatorIncluded,
-          'price_minor': (int.tryParse(_price.text.trim()) ?? 0) * 100,
-          'currency': 'PKR',
-          'terms': _terms.text.trim(),
-          'status': 'published',
-        });
-        final data = packageResponse['data'] as Map<String, dynamic>?;
-        final package = data?['package'] as Map<String, dynamic>?;
-        final packageId = package?['public_id'] as String?;
-        if (packageId != null && packageId.isNotEmpty) {
-          for (final itemId in _selectedLiveItemIds) {
-            await operations.addEquipmentPackageItem(packageId, itemId);
-          }
-        }
-      }
-    } catch (error) {
-      if (!mounted) return;
-      mediaSnack(context, 'Live package publish skipped: $error');
-    } finally {
-      if (mounted) setState(() => _publishing = false);
-    }
-    store.submitPackage(
-      label: _name.text.trim(),
-      price: int.tryParse(_price.text.trim()) ??
-          store.inventory
-                  .where((item) => store.selectedPackageItems.contains(item.id))
-                  .fold<int>(0, (sum, item) => sum + item.dayRate) +
-              (_operatorIncluded
-                  ? store.terms
-                      .firstWhere((term) => term.id == 'operator')
-                      .amount
-                  : 0),
-      terms: _terms.text.trim(),
-      operatorIncluded: _operatorIncluded,
-    );
-    if (!mounted) return;
-    showCoreSuccessDialog(
-      context,
-      title: 'Package published',
-      message: 'The package is now available in director marketplace search.',
-      buttonLabel: 'Open requests',
-      onDone: () => Navigator.pushNamed(context, MediaEquipmentRoutes.requests),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusChip(
+                label: mediaMoney(package.priceMinor ~/ 100),
+                color: colors.goldMid,
+              ),
+              StatusChip(
+                label: '${package.items.length} item(s)',
+                color: colors.infoBlue,
+              ),
+              if (package.operatorIncluded)
+                StatusChip(label: 'Operator', color: colors.infoPurple),
+            ],
+          ),
+          const SizedBox(height: 10),
+          CoreSecondaryButton(
+            icon: published
+                ? Icons.visibility_off_outlined
+                : Icons.publish_outlined,
+            label: published ? 'Move to draft' : 'Publish',
+            compact: true,
+            onTap: busy ? null : onStatus,
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SelectableItemRow extends StatelessWidget {
-  final String itemName;
-  final String serial;
-  final bool selected;
-  final VoidCallback onTap;
+class _PackageData {
+  final List<EquipmentItemDto> items;
+  final List<EquipmentPackageDto> packages;
 
-  const _SelectableItemRow({
-    required this.itemName,
-    required this.serial,
-    required this.selected,
-    required this.onTap,
+  const _PackageData({
+    required this.items,
+    required this.packages,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? colors.activeChipGradient
-              : colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? colors.goldMid : colors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              selected ? Icons.check_circle_outline : Icons.circle_outlined,
-              color: selected ? colors.success : colors.iconMuted,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    itemName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    serial,
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

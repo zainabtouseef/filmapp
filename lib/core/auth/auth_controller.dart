@@ -185,11 +185,13 @@ class AuthController extends ChangeNotifier {
     required String bio,
     required String? cityId,
     String visibility = 'public',
+    String? websiteUrl,
   }) {
     return _repository.updateMyProfile(
       bio: bio,
       cityId: cityId,
       visibility: visibility,
+      websiteUrl: websiteUrl,
     );
   }
 
@@ -203,6 +205,11 @@ class AuthController extends ChangeNotifier {
     int? dayRateMinor,
     String availabilityStatus = 'available',
     String currency = 'PKR',
+    String? ageRange,
+    String? genderIdentity,
+    int? heightCm,
+    String? unionNote,
+    int? experienceYears,
   }) {
     return _repository.updateTalentProfile(
       screenName: screenName,
@@ -210,6 +217,11 @@ class AuthController extends ChangeNotifier {
       dayRateMinor: dayRateMinor,
       availabilityStatus: availabilityStatus,
       currency: currency,
+      ageRange: ageRange,
+      genderIdentity: genderIdentity,
+      heightCm: heightCm,
+      unionNote: unionNote,
+      experienceYears: experienceYears,
     );
   }
 

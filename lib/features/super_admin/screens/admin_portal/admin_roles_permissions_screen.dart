@@ -10,152 +10,311 @@ class AdminRolesPermissionsScreen extends StatefulWidget {
 
 class _AdminRolesPermissionsScreenState
     extends State<AdminRolesPermissionsScreen> {
-  final roles = const [
-    'Verification Agent',
-    'Payments Officer',
-    'Dispute Officer',
-    'Content Moderator',
-    'Support Agent',
-    'Super Admin'
-  ];
-  final permissions = const [
-    'View users',
-    'Approve KYC',
-    'Reject KYC',
-    'Verify payments',
-    'Resolve disputes',
-    'Moderate content',
-    'Manage templates',
-    'Manage fees',
-    'Broadcast',
-    'Audit logs',
-    'Manage admins'
-  ];
-  late Set<String> enabled = {
-    for (final role in roles)
-      for (final permission in permissions)
-        if (role == 'Super Admin' || permission == 'View users')
-          '$role|$permission',
+  Future<AdminRolesBundleDto>? _future;
+  String? _selectedCode;
+  Set<String> _draftPermissions = {};
+  bool _saving = false;
+
+  static const _adminCodes = {
+    'reviewer',
+    'finance_admin',
+    'support_agent',
+    'super_admin',
   };
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= AdminScope.of(context).roles();
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = AdminScope.of(context).roles(force: true);
+      _selectedCode = null;
+      _draftPermissions = {};
+    });
+  }
+
+  void _select(AdminRoleRecordDto role) {
+    setState(() {
+      _selectedCode = role.code;
+      _draftPermissions = {...role.permissions};
+    });
+  }
+
+  Future<void> _save(AdminRoleRecordDto role) async {
+    if (_saving || role.code == 'super_admin') return;
+    setState(() => _saving = true);
+    try {
+      await AdminScope.of(context).updateRolePermissions(
+        role.code,
+        _draftPermissions,
+      );
+      if (!mounted) return;
+      showCoreSnack(context, 'Permissions saved for ${role.name}.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _ResponsiveGrid(
-          minTileWidth: 180,
-          childAspectRatio: 2.6,
-          children: const [
-            AdminMetricTile(
-                label: 'Active admins',
-                value: '12',
-                icon: Icons.admin_panel_settings_outlined,
-                tone: AdminDecisionTone.info),
-            AdminMetricTile(
-                label: '2FA enabled',
-                value: '10',
-                icon: Icons.password_rounded,
-                tone: AdminDecisionTone.success),
-            AdminMetricTile(
-                label: 'Suspicious sessions',
-                value: '1',
-                icon: Icons.warning_amber_rounded,
-                tone: AdminDecisionTone.danger),
-            AdminMetricTile(
-                label: 'Pending invites',
-                value: '3',
-                icon: Icons.mail_outline_rounded,
-                tone: AdminDecisionTone.warning),
+    return FutureBuilder<AdminRolesBundleDto>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
+              children: [
+                AdminEmptyState(
+                  icon: Icons.admin_panel_settings_outlined,
+                  title: 'Could not load admin permissions',
+                  message: error is ApiException
+                      ? error.message
+                      : 'Check the backend connection and try again.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
+              ],
+            ),
+          );
+        }
+        final data = snapshot.data!;
+        final roles = data.roles
+            .where((role) => _adminCodes.contains(role.code))
+            .toList();
+        if (roles.isEmpty) {
+          return const AdminEmptyState(
+            icon: Icons.admin_panel_settings_outlined,
+            title: 'No admin roles configured',
+            message: 'Seed admin roles before assigning staff access.',
+          );
+        }
+        final selected = roles.firstWhere(
+          (role) => role.code == _selectedCode,
+          orElse: () => roles.first,
+        );
+        if (_selectedCode == null) {
+          _selectedCode = selected.code;
+          _draftPermissions = {...selected.permissions};
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ResponsiveGrid(
+              minTileWidth: 180,
+              childAspectRatio: 2.7,
+              children: [
+                AdminMetricTile(
+                  label: 'Admin roles',
+                  value: '${roles.length}',
+                  icon: Icons.admin_panel_settings_outlined,
+                  tone: AdminDecisionTone.info,
+                ),
+                AdminMetricTile(
+                  label: 'Assigned admins',
+                  value: '${roles.fold<int>(
+                    0,
+                    (sum, role) => sum + role.adminUsers,
+                  )}',
+                  icon: Icons.groups_2_outlined,
+                  tone: AdminDecisionTone.success,
+                ),
+                AdminMetricTile(
+                  label: 'Permissions',
+                  value: '${data.permissions.length}',
+                  icon: Icons.key_outlined,
+                  tone: AdminDecisionTone.warning,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _TwoPane(
+              leftFlex: 2,
+              rightFlex: 5,
+              left: AdminSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AdminSectionHeader(
+                      title: 'Admin roles',
+                      icon: Icons.badge_outlined,
+                    ),
+                    const SizedBox(height: 10),
+                    for (final role in roles)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 7),
+                        child: _AdminRoleCard(
+                          role: role,
+                          selected: role.code == selected.code,
+                          onTap: () => _select(role),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    AdminActionButton(
+                      icon: Icons.person_add_alt_1_outlined,
+                      label: 'Assign staff roles',
+                      secondary: true,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        SuperAdminRoutes.users,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              right: AdminSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _headline(context, selected.name),
+                              const SizedBox(height: 3),
+                              _text(
+                                context,
+                                '${selected.adminUsers} active admin(s) · '
+                                '${selected.code}',
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (selected.code == 'super_admin')
+                          const AdminStatusBadge(
+                            label: 'Protected',
+                            icon: Icons.lock_outline_rounded,
+                            tone: AdminDecisionTone.warning,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    for (final permission in data.permissions)
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        value: _draftPermissions.contains(permission.code),
+                        onChanged: selected.code == 'super_admin'
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  if (value ?? false) {
+                                    _draftPermissions.add(permission.code);
+                                  } else {
+                                    _draftPermissions.remove(permission.code);
+                                  }
+                                });
+                              },
+                        title: Text(
+                          permission.code,
+                          style: AppTextStyles.label.copyWith(
+                            color: context.appColors.textPrimary,
+                          ),
+                        ),
+                        subtitle: permission.description.isEmpty
+                            ? null
+                            : Text(permission.description),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                    const SizedBox(height: 12),
+                    AdminActionButton(
+                      icon: Icons.save_outlined,
+                      label: selected.code == 'super_admin'
+                          ? 'Protected role'
+                          : 'Save permissions',
+                      onTap: _saving || selected.code == 'super_admin'
+                          ? null
+                          : () => _save(selected),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AdminRoleCard extends StatelessWidget {
+  final AdminRoleRecordDto role;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AdminRoleCard({
+    required this.role,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(0, 9, 10, 9),
+        decoration: BoxDecoration(
+          color: selected
+              ? colors.goldGlow.withValues(alpha: 0.12)
+              : colors.softSurface.withValues(alpha: 0.44),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? colors.goldMid : colors.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 30,
+              color: selected ? colors.goldMid : Colors.transparent,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _text(context, role.name, strong: true),
+                  _text(
+                    context,
+                    '${role.permissions.length} permissions · '
+                    '${role.adminUsers} staff',
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: role.isActive ? colors.success : colors.iconMuted,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 18),
-        AdminPermissionMatrix(
-          roles: roles,
-          permissions: permissions,
-          enabled: enabled,
-          onToggle: (key) => setState(() {
-            if (enabled.contains(key)) {
-              enabled.remove(key);
-            } else {
-              enabled.add(key);
-            }
-          }),
-        ),
-        const SizedBox(height: 18),
-        AdminDataTable(
-          columns: const [
-            'Name',
-            'Email',
-            'Role',
-            '2FA',
-            'Last Active',
-            'Session',
-            'Action'
-          ],
-          rows: const [
-            [
-              'Ayesha',
-              'ayesha@cineconnect.pk',
-              'Verification Agent',
-              'Enabled',
-              '8m ago',
-              'Healthy'
-            ],
-            [
-              'Raamiz',
-              'raamiz@cineconnect.pk',
-              'Payments Officer',
-              'Enabled',
-              '15m ago',
-              'Healthy'
-            ],
-            [
-              'Mahnoor',
-              'mahnoor@cineconnect.pk',
-              'Content Moderator',
-              'Pending',
-              '1h ago',
-              'Review'
-            ],
-            [
-              'Basit',
-              'basit@cineconnect.pk',
-              'Super Admin',
-              'Enabled',
-              'Now',
-              'Protected'
-            ],
-          ]
-              .map((row) => [
-                    _text(context, row[0], strong: true),
-                    _text(context, row[1]),
-                    _text(context, row[2]),
-                    AdminStatusBadge(
-                        label: row[3],
-                        tone: row[3] == 'Enabled'
-                            ? AdminDecisionTone.success
-                            : AdminDecisionTone.warning),
-                    _text(context, row[4]),
-                    AdminRiskBadge(
-                        label: row[5],
-                        risk: row[5] == 'Review'
-                            ? AdminRiskTone.high
-                            : AdminRiskTone.low),
-                    Wrap(spacing: 6, children: [
-                      _tinyAction(
-                          context,
-                          'Invite/Edit',
-                          () => _noteDialog(
-                              context, 'Invite or edit permissions')),
-                      _tinyAction(context, 'Force 2FA',
-                          () => showCoreSnack(context, '2FA enforced')),
-                      _tinyAction(context, 'Revoke',
-                          () => showCoreSnack(context, 'Session revoked')),
-                    ]),
-                  ])
-              .toList(),
-        ),
-      ],
+      ),
     );
   }
 }

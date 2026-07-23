@@ -123,6 +123,7 @@ def test_profile_talent_and_marketplace_listing_flow(client: FlaskClient) -> Non
             "age_range": "28-35",
             "gender_identity": "male",
             "height_cm": 180,
+            "union_note": "Actors Guild member",
             "experience_years": 8,
             "availability_status": "available",
             "day_rate_minor": 14000000,
@@ -135,6 +136,24 @@ def test_profile_talent_and_marketplace_listing_flow(client: FlaskClient) -> Non
     )
     assert talent.status_code == 200, talent.text
     assert talent.json["data"]["talent_profile"]["screen_name"] == "Ali Marketplace"
+
+    rate_update = client.patch(
+        "/api/v1/talent/profile",
+        headers=headers,
+        json={
+            "screen_name": "Ali Marketplace",
+            "day_rate_minor": 16000000,
+        },
+    )
+    assert rate_update.status_code == 200, rate_update.text
+    updated_profile = rate_update.json["data"]["talent_profile"]
+    assert updated_profile["day_rate_minor"] == 16000000
+    assert updated_profile["age_range"] == "28-35"
+    assert updated_profile["gender_identity"] == "male"
+    assert updated_profile["height_cm"] == 180
+    assert updated_profile["union_note"] == "Actors Guild member"
+    assert updated_profile["experience_years"] == 8
+    assert len(updated_profile["languages"]) == 2
 
     blocked = client.post(
         "/api/v1/marketplace/listings",

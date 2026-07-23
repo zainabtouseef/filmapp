@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_assets.dart';
+import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/layout/admin_bottom_nav.dart';
+import '../../../shared/layout/admin_screen_scaffold.dart';
+import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/cinematic_backdrop.dart';
+import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/widgets/status_chip.dart';
 import '../routes/actor_talent_routes.dart';
 
 typedef ActorShellMenuEntry = ({
@@ -36,8 +43,8 @@ const _actorBottomDestinations = [
     icon: Icons.account_balance_wallet_outlined,
   ),
   CineBottomNavDestination(
-    label: 'Profile',
-    icon: Icons.person_outline_rounded,
+    label: 'More',
+    icon: Icons.menu_rounded,
   ),
 ];
 
@@ -51,7 +58,7 @@ const _actorMenuEntries = <ActorShellMenuEntry>[
   (
     route: ActorTalentRoutes.profile,
     screenId: 'AT-02',
-    label: 'Profile Builder',
+    label: 'Casting Profile',
     icon: Icons.badge_outlined,
   ),
   (
@@ -69,7 +76,7 @@ const _actorMenuEntries = <ActorShellMenuEntry>[
   (
     route: ActorTalentRoutes.rates,
     screenId: 'AT-05',
-    label: 'Rate Card',
+    label: 'Rates',
     icon: Icons.price_change_outlined,
   ),
   (
@@ -79,21 +86,9 @@ const _actorMenuEntries = <ActorShellMenuEntry>[
     icon: Icons.inbox_outlined,
   ),
   (
-    route: ActorTalentRoutes.offerDetail,
-    screenId: 'AT-07',
-    label: 'Offer Detail',
-    icon: Icons.description_outlined,
-  ),
-  (
-    route: ActorTalentRoutes.counteroffer,
-    screenId: 'AT-08',
-    label: 'Counteroffer',
-    icon: Icons.edit_note_outlined,
-  ),
-  (
     route: ActorTalentRoutes.contracts,
     screenId: 'AT-09',
-    label: 'Contract Signing',
+    label: 'Contracts',
     icon: Icons.draw_outlined,
   ),
   (
@@ -105,13 +100,13 @@ const _actorMenuEntries = <ActorShellMenuEntry>[
   (
     route: ActorTalentRoutes.reputation,
     screenId: 'AT-11',
-    label: 'Reputation',
+    label: 'Reviews',
     icon: Icons.stars_outlined,
   ),
   (
     route: ActorTalentRoutes.safety,
     screenId: 'AT-12',
-    label: 'Safety',
+    label: 'Safety & Support',
     icon: Icons.health_and_safety_outlined,
   ),
 ];
@@ -137,6 +132,16 @@ class ActorTalentShell extends StatefulWidget {
   final List<CineBottomNavDestination> navDestinations;
   final List<ActorShellMenuEntry> menuEntries;
   final Map<String, int> bottomIndexOverrides;
+  final bool workspaceLayout;
+  final String workspaceTitle;
+  final String workspaceSectionLabel;
+  final String workspaceBadgeLabel;
+  final String workspaceStatusSubtitle;
+  final String workspaceSearchHint;
+  final String workspaceSearchRoute;
+  final String workspaceProfileRoute;
+  final IconData workspaceIcon;
+  final String Function(String route)? workspaceEyebrow;
 
   const ActorTalentShell({
     super.key,
@@ -150,6 +155,16 @@ class ActorTalentShell extends StatefulWidget {
     this.navDestinations = _actorBottomDestinations,
     this.menuEntries = _actorMenuEntries,
     this.bottomIndexOverrides = _actorBottomIndexOverrides,
+    this.workspaceLayout = false,
+    this.workspaceTitle = 'Talent Workspace',
+    this.workspaceSectionLabel = 'ACTOR / TALENT',
+    this.workspaceBadgeLabel = 'Talent',
+    this.workspaceStatusSubtitle = 'Profile, offers, bookings and earnings',
+    this.workspaceSearchHint = 'Search offers and auditions...',
+    this.workspaceSearchRoute = ActorTalentRoutes.opportunities,
+    this.workspaceProfileRoute = ActorTalentRoutes.profile,
+    this.workspaceIcon = Icons.theater_comedy_outlined,
+    this.workspaceEyebrow,
   });
 
   @override
@@ -176,6 +191,27 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.workspaceLayout) {
+      return _ActorWorkspaceScaffold(
+        routeName: widget.routeName,
+        title: widget.title,
+        portalLabel: widget.portalLabel,
+        navRoutes: widget.navRoutes,
+        navDestinations: widget.navDestinations,
+        menuEntries: widget.menuEntries,
+        bottomIndexOverrides: widget.bottomIndexOverrides,
+        workspaceTitle: widget.workspaceTitle,
+        workspaceSectionLabel: widget.workspaceSectionLabel,
+        workspaceBadgeLabel: widget.workspaceBadgeLabel,
+        workspaceStatusSubtitle: widget.workspaceStatusSubtitle,
+        workspaceSearchHint: widget.workspaceSearchHint,
+        workspaceSearchRoute: widget.workspaceSearchRoute,
+        workspaceProfileRoute: widget.workspaceProfileRoute,
+        workspaceIcon: widget.workspaceIcon,
+        workspaceEyebrow: widget.workspaceEyebrow,
+        child: widget.child,
+      );
+    }
     final width = MediaQuery.sizeOf(context).width;
     final horizontal = width >= 900 ? 28.0 : 14.0;
     return Scaffold(
@@ -254,6 +290,665 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
     final index = widget.navRoutes.indexOf(route);
     return index == -1 ? 0 : index;
   }
+}
+
+class _ActorWorkspaceScaffold extends StatelessWidget {
+  final String routeName;
+  final String title;
+  final Widget child;
+  final String portalLabel;
+  final List<String> navRoutes;
+  final List<CineBottomNavDestination> navDestinations;
+  final List<ActorShellMenuEntry> menuEntries;
+  final Map<String, int> bottomIndexOverrides;
+  final String workspaceTitle;
+  final String workspaceSectionLabel;
+  final String workspaceBadgeLabel;
+  final String workspaceStatusSubtitle;
+  final String workspaceSearchHint;
+  final String workspaceSearchRoute;
+  final String workspaceProfileRoute;
+  final IconData workspaceIcon;
+  final String Function(String route)? workspaceEyebrow;
+
+  const _ActorWorkspaceScaffold({
+    required this.routeName,
+    required this.title,
+    required this.child,
+    required this.portalLabel,
+    required this.navRoutes,
+    required this.navDestinations,
+    required this.menuEntries,
+    required this.bottomIndexOverrides,
+    required this.workspaceTitle,
+    required this.workspaceSectionLabel,
+    required this.workspaceBadgeLabel,
+    required this.workspaceStatusSubtitle,
+    required this.workspaceSearchHint,
+    required this.workspaceSearchRoute,
+    required this.workspaceProfileRoute,
+    required this.workspaceIcon,
+    required this.workspaceEyebrow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminScreenScaffold(
+      title: title,
+      currentRoute: routeName,
+      showHeading: false,
+      topBarBuilder: (context, wide, onMenuTap) => _ActorWorkspaceTopBar(
+        wide: wide,
+        onMenuTap: onMenuTap,
+        workspaceTitle: workspaceTitle,
+        searchHint: workspaceSearchHint,
+        searchRoute: workspaceSearchRoute,
+        profileRoute: workspaceProfileRoute,
+      ),
+      sideNavBuilder: (context, currentRoute, onRouteTap) =>
+          _ActorWorkspaceSidebar(
+        currentRoute: currentRoute,
+        portalLabel: portalLabel,
+        sectionLabel: workspaceSectionLabel,
+        menuEntries: menuEntries,
+        onRouteTap: onRouteTap,
+      ),
+      bottomNavBuilder:
+          (context, currentRoute, menuOpen, onRouteTap, onMoreTap) =>
+              AdminBottomNavSlot(
+        child: _ActorWorkspaceBottomNav(
+          currentRoute: currentRoute,
+          menuOpen: menuOpen,
+          navRoutes: navRoutes,
+          navDestinations: navDestinations,
+          bottomIndexOverrides: bottomIndexOverrides,
+          onRouteTap: onRouteTap,
+          onMoreTap: onMoreTap,
+        ),
+      ),
+      floatingMenuBuilder: (context, open, currentRoute, onClose, onRouteTap) =>
+          FloatingPortalMenuOverlay(
+        open: open,
+        currentRoute: currentRoute,
+        items: [
+          for (final item in menuEntries)
+            FloatingPortalMenuItem(
+              route: item.route,
+              label: item.label,
+              icon: item.icon,
+            ),
+        ],
+        statusTitle: workspaceTitle,
+        statusSubtitle: workspaceStatusSubtitle,
+        statusIcon: workspaceIcon,
+        onClose: onClose,
+        onRouteTap: onRouteTap,
+        isRouteActive: _actorRouteActive,
+      ),
+      onRouteSelected: (context, route) => Navigator.pushNamed(context, route),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ActorRouteHeading(
+            title: title,
+            route: routeName,
+            badgeLabel: workspaceBadgeLabel,
+            icon: workspaceIcon,
+            eyebrowBuilder: workspaceEyebrow,
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _ActorRouteHeading extends StatelessWidget {
+  final String title;
+  final String route;
+  final String badgeLabel;
+  final IconData icon;
+  final String Function(String route)? eyebrowBuilder;
+
+  const _ActorRouteHeading({
+    required this.title,
+    required this.route,
+    required this.badgeLabel,
+    required this.icon,
+    this.eyebrowBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                eyebrowBuilder?.call(route) ?? _eyebrow,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.micro.copyWith(
+                  color: colors.goldDark,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.heroSerifNumber.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 30,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        StatusChip(
+          label: badgeLabel,
+          icon: icon,
+          color: colors.goldMid,
+        ),
+      ],
+    );
+  }
+
+  String get _eyebrow {
+    return switch (route) {
+      ActorTalentRoutes.dashboard => 'Talent workspace · overview',
+      ActorTalentRoutes.profile => 'Public identity · casting profile',
+      ActorTalentRoutes.portfolio => 'Media library · director preview',
+      ActorTalentRoutes.calendar => 'Availability · booking conflicts',
+      ActorTalentRoutes.rates => 'Rate guidance · negotiation baseline',
+      ActorTalentRoutes.opportunities => 'Offers · auditions · casting calls',
+      ActorTalentRoutes.offerDetail => 'Offer review · response due',
+      ActorTalentRoutes.counteroffer => 'Negotiation · revised terms',
+      ActorTalentRoutes.contracts => 'Agreements · signatures',
+      ActorTalentRoutes.earnings => 'Payments · receipts · payout security',
+      ActorTalentRoutes.reputation => 'Reviews · trust signals',
+      ActorTalentRoutes.safety => 'Privacy · boundaries · support',
+      _ => 'Actor / Talent workspace',
+    };
+  }
+}
+
+class _ActorWorkspaceTopBar extends StatelessWidget {
+  final bool wide;
+  final VoidCallback onMenuTap;
+  final String workspaceTitle;
+  final String searchHint;
+  final String searchRoute;
+  final String profileRoute;
+
+  const _ActorWorkspaceTopBar({
+    required this.wide,
+    required this.onMenuTap,
+    required this.workspaceTitle,
+    required this.searchHint,
+    required this.searchRoute,
+    required this.profileRoute,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = !wide;
+    final canGoBack = Navigator.canPop(context);
+    return AdminTopBarFrame(
+      compact: compact,
+      child: Row(
+        children: [
+          _ActorTopIcon(
+            icon: canGoBack ? Icons.arrow_back_rounded : Icons.menu_rounded,
+            tooltip: canGoBack ? 'Back' : 'Menu',
+            onTap: canGoBack ? () => navigateCoreBack(context) : onMenuTap,
+          ),
+          const SizedBox(width: 10),
+          _ActorBrandLockup(
+            compact: compact,
+            workspaceTitle: workspaceTitle,
+          ),
+          SizedBox(width: compact ? 8 : 16),
+          Expanded(
+            child: _ActorSearchPill(
+              compact: compact,
+              hint: searchHint,
+              onTap: () => Navigator.pushNamed(
+                context,
+                searchRoute,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (wide) ...[
+            _ActorNotificationButton(
+              onTap: () => Navigator.pushNamed(
+                context,
+                CoreRoutes.notifications,
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+          _ActorAvatarButton(
+            onTap: () => Navigator.pushNamed(
+              context,
+              profileRoute,
+            ),
+          ),
+          SizedBox(width: compact ? 8 : 10),
+          ThemeToggleButton(size: compact ? 34 : 38),
+          if (wide) ...[
+            const SizedBox(width: 10),
+            _ActorTopIcon(
+              icon: Icons.logout_rounded,
+              tooltip: 'Logout',
+              onTap: () => logoutToLogin(context),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ActorBrandLockup extends StatelessWidget {
+  final bool compact;
+  final String workspaceTitle;
+
+  const _ActorBrandLockup({
+    required this.compact,
+    required this.workspaceTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: compact ? 96 : 166,
+        maxWidth: compact ? 116 : 190,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RichText(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              style: AppTextStyles.sectionHeaderStyle.copyWith(
+                color: colors.textPrimary,
+                fontSize: compact ? 17 : 22,
+                fontWeight: FontWeight.w800,
+                height: 1.05,
+              ),
+              children: [
+                const TextSpan(text: 'Cine'),
+                TextSpan(
+                  text: 'Connect',
+                  style: TextStyle(color: colors.goldDark),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            workspaceTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.copyWith(
+              color: colors.textSecondary,
+              fontSize: compact ? 10.5 : 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActorSearchPill extends StatelessWidget {
+  final bool compact;
+  final String hint;
+  final VoidCallback onTap;
+
+  const _ActorSearchPill({
+    required this.compact,
+    required this.hint,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Search opportunities',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(compact ? 15 : 18),
+        onTap: onTap,
+        child: Container(
+          height: compact ? 38 : 44,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 13),
+          decoration: BoxDecoration(
+            gradient: colors.searchGradient,
+            borderRadius: BorderRadius.circular(compact ? 15 : 18),
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.search_rounded,
+                color: colors.icon,
+                size: compact ? 18 : 21,
+              ),
+              SizedBox(width: compact ? 7 : 9),
+              Expanded(
+                child: Text(
+                  compact ? 'Search...' : hint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textSecondary,
+                    fontSize: compact ? 12 : 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActorTopIcon extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _ActorTopIcon({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(19),
+        onTap: onTap,
+        child: GlassContainer(
+          width: 38,
+          height: 38,
+          radius: 19,
+          child: Icon(icon, color: colors.icon, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActorNotificationButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ActorNotificationButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Notifications',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(19),
+        onTap: onTap,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.notifications_none_rounded,
+                color: colors.icon,
+                size: 22,
+              ),
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: colors.warning,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActorAvatarButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ActorAvatarButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Talent profile',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(19),
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.border),
+          ),
+          child: ClipOval(
+            child: Image.asset(
+              AppAssets.currentUserAvatar,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: colors.softSurface,
+                alignment: Alignment.center,
+                child: Text(
+                  'T',
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.goldDark,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActorWorkspaceSidebar extends StatelessWidget {
+  final String currentRoute;
+  final String portalLabel;
+  final String sectionLabel;
+  final List<ActorShellMenuEntry> menuEntries;
+  final ValueChanged<String> onRouteTap;
+
+  const _ActorWorkspaceSidebar({
+    required this.currentRoute,
+    required this.portalLabel,
+    required this.sectionLabel,
+    required this.menuEntries,
+    required this.onRouteTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: 276,
+      margin: const EdgeInsets.fromLTRB(14, 14, 0, 14),
+      child: GlassContainer(
+        radius: 24,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              sectionLabel,
+              style: AppTextStyles.sectionHeaderStyle.copyWith(
+                color: colors.textPrimary,
+                fontSize: 18,
+                letterSpacing: 1.6,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              portalLabel,
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: menuEntries.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, index) {
+                  final item = menuEntries[index];
+                  final active = _actorRouteActive(currentRoute, item.route);
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => onRouteTap(item.route),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 11,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: active
+                            ? colors.activeChipGradient
+                            : colors.inactiveChipGradient,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: active ? colors.goldMid : colors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            item.icon,
+                            color: active ? colors.goldDark : colors.iconMuted,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.cardLabel.copyWith(
+                                color: active
+                                    ? colors.textPrimary
+                                    : colors.textSecondary,
+                                fontWeight:
+                                    active ? FontWeight.w800 : FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? colors.goldMid
+                                  : colors.iconMuted.withValues(alpha: 0.45),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActorWorkspaceBottomNav extends StatelessWidget {
+  final String currentRoute;
+  final bool menuOpen;
+  final List<String> navRoutes;
+  final List<CineBottomNavDestination> navDestinations;
+  final Map<String, int> bottomIndexOverrides;
+  final ValueChanged<String> onRouteTap;
+  final VoidCallback onMoreTap;
+
+  const _ActorWorkspaceBottomNav({
+    required this.currentRoute,
+    required this.menuOpen,
+    required this.navRoutes,
+    required this.navDestinations,
+    required this.bottomIndexOverrides,
+    required this.onRouteTap,
+    required this.onMoreTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CineBottomNav(
+      currentIndex: _currentIndex,
+      destinations: navDestinations,
+      compactCenter: true,
+      onTap: (index) {
+        if (index == navDestinations.length - 1) {
+          onMoreTap();
+          return;
+        }
+        if (index < navRoutes.length) onRouteTap(navRoutes[index]);
+      },
+    );
+  }
+
+  int get _currentIndex {
+    if (menuOpen) return navDestinations.length - 1;
+    final override = bottomIndexOverrides[currentRoute];
+    if (override != null) return override;
+    final index = navRoutes.indexOf(currentRoute);
+    if (index >= 0 && index < navDestinations.length - 1) return index;
+    return navDestinations.length - 1;
+  }
+}
+
+bool _actorRouteActive(String currentRoute, String route) {
+  if (route == ActorTalentRoutes.dashboard) return currentRoute == route;
+  return currentRoute == route || currentRoute.startsWith('$route/');
 }
 
 class _ActorTopBar extends StatelessWidget {

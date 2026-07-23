@@ -19,12 +19,14 @@ class MD05BrandSafetyScreen extends StatefulWidget {
 
 class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
   Future<List<ModelRestrictedCategoryDto>>? _restrictedFuture;
+  Future<ModelProfileDto?>? _profileFuture;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
     _restrictedFuture ??= specialist?.modelRestrictedCategories(force: true);
+    _profileFuture ??= specialist?.modelProfile(force: true);
   }
 
   @override
@@ -41,13 +43,50 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
               selected: store.autoFlagViolations,
               child: Column(
                 children: [
-                  _ModelSafetySwitch(
-                    label: 'Require my review',
-                    subtitle:
-                        'Sensitive campaigns pause before inbox delivery.',
-                    value: store.requireReview,
-                    onChanged: store.toggleRequireReview,
-                  ),
+                  if (_profileFuture != null)
+                    FutureBuilder<ModelProfileDto?>(
+                      future: _profileFuture,
+                      builder: (context, snapshot) {
+                        final profile = snapshot.data;
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const InlineNotice(
+                            message: 'Loading live safety profile...',
+                            icon: Icons.hourglass_top_rounded,
+                          );
+                        }
+                        if (profile == null) return const SizedBox.shrink();
+                        return Column(
+                          children: [
+                            _ModelSafetySwitch(
+                              label: 'Public model discovery',
+                              subtitle: profile.publicVisibility
+                                  ? 'Directors can discover this model extension.'
+                                  : 'The model extension is hidden from discovery.',
+                              value: profile.publicVisibility,
+                              onChanged: _updateVisibility,
+                            ),
+                            ActorInfoRow(
+                              icon: Icons.notes_outlined,
+                              label: 'Safety notes',
+                              value:
+                                  profile.brandSafetyNotes?.trim().isNotEmpty ==
+                                          true
+                                      ? profile.brandSafetyNotes!
+                                      : 'No private review notes added',
+                            ),
+                            const SizedBox(height: 8),
+                            CoreSecondaryButton(
+                              icon: Icons.edit_note_outlined,
+                              label: 'Edit safety notes',
+                              compact: true,
+                              onTap: () => _showNotes(profile),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      },
+                    ),
                   _ModelSafetySwitch(
                     label: 'Auto-flag violations',
                     subtitle:
@@ -192,6 +231,68 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
         );
       },
     );
+  }
+
+  Future<void> _updateVisibility(bool value) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    try {
+      await specialist.upsertModelProfile({'public_visibility': value});
+      if (!mounted) return;
+      setState(
+        () => _profileFuture = specialist.modelProfile(force: true),
+      );
+      actorSnack(
+        context,
+        value ? 'Model discovery enabled' : 'Model discovery hidden',
+      );
+    } catch (error) {
+      if (mounted) actorSnack(context, 'Could not update visibility: $error');
+    }
+  }
+
+  void _showNotes(ModelProfileDto profile) {
+    final pageContext = context;
+    final notes = TextEditingController(text: profile.brandSafetyNotes ?? '');
+    showActorSheet(
+      context,
+      title: 'Private brand safety notes',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CoreTextField(
+            controller: notes,
+            label: 'Review guidance',
+            icon: Icons.shield_outlined,
+            maxLines: 4,
+          ),
+          const SizedBox(height: 12),
+          CorePrimaryButton(
+            icon: Icons.save_outlined,
+            label: 'Save notes',
+            onTap: () async {
+              final specialist = SpecialistScope.maybeOf(context);
+              if (specialist == null) return;
+              try {
+                await specialist.upsertModelProfile({
+                  'brand_safety_notes': notes.text.trim(),
+                });
+                if (!mounted || !context.mounted) return;
+                Navigator.pop(context);
+                setState(
+                  () => _profileFuture = specialist.modelProfile(force: true),
+                );
+                actorSnack(pageContext, 'Brand safety notes saved');
+              } catch (error) {
+                if (context.mounted) {
+                  actorSnack(context, 'Could not save notes: $error');
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    ).whenComplete(notes.dispose);
   }
 }
 

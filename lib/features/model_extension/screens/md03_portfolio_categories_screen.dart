@@ -1,13 +1,19 @@
+import 'dart:async';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/marketplace/marketplace_models.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../data/model_extension_demo_data.dart';
 
-/// MD-03 Portfolio Categories
 class MD03PortfolioCategoriesScreen extends StatefulWidget {
   const MD03PortfolioCategoriesScreen({super.key});
 
@@ -18,131 +24,316 @@ class MD03PortfolioCategoriesScreen extends StatefulWidget {
 
 class _MD03PortfolioCategoriesScreenState
     extends State<MD03PortfolioCategoriesScreen> {
-  String filter = 'All';
+  String _filter = 'All';
+  Future<List<MarketplacePortfolioItem>>? _itemsFuture;
+  bool _uploading = false;
+  String? _busyId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_itemsFuture != null) return;
+    final auth = AuthScope.maybeOf(context);
+    _itemsFuture = auth?.portfolioItems(profileType: 'model');
+  }
+
+  void _reload() {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) return;
+    _itemsFuture = auth.portfolioItems(profileType: 'model');
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ModelExtensionDemoStore.instance,
-      builder: (context, _) {
-        final store = ModelExtensionDemoStore.instance;
-        final categories = [
-          'All',
-          ...store.portfolio.map((item) => item.category).toSet()
-        ];
-        final items = store.portfolio
-            .where((item) => filter == 'All' || item.category == filter)
-            .toList();
-        return Column(
-          children: [
-            ActorSectionCard(
-              title: 'Model Identity Frame',
-              icon: Icons.photo_camera_front_outlined,
-              child: ActorTwoColumn(
-                left: const ActorMediaFrame(
-                  imageUrl: ModelExtensionDemoData.heroImage,
-                  title: 'Editorial public profile',
-                  badge: 'Watermarked',
-                  fallbackIcon: Icons.style_outlined,
-                  aspectRatio: 16 / 10,
-                ),
-                right: Column(
-                  children: [
-                    const ActorInfoRow(
-                      icon: Icons.verified_user_outlined,
-                      label: 'Trust',
-                      value: 'KYC verified',
-                    ),
-                    const ActorInfoRow(
-                      icon: Icons.water_drop_outlined,
-                      label: 'Preview',
-                      value: 'Auto-watermarked',
-                    ),
-                    ActorInfoRow(
-                      icon: Icons.collections_outlined,
-                      label: 'Assets',
-                      value: '${store.portfolio.length} model frames',
-                    ),
-                  ],
-                ),
-              ),
+    return Column(
+      children: [
+        ActorSectionCard(
+          title: 'Model Portfolio Standard',
+          icon: Icons.photo_camera_front_outlined,
+          selected: true,
+          child: ActorTwoColumn(
+            left: const ActorMediaFrame(
+              imageUrl: ModelExtensionDemoData.heroImage,
+              title: 'Director-facing model profile',
+              badge: 'Protected preview',
+              fallbackIcon: Icons.style_outlined,
+              aspectRatio: 16 / 10,
             ),
-            const SizedBox(height: 12),
-            ActorSectionCard(
-              title: 'Portfolio Categories',
-              icon: Icons.photo_library_outlined,
-              actionText: 'Upload',
-              onActionTap: () {
-                store.addPortfolioPreview();
-                actorSnack(context, 'Model upload preview sent to moderation');
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
+            right: const Column(
+              children: [
+                ActorInfoRow(
+                  icon: Icons.verified_user_outlined,
+                  label: 'Identity',
+                  value: 'Linked to talent KYC',
+                ),
+                ActorInfoRow(
+                  icon: Icons.visibility_outlined,
+                  label: 'Visibility',
+                  value: 'Publish each asset separately',
+                ),
+                ActorInfoRow(
+                  icon: Icons.category_outlined,
+                  label: 'Director use',
+                  value: 'Casting filters and shortlist preview',
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ActorSectionCard(
+          title: 'Portfolio Library',
+          icon: Icons.photo_library_outlined,
+          actionText: _uploading ? 'Uploading...' : 'Upload',
+          onActionTap: _uploading ? null : _uploadMedia,
+          child: _itemsFuture == null
+              ? _PreviewPortfolio(filter: _filter, onFilter: _setFilter)
+              : FutureBuilder<List<MarketplacePortfolioItem>>(
+                  future: _itemsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const InlineNotice(
+                        message: 'Loading live model portfolio...',
+                        icon: Icons.hourglass_top_rounded,
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return Column(
+                        children: [
+                          const InlineNotice(
+                            message:
+                                'Live portfolio is unavailable. Preview assets are shown.',
+                            icon: Icons.cloud_off_outlined,
+                          ),
+                          const SizedBox(height: 10),
+                          _PreviewPortfolio(
+                            filter: _filter,
+                            onFilter: _setFilter,
+                          ),
+                        ],
+                      );
+                    }
+                    final all = snapshot.data ?? const [];
+                    final categories = <String>{
+                      'All',
+                      ...all.map((item) => item.displayCategory),
+                    }.toList();
+                    final items = all
+                        .where((item) =>
+                            _filter == 'All' || item.displayCategory == _filter)
+                        .toList();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        for (final category in categories)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => setState(() => filter = category),
-                              child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(minHeight: 44),
-                                child: Center(
-                                  child: StatusChip(
-                                    label: category,
-                                    color: filter == category
-                                        ? context.appColors.goldMid
-                                        : context.appColors.textSecondary,
+                        _CategoryFilters(
+                          categories: categories,
+                          selected: _filter,
+                          onSelected: _setFilter,
+                        ),
+                        const SizedBox(height: 12),
+                        if (items.isEmpty)
+                          CoreEmptyState(
+                            icon: Icons.photo_library_outlined,
+                            title: all.isEmpty
+                                ? 'Portfolio is empty'
+                                : 'No assets in this category',
+                            message:
+                                'Upload current headshots, full-length frames, editorial work, or campaign stills.',
+                            actionLabel: all.isEmpty ? 'Upload asset' : null,
+                            onAction: all.isEmpty ? _uploadMedia : null,
+                          )
+                        else
+                          ActorResponsiveGrid(
+                            minWidth: 230,
+                            children: [
+                              for (final item in items)
+                                _LivePortfolioCard(
+                                  item: item,
+                                  busy: _busyId == item.publicId,
+                                  onVisibility: () => _updateItem(
+                                    item,
+                                    status: item.status == 'published'
+                                        ? 'draft'
+                                        : 'published',
                                   ),
+                                  onCover: () =>
+                                      _updateItem(item, isCover: true),
                                 ),
-                              ),
-                            ),
+                            ],
                           ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ActorResponsiveGrid(
-                    minWidth: 210,
-                    children: [
-                      for (final item in items)
-                        _PortfolioAssetCard(id: item.id),
-                    ],
-                  ),
-                ],
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _setFilter(String value) => setState(() => _filter = value);
+
+  Future<void> _updateItem(
+    MarketplacePortfolioItem item, {
+    String? status,
+    bool? isCover,
+  }) async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) return;
+    setState(() => _busyId = item.publicId);
+    try {
+      await auth.updatePortfolioItem(
+        publicId: item.publicId,
+        status: status,
+        isCover: isCover,
+      );
+      if (!mounted) return;
+      setState(_reload);
+      actorSnack(
+        context,
+        isCover == true
+            ? '${item.title} set as model cover'
+            : '${item.title} visibility updated',
+      );
+    } catch (error) {
+      if (mounted) actorSnack(context, _friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  Future<void> _uploadMedia() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) {
+      actorSnack(context, 'Sign in to upload model portfolio media');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'mp4'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return;
+    final mimeType = _mimeTypeFor(file);
+    setState(() => _uploading = true);
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'profile_media',
+        file: PickedFileData(
+          name: file.name,
+          mimeType: mimeType,
+          bytes: file.bytes!,
+        ),
+      );
+      await _createWhenReady(
+        auth: auth,
+        fileId: uploaded.publicId,
+        title: _titleFor(file.name),
+        category: _categoryFor(file.name, mimeType),
+      );
+      if (!mounted) return;
+      setState(_reload);
+      actorSnack(context, 'Portfolio asset uploaded for model discovery');
+    } catch (error) {
+      if (mounted) actorSnack(context, _friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _createWhenReady({
+    required AuthController auth,
+    required String fileId,
+    required String title,
+    required String category,
+  }) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 6; attempt += 1) {
+      try {
+        await auth.createPortfolioItem(
+          profileType: 'model',
+          title: title,
+          category: category,
+          fileId: fileId,
+          status: 'published',
+        );
+        return;
+      } on ApiException catch (error) {
+        lastError = error;
+        final waiting = error.fields.containsKey('file_id') ||
+            error.message.toLowerCase().contains('ready') ||
+            error.message.toLowerCase().contains('clean');
+        if (!waiting || attempt == 5) rethrow;
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    }
+    throw lastError ?? StateError('Portfolio upload failed');
+  }
+}
+
+class _CategoryFilters extends StatelessWidget {
+  final List<String> categories;
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  const _CategoryFilters({
+    required this.categories,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final category in categories)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: CoreChip(
+                label: category,
+                selected: selected == category,
+                onTap: () => onSelected(category),
               ),
             ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 }
 
-class _PortfolioAssetCard extends StatelessWidget {
-  final String id;
+class _LivePortfolioCard extends StatelessWidget {
+  final MarketplacePortfolioItem item;
+  final bool busy;
+  final VoidCallback onVisibility;
+  final VoidCallback onCover;
 
-  const _PortfolioAssetCard({required this.id});
+  const _LivePortfolioCard({
+    required this.item,
+    required this.busy,
+    required this.onVisibility,
+    required this.onCover,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final store = ModelExtensionDemoStore.instance;
-    final asset = store.portfolio.firstWhere((item) => item.id == id);
     final colors = context.appColors;
+    final imageUrl = item.thumbnailFile?.publicUrl ??
+        item.file?.publicUrl ??
+        item.thumbnailFile?.downloadUrl ??
+        item.file?.downloadUrl ??
+        '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ActorMediaFrame(
-          imageUrl: asset.imageUrl,
-          title: asset.title,
-          badge: asset.category,
-          fallbackIcon: Icons.photo_library_outlined,
-          aspectRatio: 4 / 5,
+          imageUrl: imageUrl,
+          title: item.title,
+          badge: item.displayCategory,
+          fallbackIcon:
+              item.isImage ? Icons.photo_outlined : Icons.movie_outlined,
+          aspectRatio: item.displayCategory == 'Headshots' ? 4 / 5 : 16 / 10,
           compact: true,
         ),
         const SizedBox(height: 8),
@@ -150,7 +341,7 @@ class _PortfolioAssetCard extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                asset.title,
+                item.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.cardLabel.copyWith(
@@ -159,7 +350,7 @@ class _PortfolioAssetCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (asset.cover) StatusChip(label: 'Cover', color: colors.goldMid),
+            if (item.isCover) StatusChip(label: 'Cover', color: colors.goldMid),
           ],
         ),
         const SizedBox(height: 7),
@@ -168,10 +359,14 @@ class _PortfolioAssetCard extends StatelessWidget {
           runSpacing: 7,
           children: [
             StatusChip(
-              label: asset.status,
-              color: asset.status == 'Public' ? colors.success : colors.goldMid,
+              label: item.displayStatus,
+              color:
+                  item.status == 'published' ? colors.success : colors.goldMid,
             ),
-            StatusChip(label: 'Preview safe', color: colors.infoBlue),
+            StatusChip(
+              label: _titleCase(item.moderationStatus),
+              color: colors.infoBlue,
+            ),
           ],
         ),
         const SizedBox(height: 9),
@@ -180,24 +375,18 @@ class _PortfolioAssetCard extends StatelessWidget {
             Expanded(
               child: CoreSecondaryButton(
                 icon: Icons.visibility_outlined,
-                label: asset.status == 'Public' ? 'Unpublish' : 'Publish',
+                label: item.status == 'published' ? 'Unpublish' : 'Publish',
                 compact: true,
-                onTap: () {
-                  store.togglePortfolioStatus(asset.id);
-                  actorSnack(context, '${asset.title} visibility updated');
-                },
+                onTap: busy ? null : onVisibility,
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: CorePrimaryButton(
                 icon: Icons.star_outline_rounded,
-                label: 'Cover',
+                label: item.isCover ? 'Cover' : 'Set cover',
                 compact: true,
-                onTap: () {
-                  store.setPortfolioCover(asset.id);
-                  actorSnack(context, '${asset.title} set as model cover');
-                },
+                onTap: busy || item.isCover ? null : onCover,
               ),
             ),
           ],
@@ -205,4 +394,109 @@ class _PortfolioAssetCard extends StatelessWidget {
       ],
     );
   }
+}
+
+class _PreviewPortfolio extends StatelessWidget {
+  final String filter;
+  final ValueChanged<String> onFilter;
+
+  const _PreviewPortfolio({
+    required this.filter,
+    required this.onFilter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final store = ModelExtensionDemoStore.instance;
+    final categories = <String>{
+      'All',
+      ...store.portfolio.map((item) => item.category),
+    }.toList();
+    final items = store.portfolio
+        .where((item) => filter == 'All' || item.category == filter)
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const InlineNotice(
+          message: 'Preview mode. Sign in to manage live model media.',
+          icon: Icons.visibility_outlined,
+        ),
+        const SizedBox(height: 10),
+        _CategoryFilters(
+          categories: categories,
+          selected: filter,
+          onSelected: onFilter,
+        ),
+        const SizedBox(height: 12),
+        ActorResponsiveGrid(
+          minWidth: 230,
+          children: [
+            for (final item in items)
+              ActorMediaFrame(
+                imageUrl: item.imageUrl,
+                title: item.title,
+                badge: item.category,
+                fallbackIcon: Icons.photo_library_outlined,
+                aspectRatio: 4 / 5,
+                compact: true,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+String _mimeTypeFor(PlatformFile file) {
+  return switch ((file.extension ?? '').toLowerCase()) {
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'mp4' => 'video/mp4',
+    _ => 'application/octet-stream',
+  };
+}
+
+String _categoryFor(String filename, String mimeType) {
+  final name = filename.toLowerCase();
+  if (mimeType.startsWith('video/')) return 'campaign_video';
+  if (name.contains('head')) return 'headshots';
+  if (name.contains('full')) return 'full_length';
+  if (name.contains('beauty')) return 'beauty';
+  if (name.contains('product')) return 'product';
+  if (name.contains('bridal') || name.contains('ethnic')) return 'ethnic_wear';
+  return 'editorial';
+}
+
+String _titleFor(String filename) {
+  final clean = filename
+      .replaceFirst(RegExp(r'\.[^.]+$'), '')
+      .replaceAll(RegExp(r'[_-]+'), ' ')
+      .trim();
+  return clean.length >= 2 ? clean : 'Model portfolio asset';
+}
+
+String _friendlyError(Object error) {
+  if (error is ApiException) {
+    return switch (error.code) {
+      'auth.required' ||
+      'auth.invalid_token' =>
+        'Sign in to manage model portfolio media.',
+      'validation.invalid' =>
+        'Complete the talent and model profile before uploading media.',
+      'network.offline' => 'Portfolio is unavailable offline.',
+      _ => error.message,
+    };
+  }
+  return 'Could not update model portfolio. Try again.';
+}
+
+String _titleCase(String value) {
+  return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }

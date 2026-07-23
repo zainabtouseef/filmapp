@@ -200,6 +200,7 @@ class BrandProfileDto {
   final String? representative;
   final String trustStatus;
   final String? description;
+  final String logoUrl;
 
   const BrandProfileDto({
     required this.publicId,
@@ -208,6 +209,7 @@ class BrandProfileDto {
     this.representative,
     required this.trustStatus,
     this.description,
+    required this.logoUrl,
   });
 
   factory BrandProfileDto.fromJson(Map<String, dynamic> json) {
@@ -218,65 +220,190 @@ class BrandProfileDto {
       representative: json['representative'] as String?,
       trustStatus: json['trust_status'] as String? ?? 'pending',
       description: json['description'] as String?,
+      logoUrl: _specialistFileUrl(json['logo_file']),
     );
   }
 }
 
 class BrandOpportunityDto {
   final String publicId;
+  final String? projectId;
   final String title;
   final String category;
   final int? budgetMinor;
   final String currency;
+  final String usageSummary;
+  final String eligibility;
+  final String deliverables;
+  final DateTime? applicationDueAt;
   final String status;
+  final String coverUrl;
   final int applicationCount;
+  final DateTime? createdAt;
 
   const BrandOpportunityDto({
     required this.publicId,
+    this.projectId,
     required this.title,
     required this.category,
     this.budgetMinor,
     required this.currency,
+    required this.usageSummary,
+    required this.eligibility,
+    required this.deliverables,
+    required this.applicationDueAt,
     required this.status,
+    required this.coverUrl,
     required this.applicationCount,
+    required this.createdAt,
   });
 
   factory BrandOpportunityDto.fromJson(Map<String, dynamic> json) {
     return BrandOpportunityDto(
       publicId: json['public_id'] as String? ?? '',
+      projectId: json['project_id'] as String?,
       title: json['title'] as String? ?? 'Opportunity',
       category: json['category'] as String? ?? 'sponsorship',
-      budgetMinor: json['budget_minor'] as int?,
+      budgetMinor: (json['budget_minor'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'PKR',
+      usageSummary: json['usage_summary'] as String? ?? '',
+      eligibility: json['eligibility'] as String? ?? '',
+      deliverables: json['deliverables'] as String? ?? '',
+      applicationDueAt:
+          DateTime.tryParse(json['application_due_at'] as String? ?? ''),
       status: json['status'] as String? ?? 'draft',
-      applicationCount:
+      coverUrl: _specialistFileUrl(json['cover_file']),
+      applicationCount: (json['application_count'] as num?)?.toInt() ??
           (json['applications'] as List<dynamic>? ?? const []).length,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+    );
+  }
+}
+
+class BrandTermDto {
+  final String publicId;
+  final String scope;
+  final String exclusivity;
+  final String approvalRights;
+  final List<Map<String, dynamic>> paymentSchedule;
+  final String status;
+  final int version;
+
+  const BrandTermDto({
+    required this.publicId,
+    required this.scope,
+    required this.exclusivity,
+    required this.approvalRights,
+    required this.paymentSchedule,
+    required this.status,
+    required this.version,
+  });
+
+  factory BrandTermDto.fromJson(Map<String, dynamic> json) {
+    return BrandTermDto(
+      publicId: json['public_id'] as String? ?? '',
+      scope: json['scope'] as String? ?? '',
+      exclusivity: json['exclusivity'] as String? ?? '',
+      approvalRights: json['approval_rights'] as String? ?? '',
+      paymentSchedule: (json['payment_schedule'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList(),
+      status: json['status'] as String? ?? 'draft',
+      version: (json['version'] as num?)?.toInt() ?? 1,
     );
   }
 }
 
 class BrandApplicationDto {
   final String publicId;
+  final String opportunityId;
+  final String opportunityTitle;
+  final SpecialistUserDto applicant;
+  final String? talentProfileId;
+  final String? conversationId;
+  final String proposal;
+  final Map<String, dynamic> audienceMetrics;
   final String status;
+  final String? rejectionReason;
   final int? budgetAskMinor;
   final String currency;
-  final int termsCount;
+  final List<BrandTermDto> terms;
+  final DateTime? createdAt;
 
   const BrandApplicationDto({
     required this.publicId,
+    required this.opportunityId,
+    required this.opportunityTitle,
+    required this.applicant,
+    this.talentProfileId,
+    this.conversationId,
+    required this.proposal,
+    required this.audienceMetrics,
     required this.status,
+    this.rejectionReason,
     this.budgetAskMinor,
     required this.currency,
-    required this.termsCount,
+    required this.terms,
+    required this.createdAt,
   });
 
   factory BrandApplicationDto.fromJson(Map<String, dynamic> json) {
+    final opportunity =
+        json['opportunity'] as Map<String, dynamic>? ?? const {};
     return BrandApplicationDto(
       publicId: json['public_id'] as String? ?? '',
+      opportunityId: opportunity['public_id'] as String? ?? '',
+      opportunityTitle: opportunity['title'] as String? ?? 'Brand opportunity',
+      applicant: SpecialistUserDto.fromJson(
+        json['applicant'] as Map<String, dynamic>? ?? const {},
+      ),
+      talentProfileId: json['talent_profile_id'] as String?,
+      conversationId: json['conversation_id'] as String?,
+      proposal: json['proposal'] as String? ?? '',
+      audienceMetrics:
+          json['audience_metrics'] as Map<String, dynamic>? ?? const {},
       status: json['status'] as String? ?? 'submitted',
-      budgetAskMinor: json['budget_ask_minor'] as int?,
+      rejectionReason: json['rejection_reason'] as String?,
+      budgetAskMinor: (json['budget_ask_minor'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'PKR',
-      termsCount: (json['terms'] as List<dynamic>? ?? const []).length,
+      terms: (json['terms'] as List<dynamic>? ?? const [])
+          .map((item) => BrandTermDto.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+    );
+  }
+
+  int get termsCount => terms.length;
+}
+
+class CampaignMetricDto {
+  final DateTime? capturedAt;
+  final String platform;
+  final int impressions;
+  final int reach;
+  final int engagements;
+  final int clicks;
+  final String source;
+
+  const CampaignMetricDto({
+    required this.capturedAt,
+    required this.platform,
+    required this.impressions,
+    required this.reach,
+    required this.engagements,
+    required this.clicks,
+    required this.source,
+  });
+
+  factory CampaignMetricDto.fromJson(Map<String, dynamic> json) {
+    return CampaignMetricDto(
+      capturedAt: DateTime.tryParse(json['captured_at'] as String? ?? ''),
+      platform: json['platform'] as String? ?? 'other',
+      impressions: (json['impressions'] as num?)?.toInt() ?? 0,
+      reach: (json['reach'] as num?)?.toInt() ?? 0,
+      engagements: (json['engagements'] as num?)?.toInt() ?? 0,
+      clicks: (json['clicks'] as num?)?.toInt() ?? 0,
+      source: json['source'] as String? ?? 'manual_verified',
     );
   }
 }
@@ -284,27 +411,60 @@ class BrandApplicationDto {
 class CampaignDeliverableDto {
   final String publicId;
   final String opportunityId;
+  final String? bookingId;
+  final SpecialistUserDto owner;
   final String label;
+  final DateTime? dueAt;
+  final String proofUrl;
   final String status;
-  final int metricCount;
+  final String? revisionNote;
+  final DateTime? approvedAt;
+  final List<CampaignMetricDto> metrics;
 
   const CampaignDeliverableDto({
     required this.publicId,
     required this.opportunityId,
+    this.bookingId,
+    required this.owner,
     required this.label,
+    required this.dueAt,
+    required this.proofUrl,
     required this.status,
-    required this.metricCount,
+    this.revisionNote,
+    required this.approvedAt,
+    required this.metrics,
   });
 
   factory CampaignDeliverableDto.fromJson(Map<String, dynamic> json) {
     return CampaignDeliverableDto(
       publicId: json['public_id'] as String? ?? '',
       opportunityId: json['opportunity_id'] as String? ?? '',
+      bookingId: json['booking_id'] as String?,
+      owner: SpecialistUserDto.fromJson(
+        json['owner'] as Map<String, dynamic>? ?? const {},
+      ),
       label: json['label'] as String? ?? 'Deliverable',
+      dueAt: DateTime.tryParse(json['due_at'] as String? ?? ''),
+      proofUrl: _specialistFileUrl(json['proof_file']),
       status: json['status'] as String? ?? 'pending',
-      metricCount: (json['metrics'] as List<dynamic>? ?? const []).length,
+      revisionNote: json['revision_note'] as String?,
+      approvedAt: DateTime.tryParse(json['approved_at'] as String? ?? ''),
+      metrics: (json['metrics'] as List<dynamic>? ?? const [])
+          .map((item) =>
+              CampaignMetricDto.fromJson(item as Map<String, dynamic>))
+          .toList(),
     );
   }
+
+  int get metricCount => metrics.length;
+}
+
+String _specialistFileUrl(Object? value) {
+  final file = value as Map<String, dynamic>?;
+  if (file == null) return '';
+  final publicUrl = file['public_url'] as String?;
+  if (publicUrl != null && publicUrl.isNotEmpty) return publicUrl;
+  return file['download_url'] as String? ?? '';
 }
 
 class ModelProfileDto {

@@ -14,7 +14,7 @@ const _goldBright = Color(0xFFE9C77B);
 const _goldSoft = Color(0xFFD9B36B);
 const _subtitleGrey = Color(0xFF6B655A);
 
-const _totalDuration = Duration(milliseconds: 2200);
+const _totalDuration = Duration(milliseconds: 3400);
 
 // Phase boundaries as fractions of the compact splash timeline.
 const double _p1End = 0.26; // light sweep + icons emerge
@@ -92,8 +92,9 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
+  late final AnimationController _exitController;
   late final List<Offset> _dust;
   bool _skipped = false;
 
@@ -102,6 +103,14 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(vsync: this, duration: _totalDuration)
       ..forward();
+    // A short fade the splash plays itself out with right before the route
+    // change, so the handoff to the next screen reads as one continuous
+    // motion instead of the animation finishing and then a separate,
+    // unrelated page transition cutting in.
+    _exitController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
     _dust = List.generate(26, (i) {
       final r = math.Random(i * 97 + 11);
       return Offset(r.nextDouble(), r.nextDouble());
@@ -114,7 +123,8 @@ class _SplashScreenState extends State<SplashScreen>
     final auth = AuthScope.maybeOf(context);
     if (auth == null) {
       if (!_skipped) await animationDone;
-      _routeNext(forceUpdateRequired: false, maintenanceEnabled: false);
+      await _exitAndRoute(
+          forceUpdateRequired: false, maintenanceEnabled: false);
       return;
     }
     var forceUpdateRequired = false;
@@ -132,6 +142,18 @@ class _SplashScreenState extends State<SplashScreen>
       // Offline routing still lets a stored session continue to its portal.
     }
     if (!_skipped) await animationDone;
+    await _exitAndRoute(
+      forceUpdateRequired: forceUpdateRequired,
+      maintenanceEnabled: maintenanceEnabled,
+    );
+  }
+
+  Future<void> _exitAndRoute({
+    required bool forceUpdateRequired,
+    required bool maintenanceEnabled,
+  }) async {
+    if (!mounted) return;
+    await _exitController.forward().orCancel.catchError((_) {});
     _routeNext(
       forceUpdateRequired: forceUpdateRequired,
       maintenanceEnabled: maintenanceEnabled,
@@ -165,6 +187,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _exitController.dispose();
     super.dispose();
   }
 
@@ -182,25 +205,31 @@ class _SplashScreenState extends State<SplashScreen>
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _skip,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            final t = _controller.value;
-            return SizedBox.expand(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _background(t),
-                  _lightSweep(t),
-                  _dustField(t),
-                  _iconNetwork(t),
-                  _lensEmblem(t),
-                  _wordmark(t),
-                  if (t < 0.94) _skipHint(t),
-                ],
-              ),
-            );
-          },
+        child: FadeTransition(
+          opacity: Tween<double>(begin: 1, end: 0).animate(
+            CurvedAnimation(parent: _exitController, curve: Curves.easeInCubic),
+          ),
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final t = _controller.value;
+              return SizedBox.expand(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _background(t),
+                    _shaderWarmup(),
+                    _lightSweep(t),
+                    RepaintBoundary(child: _dustField(t)),
+                    RepaintBoundary(child: _iconNetwork(t)),
+                    _lensEmblem(t),
+                    _wordmark(t),
+                    if (t < 0.94) _skipHint(t),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -214,6 +243,61 @@ class _SplashScreenState extends State<SplashScreen>
           center: Alignment(0, -0.1),
           radius: 1.2,
           colors: [_ivory, _ivoryDeep],
+        ),
+      ),
+    );
+  }
+
+  // Pre-compiles the SweepGradient/RadialGradient/ShaderMask shaders the
+  // lens ring and wordmark shimmer need, on the very first frame — at a
+  // barely-visible but non-zero opacity so Flutter doesn't skip the paint
+  // altogether (it elides painting for exactly `Opacity(opacity: 0)`).
+  // Without this, the GPU compiles those shaders the first time they're
+  // actually needed mid-timeline, which reads as the animation stalling
+  // for a beat right as the ring/wordmark are about to appear.
+  Widget _shaderWarmup() {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.003,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: SweepGradient(
+                    colors: [
+                      _metallicGold,
+                      _goldBright,
+                      _metallicGold,
+                      _goldSoft,
+                      _metallicGold,
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient:
+                      RadialGradient(colors: [_goldBright, Colors.transparent]),
+                ),
+              ),
+              ShaderMask(
+                blendMode: BlendMode.srcATop,
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Colors.white,
+                    Colors.transparent,
+                  ],
+                ).createShader(bounds),
+                child: const Text('W', style: TextStyle(fontSize: 10)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -337,10 +421,16 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             for (var i = 0; i < _iconSpecs.length; i++)
               if (opacities[i] > 0)
-                Transform.translate(
-                  offset: positions[i],
-                  child: Opacity(
-                    opacity: (opacities[i] * overallFade).clamp(0.0, 1.0),
+                Builder(builder: (context) {
+                  // Alpha is baked directly into each layer's own color
+                  // rather than wrapped in an `Opacity` widget — the icon,
+                  // fill, and border don't overlap each other, so this
+                  // produces an identical fade without the extra
+                  // compositing layer `Opacity` would force per icon
+                  // (×7 icons × every frame otherwise).
+                  final iconFade = (opacities[i] * overallFade).clamp(0.0, 1.0);
+                  return Transform.translate(
+                    offset: positions[i],
                     child: Transform.scale(
                       scale: scales[i],
                       child: Transform.rotate(
@@ -355,18 +445,20 @@ class _SplashScreenState extends State<SplashScreen>
                           padding: const EdgeInsets.all(11),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _ivory.withValues(alpha: 0.6),
+                            color: _ivory.withValues(alpha: 0.6 * iconFade),
                             border: Border.all(
-                                color: _goldSoft.withValues(alpha: 0.7),
+                                color:
+                                    _goldSoft.withValues(alpha: 0.7 * iconFade),
                                 width: 1),
                           ),
                           child: Icon(_iconSpecs[i].icon,
-                              color: _metallicGold, size: 22),
+                              color: _metallicGold.withValues(alpha: iconFade),
+                              size: 22),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
           ],
         );
       },
@@ -588,9 +680,14 @@ class _NetworkLinesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (opacity <= 0 || positions.length < 2) return;
+    // Always draws — even at alpha 0 — rather than early-returning while
+    // invisible. Early-returning meant this surface only got rasterized
+    // for the first time right as the lines actually needed to become
+    // visible, which measured as a real ~200ms stall at that exact
+    // moment; drawing (invisibly) from frame one keeps the surface warm.
+    if (positions.length < 2) return;
     final paint = Paint()
-      ..color = _metallicGold.withValues(alpha: 0.35 * opacity)
+      ..color = _metallicGold.withValues(alpha: 0.35 * opacity.clamp(0.0, 1.0))
       ..strokeWidth = 1;
     for (var i = 0; i < positions.length; i++) {
       final a = center + positions[i];

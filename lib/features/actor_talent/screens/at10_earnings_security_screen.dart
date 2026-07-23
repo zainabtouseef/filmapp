@@ -65,7 +65,7 @@ class _AT10EarningsSecurityScreenState
               onCreateAccount: _createPayoutAccount,
             );
           }
-          return _DemoEarnings();
+          return _EarningsLoadError(onRetry: _refresh);
         },
       );
     }
@@ -77,14 +77,24 @@ class _AT10EarningsSecurityScreenState
     if (payments == null) return;
     try {
       await payments.createSandboxPayoutAccount(
-          accountName: 'CineConnect Sandbox');
+        accountName: 'CineConnect test account',
+      );
       if (!mounted) return;
       setState(() => _accountsFuture = _safePayoutAccounts(payments));
-      actorSnack(context, 'Sandbox payout account added');
+      actorSnack(context, 'Test payout account added');
     } catch (error) {
       if (!mounted) return;
       actorSnack(context, '$error');
     }
+  }
+
+  void _refresh() {
+    final payments = PaymentsScope.maybeOf(context);
+    if (payments == null) return;
+    setState(() {
+      _dashboardFuture = payments.dashboard(force: true);
+      _accountsFuture = _safePayoutAccounts(payments);
+    });
   }
 }
 
@@ -154,14 +164,22 @@ class _LiveEarnings extends StatelessWidget {
             icon: Icons.timeline_outlined,
             child: Column(
               children: [
-                for (final schedule in dashboard.schedules)
-                  for (final milestone in schedule.milestones)
-                    ActorInfoRow(
-                      icon: Icons.payments_outlined,
-                      label: milestone.status,
-                      value:
-                          '${schedule.bookingId} • ${milestone.name} • ${milestone.amountLabel}',
-                    ),
+                if (dashboard.schedules.isEmpty)
+                  const CoreEmptyState(
+                    icon: Icons.payments_outlined,
+                    title: 'No payment schedule',
+                    message:
+                        'Payment milestones appear after a contract is secured.',
+                  )
+                else
+                  for (final schedule in dashboard.schedules)
+                    for (final milestone in schedule.milestones)
+                      ActorInfoRow(
+                        icon: Icons.payments_outlined,
+                        label: milestone.status,
+                        value:
+                            '${schedule.bookingId} • ${milestone.name} • ${milestone.amountLabel}',
+                      ),
               ],
             ),
           ),
@@ -186,7 +204,7 @@ class _LiveEarnings extends StatelessWidget {
                 const SizedBox(height: 8),
                 CorePrimaryButton(
                   icon: Icons.account_balance_outlined,
-                  label: 'Add sandbox payout',
+                  label: 'Add test payout account',
                   compact: true,
                   onTap: () => onCreateAccount(),
                 ),
@@ -350,6 +368,37 @@ class _DemoEarnings extends StatelessWidget {
               Navigator.pop(context);
               Navigator.pushNamed(context, CoreRoutes.report);
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EarningsLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _EarningsLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return ActorSectionCard(
+      title: 'Earnings unavailable',
+      icon: Icons.cloud_off_outlined,
+      tone: ActorTone.danger,
+      child: Column(
+        children: [
+          const CoreEmptyState(
+            icon: Icons.sync_problem_outlined,
+            title: 'Could not load payment records',
+            message: 'Check your connection and try again.',
+          ),
+          const SizedBox(height: 10),
+          CoreSecondaryButton(
+            icon: Icons.refresh_rounded,
+            label: 'Try again',
+            compact: true,
+            onTap: onRetry,
           ),
         ],
       ),

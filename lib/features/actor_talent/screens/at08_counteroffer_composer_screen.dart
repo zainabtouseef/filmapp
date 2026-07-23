@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
@@ -30,6 +31,7 @@ class _AT08CounterofferComposerScreenState
   late final TextEditingController message;
   String? error;
   bool sending = false;
+  bool _loadedLiveTerms = false;
 
   @override
   void initState() {
@@ -39,7 +41,7 @@ class _AT08CounterofferComposerScreenState
       (item) => item.id == widget.offerId,
       orElse: () => opportunities.first,
     );
-    offerId = offer.id;
+    offerId = widget.offerId ?? offer.id;
     final draft = ActorTalentDemoStore.instance.draftFor(offerId);
     amount = TextEditingController(text: draft?.amount ?? offer.fee);
     dates = TextEditingController(text: draft?.dates ?? offer.dates);
@@ -50,6 +52,15 @@ class _AT08CounterofferComposerScreenState
       text: draft?.message ??
           'Thank you for the offer. I can confirm availability with the adjusted dates and advance.',
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadedLiveTerms && offerId.startsWith('BKG-')) {
+      _loadedLiveTerms = true;
+      _loadLiveTerms();
+    }
   }
 
   @override
@@ -70,7 +81,13 @@ class _AT08CounterofferComposerScreenState
         icon: Icons.edit_note_outlined,
         child: Column(
           children: [
-            const StepWizardIndicator(currentStep: 1, totalSteps: 3),
+            Text(
+              'Revise only the terms that need to change. The producer receives this as the next offer revision.',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: context.appColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
             const SizedBox(height: 14),
             CoreTextField(
               controller: amount,
@@ -124,9 +141,10 @@ class _AT08CounterofferComposerScreenState
                 Expanded(
                   child: CorePrimaryButton(
                     icon: Icons.send_outlined,
-                    label: 'Send',
+                    label: 'Send counteroffer',
                     compact: true,
-                    onTap: _submit,
+                    loading: sending,
+                    onTap: sending ? null : _submit,
                   ),
                 ),
               ],
@@ -158,6 +176,27 @@ class _AT08CounterofferComposerScreenState
     actorSnack(context, 'Counteroffer draft saved');
   }
 
+  Future<void> _loadLiveTerms() async {
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) return;
+    try {
+      final booking = await bookings.booking(offerId);
+      if (!mounted) return;
+      final offer = booking.activeOffer;
+      setState(() {
+        if (offer != null) amount.text = offer.feeLabel;
+        dates.text =
+            '${DateFormat('MMM d').format(booking.startAt.toLocal())} - ${DateFormat('MMM d, y').format(booking.endAt.toLocal())}';
+        if ((offer?.conditions ?? '').trim().isNotEmpty) {
+          conditions.text = offer!.conditions!.trim();
+        }
+      });
+    } on ApiException catch (apiError) {
+      if (!mounted) return;
+      setState(() => error = apiError.message);
+    }
+  }
+
   void _submit() {
     if (amount.text.trim().isEmpty || message.text.trim().isEmpty) {
       setState(() => error = 'Required');
@@ -170,7 +209,7 @@ class _AT08CounterofferComposerScreenState
     ActorTalentDemoStore.instance.sendCounteroffer(offerId);
     ActorTalentDemoStore.instance.clearDraft(offerId);
     setState(() => error = null);
-    actorSnack(context, 'Counteroffer sent to Director DP-11');
+    actorSnack(context, 'Counteroffer sent to producer');
     Navigator.popUntil(
       context,
       (route) =>
@@ -193,7 +232,7 @@ class _AT08CounterofferComposerScreenState
       await BookingsScope.of(context).createCounterOffer(
         bookingId: offerId,
         feeMinor: feeMinor,
-        conditions: conditions.text.trim(),
+        conditions: _structuredConditions(),
         message: message.text.trim(),
       );
       if (!mounted) return;
@@ -207,6 +246,9 @@ class _AT08CounterofferComposerScreenState
     } on ApiException catch (apiError) {
       if (!mounted) return;
       setState(() => error = apiError.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'Could not send the counteroffer. Try again.');
     } finally {
       if (mounted) setState(() => sending = false);
     }
@@ -216,6 +258,15 @@ class _AT08CounterofferComposerScreenState
     final whole = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
     if (whole == null) return null;
     return whole * 100;
+  }
+
+  String _structuredConditions() {
+    return [
+      if (conditions.text.trim().isNotEmpty) conditions.text.trim(),
+      if (dates.text.trim().isNotEmpty) 'Requested dates: ${dates.text.trim()}',
+      if (advance.text.trim().isNotEmpty)
+        'Requested advance: ${advance.text.trim()}',
+    ].join('\n');
   }
 }
 

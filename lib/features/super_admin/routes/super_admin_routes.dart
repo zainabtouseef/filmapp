@@ -32,6 +32,12 @@ class SuperAdminRoutes {
   static const auditLogs = '/admin/audit-logs';
   static const analytics = '/admin/analytics';
 
+  static String bookingPath(String id) => '$bookingsMonitor/$id';
+  static String verificationPath(String id) => '$verifications/$id';
+  static String paymentReviewPath(String id) => '/admin/payment-review/$id';
+  static String contractTemplatePath(String id) => '$contractTemplates/$id';
+  static String disputePath(String id) => '$disputes/$id';
+
   static const allRoutes = [
     dashboard,
     reviewHub,

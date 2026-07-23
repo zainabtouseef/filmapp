@@ -12,6 +12,7 @@ class KycReviewDetailScreen extends StatefulWidget {
 class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
   String _document = 'CNIC Front';
   double _zoom = 1;
+  int _quarterTurns = 0;
   final Set<String> _checked = {'Identity document readable'};
   final _note = TextEditingController();
   Future<verification.KycSubmission>? _submissionFuture;
@@ -180,8 +181,12 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
         : submission.documentTypes;
     final selectedDocument =
         filters.contains(_document) ? _document : filters.first;
-    final fileNames =
-        submission.files.map((file) => file.originalName).toList();
+    final documentIndex = filters.indexOf(selectedDocument);
+    final file = documentIndex >= 0 && documentIndex < submission.files.length
+        ? submission.files[documentIndex]
+        : submission.files.isEmpty
+            ? null
+            : submission.files.first;
     return AdminSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,15 +197,49 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
             onSelected: (value) => setState(() => _document = value),
           ),
           const SizedBox(height: 12),
-          Transform.scale(
-            scale: _zoom,
-            child: AdminEvidenceViewer(
-              title: selectedDocument,
-              icon: Icons.article_outlined,
-              details: fileNames.isEmpty
-                  ? const ['No files attached yet']
-                  : fileNames,
+          Container(
+            width: double.infinity,
+            height: 360,
+            decoration: BoxDecoration(
+              color: context.appColors.softSurface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.appColors.border),
             ),
+            clipBehavior: Clip.antiAlias,
+            child: file?.publicUrl != null &&
+                    file!.mimeType.startsWith('image/')
+                ? InteractiveViewer(
+                    minScale: 0.7,
+                    maxScale: 5,
+                    child: Center(
+                      child: Transform.scale(
+                        scale: _zoom,
+                        child: RotatedBox(
+                          quarterTurns: _quarterTurns,
+                          child: Image.network(
+                            file.publicUrl!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => AdminEvidenceViewer(
+                              title: selectedDocument,
+                              icon: Icons.broken_image_outlined,
+                              details: [file.originalName],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : AdminEvidenceViewer(
+                    title: selectedDocument,
+                    icon: Icons.article_outlined,
+                    details: file == null
+                        ? const ['No file attached']
+                        : [
+                            file.originalName,
+                            file.mimeType,
+                            file.scanStatus,
+                          ],
+                  ),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -225,18 +264,18 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
                 icon: Icons.rotate_right_rounded,
                 label: 'Rotate',
                 secondary: true,
-                onTap: () => showCoreSnack(context, 'Document rotated'),
+                onTap: () => setState(
+                  () => _quarterTurns = (_quarterTurns + 1) % 4,
+                ),
               ),
               AdminActionButton(
-                icon: Icons.check_circle_outline,
-                label: 'Mark clear',
-                onTap: () => showCoreSnack(context, 'Document marked clear'),
-              ),
-              AdminActionButton(
-                icon: Icons.error_outline,
-                label: 'Mark unclear',
+                icon: Icons.center_focus_strong_rounded,
+                label: 'Reset view',
                 secondary: true,
-                onTap: () => showCoreSnack(context, 'Document marked unclear'),
+                onTap: () => setState(() {
+                  _zoom = 1;
+                  _quarterTurns = 0;
+                }),
               ),
             ],
           ),

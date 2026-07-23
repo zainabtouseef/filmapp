@@ -14,7 +14,6 @@ class LocationOwnerRoutes {
 
   static const primaryNav = [
     home,
-    listing,
     requests,
     calendar,
     earnings,
@@ -35,16 +34,16 @@ class LocationOwnerRoutes {
 
   static String titleFor(String route) {
     return switch (route) {
-      home => 'Owner Dashboard',
-      listing => 'Location Listing',
-      calendar => 'Availability Calendar',
-      pricing => 'Pricing & Deposit',
-      rules => 'Rules & Restrictions',
+      home => 'Location Workspace',
+      listing => 'Properties',
+      calendar => 'Availability',
+      pricing => 'Rates & Deposits',
+      rules => 'Property Rules',
       requests => 'Booking Requests',
-      checkIn => 'Check-In Inspection',
-      checkOut => 'Check-Out Claim',
-      earnings => 'Earnings & Deposits',
-      performance => 'Property Performance',
+      checkIn => 'Check-In',
+      checkOut => 'Check-Out & Claims',
+      earnings => 'Earnings',
+      performance => 'Property Insights',
       _ => 'Location Owner',
     };
   }

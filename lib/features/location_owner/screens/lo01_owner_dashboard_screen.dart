@@ -1,339 +1,644 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/booking_models.dart';
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/operations/operations_controller.dart';
+import '../../../core/operations/operations_models.dart';
+import '../../../core/payments/payment_models.dart';
+import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/location_owner_demo_data.dart';
+import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
+import '../widgets/location_owner_live.dart';
 
-class LO01OwnerDashboardScreen extends StatelessWidget {
+class LO01OwnerDashboardScreen extends StatefulWidget {
   const LO01OwnerDashboardScreen({super.key});
 
   @override
+  State<LO01OwnerDashboardScreen> createState() =>
+      _LO01OwnerDashboardScreenState();
+}
+
+class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
+  Future<_DashboardData>? _future;
+  OperationsController? _operations;
+  BookingsController? _bookings;
+  PaymentsController? _payments;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final operations = OperationsScope.maybeOf(context);
+    final bookings = BookingsScope.maybeOf(context);
+    final payments = PaymentsScope.maybeOf(context);
+    if (operations == null || bookings == null || payments == null) return;
+    if (identical(operations, _operations) &&
+        identical(bookings, _bookings) &&
+        identical(payments, _payments)) {
+      return;
+    }
+    _operations = operations;
+    _bookings = bookings;
+    _payments = payments;
+    _future = _load();
+  }
+
+  Future<_DashboardData> _load({bool force = false}) async {
+    final properties = await _operations!.locationProperties(force: force);
+    final bookings = await _bookings!.bookings(role: 'provider', force: force);
+    final payments = await _payments!.dashboard(force: force);
+    return _DashboardData(
+      properties: properties,
+      bookings: bookings.where((item) => item.category == 'location').toList(),
+      payments: payments,
+    );
+  }
+
+  void _reload() {
+    if (_operations == null || _bookings == null || _payments == null) return;
+    setState(() => _future = _load(force: true));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final store = LocationOwnerDemoStore.instance;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final property = store.activeProperty;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    if (_future == null) return _buildPreview(context);
+    return FutureBuilder<_DashboardData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return CoreEmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Workspace unavailable',
+            message: locationApiMessage(snapshot.error!),
+            actionLabel: 'Try again',
+            onAction: _reload,
+          );
+        }
+        return _buildLive(context, snapshot.data!);
+      },
+    );
+  }
+
+  Widget _buildLive(BuildContext context, _DashboardData data) {
+    final property = activeLocationProperty(data.properties);
+    final openRequests = data.bookings.where((booking) {
+      return {'sent', 'viewed', 'under_negotiation'}.contains(booking.status);
+    }).toList();
+    final upcoming = data.bookings.where((booking) {
+      return {'accepted', 'secured', 'in_progress'}.contains(booking.status) &&
+          booking.endAt.isAfter(DateTime.now());
+    }).toList();
+    final metrics = [
+      LocationMetric(
+        label: 'Properties',
+        value: '${data.properties.length}',
+        delta: data.properties.any((item) => item.status == 'draft')
+            ? 'Drafts need review'
+            : 'Portfolio',
+        icon: Icons.location_city_outlined,
+        tone: LocationTone.blue,
+        route: LocationOwnerRoutes.listing,
+      ),
+      LocationMetric(
+        label: 'Open Requests',
+        value: '${openRequests.length}',
+        delta: openRequests.isEmpty ? 'Inbox clear' : 'Response needed',
+        icon: Icons.inbox_outlined,
+        tone: LocationTone.gold,
+        route: LocationOwnerRoutes.requests,
+      ),
+      LocationMetric(
+        label: 'Upcoming Shoots',
+        value: '${upcoming.length}',
+        delta: 'Accepted bookings',
+        icon: Icons.movie_filter_outlined,
+        tone: LocationTone.purple,
+        route: LocationOwnerRoutes.calendar,
+      ),
+      LocationMetric(
+        label: 'Earnings',
+        value: 'PKR ${compactLocationMoney(data.payments.creditMinor ~/ 100)}',
+        delta: data.payments.pendingReleaseMinor > 0
+            ? 'Release pending'
+            : 'Verified ledger',
+        icon: Icons.account_balance_wallet_outlined,
+        tone: LocationTone.green,
+        route: LocationOwnerRoutes.earnings,
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LocationKpiRail(metrics: metrics),
+        const SizedBox(height: 12),
+        LocationTwoColumn(
+          left: property == null
+              ? LocationSectionCard(
+                  title: 'Property portfolio',
+                  icon: Icons.add_location_alt_outlined,
+                  selected: true,
+                  child: CoreEmptyState(
+                    icon: Icons.location_city_outlined,
+                    title: 'Create your first property',
+                    message:
+                        'Add production areas, capacity, access details and a public listing.',
+                    actionLabel: 'Create property',
+                    onAction: () => Navigator.pushNamed(
+                      context,
+                      LocationOwnerRoutes.listing,
+                    ),
+                  ),
+                )
+              : _LivePropertyCard(property: property),
+          right: LocationSectionCard(
+            title: 'Action required',
+            icon: Icons.priority_high_rounded,
+            tone: LocationTone.gold,
+            child: _ActionList(
+              property: property,
+              openRequests: openRequests,
+              upcoming: upcoming,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        LocationResponsiveGrid(
+          minWidth: 280,
           children: [
-            LocationKpiRail(metrics: LocationOwnerDemoData.metrics),
-            const SizedBox(height: 12),
-            LocationTwoColumn(
-              left: LocationSectionCard(
-                title: 'Primary workload',
-                icon: Icons.location_city_outlined,
-                selected: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LocationMediaFrame(
-                      imageUrl: property.imageUrl,
-                      title: property.name,
-                      badge: property.publicAddress,
-                      fallbackIcon: Icons.location_city_outlined,
-                      aspectRatio: 16 / 8.8,
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+            LocationSectionCard(
+              title: 'Latest requests',
+              icon: Icons.move_to_inbox_outlined,
+              tone: LocationTone.blue,
+              child: openRequests.isEmpty
+                  ? _CompactStatus(
+                      icon: Icons.inbox_outlined,
+                      title: 'No open requests',
+                      message:
+                          'New location offers and counteroffers will appear here.',
+                    )
+                  : Column(
                       children: [
-                        StatusChip(
-                          label: '${property.capacity} crew capacity',
-                          icon: Icons.groups_2_outlined,
-                          color: colors.infoBlue,
-                        ),
-                        StatusChip(
-                          label: '${property.parking} parking',
-                          icon: Icons.local_parking_outlined,
-                          color: colors.goldMid,
-                        ),
-                        StatusChip(
-                          label: property.powerBackup
-                              ? 'Power backup'
-                              : 'No backup',
-                          icon: Icons.bolt_outlined,
-                          color: property.powerBackup
-                              ? colors.success
-                              : colors.textSecondary,
-                        ),
-                        StatusChip(
-                          label: '${property.rating.toStringAsFixed(1)} rating',
-                          icon: Icons.star_outline_rounded,
-                          color: colors.infoPurple,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    LocationInfoRow(
-                      icon: Icons.security_outlined,
-                      label: 'Public address',
-                      value: property.publicAddress,
-                    ),
-                    LocationInfoRow(
-                      icon: Icons.lock_outline_rounded,
-                      label: 'Exact address',
-                      value: store.exactAddressEncrypted
-                          ? property.encryptedAddressHint
-                          : 'Shared after contract',
-                    ),
-                    LocationInfoRow(
-                      icon: Icons.event_available_outlined,
-                      label: 'Next secured shoot',
-                      value: 'River Lights - Jul 20',
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CoreSecondaryButton(
-                            icon: Icons.rule_folder_outlined,
-                            label: 'Rules',
-                            compact: true,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              LocationOwnerRoutes.rules,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: CorePrimaryButton(
-                            icon: Icons.calendar_month_outlined,
-                            label: 'Calendar',
-                            compact: true,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              LocationOwnerRoutes.calendar,
-                            ),
+                        for (final booking in openRequests.take(3))
+                          _BookingSummaryRow(booking: booking),
+                        const SizedBox(height: 4),
+                        CoreSecondaryButton(
+                          icon: Icons.open_in_new_rounded,
+                          label: 'Open requests',
+                          compact: true,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            LocationOwnerRoutes.requests,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              right: LocationSectionCard(
-                title: 'Action required',
-                icon: Icons.priority_high_rounded,
-                child: store.activeTasks.isEmpty
-                    ? _CompactEmptyTasks(onReset: () {
-                        locationSnack(
-                            context, 'No urgent owner tasks right now');
-                      })
-                    : LocationTaskRail(tasks: store.activeTasks),
+            ),
+            LocationSectionCard(
+              title: 'Availability',
+              icon: Icons.calendar_month_outlined,
+              tone: LocationTone.purple,
+              child: Column(
+                children: [
+                  LocationInfoRow(
+                    icon: Icons.event_available_outlined,
+                    label: 'Upcoming',
+                    value: '${upcoming.length} bookings',
+                  ),
+                  LocationInfoRow(
+                    icon: Icons.lock_clock_outlined,
+                    label: 'Next shoot',
+                    value: upcoming.isEmpty
+                        ? 'None scheduled'
+                        : shortLocationDate(upcoming.first.startAt),
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.calendar_month_outlined,
+                    label: 'Manage calendar',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      LocationOwnerRoutes.calendar,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            LocationResponsiveGrid(
-              minWidth: 280,
+            LocationSectionCard(
+              title: 'Payments',
+              icon: Icons.payments_outlined,
+              tone: LocationTone.green,
+              child: Column(
+                children: [
+                  LocationInfoRow(
+                    icon: Icons.verified_outlined,
+                    label: 'Credits',
+                    value:
+                        'PKR ${compactLocationMoney(data.payments.creditMinor ~/ 100)}',
+                  ),
+                  LocationInfoRow(
+                    icon: Icons.pending_actions_outlined,
+                    label: 'Pending release',
+                    value:
+                        'PKR ${compactLocationMoney(data.payments.pendingReleaseMinor ~/ 100)}',
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Open earnings',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      LocationOwnerRoutes.earnings,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            LocationSectionCard(
+              title: 'Safety & support',
+              icon: Icons.health_and_safety_outlined,
+              tone: LocationTone.danger,
+              child: Column(
+                children: [
+                  CoreSecondaryButton(
+                    icon: Icons.fact_check_outlined,
+                    label: 'Check-in evidence',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      LocationOwnerRoutes.checkIn,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.support_agent_outlined,
+                    label: 'Report an issue',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      CoreRoutes.report,
+                      arguments: 'Location owner support',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreview(BuildContext context) {
+    final store = LocationOwnerDemoStore.instance;
+    final property = store.activeProperty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LocationKpiRail(metrics: LocationOwnerDemoData.metrics),
+        const SizedBox(height: 12),
+        LocationTwoColumn(
+          left: LocationSectionCard(
+            title: 'Property portfolio',
+            icon: Icons.location_city_outlined,
+            selected: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DashboardSummaryCard(
-                  title: 'Pending requests',
-                  icon: Icons.move_to_inbox_outlined,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final request
-                          in LocationOwnerDemoData.requests.take(2))
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              LocationOwnerRoutes.requests,
-                              arguments: request.id,
-                            ),
-                            child: GlassSectionCard(
-                              radius: 16,
-                              padding: const EdgeInsets.all(11),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          request.project,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              AppTextStyles.cardLabel.copyWith(
-                                            color: colors.textPrimary,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${request.dates} - ${request.budget}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              AppTextStyles.smallMeta.copyWith(
-                                            color: colors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  LocationBookingStatusChip(
-                                    status: store.requestStatus(request),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                LocationMediaFrame(
+                  imageUrl: property.imageUrl,
+                  title: property.name,
+                  badge: property.publicAddress,
+                  fallbackIcon: Icons.location_city_outlined,
+                  aspectRatio: 16 / 8.8,
                 ),
-                _DashboardSummaryCard(
-                  title: 'Deposit history',
-                  icon: Icons.account_balance_wallet_outlined,
-                  child: Column(
-                    children: [
-                      LocationInfoRow(
-                        icon: Icons.lock_clock_outlined,
-                        label: 'Held',
-                        value: locationMoney(store.depositHeldAmount),
-                      ),
-                      LocationInfoRow(
-                        icon: Icons.verified_outlined,
-                        label: 'Released',
-                        value: locationMoney(store.depositReleasedAmount),
-                      ),
-                      LocationInfoRow(
-                        icon: Icons.report_problem_outlined,
-                        label: 'Claim review',
-                        value: store.damageClaimOpen ? 'Open' : 'None',
-                      ),
-                      const SizedBox(height: 8),
-                      CoreSecondaryButton(
-                        icon: Icons.receipt_long_outlined,
-                        label: 'Open ledger',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          LocationOwnerRoutes.earnings,
-                        ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 12),
+                LocationInfoRow(
+                  icon: Icons.groups_2_outlined,
+                  label: 'Crew capacity',
+                  value: '${property.capacity}',
                 ),
-                _DashboardSummaryCard(
-                  title: 'Performance pulse',
-                  icon: Icons.analytics_outlined,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LocationMiniBarChart(
-                        values: const [18, 30, 26, 41, 34, 49, 44],
-                        colors: [
-                          colors.goldMid,
-                          colors.infoBlue,
-                          colors.infoPurple,
-                        ],
-                        height: 92,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Better night-shoot pricing can lift conversion by 12%.',
-                        style: AppTextStyles.smallMeta.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      CoreSecondaryButton(
-                        icon: Icons.open_in_new_rounded,
-                        label: 'View performance',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          LocationOwnerRoutes.performance,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _DashboardSummaryCard(
-                  title: 'Safety links',
-                  icon: Icons.health_and_safety_outlined,
-                  child: Column(
-                    children: [
-                      CoreSecondaryButton(
-                        icon: Icons.fact_check_outlined,
-                        label: 'Check-in',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          LocationOwnerRoutes.checkIn,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      CoreSecondaryButton(
-                        icon: Icons.verified_user_outlined,
-                        label: 'Check-out',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          LocationOwnerRoutes.checkOut,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      CoreSecondaryButton(
-                        icon: Icons.support_agent_outlined,
-                        label: 'Report issue',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          CoreRoutes.report,
-                          arguments: 'Location owner safety support',
-                        ),
-                      ),
-                    ],
-                  ),
+                LocationInfoRow(
+                  icon: Icons.local_parking_outlined,
+                  label: 'Parking',
+                  value: '${property.parking}',
                 ),
               ],
             ),
-          ],
-        );
-      },
+          ),
+          right: LocationSectionCard(
+            title: 'Preview tasks',
+            icon: Icons.priority_high_rounded,
+            child: LocationTaskRail(tasks: store.activeTasks),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _DashboardSummaryCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget child;
+class _LivePropertyCard extends StatelessWidget {
+  final LocationPropertyDto property;
 
-  const _DashboardSummaryCard({
-    required this.title,
-    required this.icon,
-    required this.child,
+  const _LivePropertyCard({required this.property});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return LocationSectionCard(
+      title: 'Active property',
+      icon: Icons.location_city_outlined,
+      selected: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LocationMediaFrame(
+            imageUrl:
+                property.mediaUrls.isEmpty ? '' : property.mediaUrls.first,
+            title: property.name,
+            badge: readableLocationStatus(property.status),
+            fallbackIcon: Icons.location_city_outlined,
+            aspectRatio: 16 / 8.8,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusChip(
+                label: '${property.capacity ?? 0} crew',
+                icon: Icons.groups_2_outlined,
+                color: colors.infoBlue,
+              ),
+              StatusChip(
+                label: '${property.parkingSpaces ?? 0} parking',
+                icon: Icons.local_parking_outlined,
+                color: colors.goldMid,
+              ),
+              if (property.powerBackup)
+                StatusChip(
+                  label: 'Power backup',
+                  icon: Icons.bolt_outlined,
+                  color: colors.success,
+                ),
+              if (property.accessible)
+                StatusChip(
+                  label: 'Accessible',
+                  icon: Icons.accessible_outlined,
+                  color: colors.infoPurple,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LocationInfoRow(
+            icon: Icons.place_outlined,
+            label: 'Public area',
+            value: property.publicAddress.isEmpty
+                ? property.areaName
+                : property.publicAddress,
+          ),
+          LocationInfoRow(
+            icon: Icons.dashboard_customize_outlined,
+            label: 'Shoot spaces',
+            value: '${property.spaces.length}',
+          ),
+          LocationInfoRow(
+            icon: Icons.star_outline_rounded,
+            label: 'Rating',
+            value: property.ratingAverage > 0
+                ? property.ratingAverage.toStringAsFixed(1)
+                : 'No reviews yet',
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: CoreSecondaryButton(
+                  icon: Icons.rule_folder_outlined,
+                  label: 'Rules',
+                  compact: true,
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    LocationOwnerRoutes.rules,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CorePrimaryButton(
+                  icon: Icons.edit_outlined,
+                  label: 'Edit property',
+                  compact: true,
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    LocationOwnerRoutes.listing,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionList extends StatelessWidget {
+  final LocationPropertyDto? property;
+  final List<Booking> openRequests;
+  final List<Booking> upcoming;
+
+  const _ActionList({
+    required this.property,
+    required this.openRequests,
+    required this.upcoming,
   });
 
   @override
   Widget build(BuildContext context) {
-    return LocationSectionCard(title: title, icon: icon, child: child);
+    final actions =
+        <({IconData icon, String title, String detail, String route})>[
+      if (property == null)
+        (
+          icon: Icons.add_location_alt_outlined,
+          title: 'Create a property profile',
+          detail: 'Add the property before accepting booking requests.',
+          route: LocationOwnerRoutes.listing,
+        )
+      else if (property!.status == 'draft')
+        (
+          icon: Icons.publish_outlined,
+          title: 'Publish ${property!.name}',
+          detail: 'Review rates and rules before making it discoverable.',
+          route: LocationOwnerRoutes.listing,
+        ),
+      if (openRequests.isNotEmpty)
+        (
+          icon: Icons.inbox_outlined,
+          title: '${openRequests.length} requests need a response',
+          detail: 'Review dates, fee and production conditions.',
+          route: LocationOwnerRoutes.requests,
+        ),
+      if (upcoming.isNotEmpty)
+        (
+          icon: Icons.fact_check_outlined,
+          title: 'Prepare the next handover',
+          detail:
+              'The next booking starts ${shortLocationDate(upcoming.first.startAt)}.',
+          route: LocationOwnerRoutes.checkIn,
+        ),
+    ];
+    if (actions.isEmpty) {
+      return const _CompactStatus(
+        icon: Icons.check_circle_outline_rounded,
+        title: 'No urgent actions',
+        message: 'New requests and inspection tasks will appear here.',
+      );
+    }
+    return Column(
+      children: [
+        for (final action in actions)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 9),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => Navigator.pushNamed(context, action.route),
+              child: GlassSectionCard(
+                radius: 16,
+                padding: const EdgeInsets.all(11),
+                child: Row(
+                  children: [
+                    Icon(
+                      action.icon,
+                      color: context.appColors.goldDark,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            action.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.cardLabel.copyWith(
+                              color: context.appColors.textPrimary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            action.detail,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.smallMeta.copyWith(
+                              color: context.appColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: context.appColors.iconMuted,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 
-class _CompactEmptyTasks extends StatelessWidget {
-  final VoidCallback onReset;
+class _BookingSummaryRow extends StatelessWidget {
+  final Booking booking;
 
-  const _CompactEmptyTasks({required this.onReset});
+  const _BookingSummaryRow({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Navigator.pushNamed(
+          context,
+          LocationOwnerRoutes.requests,
+          arguments: booking.publicId,
+        ),
+        child: GlassSectionCard(
+          radius: 16,
+          padding: const EdgeInsets.all(11),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Project ${booking.projectId}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.cardLabel.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${locationBookingDates(booking)} · '
+                      '${locationBookingAmount(booking)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              LocationBookingStatusChip(
+                status: locationBookingStatusFromBooking(booking),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactStatus extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _CompactStatus({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -345,35 +650,46 @@ class _CompactEmptyTasks extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors.border),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle_outline_rounded,
-              color: colors.success, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            'No urgent tasks',
-            style: AppTextStyles.cardLabel.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w800,
+          Icon(icon, color: colors.success, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Requests, inspection evidence and deposit reviews will appear here.',
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          CoreSecondaryButton(
-            icon: Icons.refresh_rounded,
-            label: 'Check again',
-            compact: true,
-            onTap: onReset,
           ),
         ],
       ),
     );
   }
+}
+
+class _DashboardData {
+  final List<LocationPropertyDto> properties;
+  final List<Booking> bookings;
+  final PaymentDashboardDto payments;
+
+  const _DashboardData({
+    required this.properties,
+    required this.bookings,
+    required this.payments,
+  });
 }

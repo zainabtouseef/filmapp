@@ -39,37 +39,32 @@ class _BroadcastAnnouncementsScreenState
 
   Future<void> _saveOrSend({required bool publish}) async {
     if (_sending) return;
-    final trustSafety = TrustSafetyScope.maybeOf(context);
+    final trustSafety = TrustSafetyScope.of(context);
     setState(() {
       _sending = true;
       _notice = null;
     });
     try {
-      String? liveId;
-      if (trustSafety != null) {
-        final announcement = await trustSafety.createAnnouncement({
-          'title': _title.text.trim(),
-          'body': _body.text.trim(),
-          'priority': _priority.toLowerCase(),
-          'audience': {'roles': _audienceRoles},
-          'channels': {
-            'in_app': true,
-            'push': true,
-            'email': false,
-            'sms': false
-          },
-        });
-        liveId = announcement.publicId;
-        if (publish) {
-          await trustSafety.publishAnnouncement(announcement.publicId);
-        }
+      final announcement = await trustSafety.createAnnouncement({
+        'title': _title.text.trim(),
+        'body': _body.text.trim(),
+        'priority': _priority.toLowerCase(),
+        'audience': {'roles': _audienceRoles},
+        'channels': {
+          'in_app': true,
+          'push': true,
+          'email': false,
+          'sms': false
+        },
+      });
+      if (publish) {
+        await trustSafety.publishAnnouncement(announcement.publicId);
       }
       if (!mounted) return;
       setState(() {
         _status = publish ? 'Sent live' : 'Draft saved';
-        _notice = liveId == null
-            ? 'Announcement kept as preview because live admin access is unavailable.'
-            : 'Live announcement $liveId ${publish ? 'published' : 'saved as draft'}.';
+        _notice = 'Announcement ${announcement.publicId} '
+            '${publish ? 'published' : 'saved as draft'}.';
       });
       if (publish) {
         showCoreSuccessDialog(
@@ -79,12 +74,9 @@ class _BroadcastAnnouncementsScreenState
               'The live announcement was published to the selected audience.',
         );
       }
-    } catch (_) {
+    } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() {
-        _notice =
-            'Live announcement endpoint unavailable — preview announcement kept locally.';
-      });
+      setState(() => _notice = error.message);
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -165,12 +157,8 @@ class _BroadcastAnnouncementsScreenState
               children: [
                 _tinyAction(context, 'Save Draft',
                     _sending ? null : () => _saveOrSend(publish: false)),
-                _tinyAction(context, 'Schedule',
-                    () => setState(() => _status = 'Scheduled')),
                 _tinyAction(context, _sending ? 'Sending...' : 'Send Now',
                     _sending ? null : () => _saveOrSend(publish: true)),
-                _tinyAction(context, 'Test Send',
-                    () => showCoreSnack(context, 'Test notification sent')),
               ],
             ),
           ],
@@ -205,15 +193,12 @@ class _LiveAnnouncementsList extends StatefulWidget {
 }
 
 class _LiveAnnouncementsListState extends State<_LiveAnnouncementsList> {
-  late Future<List<AnnouncementDto>> _future;
+  Future<List<AnnouncementDto>>? _future;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final trustSafety = TrustSafetyScope.maybeOf(context);
-    _future = trustSafety == null
-        ? Future.value(const <AnnouncementDto>[])
-        : trustSafety.announcements(force: true);
+    _future ??= TrustSafetyScope.of(context).announcements(force: true);
   }
 
   @override

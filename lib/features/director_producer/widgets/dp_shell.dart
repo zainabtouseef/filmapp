@@ -200,17 +200,20 @@ class _DPTopBar extends StatelessWidget {
           SizedBox(width: compact ? 8 : 16),
           Expanded(child: _DPSearchPill(compact: compact)),
           const SizedBox(width: 10),
-          _DPNotificationIcon(
-            hasUnread: true,
-            onTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),
-          ),
-          SizedBox(width: compact ? 8 : 10),
+          if (wide) ...[
+            _DPNotificationIcon(
+              hasUnread: true,
+              onTap: () =>
+                  Navigator.pushNamed(context, CoreRoutes.notifications),
+            ),
+            const SizedBox(width: 10),
+          ],
           _DPAvatarButton(
             onTap: () => Navigator.pushNamed(context, CoreRoutes.profileRoles),
           ),
+          SizedBox(width: compact ? 8 : 10),
+          ThemeToggleButton(size: compact ? 34 : 38),
           if (wide) ...[
-            const SizedBox(width: 10),
-            ThemeToggleButton(size: 38),
             const SizedBox(width: 10),
             _DPTopIcon(
               icon: Icons.logout_rounded,

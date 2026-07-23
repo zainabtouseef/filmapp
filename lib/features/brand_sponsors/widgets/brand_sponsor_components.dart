@@ -8,6 +8,7 @@ import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
+import 'brand_sponsor_live.dart';
 
 Color brandToneColor(BuildContext context, BrandTone tone) {
   final colors = context.appColors;
@@ -59,39 +60,52 @@ Future<void> showBrandSheet(
         right: 12,
         bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
       ),
-      child: GlassSectionCard(
-        radius: 24,
-        padding: const EdgeInsets.all(16),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.sectionHeading.copyWith(
-                        color: colors.textPrimary,
-                        fontSize: 16,
-                        letterSpacing: 1.5,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: GlassSectionCard(
+            radius: 20,
+            padding: const EdgeInsets.all(16),
+            child: SafeArea(
+              top: false,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.sectionHeading.copyWith(
+                                color: colors.textPrimary,
+                                fontSize: 16,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(context),
+                            icon: Icon(Icons.close_rounded, color: colors.icon),
+                          ),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                      child,
+                    ],
                   ),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close_rounded, color: colors.icon),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 10),
-              child,
-            ],
+            ),
           ),
         ),
       ),
@@ -106,6 +120,7 @@ class BrandSectionCard extends StatelessWidget {
   final bool selected;
   final String? actionText;
   final VoidCallback? onActionTap;
+  final BrandTone tone;
 
   const BrandSectionCard({
     super.key,
@@ -115,22 +130,87 @@ class BrandSectionCard extends StatelessWidget {
     this.selected = false,
     this.actionText,
     this.onActionTap,
+    this.tone = BrandTone.gold,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SectionContainer(
-      title: title,
-      leading: IconBadge(
-        icon: icon,
-        tone: CineTone.premium,
-        compact: true,
+    final colors = context.appColors;
+    final accent = brandToneColor(context, tone);
+    return GlassSectionCard(
+      radius: 18,
+      padding: EdgeInsets.zero,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: selected ? 5 : 3,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(18),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.28),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Icon(icon, color: accent, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    if (actionText != null) ...[
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onActionTap,
+                        icon: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                        ),
+                        label: Text(actionText!),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+        ],
       ),
-      action: actionText == null
-          ? null
-          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
-      treatment: selected ? SectionTreatment.elevated : SectionTreatment.open,
-      child: child,
     );
   }
 }
@@ -280,6 +360,24 @@ class BrandMediaFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final radius = compact ? 16.0 : 22.0;
+    final image = imageUrl.isEmpty
+        ? _BrandFallback(icon: fallbackIcon)
+        : imageUrl.startsWith('assets/')
+            ? Image.asset(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    _BrandFallback(icon: fallbackIcon),
+              )
+            : Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) => progress == null
+                    ? child
+                    : _BrandFallback(icon: fallbackIcon),
+                errorBuilder: (_, __, ___) =>
+                    _BrandFallback(icon: fallbackIcon),
+              );
     return AspectRatio(
       aspectRatio: aspectRatio,
       child: ClipRRect(
@@ -287,13 +385,7 @@ class BrandMediaFrame extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) =>
-                  progress == null ? child : _BrandFallback(icon: fallbackIcon),
-              errorBuilder: (_, __, ___) => _BrandFallback(icon: fallbackIcon),
-            ),
+            image,
             DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.all(color: colors.border),
@@ -309,35 +401,33 @@ class BrandMediaFrame extends StatelessWidget {
               ),
             ),
             Positioned(
+              top: compact ? 8 : 12,
+              left: compact ? 8 : 12,
+              child: SizedBox(
+                width: compact ? 142 : 220,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: StatusChip(label: badge, color: colors.goldMid),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
               left: compact ? 8 : 12,
               right: compact ? 8 : 12,
               bottom: compact ? 8 : 12,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.statusText.copyWith(
-                        color: Colors.white,
-                        shadows: const [
-                          Shadow(color: Colors.black87, blurRadius: 8),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: StatusChip(label: badge, color: colors.goldMid),
-                      ),
-                    ),
-                  ),
-                ],
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.statusText.copyWith(
+                  color: Colors.white,
+                  shadows: const [
+                    Shadow(color: Colors.black87, blurRadius: 8),
+                  ],
+                ),
               ),
             ),
           ],
@@ -450,6 +540,38 @@ class BrandStatusChip extends StatelessWidget {
     return StatusChip(
       label: BrandSponsorDemoData.statusLabel(status),
       color: brandStatusColor(context, status),
+    );
+  }
+}
+
+class BrandLiveStatusChip extends StatelessWidget {
+  final String status;
+
+  const BrandLiveStatusChip({super.key, required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final normalized = status.toLowerCase();
+    final color = switch (normalized) {
+      'published' ||
+      'accepted' ||
+      'approved' ||
+      'verified' ||
+      'completed' =>
+        colors.success,
+      'rejected' || 'cancelled' || 'closed' => colors.danger,
+      'shortlisted' ||
+      'negotiating' ||
+      'revision_requested' ||
+      'submitted' =>
+        colors.infoBlue,
+      'paused' || 'reviewing' => colors.infoPurple,
+      _ => colors.goldMid,
+    };
+    return StatusChip(
+      label: readableBrandStatus(status).toUpperCase(),
+      color: color,
     );
   }
 }

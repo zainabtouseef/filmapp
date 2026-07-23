@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/core_safety/screens/report_block_screen.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
@@ -46,34 +45,29 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
         return Column(
           children: [
             ActorSectionCard(
-              title: 'Privacy & Boundaries',
+              title: 'Booking Protections',
               icon: Icons.health_and_safety_outlined,
               child: Column(
                 children: [
-                  _SafetySwitch(
-                    label: 'Phone number hidden',
-                    subtitle: 'Directors contact you through CineConnect chat.',
-                    value: store.phoneHidden,
-                    onChanged: store.togglePhoneHidden,
+                  const ActorInfoRow(
+                    icon: Icons.phone_locked_outlined,
+                    label: 'Contact privacy',
+                    value: 'Use CineConnect chat',
                   ),
-                  _SafetySwitch(
-                    label: 'Adult content boundary',
-                    subtitle: 'Blocks unsafe or mismatched content offers.',
-                    value: store.adultContentBoundary,
-                    onChanged: store.toggleAdultContentBoundary,
+                  const ActorInfoRow(
+                    icon: Icons.fact_check_outlined,
+                    label: 'Content and usage',
+                    value: 'Review before accepting',
                   ),
-                  _SafetySwitch(
-                    label: 'Travel consent required',
-                    subtitle: 'Outstation requests need explicit confirmation.',
-                    value: store.travelConsentRequired,
-                    onChanged: store.toggleTravelConsent,
+                  const ActorInfoRow(
+                    icon: Icons.flight_takeoff_outlined,
+                    label: 'Travel consent',
+                    value: 'Confirm in offer terms',
                   ),
-                  _SafetySwitch(
-                    label: 'Emergency support on shoot days',
-                    subtitle: 'Shows safety contact during active bookings.',
-                    value: store.emergencySupport,
-                    onChanged: store.toggleEmergencySupport,
-                    showDivider: false,
+                  const ActorInfoRow(
+                    icon: Icons.lock_clock_outlined,
+                    label: 'Secured dates',
+                    value: 'Locked by booking',
                   ),
                 ],
               ),
@@ -102,31 +96,24 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
                         context,
                         MaterialPageRoute<void>(
                           builder: (_) => ReportBlockScreen(
-                            onBlock: () =>
-                                store.block('Ali Khan (TVC Shoot — Lahore)'),
+                            onBlock: TrustSafetyScope.maybeOf(context) == null
+                                ? () =>
+                                    store.block('Ali Khan (TVC Shoot - Lahore)')
+                                : null,
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     CoreSecondaryButton(
-                      icon: Icons.call_outlined,
-                      label: 'Emergency contact',
+                      icon: Icons.support_agent_outlined,
+                      label: 'Contact safety support',
                       compact: true,
-                      onTap: () async {
-                        await Clipboard.setData(
-                          const ClipboardData(text: '+92 300 0000000'),
-                        );
-                        if (!context.mounted) return;
-                        actorSnack(
-                          context,
-                          'Emergency support number copied: +92 300 0000000',
-                        );
-                      },
+                      onTap: () => _openSafetySupport(context),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Safety reports route to SC-16 and Super Admin support queue.',
+                      'For immediate danger, leave the location and contact local emergency services.',
                       style: AppTextStyles.smallMeta.copyWith(
                         color: context.appColors.textSecondary,
                         height: 1.3,
@@ -140,6 +127,21 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
         );
       },
     );
+  }
+
+  Future<void> _openSafetySupport(BuildContext context) async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null) {
+      actorSnack(context, 'Sign in to contact safety support');
+      return;
+    }
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (_) => _SafetySupportDialog(trustSafety: trustSafety),
+    );
+    if (created == true && context.mounted) {
+      actorSnack(context, 'Safety support ticket created');
+    }
   }
 }
 
@@ -171,14 +173,19 @@ class _BlockedUsersPanel extends StatelessWidget {
         }
         if (snapshot.hasError) {
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StatusChip(
-                label: 'Using local safety preview',
-                color: context.appColors.goldMid,
+              const CoreEmptyState(
+                icon: Icons.sync_problem_outlined,
+                title: 'Could not load blocked users',
+                message: 'Check your connection and try again.',
               ),
               const SizedBox(height: 8),
-              _DemoBlockedUsersList(names: fallbackNames),
+              CoreSecondaryButton(
+                icon: Icons.refresh_rounded,
+                label: 'Try again',
+                compact: true,
+                onTap: onRefresh,
+              ),
             ],
           );
         }
@@ -204,6 +211,121 @@ class _BlockedUsersPanel extends StatelessWidget {
   }
 }
 
+class _SafetySupportDialog extends StatefulWidget {
+  final TrustSafetyController trustSafety;
+
+  const _SafetySupportDialog({required this.trustSafety});
+
+  @override
+  State<_SafetySupportDialog> createState() => _SafetySupportDialogState();
+}
+
+class _SafetySupportDialogState extends State<_SafetySupportDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _subject = TextEditingController(text: 'Talent safety concern');
+  final _message = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await widget.trustSafety.createSupportTicket({
+        'category': 'safety',
+        'priority': 'high',
+        'subject': _subject.text.trim(),
+        'message': _message.text.trim(),
+      });
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = 'Could not create the ticket. Please try again.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.support_agent_outlined),
+          SizedBox(width: 10),
+          Expanded(child: Text('Contact safety support')),
+        ],
+      ),
+      content: SizedBox(
+        width: 460,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _subject,
+                enabled: !_submitting,
+                decoration: const InputDecoration(labelText: 'Subject'),
+                validator: (value) =>
+                    (value?.trim().length ?? 0) < 2 ? 'Enter a subject' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _message,
+                enabled: !_submitting,
+                minLines: 4,
+                maxLines: 7,
+                decoration: const InputDecoration(
+                  labelText: 'What happened?',
+                  alignLabelWithHint: true,
+                ),
+                validator: (value) => (value?.trim().isEmpty ?? true)
+                    ? 'Describe the safety concern'
+                    : null,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _error!,
+                  style: AppTextStyles.smallMeta.copyWith(color: colors.danger),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _submitting ? null : _submit,
+          icon: Icon(
+            _submitting ? Icons.hourglass_top_rounded : Icons.send_outlined,
+          ),
+          label: Text(_submitting ? 'Sending' : 'Create ticket'),
+        ),
+      ],
+    );
+  }
+}
+
 class _DemoBlockedUsersList extends StatelessWidget {
   final List<String> names;
 
@@ -225,62 +347,6 @@ class _DemoBlockedUsersList extends StatelessWidget {
             showDivider: i != names.length - 1,
           ),
       ],
-    );
-  }
-}
-
-class _SafetySwitch extends StatelessWidget {
-  final String label;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final bool showDivider;
-
-  const _SafetySwitch({
-    required this.label,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-    this.showDivider = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(bottom: BorderSide(color: colors.borderMuted))
-            : null,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged),
-        ],
-      ),
     );
   }
 }

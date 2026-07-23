@@ -1,203 +1,426 @@
 part of '../super_admin_screens.dart';
 
-class ListingsModerationScreen extends StatefulWidget {
+class ListingsModerationScreen extends StatelessWidget {
   const ListingsModerationScreen({super.key});
 
   @override
-  State<ListingsModerationScreen> createState() =>
-      _ListingsModerationScreenState();
+  Widget build(BuildContext context) {
+    return const AdminListingsControlView();
+  }
 }
 
-class _ListingsModerationScreenState extends State<ListingsModerationScreen> {
-  String _tab = 'Locations';
-  final Map<String, String> _statuses = {};
+class AdminListingsControlView extends StatefulWidget {
+  final bool reviewOnly;
 
-  bool _matches(AdminListing listing) {
-    final status = _statuses[listing.title] ?? listing.status;
-    return switch (_tab) {
-      'Locations' => listing.category == 'Location',
-      'Equipment' => listing.category == 'Equipment',
-      'Packages' => listing.category == 'Packages',
-      'Services' => listing.category == 'Services',
-      'Rejected' => status == 'Rejected',
-      'Approved' => status == 'Live' || status == 'Approved',
-      _ => true,
-    };
+  const AdminListingsControlView({super.key, this.reviewOnly = false});
+
+  @override
+  State<AdminListingsControlView> createState() =>
+      _AdminListingsControlViewState();
+}
+
+class _AdminListingsControlViewState extends State<AdminListingsControlView> {
+  Future<List<AdminListingRecordDto>>? _future;
+  final _search = TextEditingController();
+  String _filter = 'All';
+  String? _busyId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= AdminScope.of(context).listings();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _refresh() {
+    setState(() => _future = AdminScope.of(context).listings(force: true));
+  }
+
+  List<AdminListingRecordDto> _visible(
+    List<AdminListingRecordDto> listings,
+  ) {
+    final query = _search.text.trim().toLowerCase();
+    return listings.where((listing) {
+      if (widget.reviewOnly && listing.moderationStatus != 'pending') {
+        return false;
+      }
+      final haystack = [
+        listing.publicId,
+        listing.title,
+        listing.owner.displayName,
+        listing.listingType,
+        listing.city ?? '',
+      ].join(' ').toLowerCase();
+      if (query.isNotEmpty && !haystack.contains(query)) return false;
+      return switch (_filter) {
+        'Pending' => listing.moderationStatus == 'pending',
+        'Approved' => listing.moderationStatus == 'approved',
+        'Rejected' => listing.moderationStatus == 'rejected',
+        'Changes' => listing.moderationStatus == 'changes_requested',
+        'Locations' => listing.listingType.toLowerCase().contains('location'),
+        'Equipment' => listing.listingType.toLowerCase().contains('equipment'),
+        'Services' => listing.listingType.toLowerCase().contains('service'),
+        'Private' => listing.visibility == 'private',
+        _ => true,
+      };
+    }).toList();
+  }
+
+  Future<void> _update(
+    AdminListingRecordDto listing, {
+    required String moderationStatus,
+    required String visibility,
+    String? reason,
+  }) async {
+    if (_busyId != null) return;
+    setState(() => _busyId = listing.publicId);
+    try {
+      await AdminScope.of(context).updateListing(
+        listing.publicId,
+        moderationStatus: moderationStatus,
+        visibility: visibility,
+        reason: reason,
+      );
+      if (!mounted) return;
+      showCoreSnack(
+        context,
+        moderationStatus == 'approved'
+            ? 'Listing approved and made public.'
+            : 'Listing updated to $moderationStatus.',
+      );
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  Future<void> _reject(AdminListingRecordDto listing) async {
+    final note = await _adminNotePrompt(
+      context,
+      title: 'Reject ${listing.title}',
+      hint: 'Give the owner a clear moderation reason.',
+    );
+    if (!mounted || note == null) return;
+    await _update(
+      listing,
+      moderationStatus: 'rejected',
+      visibility: 'private',
+      reason: note,
+    );
+  }
+
+  Future<void> _requestChanges(AdminListingRecordDto listing) async {
+    final note = await _adminNotePrompt(
+      context,
+      title: 'Request listing changes',
+      hint: 'List the required media, pricing, or policy corrections.',
+    );
+    if (!mounted || note == null) return;
+    await _update(
+      listing,
+      moderationStatus: 'changes_requested',
+      visibility: 'private',
+      reason: note,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final rows = AdminMockData.listings.where(_matches).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AdminFilterBar(
-          filters: const [
-            'Locations',
-            'Equipment',
-            'Packages',
-            'Services',
-            'Rejected',
-            'Approved'
-          ],
-          selected: _tab,
-          onSelected: (value) => setState(() => _tab = value),
-        ),
-        const SizedBox(height: 14),
-        if (rows.isEmpty)
-          const AdminEmptyState(
-            icon: Icons.storefront_outlined,
-            title: 'No listings in this category',
-            message: 'Try a different filter.',
-          )
-        else
-          ...rows.map(
-            (listing) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _listingCard(context, listing),
-            ),
+        AdminSurface(
+          child: Column(
+            children: [
+              CoreTextField(
+                controller: _search,
+                label: 'Search listing, owner, city or ID',
+                icon: Icons.search_rounded,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              AdminFilterBar(
+                filters: widget.reviewOnly
+                    ? const ['All', 'Locations', 'Equipment', 'Services']
+                    : const [
+                        'All',
+                        'Pending',
+                        'Approved',
+                        'Rejected',
+                        'Changes',
+                        'Locations',
+                        'Equipment',
+                        'Services',
+                        'Private',
+                      ],
+                selected: _filter,
+                onSelected: (value) => setState(() => _filter = value),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Refresh',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
+              ),
+            ],
           ),
+        ),
+        const SizedBox(height: 16),
+        FutureBuilder<List<AdminListingRecordDto>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const AdminSurface(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              final error = snapshot.error;
+              return AdminSurface(
+                child: Column(
+                  children: [
+                    AdminEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Could not load marketplace listings',
+                      message: error is ApiException
+                          ? error.message
+                          : 'Check the backend connection and try again.',
+                    ),
+                    const SizedBox(height: 12),
+                    AdminActionButton(
+                      icon: Icons.refresh_rounded,
+                      label: 'Retry',
+                      secondary: true,
+                      onTap: _refresh,
+                    ),
+                  ],
+                ),
+              );
+            }
+            final rows = _visible(snapshot.data ?? const []);
+            if (rows.isEmpty) {
+              return const AdminEmptyState(
+                icon: Icons.storefront_outlined,
+                title: 'No matching listings',
+                message: 'This review view is currently clear.',
+              );
+            }
+            return Column(
+              children: [
+                for (final listing in rows)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _LiveListingCard(
+                      listing: listing,
+                      busy: _busyId == listing.publicId,
+                      onApprove: () => _update(
+                        listing,
+                        moderationStatus: 'approved',
+                        visibility: 'public',
+                      ),
+                      onReject: () => _reject(listing),
+                      onChanges: () => _requestChanges(listing),
+                      onPreview: () => _listingDetail(context, listing),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
+}
 
-  Widget _listingCard(BuildContext context, AdminListing listing) {
+class _LiveListingCard extends StatelessWidget {
+  final AdminListingRecordDto listing;
+  final bool busy;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  final VoidCallback onChanges;
+  final VoidCallback onPreview;
+
+  const _LiveListingCard({
+    required this.listing,
+    required this.busy,
+    required this.onApprove,
+    required this.onReject,
+    required this.onChanges,
+    required this.onPreview,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.appColors;
-    final status = _statuses[listing.title] ?? listing.status;
-    final checks = listing.category == 'Equipment'
-        ? const [
-            'Inventory photos clear',
-            'Serial number optional',
-            'Deposit defined',
-            'Handover terms clear',
-            'Operator requirement stated',
-            'Overtime terms added',
-          ]
-        : const [
-            'Photos look genuine',
-            'Exact address hidden',
-            'Approximate area visible',
-            'Pricing reasonable',
-            'Deposit terms clear',
-            'Rules and availability added',
-          ];
+    final approved = listing.moderationStatus == 'approved';
+    final rejected = listing.moderationStatus == 'rejected';
+    final amount = listing.priceFromMinor == null
+        ? 'Price on request'
+        : '${listing.currency} '
+            '${(listing.priceFromMinor! / 100).toStringAsFixed(0)}';
     return AdminSurface(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colors.goldGlow.withValues(alpha: 0.5),
-                  colors.softSurface.withValues(alpha: 0.8),
-                ],
+      padding: EdgeInsets.zero,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                color: rejected
+                    ? colors.danger
+                    : approved
+                        ? colors.success
+                        : colors.goldMid,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(8),
+                ),
               ),
             ),
-            child: Icon(Icons.storefront_outlined,
-                color: colors.goldDark, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        listing.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.cardTitle
-                            .copyWith(color: colors.textPrimary),
-                      ),
-                    ),
-                    AdminStatusBadge(
-                      label: status == 'Live' ? 'Live' : status,
-                      tone: status == 'Live'
-                          ? AdminDecisionTone.success
-                          : AdminDecisionTone.warning,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '${listing.owner} - ${listing.city} - ${listing.category}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.micro
-                      .copyWith(color: colors.textSecondary, letterSpacing: 0),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    AdminStatusBadge(
-                        label: listing.price, tone: AdminDecisionTone.info),
-                    AdminStatusBadge(
-                        label: 'Deposit ${listing.deposit}',
-                        tone: AdminDecisionTone.neutral),
-                    AdminStatusBadge(
-                        label: listing.visibility,
-                        tone: AdminDecisionTone.neutral),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${checks.length}/${checks.length} checks passed',
-                  style: AppTextStyles.micro
-                      .copyWith(color: colors.success, letterSpacing: 0),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _tinyAction(context, 'Approve', () {
-                        setState(() => _statuses[listing.title] = 'Live');
-                        showCoreSnack(
-                            context, 'Listing approved and made live');
-                      }),
-                    ),
-                    Expanded(
-                      child: _tinyAction(context, 'Reject',
-                          () => _noteDialog(context, 'Reject with note')),
-                    ),
-                    PopupMenuButton<String>(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(Icons.more_vert_rounded,
-                          color: colors.iconMuted, size: 19),
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'changes':
-                            showCoreSnack(context, 'Static notification sent');
-                            return;
-                          case 'preview':
-                            _previewListing(context, listing);
-                            return;
-                        }
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(
-                            value: 'changes', child: Text('Request Changes')),
-                        PopupMenuItem(value: 'preview', child: Text('Preview')),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final actions = Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _tinyAction(
+                          context,
+                          'Approve',
+                          busy || approved ? null : onApprove,
+                        ),
+                        _tinyAction(
+                          context,
+                          'Changes',
+                          busy ? null : onChanges,
+                        ),
+                        _tinyAction(
+                          context,
+                          'Reject',
+                          busy || rejected ? null : onReject,
+                        ),
+                        AdminIconButton(
+                          icon: Icons.open_in_new_rounded,
+                          tooltip: 'Inspect listing',
+                          onTap: onPreview,
+                        ),
                       ],
-                    ),
-                  ],
+                    );
+                    final details = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          listing.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${listing.owner.displayName} · '
+                          '${listing.city ?? 'Remote'} · ${listing.listingType}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            AdminStatusBadge(
+                              label: listing.moderationStatus,
+                              tone: approved
+                                  ? AdminDecisionTone.success
+                                  : rejected
+                                      ? AdminDecisionTone.danger
+                                      : AdminDecisionTone.warning,
+                            ),
+                            AdminStatusBadge(
+                              label: listing.visibility,
+                              tone: AdminDecisionTone.neutral,
+                            ),
+                            AdminStatusBadge(
+                              label: amount,
+                              tone: AdminDecisionTone.info,
+                            ),
+                            AdminStatusBadge(
+                              label: '${listing.mediaCount} media',
+                              tone: AdminDecisionTone.neutral,
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                    if (constraints.maxWidth < 720) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          details,
+                          const SizedBox(height: 10),
+                          actions,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: details),
+                        const SizedBox(width: 12),
+                        actions,
+                      ],
+                    );
+                  },
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
+
+void _listingDetail(BuildContext context, AdminListingRecordDto listing) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => AdminDetailDrawer(
+      title: listing.title,
+      children: [
+        _kv(context, 'Listing ID', listing.publicId),
+        _kv(context, 'Owner', listing.owner.displayName),
+        _kv(context, 'Type', listing.listingType),
+        _kv(context, 'City', listing.city ?? 'Remote'),
+        _kv(context, 'Verification', listing.verificationStatus),
+        _kv(context, 'Moderation', listing.moderationStatus),
+        _kv(context, 'Visibility', listing.visibility),
+        _kv(context, 'Media', '${listing.mediaCount} files'),
+        const SizedBox(height: 12),
+        _text(
+          context,
+          listing.summary.isEmpty
+              ? 'No listing summary was supplied.'
+              : listing.summary,
+        ),
+      ],
+    ),
+  );
 }

@@ -8,261 +8,332 @@ class DisputeCenterScreen extends StatefulWidget {
 }
 
 class _DisputeCenterScreenState extends State<DisputeCenterScreen> {
-  String _tab = 'All';
-  final Set<String> _urgent = {};
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _LiveDisputePanel(),
-        const SizedBox(height: 16),
-        _ResponsiveGrid(
-          minTileWidth: 190,
-          childAspectRatio: 2.6,
-          children: const [
-            AdminMetricTile(
-                label: 'New cases',
-                value: '11',
-                icon: Icons.fiber_new_outlined,
-                tone: AdminDecisionTone.warning),
-            AdminMetricTile(
-                label: 'Evidence gathering',
-                value: '9',
-                icon: Icons.folder_copy_outlined,
-                tone: AdminDecisionTone.info),
-            AdminMetricTile(
-                label: 'Decision pending',
-                value: '7',
-                icon: Icons.gavel_outlined,
-                tone: AdminDecisionTone.danger),
-            AdminMetricTile(
-                label: 'Resolved this month',
-                value: '48',
-                icon: Icons.check_circle_outline,
-                tone: AdminDecisionTone.success),
-            AdminMetricTile(
-                label: 'Safety cases',
-                value: '2',
-                icon: Icons.health_and_safety_outlined,
-                tone: AdminDecisionTone.danger),
-          ],
-        ),
-        const SizedBox(height: 18),
-        AdminFilterBar(
-          filters: const [
-            'All',
-            'Payment',
-            'Completion',
-            'Cancellation',
-            'Location Damage',
-            'Equipment Damage',
-            'Harassment / Safety'
-          ],
-          selected: _tab,
-          onSelected: (value) => setState(() => _tab = value),
-        ),
-        const SizedBox(height: 16),
-        ...AdminMockData.disputes.map((d) {
-          final severity = _urgent.contains(d.caseId) ? 'Urgent' : d.severity;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _DisputeRow(
-              dispute: d,
-              severity: severity,
-              onOpen: () =>
-                  Navigator.pushNamed(context, SuperAdminRoutes.disputeCase),
-              onAssign: () => _staffSheet(context),
-              onUrgent: () => setState(() => _urgent.add(d.caseId)),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _LiveDisputePanel extends StatefulWidget {
-  const _LiveDisputePanel();
-
-  @override
-  State<_LiveDisputePanel> createState() => _LiveDisputePanelState();
-}
-
-class _LiveDisputePanelState extends State<_LiveDisputePanel> {
-  late Future<List<DisputeDto>> _future;
-  bool _updating = false;
+  Future<List<DisputeDto>>? _future;
+  String _filter = 'All';
+  String? _busyId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final trustSafety = TrustSafetyScope.maybeOf(context);
-    _future = trustSafety == null
-        ? Future.value(const <DisputeDto>[])
-        : trustSafety.adminDisputes(force: true);
+    _future ??= TrustSafetyScope.of(context).adminDisputes(force: true);
+  }
+
+  void _refresh() {
+    setState(
+      () => _future = TrustSafetyScope.of(context).adminDisputes(force: true),
+    );
+  }
+
+  List<DisputeDto> _visible(List<DisputeDto> disputes) {
+    return disputes.where((dispute) {
+      final type = dispute.type.toLowerCase();
+      return switch (_filter) {
+        'Open' => dispute.status == 'open',
+        'Escalated' => dispute.status == 'escalated',
+        'Resolved' => {'resolved', 'rejected'}.contains(dispute.status),
+        'Payment' => type.contains('payment'),
+        'Completion' => type.contains('completion'),
+        'Cancellation' => type.contains('cancellation'),
+        'Damage' => type.contains('damage'),
+        'Safety' => type.contains('safety') || type.contains('harassment'),
+        _ => true,
+      };
+    }).toList();
   }
 
   Future<void> _decide(DisputeDto dispute, String decision) async {
-    final trustSafety = TrustSafetyScope.maybeOf(context);
-    if (trustSafety == null || _updating) return;
-    setState(() => _updating = true);
+    final note = await _adminNotePrompt(
+      context,
+      title: '${decision[0].toUpperCase()}${decision.substring(1)} dispute',
+      hint: 'Record the ruling, evidence basis, and next operational step.',
+    );
+    if (!mounted || note == null || _busyId != null) return;
+    setState(() => _busyId = dispute.publicId);
     try {
-      await trustSafety.decideDispute(
+      await TrustSafetyScope.of(context).decideDispute(
         disputeId: dispute.publicId,
         decision: decision,
-        note: 'Recorded from Flutter Super Admin dispute center.',
+        note: note,
       );
       if (!mounted) return;
-      setState(() => _future = trustSafety.adminDisputes(force: true));
-      showCoreSnack(context, 'Live dispute updated');
-    } catch (_) {
-      if (mounted) showCoreSnack(context, 'Could not update live dispute');
+      showCoreSnack(context, 'Dispute changed to $decision.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
     } finally {
-      if (mounted) setState(() => _updating = false);
+      if (mounted) setState(() => _busyId = null);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<DisputeDto>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LinearProgressIndicator(minHeight: 2);
-        }
-        if (snapshot.hasError) {
-          return const InlineNotice(
-            message:
-                'Live dispute queue unavailable — showing preview dispute cases.',
-            tone: CoreStatusTone.warning,
-          );
-        }
-        final rows = snapshot.data ?? const <DisputeDto>[];
-        if (rows.isEmpty) {
-          return const InlineNotice(
-            message:
-                'No live disputes are open — preview dispute cases remain below.',
-          );
-        }
-        final dispute = rows.first;
-        return AdminSurface(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
+    return Column(
+      children: [
+        AdminSurface(
+          child: Column(
             children: [
-              AdminStatusBadge(
-                label: '${rows.length} live disputes',
-                tone: AdminDecisionTone.warning,
+              AdminFilterBar(
+                filters: const [
+                  'All',
+                  'Open',
+                  'Escalated',
+                  'Resolved',
+                  'Payment',
+                  'Completion',
+                  'Cancellation',
+                  'Damage',
+                  'Safety',
+                ],
+                selected: _filter,
+                onSelected: (value) => setState(() => _filter = value),
               ),
-              AdminStatusBadge(
-                label: dispute.severity,
-                tone: dispute.severity == 'high'
-                    ? AdminDecisionTone.danger
-                    : AdminDecisionTone.info,
-              ),
-              Text(
-                '${dispute.publicId} · ${dispute.type} · ${dispute.status}',
-                style: AppTextStyles.caption
-                    .copyWith(color: context.appColors.textSecondary),
-              ),
-              _tinyAction(
-                context,
-                _updating ? 'Updating...' : 'Resolve live',
-                _updating ? null : () => _decide(dispute, 'resolved'),
-              ),
-              _tinyAction(
-                context,
-                _updating ? 'Updating...' : 'Escalate live',
-                _updating ? null : () => _decide(dispute, 'escalated'),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Refresh',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
               ),
             ],
           ),
-        );
-      },
+        ),
+        const SizedBox(height: 16),
+        FutureBuilder<List<DisputeDto>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const AdminSurface(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              final error = snapshot.error;
+              return AdminSurface(
+                child: Column(
+                  children: [
+                    AdminEmptyState(
+                      icon: Icons.gpp_bad_outlined,
+                      title: 'Could not load disputes',
+                      message: error is ApiException
+                          ? error.message
+                          : 'Check the backend connection and try again.',
+                    ),
+                    const SizedBox(height: 12),
+                    AdminActionButton(
+                      icon: Icons.refresh_rounded,
+                      label: 'Retry',
+                      secondary: true,
+                      onTap: _refresh,
+                    ),
+                  ],
+                ),
+              );
+            }
+            final all = snapshot.data ?? const <DisputeDto>[];
+            final rows = _visible(all);
+            if (rows.isEmpty) {
+              return const AdminEmptyState(
+                icon: Icons.verified_user_outlined,
+                title: 'No matching disputes',
+                message: 'This dispute view is currently clear.',
+              );
+            }
+            return Column(
+              children: [
+                _ResponsiveGrid(
+                  minTileWidth: 180,
+                  childAspectRatio: 2.7,
+                  children: [
+                    AdminMetricTile(
+                      label: 'Open',
+                      value:
+                          '${all.where((item) => item.status == 'open').length}',
+                      icon: Icons.folder_open_outlined,
+                      tone: AdminDecisionTone.warning,
+                    ),
+                    AdminMetricTile(
+                      label: 'Escalated',
+                      value:
+                          '${all.where((item) => item.status == 'escalated').length}',
+                      icon: Icons.priority_high_rounded,
+                      tone: AdminDecisionTone.danger,
+                    ),
+                    AdminMetricTile(
+                      label: 'Resolved',
+                      value: '${all.where((item) => {
+                            'resolved',
+                            'rejected',
+                          }.contains(item.status)).length}',
+                      icon: Icons.task_alt_outlined,
+                      tone: AdminDecisionTone.success,
+                    ),
+                    AdminMetricTile(
+                      label: 'High severity',
+                      value:
+                          '${all.where((item) => item.severity == 'high').length}',
+                      icon: Icons.health_and_safety_outlined,
+                      tone: AdminDecisionTone.danger,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                for (final dispute in rows)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _LiveDisputeCard(
+                      dispute: dispute,
+                      busy: _busyId == dispute.publicId,
+                      onOpen: () => Navigator.pushNamed(
+                        context,
+                        SuperAdminRoutes.disputePath(dispute.publicId),
+                      ),
+                      onResolve: () => _decide(dispute, 'resolved'),
+                      onEscalate: () => _decide(dispute, 'escalated'),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
 
-class _DisputeRow extends StatelessWidget {
-  final AdminDispute dispute;
-  final String severity;
+class _LiveDisputeCard extends StatelessWidget {
+  final DisputeDto dispute;
+  final bool busy;
   final VoidCallback onOpen;
-  final VoidCallback onAssign;
-  final VoidCallback onUrgent;
+  final VoidCallback onResolve;
+  final VoidCallback onEscalate;
 
-  const _DisputeRow({
+  const _LiveDisputeCard({
     required this.dispute,
-    required this.severity,
+    required this.busy,
     required this.onOpen,
-    required this.onAssign,
-    required this.onUrgent,
+    required this.onResolve,
+    required this.onEscalate,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final urgent = severity.contains('Safety') || severity == 'Urgent';
-    return GestureDetector(
-      onTap: onOpen,
-      child: AdminSurface(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final high = dispute.severity == 'high';
+    final amount = dispute.valueMinor == null
+        ? 'Value not stated'
+        : '${dispute.currency} '
+            '${(dispute.valueMinor! / 100).toStringAsFixed(0)}';
+    return AdminSurface(
+      padding: EdgeInsets.zero,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${dispute.caseId} - ${dispute.type}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                color: high ? colors.danger : colors.goldMid,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(8),
                 ),
-                AdminSlaBadge(age: dispute.age),
-              ],
-            ),
-            const SizedBox(height: 3),
-            Text(
-              '${dispute.parties} - ${dispute.bookingId} - ${dispute.value}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.micro.copyWith(
-                color: colors.textSecondary,
-                letterSpacing: 0,
               ),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                AdminStatusBadge(
-                    label: dispute.status, tone: AdminDecisionTone.warning),
-                AdminRiskBadge(
-                  label: severity,
-                  risk: urgent ? AdminRiskTone.high : AdminRiskTone.medium,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final details = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dispute.type,
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        _text(
+                          context,
+                          '${dispute.publicId} · Booking ${dispute.bookingId}',
+                        ),
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            AdminStatusBadge(
+                              label: dispute.status,
+                              tone: dispute.status == 'open'
+                                  ? AdminDecisionTone.warning
+                                  : dispute.status == 'escalated'
+                                      ? AdminDecisionTone.danger
+                                      : AdminDecisionTone.success,
+                            ),
+                            AdminRiskBadge(
+                              label: dispute.severity,
+                              risk: high
+                                  ? AdminRiskTone.high
+                                  : AdminRiskTone.medium,
+                            ),
+                            AdminStatusBadge(
+                              label: amount,
+                              tone: AdminDecisionTone.info,
+                            ),
+                            AdminStatusBadge(
+                              label: '${dispute.evidenceCount} evidence',
+                              tone: AdminDecisionTone.neutral,
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                    final actions = Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _tinyAction(context, 'Open', busy ? null : onOpen),
+                        _tinyAction(
+                          context,
+                          'Resolve',
+                          busy ||
+                                  {'resolved', 'rejected'}
+                                      .contains(dispute.status)
+                              ? null
+                              : onResolve,
+                        ),
+                        _tinyAction(
+                          context,
+                          'Escalate',
+                          busy || dispute.status == 'escalated'
+                              ? null
+                              : onEscalate,
+                        ),
+                      ],
+                    );
+                    if (constraints.maxWidth < 720) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          details,
+                          const SizedBox(height: 10),
+                          actions,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: details),
+                        const SizedBox(width: 12),
+                        actions,
+                      ],
+                    );
+                  },
                 ),
-                AdminStatusBadge(
-                    label: 'Assigned: ${dispute.assignedTo}',
-                    tone: AdminDecisionTone.neutral),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _tinyAction(context, 'Open', onOpen),
-                _tinyAction(context, 'Assign', onAssign),
-                _tinyAction(context, 'Urgent', onUrgent),
-              ],
+              ),
             ),
           ],
         ),

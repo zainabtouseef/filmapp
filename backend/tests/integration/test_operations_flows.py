@@ -192,12 +192,59 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
         json={"label": "Day shoot", "amount_minor": 18000000},
     )
     assert pricing.status_code == 201, pricing.text
+    pricing_id = pricing.json["data"]["pricing"]["public_id"]
     rule = client.post(
         f"/api/v1/location-properties/{property_id}/rules",
         headers=location_headers,
         json={"rule_type": "noise", "label": "Night shoots", "allowed": True},
     )
     assert rule.status_code == 201, rule.text
+    rule_id = rule.json["data"]["rule"]["public_id"]
+
+    updated_location = client.patch(
+        f"/api/v1/location-properties/{property_id}",
+        headers=location_headers,
+        json={
+            "description": "Production-ready heritage property with controlled access.",
+            "capacity": 40,
+        },
+    )
+    assert updated_location.status_code == 200, updated_location.text
+    updated_property = updated_location.json["data"]["property"]
+    assert updated_property["capacity"] == 40
+    assert updated_property["power_backup"] is True
+    assert updated_property["status"] == "published"
+    assert len(updated_property["pricing"]) == 1
+    assert len(updated_property["rules"]) == 1
+
+    updated_pricing = client.patch(
+        f"/api/v1/location-pricing/{pricing_id}",
+        headers=location_headers,
+        json={"amount_minor": 19500000, "conditions": "Twelve-hour day."},
+    )
+    assert updated_pricing.status_code == 200, updated_pricing.text
+    assert updated_pricing.json["data"]["pricing"]["amount_minor"] == 19500000
+    updated_rule = client.patch(
+        f"/api/v1/location-rules/{rule_id}",
+        headers=location_headers,
+        json={"allowed": False, "note": "Written approval is required."},
+    )
+    assert updated_rule.status_code == 200, updated_rule.text
+    assert updated_rule.json["data"]["rule"]["allowed"] is False
+
+    published_location = client.post(
+        "/api/v1/marketplace/listings",
+        headers=location_headers,
+        json={
+            "listing_type": "location",
+            "profile_entity_id": property_id,
+            "title": "Gulberg Heritage House",
+            "summary": "Production-ready heritage property with controlled access.",
+        },
+    )
+    assert published_location.status_code == 201, published_location.text
+    assert published_location.json["data"]["listing"]["listing_type"] == "location"
+    assert published_location.json["data"]["listing"]["price_from_minor"] == 19500000
 
     inspection = client.post(
         "/api/v1/location-inspections",
@@ -234,6 +281,12 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
     )
     assert renter_confirm.status_code == 200, renter_confirm.text
     assert renter_confirm.json["data"]["inspection"]["status"] == "confirmed"
+    inspection_history = client.get(
+        f"/api/v1/location-inspections?property_id={property_id}",
+        headers=location_headers,
+    )
+    assert inspection_history.status_code == 200, inspection_history.text
+    assert len(inspection_history.json["data"]["inspections"]) == 1
 
     claim = client.post(
         "/api/v1/damage-claims",
@@ -253,6 +306,12 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
         json={"evidence_type": "note", "caption": "Logged without photo."},
     )
     assert evidence.status_code == 201, evidence.text
+    claim_history = client.get(
+        f"/api/v1/damage-claims?booking_id={booking_id}",
+        headers=producer_headers,
+    )
+    assert claim_history.status_code == 200, claim_history.text
+    assert len(claim_history.json["data"]["claims"]) == 1
 
     profile = client.patch(
         "/api/v1/equipment/provider-profile",
@@ -266,7 +325,10 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
         },
     )
     assert profile.status_code == 200, profile.text
-    provider_profile_id = profile.json["data"]["profile"]["public_id"]
+    profile_payload = profile.json["data"]["profile"]
+    provider_profile_id = profile_payload["public_id"]
+    assert profile_payload["listing_id"]
+    assert profile_payload["visibility"] == "public"
     equipment = client.post(
         "/api/v1/equipment/items",
         headers=equipment_headers,
@@ -281,24 +343,71 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
     )
     assert equipment.status_code == 201, equipment.text
     equipment_item_id = equipment.json["data"]["item"]["public_id"]
+    equipment_rows = client.get(
+        "/api/v1/equipment/items",
+        headers=equipment_headers,
+    )
+    assert equipment_rows.status_code == 200, equipment_rows.text
+    assert equipment_rows.json["data"]["items"][0]["public_id"] == equipment_item_id
+    equipment_update = client.patch(
+        f"/api/v1/equipment/items/{equipment_item_id}",
+        headers=equipment_headers,
+        json={"condition": "excellent", "status": "maintenance"},
+    )
+    assert equipment_update.status_code == 200, equipment_update.text
+    assert equipment_update.json["data"]["item"]["condition"] == "excellent"
+    assert equipment_update.json["data"]["item"]["status"] == "maintenance"
     package = client.post(
         "/api/v1/equipment/packages",
         headers=equipment_headers,
         json={"name": "Cinema Camera Package", "price_minor": 18500000},
     )
     assert package.status_code == 201, package.text
+    package_id = package.json["data"]["package"]["public_id"]
     package_item = client.post(
-        f"/api/v1/equipment/packages/{package.json['data']['package']['public_id']}/items",
+        f"/api/v1/equipment/packages/{package_id}/items",
         headers=equipment_headers,
         json={"equipment_item_id": equipment_item_id, "quantity": 1},
     )
     assert package_item.status_code == 201, package_item.text
+    package_update = client.patch(
+        f"/api/v1/equipment/packages/{package_id}",
+        headers=equipment_headers,
+        json={"status": "published", "operator_included": True},
+    )
+    assert package_update.status_code == 200, package_update.text
+    assert package_update.json["data"]["package"]["status"] == "published"
+    package_rows = client.get(
+        "/api/v1/equipment/packages",
+        headers=equipment_headers,
+    )
+    assert package_rows.status_code == 200, package_rows.text
+    assert (
+        package_rows.json["data"]["packages"][0]["items"][0]["equipment_item"][
+            "public_id"
+        ]
+        == equipment_item_id
+    )
     term = client.post(
         "/api/v1/equipment/terms",
         headers=equipment_headers,
         json={"label": "Late return", "term_type": "late_fee", "amount_minor": 1500000},
     )
     assert term.status_code == 201, term.text
+    term_id = term.json["data"]["term"]["public_id"]
+    term_update = client.patch(
+        f"/api/v1/equipment/terms/{term_id}",
+        headers=equipment_headers,
+        json={"enabled": False, "note": "Waived for approved long rentals."},
+    )
+    assert term_update.status_code == 200, term_update.text
+    assert term_update.json["data"]["term"]["enabled"] is False
+    term_rows = client.get(
+        "/api/v1/equipment/terms",
+        headers=equipment_headers,
+    )
+    assert term_rows.status_code == 200, term_rows.text
+    assert term_rows.json["data"]["terms"][0]["public_id"] == term_id
 
     equipment_inspection = client.post(
         "/api/v1/equipment-inspections",
@@ -319,10 +428,34 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
         json={
             "equipment_item_id": equipment_item_id,
             "accessories": ["battery x4", "case"],
+            "stage": "captured",
             "note": "No marks.",
         },
     )
     assert equipment_inspection_item.status_code == 201, equipment_inspection_item.text
+    equipment_inspection_update = client.post(
+        f"/api/v1/equipment-inspections/{equipment_inspection_id}/items",
+        headers=equipment_headers,
+        json={
+            "equipment_item_id": equipment_item_id,
+            "accessories": ["battery x4", "case", "charger"],
+            "stage": "verified",
+            "note": "Condition verified by provider.",
+        },
+    )
+    assert equipment_inspection_update.status_code == 201
+    inspection_items = equipment_inspection_update.json["data"]["inspection"]["items"]
+    assert len(inspection_items) == 1
+    assert inspection_items[0]["stage"] == "verified"
+    inspection_rows = client.get(
+        "/api/v1/equipment-inspections?inspection_type=handover",
+        headers=equipment_headers,
+    )
+    assert inspection_rows.status_code == 200, inspection_rows.text
+    assert (
+        inspection_rows.json["data"]["inspections"][0]["public_id"]
+        == equipment_inspection_id
+    )
     provider_sign = client.post(
         f"/api/v1/equipment-inspections/{equipment_inspection_id}/confirm",
         headers=equipment_headers,

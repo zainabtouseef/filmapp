@@ -60,6 +60,7 @@ class DPHolographicButton extends StatelessWidget {
               );
             }
             return Row(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 iconWidget,

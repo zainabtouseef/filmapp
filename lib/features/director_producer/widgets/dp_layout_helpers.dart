@@ -66,8 +66,18 @@ class DPPageHeader extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final stackAction =
-            constraints.maxWidth < (trailing == null ? 340 : 620);
+        final reservedForAction = trailing == null ? 260.0 : 360.0;
+        final titlePainter = TextPainter(
+          text: TextSpan(
+            text: title,
+            style: AppTextStyles.heroSerifNumber.copyWith(fontSize: 30),
+          ),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        )..layout();
+        final fitsInline =
+            constraints.maxWidth - reservedForAction - 12 >= titlePainter.width;
+        final stackAction = constraints.maxWidth < 620 && !fitsInline;
         if (stackAction) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,

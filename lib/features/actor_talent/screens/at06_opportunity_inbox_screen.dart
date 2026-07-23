@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
-import '../../../shared/widgets/status_chip.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
@@ -44,6 +44,7 @@ class _AT06OpportunityInboxScreenState
               query: query,
               onQueryChanged: (value) => setState(() => query = value),
               filters: const [
+                'All',
                 'Direct Offers',
                 'Audition Invites',
                 'Casting Calls',
@@ -53,20 +54,25 @@ class _AT06OpportunityInboxScreenState
             ),
             const SizedBox(height: 12),
             ActorSectionCard(
-              title: 'Sorted by Expiry',
+              title: 'Opportunity Queue',
               icon: Icons.inbox_outlined,
+              actionText: _future == null ? null : 'Refresh',
+              onActionTap: _refresh,
               child: FutureBuilder<List<Booking>>(
                 future: _future,
                 builder: (context, snapshot) {
+                  if (_future == null) {
+                    return _DemoOpportunityGrid(query: query, tab: tab);
+                  }
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const _EmptyOpportunity(tab: 'Loading offers');
                   }
                   if (snapshot.hasError) {
-                    return _DemoOpportunityGrid(query: query, tab: tab);
+                    return _OpportunityLoadError(onRetry: _refresh);
                   }
                   final bookings = _filter(snapshot.data ?? const []);
                   if (bookings.isEmpty) {
-                    return _DemoOpportunityGrid(query: query, tab: tab);
+                    return _EmptyOpportunity(tab: tab);
                   }
                   return ActorResponsiveGrid(
                     minWidth: 270,
@@ -80,10 +86,9 @@ class _AT06OpportunityInboxScreenState
                             ActorTalentRoutes.offerDetail,
                             arguments: booking.publicId,
                           ),
-                          onPrimary: () => _accept(booking),
-                          onHold: () => actorSnack(
+                          onHold: () => Navigator.pushNamed(
                             context,
-                            'Live holds are managed in Availability Calendar',
+                            ActorTalentRoutes.calendar,
                           ),
                         ),
                     ],
@@ -99,31 +104,31 @@ class _AT06OpportunityInboxScreenState
 
   List<Booking> _filter(List<Booking> rows) {
     final normalized = query.toLowerCase().trim();
+    final selectedType = ActorTalentDemoStore.instance.selectedOpportunityTab;
     return rows.where((item) {
+      final opportunity = item.toActorOpportunity();
       final haystack =
           '${item.requester.displayName} ${item.category} ${item.status}'
               .toLowerCase();
-      return normalized.isEmpty || haystack.contains(normalized);
+      final matchesQuery = normalized.isEmpty || haystack.contains(normalized);
+      final matchesType =
+          selectedType == 'All' || selectedType == _tabFor(opportunity.type);
+      return matchesQuery && matchesType;
     }).toList();
   }
 
-  Future<void> _accept(Booking booking) async {
-    final offer = booking.activeOffer;
-    if (offer == null) return;
+  void _refresh() {
     final bookings = BookingsScope.maybeOf(context);
-    if (bookings == null) {
-      actorSnack(context, 'Offer accepted. Terms approved.');
-      return;
-    }
-    try {
-      await bookings.acceptOffer(offer.publicId);
-      if (!mounted) return;
-      actorSnack(context, 'Offer accepted. Terms approved.');
-      setState(() => _future = bookings.opportunities(force: true));
-    } catch (error) {
-      if (!mounted) return;
-      actorSnack(context, '$error');
-    }
+    if (bookings == null) return;
+    setState(() => _future = bookings.opportunities(force: true));
+  }
+
+  String _tabFor(ActorOpportunityType type) {
+    return switch (type) {
+      ActorOpportunityType.directOffer => 'Direct Offers',
+      ActorOpportunityType.auditionInvite => 'Audition Invites',
+      ActorOpportunityType.castingCall => 'Casting Calls',
+    };
   }
 }
 
@@ -137,7 +142,7 @@ class _DemoOpportunityGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = ActorTalentDemoStore.instance;
     final filtered = ActorTalentDemoData.opportunities.where((item) {
-      final matchesTab = tab == _tabFor(item.type);
+      final matchesTab = tab == 'All' || tab == _tabFor(item.type);
       final normalized = query.toLowerCase().trim();
       final matchesQuery = normalized.isEmpty ||
           item.projectTitle.toLowerCase().contains(normalized) ||
@@ -158,10 +163,9 @@ class _DemoOpportunityGrid extends StatelessWidget {
               ActorTalentRoutes.offerDetail,
               arguments: opportunity.id,
             ),
-            onPrimary: () => store.acceptOffer(opportunity.id),
             onHold: () {
               store.holdDates(opportunity.id);
-              actorSnack(context, '${opportunity.projectTitle} dates held');
+              Navigator.pushNamed(context, ActorTalentRoutes.calendar);
             },
           ),
       ],
@@ -184,21 +188,38 @@ class _EmptyOpportunity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          StatusChip(
-            label: 'No $tab',
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          StatusChip(
-            label: 'Filtered-zero state',
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-        ],
-      ),
+    return CoreEmptyState(
+      icon: Icons.mark_email_read_outlined,
+      title: tab == 'Loading offers' ? 'Loading opportunities' : 'No $tab',
+      message: tab == 'Loading offers'
+          ? 'Fetching your latest offers from CineConnect.'
+          : 'New matching offers will appear here when a producer sends them.',
+    );
+  }
+}
+
+class _OpportunityLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _OpportunityLoadError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: 'Could not load opportunities',
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

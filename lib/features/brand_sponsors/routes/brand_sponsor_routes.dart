@@ -14,7 +14,6 @@ class BrandSponsorRoutes {
     composer,
     applications,
     tracker,
-    payments,
   ];
 
   static const allRoutes = [
@@ -29,14 +28,14 @@ class BrandSponsorRoutes {
 
   static String titleFor(String route) {
     return switch (route) {
-      home => 'Brand Dashboard',
+      home => 'Brand Workspace',
       profile => 'Brand Profile',
-      composer => 'Opportunity Composer',
-      applications => 'Applications Inbox',
-      negotiation => 'Negotiation & Terms',
-      tracker => 'Campaign Tracker',
-      payments => 'Payments & Records',
-      _ => 'Brands / Sponsors',
+      composer => 'Opportunities',
+      applications => 'Applications',
+      negotiation => 'Terms & Deals',
+      tracker => 'Campaign Delivery',
+      payments => 'Finance & Records',
+      _ => 'Brand Workspace',
     };
   }
 

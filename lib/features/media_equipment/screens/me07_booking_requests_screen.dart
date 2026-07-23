@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/booking_models.dart';
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/media_equipment_demo_data.dart';
-import '../models/media_equipment_models.dart';
+import '../../../shared/widgets/status_chip.dart';
 import '../widgets/media_equipment_components.dart';
 
 class ME07BookingRequestsScreen extends StatefulWidget {
@@ -21,295 +22,410 @@ class ME07BookingRequestsScreen extends StatefulWidget {
 
 class _ME07BookingRequestsScreenState extends State<ME07BookingRequestsScreen> {
   String _query = '';
+  String _filter = 'All';
+  Future<List<Booking>>? _bookingsFuture;
+  String? _busyId;
 
   @override
   void initState() {
     super.initState();
-    final id = widget.initialRequestId;
-    if (id != null) {
-      final match = MediaEquipmentDemoData.requests
-          .where((request) => request.id == id)
-          .toList();
-      if (match.isNotEmpty) {
-        _query = match.first.project;
-      }
-    }
+    _query = widget.initialRequestId ?? '';
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bookingsFuture != null) return;
+    _reload();
+  }
+
+  void _reload() {
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) return;
+    _bookingsFuture = bookings.bookings(role: 'provider', force: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = MediaEquipmentDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final requests = _filteredRequests(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MediaSectionCard(
-              title: 'Shared inbox',
-              icon: Icons.move_to_inbox_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  _SearchField(
-                      onChanged: (value) => setState(() => _query = value)),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'Urgent',
-                          'Negotiation',
-                          'Secured',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: store.requestFilter == filter,
-                              onTap: () => store.setRequestFilter(filter),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (requests.isEmpty)
-              CoreEmptyState(
-                icon: Icons.search_off_rounded,
-                title: 'No matching requests',
-                message: 'Try another filter or search term.',
-                actionLabel: 'Clear filters',
-                onAction: () {
-                  setState(() => _query = '');
-                  store.setRequestFilter('All');
-                },
-              )
-            else
-              MediaResponsiveGrid(
-                minWidth: 320,
-                children: [
-                  for (final request in requests)
-                    _RequestCard(
-                      request: request,
-                      status: store.requestStatus(request),
-                      onDetails: () => _showDetails(context, request),
-                      onAccept: () {
-                        store.acceptRequest(request.id);
-                        mediaSnack(
-                          context,
-                          '${request.project} moved to contract pending',
-                        );
-                      },
-                      onCounter: () {
-                        store.counterRequest(request.id);
-                        Navigator.pushNamed(context, CoreRoutes.chat);
-                      },
-                      onReject: () => _confirmReject(context, store, request),
-                    ),
-                ],
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Iterable<MediaBookingRequest> _filteredRequests(
-    MediaEquipmentDemoStore store,
-  ) {
-    final lower = _query.trim().toLowerCase();
-    return MediaEquipmentDemoData.requests.where((request) {
-      final status = store.requestStatus(request);
-      final matchesFilter = switch (store.requestFilter) {
-        'Urgent' => status == MediaBookingStatus.requestReceived,
-        'Negotiation' => status == MediaBookingStatus.underNegotiation,
-        'Secured' => status == MediaBookingStatus.secured ||
-            status == MediaBookingStatus.contractPending,
-        _ => true,
-      };
-      final haystack =
-          '${request.project} ${request.producer} ${request.items} ${request.city}'
-              .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
-    });
-  }
-
-  void _showDetails(BuildContext context, MediaBookingRequest request) {
-    showMediaSheet(
-      context,
-      title: request.project,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MediaInfoRow(
-            icon: Icons.business_outlined,
-            label: 'Producer',
-            value: request.producer,
-          ),
-          MediaInfoRow(
-            icon: Icons.calendar_today_outlined,
-            label: 'Dates',
-            value: request.dates,
-          ),
-          MediaInfoRow(
-            icon: Icons.videocam_outlined,
-            label: 'Items',
-            value: request.items,
-          ),
-          MediaInfoRow(
-            icon: Icons.payments_outlined,
-            label: 'Budget',
-            value: request.budget,
-          ),
-          const SizedBox(height: 8),
-          CorePrimaryButton(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: 'Open negotiation',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, CoreRoutes.chat);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmReject(
-    BuildContext context,
-    MediaEquipmentDemoStore store,
-    MediaBookingRequest request,
-  ) {
-    showMediaSheet(
-      context,
-      title: 'Reject request',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Reject ${request.project}? The producer action center updates immediately.',
-            style: AppTextStyles.body.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        MediaSectionCard(
+          title: 'Equipment Booking Inbox',
+          icon: Icons.move_to_inbox_outlined,
+          selected: true,
+          child: Column(
             children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.close_rounded,
-                  label: 'Cancel',
-                  onTap: () => Navigator.pop(context),
+              TextField(
+                onChanged: (value) => setState(() => _query = value),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search_rounded),
+                  hintText: 'Search request, producer, project, status...',
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.block_rounded,
-                  label: 'Reject',
-                  onTap: () {
-                    store.rejectRequest(request.id);
-                    Navigator.pop(context);
-                    mediaSnack(context, 'Request rejected');
-                  },
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final filter in const [
+                      'All',
+                      'New',
+                      'Negotiation',
+                      'Secured',
+                      'Closed',
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CoreChip(
+                          label: filter,
+                          selected: _filter == filter,
+                          onTap: () => setState(() => _filter = filter),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 12),
+        if (_bookingsFuture == null)
+          const InlineNotice(
+            message: 'Preview mode. Sign in to view booking requests.',
+            icon: Icons.visibility_outlined,
+          )
+        else
+          FutureBuilder<List<Booking>>(
+            future: _bookingsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const InlineNotice(
+                  message: 'Loading provider booking requests...',
+                  icon: Icons.hourglass_top_rounded,
+                );
+              }
+              if (snapshot.hasError) {
+                return InlineNotice(
+                  message: 'Could not load booking requests: ${snapshot.error}',
+                  icon: Icons.cloud_off_outlined,
+                );
+              }
+              final all = (snapshot.data ?? const [])
+                  .where((booking) => booking.category == 'equipment')
+                  .toList();
+              final rows = all.where(_matches).toList();
+              if (rows.isEmpty) {
+                return CoreEmptyState(
+                  icon: Icons.inbox_outlined,
+                  title: all.isEmpty
+                      ? 'No equipment requests yet'
+                      : 'No matching requests',
+                  message: all.isEmpty
+                      ? 'Published inventory and packages will receive Director booking requests here.'
+                      : 'Change the search or status filter.',
+                  actionLabel: all.isNotEmpty ? 'Clear filters' : null,
+                  onAction: all.isNotEmpty
+                      ? () => setState(() {
+                            _query = '';
+                            _filter = 'All';
+                          })
+                      : null,
+                );
+              }
+              return MediaResponsiveGrid(
+                minWidth: 320,
+                children: [
+                  for (final booking in rows)
+                    _LiveRequestCard(
+                      booking: booking,
+                      busy: _busyId == booking.publicId,
+                      onDetails: () => _showDetails(booking),
+                      onAccept: () => _accept(booking),
+                      onCounter: () => _showCounter(booking),
+                      onReject: () => _showReject(booking),
+                      onChat: () => _openChat(booking),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  bool _matches(Booking booking) {
+    final query = _query.trim().toLowerCase();
+    final searchMatch = query.isEmpty ||
+        '${booking.publicId} ${booking.projectId} ${booking.requester.displayName} ${booking.status}'
+            .toLowerCase()
+            .contains(query);
+    final filterMatch = switch (_filter) {
+      'New' => {'sent', 'viewed'}.contains(booking.status),
+      'Negotiation' => booking.status == 'under_negotiation',
+      'Secured' =>
+        {'accepted', 'secured', 'in_progress'}.contains(booking.status),
+      'Closed' => {'rejected', 'cancelled', 'closed', 'completed'}
+          .contains(booking.status),
+      _ => true,
+    };
+    return searchMatch && filterMatch;
+  }
+
+  Future<void> _accept(Booking booking) async {
+    final offer = booking.activeOffer;
+    if (offer == null) {
+      mediaSnack(context, 'No active offer is available to accept');
+      return;
+    }
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) return;
+    setState(() => _busyId = booking.publicId);
+    try {
+      await bookings.acceptOffer(offer.publicId);
+      if (!mounted) return;
+      setState(_reload);
+      mediaSnack(context, 'Equipment booking accepted');
+    } catch (error) {
+      if (mounted) mediaSnack(context, 'Could not accept request: $error');
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  void _showCounter(Booking booking) {
+    final pageContext = context;
+    final current =
+        booking.activeOffer?.feeMinor ?? booking.agreedAmountMinor ?? 0;
+    final amount = TextEditingController(
+      text: current == 0 ? '' : '${current ~/ 100}',
+    );
+    final conditions = TextEditingController(
+      text:
+          'Rates include listed equipment only. Transport, overtime, and damage terms apply.',
+    );
+    showMediaSheet(
+      context,
+      title: 'Counter equipment request',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CoreTextField(
+            controller: amount,
+            label: 'Counter amount in PKR',
+            icon: Icons.payments_outlined,
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 10),
+          CoreTextField(
+            controller: conditions,
+            label: 'Equipment and service conditions',
+            icon: Icons.rule_folder_outlined,
+            maxLines: 4,
+          ),
+          const SizedBox(height: 12),
+          CorePrimaryButton(
+            icon: Icons.send_outlined,
+            label: 'Send counteroffer',
+            onTap: () async {
+              final value = int.tryParse(amount.text.trim());
+              if (value == null || value <= 0) {
+                mediaSnack(context, 'Enter a valid counter amount');
+                return;
+              }
+              final bookings = BookingsScope.maybeOf(context);
+              if (bookings == null) return;
+              try {
+                await bookings.createCounterOffer(
+                  bookingId: booking.publicId,
+                  feeMinor: value * 100,
+                  conditions: conditions.text.trim(),
+                  message: 'Equipment provider counteroffer',
+                );
+                if (!mounted || !context.mounted) return;
+                Navigator.pop(context);
+                setState(_reload);
+                mediaSnack(pageContext, 'Counteroffer sent');
+              } catch (error) {
+                if (context.mounted) {
+                  mediaSnack(context, 'Could not send counteroffer: $error');
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    ).whenComplete(() {
+      amount.dispose();
+      conditions.dispose();
+    });
+  }
+
+  void _showReject(Booking booking) {
+    final pageContext = context;
+    final reason = TextEditingController(text: 'Inventory unavailable');
+    showMediaSheet(
+      context,
+      title: 'Reject equipment request',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CoreTextField(
+            controller: reason,
+            label: 'Reason for producer',
+            icon: Icons.notes_outlined,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 12),
+          CorePrimaryButton(
+            icon: Icons.block_outlined,
+            label: 'Reject request',
+            onTap: () async {
+              if (reason.text.trim().isEmpty) {
+                mediaSnack(context, 'Add a short rejection reason');
+                return;
+              }
+              final bookings = BookingsScope.maybeOf(context);
+              if (bookings == null) return;
+              try {
+                await bookings.rejectBooking(
+                  booking.publicId,
+                  reason: reason.text.trim(),
+                );
+                if (!mounted || !context.mounted) return;
+                Navigator.pop(context);
+                setState(_reload);
+                mediaSnack(pageContext, 'Request rejected');
+              } catch (error) {
+                if (context.mounted) {
+                  mediaSnack(context, 'Could not reject request: $error');
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    ).whenComplete(reason.dispose);
+  }
+
+  void _showDetails(Booking booking) {
+    showMediaSheet(
+      context,
+      title: 'Booking ${booking.publicId}',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MediaInfoRow(
+            icon: Icons.movie_creation_outlined,
+            label: 'Project',
+            value: booking.projectId,
+          ),
+          MediaInfoRow(
+            icon: Icons.business_outlined,
+            label: 'Producer',
+            value: booking.requester.displayName,
+          ),
+          MediaInfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Dates',
+            value: '${_date(booking.startAt)} - ${_date(booking.endAt)}',
+          ),
+          MediaInfoRow(
+            icon: Icons.payments_outlined,
+            label: 'Current offer',
+            value: _money(booking),
+          ),
+          MediaInfoRow(
+            icon: Icons.info_outline,
+            label: 'Status',
+            value: _title(booking.status),
+          ),
+          const SizedBox(height: 10),
+          CoreSecondaryButton(
+            icon: Icons.chat_bubble_outline_rounded,
+            label: 'Open booking conversation',
+            onTap: booking.conversationId == null
+                ? null
+                : () {
+                    Navigator.pop(context);
+                    _openChat(booking);
+                  },
+          ),
         ],
       ),
     );
   }
-}
 
-class _SearchField extends StatelessWidget {
-  final ValueChanged<String> onChanged;
-
-  const _SearchField({required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return TextField(
-      onChanged: onChanged,
-      style: AppTextStyles.body.copyWith(color: colors.textPrimary),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: 'Search projects, producers, serials...',
-        hintStyle: AppTextStyles.smallMeta.copyWith(
-          color: colors.textSecondary,
-        ),
-        prefixIcon:
-            Icon(Icons.search_rounded, color: colors.goldDark, size: 20),
-        filled: true,
-        fillColor:
-            colors.surface.withValues(alpha: colors.isLight ? 0.74 : 0.36),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: colors.goldMid),
-        ),
-      ),
+  void _openChat(Booking booking) {
+    final conversationId = booking.conversationId;
+    if (conversationId == null) {
+      mediaSnack(context, 'Conversation opens after the request is sent');
+      return;
+    }
+    Navigator.pushNamed(
+      context,
+      CoreRoutes.chat,
+      arguments: conversationId,
     );
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  final MediaBookingRequest request;
-  final MediaBookingStatus status;
+class _LiveRequestCard extends StatelessWidget {
+  final Booking booking;
+  final bool busy;
   final VoidCallback onDetails;
   final VoidCallback onAccept;
   final VoidCallback onCounter;
   final VoidCallback onReject;
+  final VoidCallback onChat;
 
-  const _RequestCard({
-    required this.request,
-    required this.status,
+  const _LiveRequestCard({
+    required this.booking,
+    required this.busy,
     required this.onDetails,
     required this.onAccept,
     required this.onCounter,
     required this.onReject,
+    required this.onChat,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final actionable = status == MediaBookingStatus.requestReceived ||
-        status == MediaBookingStatus.underNegotiation;
+    final actionable =
+        {'sent', 'viewed', 'under_negotiation'}.contains(booking.status);
+    final statusColor = switch (booking.status) {
+      'accepted' || 'secured' => colors.success,
+      'under_negotiation' => colors.infoBlue,
+      'rejected' || 'cancelled' => colors.danger,
+      _ => colors.goldMid,
+    };
     return GlassSectionCard(
-      radius: 20,
+      radius: 8,
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MediaFrame(
-            imageUrl: request.imageUrl,
-            title: request.project,
-            badge: request.city,
-            fallbackIcon: Icons.movie_filter_outlined,
-            aspectRatio: 16 / 9,
-            compact: true,
+          Container(
+            width: double.infinity,
+            height: 118,
+            decoration: BoxDecoration(
+              color: colors.softSurface,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: colors.border),
+            ),
+            child: Icon(
+              Icons.movie_filter_outlined,
+              color: colors.goldDark,
+              size: 44,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  request.project,
+                  'Project ${booking.projectId}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -318,12 +434,15 @@ class _RequestCard extends StatelessWidget {
                   ),
                 ),
               ),
-              MediaBookingStatusChip(status: status),
+              StatusChip(
+                label: _title(booking.status),
+                color: statusColor,
+              ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           Text(
-            '${request.producer} - ${request.dates} - ${request.budget}',
+            '${booking.requester.displayName} · ${_date(booking.startAt)} - ${_date(booking.endAt)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.smallMeta.copyWith(
@@ -331,24 +450,39 @@ class _RequestCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            request.items,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-            ),
+          StatusChip(label: _money(booking), color: colors.goldMid),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: CoreSecondaryButton(
+                  icon: Icons.info_outline,
+                  label: 'Details',
+                  compact: true,
+                  onTap: onDetails,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: CoreSecondaryButton(
+                  icon: Icons.chat_bubble_outline,
+                  label: 'Chat',
+                  compact: true,
+                  onTap: onChat,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 11),
           if (actionable) ...[
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: CoreSecondaryButton(
-                    icon: Icons.info_outline_rounded,
-                    label: 'Details',
+                    icon: Icons.block_outlined,
+                    label: 'Reject',
                     compact: true,
-                    onTap: onDetails,
+                    onTap: busy ? null : onReject,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -357,20 +491,7 @@ class _RequestCard extends StatelessWidget {
                     icon: Icons.edit_note_outlined,
                     label: 'Counter',
                     compact: true,
-                    onTap: onCounter,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: CoreSecondaryButton(
-                    icon: Icons.block_rounded,
-                    label: 'Reject',
-                    compact: true,
-                    onTap: onReject,
+                    onTap: busy ? null : onCounter,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -379,20 +500,34 @@ class _RequestCard extends StatelessWidget {
                     icon: Icons.check_circle_outline,
                     label: 'Accept',
                     compact: true,
-                    onTap: onAccept,
+                    onTap: busy ? null : onAccept,
                   ),
                 ),
               ],
             ),
-          ] else
-            CoreSecondaryButton(
-              icon: Icons.info_outline_rounded,
-              label: 'Details',
-              compact: true,
-              onTap: onDetails,
-            ),
+          ],
         ],
       ),
     );
   }
+}
+
+String _money(Booking booking) {
+  final minor = booking.activeOffer?.feeMinor ?? booking.agreedAmountMinor;
+  return minor == null
+      ? 'Rate requested'
+      : '${booking.currency} ${(minor ~/ 100).toString()}';
+}
+
+String _date(DateTime value) {
+  return '${value.day}/${value.month}/${value.year}';
+}
+
+String _title(String value) {
+  return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }

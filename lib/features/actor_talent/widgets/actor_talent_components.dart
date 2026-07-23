@@ -118,6 +118,7 @@ class ActorSectionCard extends StatelessWidget {
   final String? actionText;
   final VoidCallback? onActionTap;
   final bool selected;
+  final ActorTone tone;
 
   const ActorSectionCard({
     super.key,
@@ -127,22 +128,87 @@ class ActorSectionCard extends StatelessWidget {
     this.actionText,
     this.onActionTap,
     this.selected = false,
+    this.tone = ActorTone.gold,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SectionContainer(
-      title: title,
-      leading: IconBadge(
-        icon: icon,
-        tone: CineTone.premium,
-        compact: true,
+    final colors = context.appColors;
+    final accent = actorToneColor(context, tone);
+    return GlassSectionCard(
+      radius: 18,
+      padding: EdgeInsets.zero,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: selected ? 5 : 3,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(18),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.28),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Icon(icon, color: accent, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    if (actionText != null) ...[
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onActionTap,
+                        icon: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                        ),
+                        label: Text(actionText!),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+        ],
       ),
-      action: actionText == null
-          ? null
-          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
-      treatment: selected ? SectionTreatment.elevated : SectionTreatment.open,
-      child: child,
     );
   }
 }
@@ -355,7 +421,7 @@ class ActorMediaFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final radius = compact ? 16.0 : 22.0;
+    final radius = compact ? 12.0 : 16.0;
     return AspectRatio(
       aspectRatio: aspectRatio,
       child: ClipRRect(
@@ -487,7 +553,6 @@ class ActorOpportunityCard extends StatelessWidget {
   final ActorOpportunity opportunity;
   final ActorBookingStatus status;
   final VoidCallback onOpen;
-  final VoidCallback onPrimary;
   final VoidCallback onHold;
 
   const ActorOpportunityCard({
@@ -495,7 +560,6 @@ class ActorOpportunityCard extends StatelessWidget {
     required this.opportunity,
     required this.status,
     required this.onOpen,
-    required this.onPrimary,
     required this.onHold,
   });
 
@@ -503,8 +567,8 @@ class ActorOpportunityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return GlassSectionCard(
-      radius: 20,
-      padding: const EdgeInsets.all(12),
+      radius: 16,
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -566,28 +630,19 @@ class ActorOpportunityCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               SizedBox(
-                width: 96,
+                width: 132,
                 child: CoreSecondaryButton(
                   icon: Icons.calendar_today_outlined,
-                  label: 'Hold',
+                  label: 'Hold dates',
                   compact: true,
                   onTap: onHold,
                 ),
               ),
               SizedBox(
-                width: 96,
-                child: CoreSecondaryButton(
-                  icon: Icons.check_circle_outline,
-                  label: 'Accept',
-                  compact: true,
-                  onTap: onPrimary,
-                ),
-              ),
-              SizedBox(
-                width: 96,
+                width: 132,
                 child: CorePrimaryButton(
-                  icon: Icons.open_in_new_rounded,
-                  label: 'Open',
+                  icon: Icons.rate_review_outlined,
+                  label: 'Review offer',
                   compact: true,
                   onTap: onOpen,
                 ),
@@ -628,7 +683,8 @@ class ActorSearchFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return GlassSectionCard(
-      padding: const EdgeInsets.all(12),
+      radius: 16,
+      padding: const EdgeInsets.all(14),
       child: Column(
         children: [
           TextField(

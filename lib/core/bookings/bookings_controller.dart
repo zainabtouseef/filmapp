@@ -116,10 +116,26 @@ class BookingsController extends ChangeNotifier {
     required String endAt,
     required String status,
     String? note,
+    String? resourceType,
+    String? resourceId,
   }) {
     return _repository.createAvailability(
       startAt: startAt,
       endAt: endAt,
+      status: status,
+      note: note,
+      resourceType: resourceType,
+      resourceId: resourceId,
+    );
+  }
+
+  Future<AvailabilityEntry> updateAvailability({
+    required String entryId,
+    required String status,
+    String? note,
+  }) {
+    return _repository.updateAvailability(
+      entryId: entryId,
       status: status,
       note: note,
     );

@@ -12,6 +12,8 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models.identity import Role, User, UserRole
 from app.models.kyc import KycSubmission
+from app.models.marketplace import MarketplaceListing
+from app.models.trust_safety import ModerationCase, ModerationEvent
 
 pytestmark = [
     pytest.mark.integration,
@@ -322,6 +324,25 @@ def test_export_jobs_flow(client: FlaskClient) -> None:
     assert admin_export.status_code == 201, admin_export.text
     assert admin_export.json["data"]["export"]["row_count"] >= 1
 
+    audit_export = client.post(
+        "/api/v1/exports",
+        headers=reviewer_headers,
+        json={"export_type": "admin_audit_events"},
+    )
+    assert audit_export.status_code == 201, audit_export.text
+    audit_data = audit_export.json["data"]["export"]
+    assert audit_data["row_count"] >= 1
+    audit_rows = list(csv.reader(io.StringIO(audit_data["csv_content"])))
+    assert audit_rows[0] == [
+        "occurred_at",
+        "event_id",
+        "event_type",
+        "entity_id",
+        "actor_user_id",
+        "description",
+    ]
+    assert len(audit_rows) - 1 == audit_data["row_count"]
+
     export_list = client.get("/api/v1/exports", headers=producer_headers)
     assert export_list.status_code == 200, export_list.text
     assert len(export_list.json["data"]["exports"]) == 1
@@ -337,3 +358,93 @@ def test_export_jobs_flow(client: FlaskClient) -> None:
     )
     denied = client.get(f"/api/v1/exports/{export_id}", headers=other_user_headers)
     assert denied.status_code == 404, denied.text
+
+
+def test_admin_control_protects_configuration_and_audits_listing_decisions(
+    client: FlaskClient,
+) -> None:
+    _producer_headers, _producer_id, _actor_headers, actor_id, _booking_id = (
+        _accepted_and_secured_booking(client)
+    )
+    reviewer_headers, _reviewer_id = _register_admin(
+        client, "reviewer", name="Control Flow Reviewer"
+    )
+    super_admin_headers, _super_admin_id = _register_admin(
+        client, "super_admin", name="Control Flow Super Admin"
+    )
+
+    with client.application.app_context():
+        actor = db.session.execute(
+            select(User).where(User.public_id == actor_id)
+        ).scalar_one()
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == actor.id
+            )
+        ).scalar_one()
+        listing_id = listing.public_id
+
+    decision = client.patch(
+        f"/api/v1/admin/control/listings/{listing_id}",
+        headers=reviewer_headers,
+        json={
+            "moderation_status": "changes_requested",
+            "visibility": "private",
+            "reason": "Replace the ownership document and cover image.",
+        },
+    )
+    assert decision.status_code == 200, decision.text
+    assert decision.json["data"]["listing"]["moderation_status"] == (
+        "changes_requested"
+    )
+
+    with client.application.app_context():
+        moderation_case = (
+            db.session.execute(
+                select(ModerationCase)
+                .where(
+                    ModerationCase.entity_type == "marketplace_listing",
+                    ModerationCase.entity_id == listing_id,
+                )
+                .order_by(ModerationCase.created_at.desc())
+            )
+            .scalars()
+            .first()
+        )
+        assert moderation_case is not None
+        assert moderation_case.status == "escalated"
+        assert moderation_case.decision_reason == (
+            "Replace the ownership document and cover image."
+        )
+        event = (
+            db.session.execute(
+                select(ModerationEvent)
+                .where(ModerationEvent.case_id == moderation_case.id)
+                .order_by(ModerationEvent.created_at.desc())
+            )
+            .scalars()
+            .first()
+        )
+        assert event is not None
+        assert event.action == "listing_changes_requested"
+        assert event.notes == "Replace the ownership document and cover image."
+
+    invalid_fee = client.post(
+        "/api/v1/admin/control/fee-rules",
+        headers=super_admin_headers,
+        json={
+            "name": "",
+            "category": "",
+            "basis_points": 10001,
+            "fixed_minor": -1,
+        },
+    )
+    assert invalid_fee.status_code == 422, invalid_fee.text
+
+    protected_role = client.patch(
+        "/api/v1/admin/control/roles/super_admin/permissions",
+        headers=super_admin_headers,
+        json={"permissions": []},
+    )
+    assert protected_role.status_code == 409, protected_role.text
+    assert protected_role.json["error"]["code"] == "admin.protected_role"

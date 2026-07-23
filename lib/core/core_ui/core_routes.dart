@@ -74,6 +74,7 @@ class CoreRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
+    final superAdminDeepLink = _superAdminDeepLink(routeSettings.name);
     final contractDeepLinkId = _singleIdPath(routeSettings.name, 'contract');
     final paymentDeepLinkId = _singleIdPath(routeSettings.name, 'payment');
     Widget page;
@@ -265,6 +266,17 @@ class CoreRoutes {
         );
       case SuperAdminRoutes.loginDemo:
         page = const LoginScreen();
+      case _ when superAdminDeepLink != null:
+        page = SuperAdminPortalScreen(
+          routeName: superAdminDeepLink.routeName,
+          arguments: {
+            ...superAdminDeepLink.arguments,
+            if (routeSettings.arguments is Map)
+              ...(routeSettings.arguments! as Map),
+            if (routeSettings.arguments is String)
+              'id': routeSettings.arguments! as String,
+          },
+        );
       case SuperAdminRoutes.dashboard:
       case SuperAdminRoutes.reviewHub:
       case SuperAdminRoutes.reviewHubPeople:
@@ -387,6 +399,37 @@ class CoreRoutes {
     return segments[1];
   }
 
+  static _SuperAdminDeepLink? _superAdminDeepLink(String? name) {
+    final segments = _pathSegments(name);
+    if (segments.length != 3 || segments.first != 'admin') return null;
+    final id = segments[2];
+    if (id.isEmpty || id == ':id') return null;
+
+    return switch (segments[1]) {
+      'bookings-monitor' => _SuperAdminDeepLink(
+          SuperAdminRoutes.bookingDetail,
+          arguments: {'id': id, 'booking_id': id},
+        ),
+      'verifications' => _SuperAdminDeepLink(
+          SuperAdminRoutes.verificationDetail,
+          arguments: {'id': id, 'submission_id': id},
+        ),
+      'payment-review' => _SuperAdminDeepLink(
+          SuperAdminRoutes.paymentReview,
+          arguments: {'id': id, 'proof_id': id},
+        ),
+      'contract-templates' => _SuperAdminDeepLink(
+          SuperAdminRoutes.contractTemplateDetail,
+          arguments: {'id': id, 'template_id': id},
+        ),
+      'disputes' => _SuperAdminDeepLink(
+          SuperAdminRoutes.disputeCase,
+          arguments: {'id': id, 'dispute_id': id},
+        ),
+      _ => null,
+    };
+  }
+
   static List<String> _pathSegments(String? name) {
     if (name == null || !name.startsWith('/')) return const [];
     return Uri.tryParse(name)?.pathSegments ?? const [];
@@ -398,4 +441,11 @@ class _DirectorDeepLink {
   final Map<String, Object?> arguments;
 
   const _DirectorDeepLink(this.routeName, {this.arguments = const {}});
+}
+
+class _SuperAdminDeepLink {
+  final String routeName;
+  final Map<String, Object?> arguments;
+
+  const _SuperAdminDeepLink(this.routeName, {this.arguments = const {}});
 }

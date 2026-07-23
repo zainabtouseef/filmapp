@@ -52,8 +52,7 @@ class _UserVerificationQueueScreenState
   void _open(verification.KycSubmission submission) {
     Navigator.pushNamed(
       context,
-      SuperAdminRoutes.verificationDetail,
-      arguments: submission.publicId,
+      SuperAdminRoutes.verificationPath(submission.publicId),
     );
   }
 
@@ -210,8 +209,7 @@ class _UserVerificationQueueScreenState
                             'Request info',
                             () => Navigator.pushNamed(
                               context,
-                              SuperAdminRoutes.verificationDetail,
-                              arguments: row.publicId,
+                              SuperAdminRoutes.verificationPath(row.publicId),
                             ),
                           ),
                         ],

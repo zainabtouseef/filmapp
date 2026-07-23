@@ -157,6 +157,7 @@ class LocationSectionCard extends StatelessWidget {
   final String? actionText;
   final VoidCallback? onActionTap;
   final bool selected;
+  final LocationTone tone;
 
   const LocationSectionCard({
     super.key,
@@ -166,22 +167,87 @@ class LocationSectionCard extends StatelessWidget {
     this.actionText,
     this.onActionTap,
     this.selected = false,
+    this.tone = LocationTone.gold,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SectionContainer(
-      title: title,
-      leading: IconBadge(
-        icon: icon,
-        tone: CineTone.premium,
-        compact: true,
+    final colors = context.appColors;
+    final accent = locationToneColor(context, tone);
+    return GlassSectionCard(
+      radius: 18,
+      padding: EdgeInsets.zero,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: selected ? 5 : 3,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(18),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.28),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Icon(icon, color: accent, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    if (actionText != null) ...[
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onActionTap,
+                        icon: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                        ),
+                        label: Text(actionText!),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 14),
+                child,
+              ],
+            ),
+          ),
+        ],
       ),
-      action: actionText == null
-          ? null
-          : TextButton(onPressed: onActionTap, child: Text(actionText!)),
-      treatment: selected ? SectionTreatment.elevated : SectionTreatment.open,
-      child: child,
     );
   }
 }

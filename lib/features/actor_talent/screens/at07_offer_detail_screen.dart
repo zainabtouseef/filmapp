@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -113,18 +114,37 @@ class _AT07OfferDetailScreenState extends State<AT07OfferDetailScreen> {
             label: 'Send rejection',
             compact: true,
             onTap: () async {
+              if (reason.text.trim().isEmpty) {
+                actorSnack(context, 'Add a short reason before rejecting');
+                return;
+              }
               Navigator.pop(context);
-              await BookingsScope.of(context).rejectBooking(
-                booking.publicId,
-                reason: reason.text.trim(),
-              );
-              if (!mounted) return;
-              actorSnack(context, 'Rejection sent to producer');
+              await _reject(booking, reason.text.trim());
             },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _reject(Booking booking, String reason) async {
+    setState(() => _busy = true);
+    try {
+      await BookingsScope.of(context).rejectBooking(
+        booking.publicId,
+        reason: reason,
+      );
+      if (!mounted) return;
+      actorSnack(context, 'Rejection sent to producer');
+      setState(
+        () => _future = BookingsScope.of(context).booking(booking.publicId),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      actorSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 
@@ -145,6 +165,15 @@ class _LiveOfferDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     final opportunity = booking.toActorOpportunity();
     final status = opportunity.status;
+    final activeOffer = booking.activeOffer;
+    final currentUserId = AuthScope.maybeOf(context)?.user?.publicId;
+    final canRespond = activeOffer?.status == 'active' &&
+        (currentUserId == null ||
+            activeOffer?.recipient.publicId == currentUserId) &&
+        booking.status != 'accepted' &&
+        booking.status != 'secured' &&
+        booking.status != 'rejected' &&
+        booking.status != 'cancelled';
     return ActorTwoColumn(
       left: ActorSectionCard(
         title: '${booking.publicId} Structured Offer',
@@ -223,36 +252,42 @@ class _LiveOfferDetail extends StatelessWidget {
               label: 'Accept offer',
               compact: true,
               loading: busy,
-              onTap: busy ? null : () => onAccept(booking),
+              onTap: busy || !canRespond ? null : () => onAccept(booking),
             ),
             const SizedBox(height: 8),
             CoreSecondaryButton(
               icon: Icons.edit_note_outlined,
               label: 'Counteroffer',
               compact: true,
-              onTap: () => Navigator.pushNamed(
-                context,
-                ActorTalentRoutes.counteroffer,
-                arguments: booking.publicId,
-              ),
+              onTap: canRespond
+                  ? () => Navigator.pushNamed(
+                        context,
+                        ActorTalentRoutes.counteroffer,
+                        arguments: booking.publicId,
+                      )
+                  : null,
             ),
             const SizedBox(height: 8),
             CoreSecondaryButton(
               icon: Icons.chat_bubble_outline_rounded,
-              label: 'Ask question',
+              label: booking.conversationId == null
+                  ? 'Chat unavailable'
+                  : 'Ask question',
               compact: true,
-              onTap: () => Navigator.pushNamed(
-                context,
-                CoreRoutes.chat,
-                arguments: booking.conversationId,
-              ),
+              onTap: booking.conversationId == null
+                  ? null
+                  : () => Navigator.pushNamed(
+                        context,
+                        CoreRoutes.chat,
+                        arguments: booking.conversationId,
+                      ),
             ),
             const SizedBox(height: 8),
             CoreSecondaryButton(
               icon: Icons.block_rounded,
               label: 'Reject',
               compact: true,
-              onTap: busy ? null : () => onReject(booking),
+              onTap: busy || !canRespond ? null : () => onReject(booking),
             ),
           ],
         ),

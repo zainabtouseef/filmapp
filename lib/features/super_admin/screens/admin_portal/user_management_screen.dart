@@ -8,8 +8,16 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  String _filter = 'Role';
+  Future<List<AdminUserRecordDto>>? _future;
   final _search = TextEditingController();
+  String _filter = 'All';
+  String? _busyId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= AdminScope.of(context).users();
+  }
 
   @override
   void dispose() {
@@ -17,145 +25,330 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     super.dispose();
   }
 
-  bool _matches(AdminUserRecord user) {
-    final query = _search.text.toLowerCase();
-    final queryMatch = query.isEmpty ||
-        user.name.toLowerCase().contains(query) ||
-        user.city.toLowerCase().contains(query) ||
-        user.roles.toLowerCase().contains(query);
-    if (!queryMatch) return false;
-    return switch (_filter) {
-      'Suspended users' => user.status == 'Suspended',
-      'High-value users' => user.bookings >= 15,
-      'Dispute count' => user.disputes > 0,
-      _ => true,
-    };
+  void _refresh() {
+    setState(() => _future = AdminScope.of(context).users(force: true));
+  }
+
+  List<AdminUserRecordDto> _visible(List<AdminUserRecordDto> users) {
+    final query = _search.text.trim().toLowerCase();
+    return users.where((user) {
+      final haystack = [
+        user.publicId,
+        user.displayName,
+        user.email,
+        ...user.roles.expand((role) => [role.code, role.name]),
+      ].join(' ').toLowerCase();
+      if (query.isNotEmpty && !haystack.contains(query)) return false;
+      return switch (_filter) {
+        'Suspended' => user.status == 'suspended',
+        'Locked' => user.status == 'locked',
+        'KYC pending' => !{'approved', 'verified'}.contains(user.kycStatus),
+        'High risk' => user.kycRiskLevel == 'high',
+        'Disputes' => user.disputesCount > 0,
+        'Admins' => user.roles.any(
+            (role) => const {
+              'reviewer',
+              'finance_admin',
+              'support_agent',
+              'super_admin',
+            }.contains(role.code),
+          ),
+        _ => true,
+      };
+    }).toList();
+  }
+
+  Future<void> _setStatus(AdminUserRecordDto user, String status) async {
+    if (_busyId != null) return;
+    setState(() => _busyId = user.publicId);
+    try {
+      await AdminScope.of(context).updateUser(
+        user.publicId,
+        status: status,
+      );
+      if (!mounted) return;
+      Navigator.maybePop(context);
+      showCoreSnack(
+        context,
+        status == 'active'
+            ? 'User access restored.'
+            : 'User access changed to $status and sessions revoked.',
+      );
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  Future<void> _assignRole(AdminUserRecordDto user) async {
+    final role = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Assign platform role'),
+        children: [
+          for (final item in const [
+            ('reviewer', 'Reviewer'),
+            ('finance_admin', 'Finance Admin'),
+            ('support_agent', 'Support Agent'),
+            ('super_admin', 'Super Admin'),
+          ])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, item.$1),
+              child: Text(item.$2),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || role == null) return;
+    setState(() => _busyId = user.publicId);
+    try {
+      await AdminScope.of(context).updateUser(
+        user.publicId,
+        roleCode: role,
+        roleStatus: 'active',
+      );
+      if (!mounted) return;
+      Navigator.maybePop(context);
+      showCoreSnack(context, 'Role assigned and activated.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final users = AdminMockData.users.where(_matches).toList();
     return Column(
       children: [
         AdminSurface(
-          child: CoreTextField(
-            controller: _search,
-            label: 'Search by name, role or city',
-            icon: Icons.search_rounded,
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-        const SizedBox(height: 14),
-        AdminFilterBar(
-          filters: const [
-            'Role',
-            'Verification state',
-            'City',
-            'Trust badge',
-            'Dispute count',
-            'Suspended users',
-            'High-value users'
-          ],
-          selected: _filter,
-          onSelected: (value) => setState(() => _filter = value),
-        ),
-        const SizedBox(height: 18),
-        if (users.isEmpty)
-          const AdminEmptyState(
-            icon: Icons.search_off_rounded,
-            title: 'No matching users',
-            message: 'Try a different search term or filter.',
-          )
-        else
-          AdminDataTable(
-            columns: const [
-              'User',
-              'Roles',
-              'City',
-              'Verification',
-              'Trust',
-              'Bookings',
-              'Disputes',
-              'Device Risk',
-              'Status',
-              'Action'
+          child: Column(
+            children: [
+              CoreTextField(
+                controller: _search,
+                label: 'Search name, email, ID or role',
+                icon: Icons.search_rounded,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              AdminFilterBar(
+                filters: const [
+                  'All',
+                  'Suspended',
+                  'Locked',
+                  'KYC pending',
+                  'High risk',
+                  'Disputes',
+                  'Admins',
+                ],
+                selected: _filter,
+                onSelected: (value) => setState(() => _filter = value),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Refresh',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
+              ),
             ],
-            rowActions: users
-                .map<VoidCallback?>((user) => () => _userDrawer(context, user))
-                .toList(),
-            rows: users.map((user) {
-              return [
-                _text(context, user.name, strong: true),
-                _text(context, user.roles),
-                _text(context, user.city),
-                AdminStatusBadge(
-                    label: user.verification,
-                    tone: user.verification == 'Verified'
-                        ? AdminDecisionTone.success
-                        : AdminDecisionTone.warning),
-                _text(context, user.trust),
-                _text(context, '${user.bookings}'),
-                _text(context, '${user.disputes}'),
-                AdminRiskBadge(
-                    label: user.deviceRisk,
-                    risk: user.deviceRisk == 'Clear'
-                        ? AdminRiskTone.low
-                        : AdminRiskTone.high),
-                AdminStatusBadge(
-                    label: user.status, tone: AdminDecisionTone.info),
-                _tinyAction(context, 'Open', () => _userDrawer(context, user)),
-              ];
-            }).toList(),
           ),
+        ),
+        const SizedBox(height: 16),
+        FutureBuilder<List<AdminUserRecordDto>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const AdminSurface(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              final error = snapshot.error;
+              return AdminSurface(
+                child: Column(
+                  children: [
+                    AdminEmptyState(
+                      icon: Icons.manage_accounts_outlined,
+                      title: 'Could not load user access',
+                      message: error is ApiException
+                          ? error.message
+                          : 'Check the backend connection and try again.',
+                    ),
+                    const SizedBox(height: 12),
+                    AdminActionButton(
+                      icon: Icons.refresh_rounded,
+                      label: 'Retry',
+                      secondary: true,
+                      onTap: _refresh,
+                    ),
+                  ],
+                ),
+              );
+            }
+            final users = _visible(snapshot.data ?? const []);
+            if (users.isEmpty) {
+              return const AdminEmptyState(
+                icon: Icons.search_off_rounded,
+                title: 'No matching users',
+                message: 'Change the search or access filter.',
+              );
+            }
+            return AdminDataTable(
+              columns: const [
+                'User',
+                'Roles',
+                'KYC',
+                'Risk',
+                'Bookings',
+                'Disputes',
+                'Sessions',
+                'Status',
+                'Action',
+              ],
+              rowActions: users
+                  .map<VoidCallback?>(
+                    (user) => () => _userDrawer(context, user),
+                  )
+                  .toList(),
+              rows: users.map((user) {
+                final roleNames = user.roles.isEmpty
+                    ? 'No active role'
+                    : user.roles.map((item) => item.name).join(', ');
+                return [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _text(context, user.displayName, strong: true),
+                      _text(context, user.email),
+                    ],
+                  ),
+                  _text(context, roleNames),
+                  AdminStatusBadge(
+                    label: user.kycStatus,
+                    tone: {'approved', 'verified'}.contains(user.kycStatus)
+                        ? AdminDecisionTone.success
+                        : AdminDecisionTone.warning,
+                  ),
+                  AdminRiskBadge(
+                    label: user.kycRiskLevel,
+                    risk: user.kycRiskLevel == 'high'
+                        ? AdminRiskTone.high
+                        : AdminRiskTone.low,
+                  ),
+                  _text(context, '${user.bookingsCount}'),
+                  _text(context, '${user.disputesCount}'),
+                  _text(context, '${user.activeSessions}'),
+                  AdminStatusBadge(
+                    label: user.status,
+                    tone: user.status == 'active'
+                        ? AdminDecisionTone.success
+                        : AdminDecisionTone.danger,
+                  ),
+                  _tinyAction(
+                    context,
+                    'Open',
+                    _busyId == user.publicId
+                        ? null
+                        : () => _userDrawer(context, user),
+                  ),
+                ];
+              }).toList(),
+            );
+          },
+        ),
       ],
     );
   }
 
-  void _userDrawer(BuildContext context, AdminUserRecord user) {
+  void _userDrawer(BuildContext context, AdminUserRecordDto user) {
+    final roleNames = user.roles.isEmpty
+        ? 'No role assigned'
+        : user.roles.map((item) => item.name).join(', ');
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AdminDetailDrawer(
-        title: user.name,
+      builder: (sheetContext) => AdminDetailDrawer(
+        title: user.displayName,
         children: [
           AdminUserMiniCard(
-              name: user.name,
-              detail: '${user.roles} - ${user.city}',
-              badge: user.status),
+            name: user.displayName,
+            detail: user.email,
+            badge: user.status,
+          ),
           const SizedBox(height: 12),
-          ...[
-            'Verification history: ${user.verification}',
-            'Bookings: ${user.bookings}',
-            'Payments: ledger linked',
-            'Disputes: ${user.disputes}',
-            'Device info: ${user.deviceRisk}',
-            'Bank/payment account: reviewed',
-          ].map((line) => _bullet(context, line)),
+          _kv(sheetContext, 'User ID', user.publicId),
+          _kv(sheetContext, 'Roles', roleNames),
+          _kv(sheetContext, 'KYC', user.kycStatus),
+          _kv(sheetContext, 'KYC risk', user.kycRiskLevel),
+          _kv(sheetContext, 'Bookings', '${user.bookingsCount}'),
+          _kv(sheetContext, 'Disputes', '${user.disputesCount}'),
+          _kv(sheetContext, 'Active sessions', '${user.activeSessions}'),
+          _kv(
+            sheetContext,
+            'Last login',
+            _adminDateTime(user.lastLoginAt),
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
+              if (user.status == 'active')
+                _tinyAction(
+                  sheetContext,
+                  'Suspend access',
+                  () => _setStatus(user, 'suspended'),
+                )
+              else
+                _tinyAction(
+                  sheetContext,
+                  'Restore access',
+                  () => _setStatus(user, 'active'),
+                ),
               _tinyAction(
-                  context, 'Suspend', () => _confirm(context, 'Suspend user')),
-              _tinyAction(context, 'Unverify',
-                  () => _confirm(context, 'Unverify user')),
-              _tinyAction(context, 'Force re-KYC',
-                  () => Navigator.pushNamed(context, CoreRoutes.kyc)),
-              _tinyAction(context, 'Merge duplicate',
-                  () => _confirm(context, 'Merge duplicate')),
-              _tinyAction(context, 'Reset access',
-                  () => _confirm(context, 'Reset access')),
-              _tinyAction(context, 'Warning',
-                  () => _noteDialog(context, 'Send warning')),
-              _tinyAction(context, 'Support tickets',
-                  () => Navigator.pushNamed(context, SuperAdminRoutes.support)),
+                sheetContext,
+                'Lock account',
+                user.status == 'locked'
+                    ? null
+                    : () => _setStatus(user, 'locked'),
+              ),
               _tinyAction(
+                sheetContext,
+                'Assign role',
+                () => _assignRole(user),
+              ),
+              _tinyAction(
+                sheetContext,
+                'KYC queue',
+                () => Navigator.pushNamed(
                   context,
-                  'Audit trail',
-                  () =>
-                      Navigator.pushNamed(context, SuperAdminRoutes.auditLogs)),
+                  SuperAdminRoutes.verifications,
+                ),
+              ),
+              _tinyAction(
+                sheetContext,
+                'Support tickets',
+                () => Navigator.pushNamed(
+                  context,
+                  SuperAdminRoutes.support,
+                ),
+              ),
+              _tinyAction(
+                sheetContext,
+                'Audit trail',
+                () => Navigator.pushNamed(
+                  context,
+                  SuperAdminRoutes.auditLogs,
+                ),
+              ),
             ],
           ),
         ],

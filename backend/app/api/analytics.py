@@ -15,12 +15,18 @@ from app.errors import APIError
 from app.extensions import db
 from app.models.analytics import ExportJob
 from app.models.base import utc_now
-from app.models.bookings import Booking
+from app.models.bookings import Booking, BookingStatusEvent
 from app.models.identity import User
-from app.models.kyc import KycSubmission
+from app.models.kyc import KycSubmission, VerificationEvent
 from app.models.marketplace import UserProfile
 from app.models.payments import BookingFeeSnapshot, PaymentProof
-from app.models.trust_safety import Dispute, ModerationCase, Notification, SupportTicket
+from app.models.trust_safety import (
+    Dispute,
+    ModerationCase,
+    ModerationEvent,
+    Notification,
+    SupportTicket,
+)
 from app.responses import success
 
 analytics_blueprint = Blueprint("analytics", __name__)
@@ -225,7 +231,7 @@ def admin_analytics() -> Response:
     )
 
 
-EXPORT_TYPES = {"ledger", "bookings", "admin_disputes"}
+EXPORT_TYPES = {"ledger", "bookings", "admin_disputes", "admin_audit_events"}
 EXPORT_ROW_LIMIT = 2000
 
 
@@ -366,6 +372,127 @@ def _run_admin_disputes_export(user: User) -> tuple[str, int]:
     return csv_text, len(rows)
 
 
+def _run_admin_audit_events_export(user: User) -> tuple[str, int]:
+    _require_admin(user)
+    rows: list[tuple[Any, str, str, str, str, str]] = []
+
+    verification_events = db.session.execute(
+        select(VerificationEvent)
+        .order_by(VerificationEvent.created_at.desc())
+        .limit(EXPORT_ROW_LIMIT)
+    ).scalars()
+    for verification_event in verification_events:
+        rows.append(
+            (
+                verification_event.created_at,
+                (
+                    "kyc:"
+                    f"{verification_event.submission.public_id}:"
+                    f"{verification_event.id}"
+                ),
+                "verification",
+                verification_event.submission.public_id,
+                str(verification_event.actor_user_id or ""),
+                (
+                    f"{verification_event.from_status or 'new'}"
+                    f" -> {verification_event.to_status}"
+                    + (
+                        f": {verification_event.reason}"
+                        if verification_event.reason
+                        else ""
+                    )
+                ),
+            )
+        )
+
+    booking_events = db.session.execute(
+        select(BookingStatusEvent)
+        .order_by(BookingStatusEvent.created_at.desc())
+        .limit(EXPORT_ROW_LIMIT)
+    ).scalars()
+    for booking_event in booking_events:
+        rows.append(
+            (
+                booking_event.created_at,
+                f"booking:{booking_event.booking.public_id}:{booking_event.id}",
+                "booking",
+                booking_event.booking.public_id,
+                str(booking_event.actor_user_id or ""),
+                f"{booking_event.from_status or 'new'} -> {booking_event.to_status}"
+                + (f": {booking_event.reason}" if booking_event.reason else ""),
+            )
+        )
+
+    payment_events = db.session.execute(
+        select(PaymentProof)
+        .where(PaymentProof.reviewed_at.is_not(None))
+        .order_by(PaymentProof.reviewed_at.desc())
+        .limit(EXPORT_ROW_LIMIT)
+    ).scalars()
+    for proof in payment_events:
+        rows.append(
+            (
+                proof.reviewed_at or proof.updated_at,
+                f"payment:{proof.public_id}",
+                "payment",
+                proof.public_id,
+                str(proof.reviewed_by or ""),
+                f"Proof reviewed as {proof.status}"
+                + (f": {proof.rejection_reason}" if proof.rejection_reason else ""),
+            )
+        )
+
+    moderation_events = db.session.execute(
+        select(ModerationEvent)
+        .order_by(ModerationEvent.created_at.desc())
+        .limit(EXPORT_ROW_LIMIT)
+    ).scalars()
+    for moderation_event in moderation_events:
+        rows.append(
+            (
+                moderation_event.created_at,
+                (f"moderation:{moderation_event.case.public_id}:{moderation_event.id}"),
+                "moderation",
+                moderation_event.case.entity_id,
+                str(moderation_event.actor_user_id),
+                moderation_event.action
+                + (f": {moderation_event.notes}" if moderation_event.notes else ""),
+            )
+        )
+
+    rows.sort(key=lambda row: row[0], reverse=True)
+    rows = rows[:EXPORT_ROW_LIMIT]
+    csv_text = _write_csv(
+        [
+            "occurred_at",
+            "event_id",
+            "event_type",
+            "entity_id",
+            "actor_user_id",
+            "description",
+        ],
+        [
+            [
+                occurred_at.isoformat(),
+                event_id,
+                event_type,
+                entity_id,
+                actor_user_id,
+                description,
+            ]
+            for (
+                occurred_at,
+                event_id,
+                event_type,
+                entity_id,
+                actor_user_id,
+                description,
+            ) in rows
+        ],
+    )
+    return csv_text, len(rows)
+
+
 @analytics_blueprint.post("/exports")
 def create_export() -> ResponseReturnValue:
     user = _current_user()
@@ -391,8 +518,10 @@ def create_export() -> ResponseReturnValue:
             csv_text, row_count = _run_ledger_export(user)
         elif export_type == "bookings":
             csv_text, row_count = _run_bookings_export(user)
-        else:
+        elif export_type == "admin_disputes":
             csv_text, row_count = _run_admin_disputes_export(user)
+        else:
+            csv_text, row_count = _run_admin_audit_events_export(user)
         job.csv_content = csv_text
         job.row_count = row_count
         job.status = "completed"

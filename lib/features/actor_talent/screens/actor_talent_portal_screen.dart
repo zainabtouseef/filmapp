@@ -33,6 +33,7 @@ class ActorTalentPortalScreen extends StatelessWidget {
       routeName: routeName,
       title: title,
       screenId: screenId,
+      workspaceLayout: true,
       child: _screenFor(routeName),
     );
   }

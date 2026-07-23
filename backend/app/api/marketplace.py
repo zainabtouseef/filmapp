@@ -28,6 +28,7 @@ from app.models.marketplace import (
     TalentProfile,
     UserProfile,
 )
+from app.models.operations import LocationProperty
 from app.responses import success
 from app.services.local_storage import public_url_for
 
@@ -486,12 +487,16 @@ def update_talent_profile() -> ResponseReturnValue:
     screen_name = str(payload.get("screen_name", "")).strip()
     if len(screen_name) < 2:
         raise _field_error("screen_name", "Screen name must contain 2+ characters.")
-    currency = str(payload.get("currency", "PKR")).strip().upper()
-    if len(currency) != 3:
-        raise _field_error("currency", "Currency must be a 3-letter ISO code.")
-    day_rate_minor = _optional_int(payload.get("day_rate_minor"), "day_rate_minor")
-    if day_rate_minor is not None and day_rate_minor < 0:
-        raise _field_error("day_rate_minor", "Day rate cannot be negative.")
+    currency = None
+    if "currency" in payload:
+        currency = str(payload.get("currency", "")).strip().upper()
+        if len(currency) != 3:
+            raise _field_error("currency", "Currency must be a 3-letter ISO code.")
+    day_rate_minor = None
+    if "day_rate_minor" in payload:
+        day_rate_minor = _optional_int(payload.get("day_rate_minor"), "day_rate_minor")
+        if day_rate_minor is not None and day_rate_minor < 0:
+            raise _field_error("day_rate_minor", "Day rate cannot be negative.")
 
     profile = db.session.execute(
         select(TalentProfile).where(TalentProfile.user_id == user.id)
@@ -500,20 +505,28 @@ def update_talent_profile() -> ResponseReturnValue:
         profile = TalentProfile(user_id=user.id, screen_name=screen_name)
         db.session.add(profile)
     profile.screen_name = screen_name
-    profile.age_range = str(payload.get("age_range", "")).strip()[:32] or None
-    profile.gender_identity = (
-        str(payload.get("gender_identity", "")).strip()[:64] or None
-    )
-    profile.height_cm = _optional_int(payload.get("height_cm"), "height_cm")
-    profile.union_note = str(payload.get("union_note", "")).strip()[:255] or None
-    profile.experience_years = _optional_int(
-        payload.get("experience_years"), "experience_years"
-    )
-    profile.availability_status = str(
-        payload.get("availability_status", "available")
-    ).strip()
-    profile.day_rate_minor = day_rate_minor
-    profile.currency = currency
+    if "age_range" in payload:
+        profile.age_range = str(payload.get("age_range", "")).strip()[:32] or None
+    if "gender_identity" in payload:
+        profile.gender_identity = (
+            str(payload.get("gender_identity", "")).strip()[:64] or None
+        )
+    if "height_cm" in payload:
+        profile.height_cm = _optional_int(payload.get("height_cm"), "height_cm")
+    if "union_note" in payload:
+        profile.union_note = str(payload.get("union_note", "")).strip()[:255] or None
+    if "experience_years" in payload:
+        profile.experience_years = _optional_int(
+            payload.get("experience_years"), "experience_years"
+        )
+    if "availability_status" in payload:
+        profile.availability_status = str(
+            payload.get("availability_status", "")
+        ).strip()
+    if "day_rate_minor" in payload:
+        profile.day_rate_minor = day_rate_minor
+    if currency is not None:
+        profile.currency = currency
     db.session.flush()
 
     if "languages" in payload:
@@ -800,10 +813,75 @@ def publish_listing() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     listing_type = str(payload.get("listing_type", "")).strip()
-    if listing_type != "talent":
+    if listing_type not in {"talent", "location"}:
         raise _field_error(
-            "listing_type", "Only talent listings are enabled in Phase 4."
+            "listing_type", "Only talent and location listings can be published."
         )
+    if listing_type == "location":
+        property_id = str(
+            payload.get("profile_entity_id") or payload.get("property_id") or ""
+        ).strip()
+        location = db.session.execute(
+            select(LocationProperty).where(
+                LocationProperty.public_id == property_id,
+                LocationProperty.owner_user_id == user.id,
+            )
+        ).scalar_one_or_none()
+        if location is None:
+            raise APIError(
+                "marketplace.profile_required",
+                "Create or select a location property before publishing.",
+                status=409,
+            )
+        title = str(payload.get("title") or location.name).strip()
+        summary = str(
+            payload.get("summary")
+            or location.description
+            or (
+                f"{location.name} is available for film and commercial "
+                "productions in "
+                f"{location.area_name or location.public_address or 'Pakistan'}."
+            )
+        ).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Listing title is required.")
+        if len(summary) < 10:
+            raise _field_error(
+                "summary", "Listing summary must contain 10+ characters."
+            )
+        requested_city = str(payload.get("city_id", "")).strip()
+        city = _city_by_public_id(requested_city) if requested_city else location.city
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "location",
+                MarketplaceListing.profile_entity_id == location.public_id,
+            )
+        ).scalar_one_or_none()
+        if listing is None:
+            listing = MarketplaceListing(
+                owner_user_id=user.id,
+                listing_type="location",
+                profile_entity_id=location.public_id,
+                verification_status="unverified",
+                moderation_status="approved",
+                visibility="public",
+            )
+            db.session.add(listing)
+        enabled_prices = [
+            price.amount_minor for price in location.pricing if price.enabled
+        ]
+        listing.title = title[:180]
+        listing.summary = summary[:2000]
+        listing.city_id = city.id if city else location.city_id
+        listing.price_from_minor = min(enabled_prices) if enabled_prices else None
+        listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        listing.published_at = listing.published_at or utc_now()
+        location.status = "published"
+        db.session.flush()
+        _sync_listing_media(listing, user.id, payload)
+        db.session.commit()
+        return jsonify(success({"listing": _listing_payload(listing)})), 201
     if not _has_approved_kyc_for_role(user.id, "actor_talent"):
         raise APIError(
             "marketplace.kyc_required",

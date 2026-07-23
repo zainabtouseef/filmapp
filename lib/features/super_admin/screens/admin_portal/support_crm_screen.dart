@@ -8,16 +8,17 @@ class SupportCrmScreen extends StatefulWidget {
 }
 
 class _SupportCrmScreenState extends State<SupportCrmScreen> {
-  String _tab = 'Inbox';
-  AdminTicket _selected = AdminMockData.tickets.first;
+  Future<List<SupportTicketDto>>? _future;
   final _reply = TextEditingController();
-  final Map<String, List<String>> _threads = {
-    for (final ticket in AdminMockData.tickets)
-      ticket.id: [
-        'Support thread opened.',
-        'Admin note: verify related booking.',
-      ],
-  };
+  String _filter = 'All';
+  String? _selectedId;
+  bool _updating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= TrustSafetyScope.of(context).adminSupportTickets(force: true);
+  }
 
   @override
   void dispose() {
@@ -25,152 +26,58 @@ class _SupportCrmScreenState extends State<SupportCrmScreen> {
     super.dispose();
   }
 
-  bool _matches(AdminTicket ticket) {
-    if (_tab == 'Inbox') return true;
-    return ticket.status == _tab;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tickets = AdminMockData.tickets.where(_matches).toList();
-    final messages = _threads[_selected.id]!;
-    return Column(
-      children: [
-        const _LiveSupportPanel(),
-        const SizedBox(height: 14),
-        AdminFilterBar(
-          filters: const [
-            'Inbox',
-            'Open',
-            'Waiting on User',
-            'Escalated',
-            'Resolved'
-          ],
-          selected: _tab,
-          onSelected: (value) => setState(() => _tab = value),
-        ),
-        const SizedBox(height: 18),
-        _TwoPane(
-          leftFlex: 3,
-          rightFlex: 4,
-          left: AdminSurface(
-            child: tickets.isEmpty
-                ? const AdminEmptyState(
-                    icon: Icons.forum_outlined,
-                    title: 'No tickets here',
-                    message: 'Nothing in this queue right now.',
-                  )
-                : Column(
-                    children: tickets.map((ticket) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selected = ticket),
-                          child: AdminUserMiniCard(
-                            name: '${ticket.id} - ${ticket.user}',
-                            detail:
-                                '${ticket.category} - ${ticket.age} - ${ticket.lastMessage}',
-                            badge: ticket.priority,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-          ),
-          right: AdminSurface(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _headline(context, _selected.id),
-                const SizedBox(height: 8),
-                _text(context,
-                    '${_selected.source} - ${_selected.category} - Assigned ${_selected.assignedTo}'),
-                const SizedBox(height: 12),
-                ...messages.map((message) => _bullet(context, message)),
-                const SizedBox(height: 12),
-                CoreTextField(
-                  controller: _reply,
-                  label: 'Write a reply',
-                  icon: Icons.reply_rounded,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _tinyAction(
-                        context,
-                        'Send response',
-                        _reply.text.trim().isEmpty
-                            ? null
-                            : () => setState(() {
-                                  messages.add(_reply.text.trim());
-                                  _reply.clear();
-                                })),
-                    _tinyAction(context, 'Change status',
-                        () => setState(() => _tab = 'Open')),
-                    _tinyAction(
-                        context, 'Assign admin', () => _staffSheet(context)),
-                    _tinyAction(
-                        context,
-                        'Escalate',
-                        () => Navigator.pushNamed(
-                            context, SuperAdminRoutes.disputeCase)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+  void _refresh() {
+    setState(
+      () => _future =
+          TrustSafetyScope.of(context).adminSupportTickets(force: true),
     );
   }
-}
 
-class _LiveSupportPanel extends StatefulWidget {
-  const _LiveSupportPanel();
-
-  @override
-  State<_LiveSupportPanel> createState() => _LiveSupportPanelState();
-}
-
-class _LiveSupportPanelState extends State<_LiveSupportPanel> {
-  late Future<List<SupportTicketDto>> _future;
-  bool _updating = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final trustSafety = TrustSafetyScope.maybeOf(context);
-    _future = trustSafety == null
-        ? Future.value(const <SupportTicketDto>[])
-        : trustSafety.adminSupportTickets(force: true);
+  List<SupportTicketDto> _visible(List<SupportTicketDto> tickets) {
+    if (_filter == 'All') return tickets;
+    return tickets.where((ticket) => ticket.status == _filter).toList();
   }
 
-  Future<void> _update(SupportTicketDto ticket, String action) async {
-    final trustSafety = TrustSafetyScope.maybeOf(context);
-    if (trustSafety == null || _updating) return;
+  Future<void> _update(
+    SupportTicketDto ticket, {
+    String? status,
+    bool assignToMe = false,
+  }) async {
+    if (_updating) return;
     setState(() => _updating = true);
     try {
-      if (action == 'reply') {
-        await trustSafety.createSupportMessage(
-          ticketId: ticket.publicId,
-          body: 'Admin response sent from Flutter Support CRM.',
-          internalNote: true,
-        );
-      } else {
-        await trustSafety.updateSupportTicket(ticket.publicId, {
-          'status': action,
-          'assign_to_me': true,
-        });
-      }
+      await TrustSafetyScope.of(context).updateSupportTicket(
+        ticket.publicId,
+        {
+          if (status != null) 'status': status,
+          if (assignToMe) 'assign_to_me': true,
+        },
+      );
       if (!mounted) return;
-      setState(() => _future = trustSafety.adminSupportTickets(force: true));
-      showCoreSnack(context, 'Live support ticket updated');
-    } catch (_) {
-      if (mounted) showCoreSnack(context, 'Could not update live ticket');
+      showCoreSnack(context, 'Support ticket updated.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  Future<void> _sendReply(SupportTicketDto ticket) async {
+    final body = _reply.text.trim();
+    if (body.isEmpty || _updating) return;
+    setState(() => _updating = true);
+    try {
+      await TrustSafetyScope.of(context).createSupportMessage(
+        ticketId: ticket.publicId,
+        body: body,
+      );
+      if (!mounted) return;
+      _reply.clear();
+      showCoreSnack(context, 'Response sent to the member.');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _updating = false);
     }
@@ -181,65 +88,277 @@ class _LiveSupportPanelState extends State<_LiveSupportPanel> {
     return FutureBuilder<List<SupportTicketDto>>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LinearProgressIndicator(minHeight: 2);
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snapshot.hasError) {
-          return const InlineNotice(
-            message:
-                'Live Support CRM unavailable — showing preview support tickets.',
-            tone: CoreStatusTone.warning,
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
+              children: [
+                AdminEmptyState(
+                  icon: Icons.support_agent_outlined,
+                  title: 'Could not load support tickets',
+                  message: error is ApiException
+                      ? error.message
+                      : 'Check the backend connection and try again.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
+              ],
+            ),
           );
         }
-        final rows = snapshot.data ?? const <SupportTicketDto>[];
-        if (rows.isEmpty) {
-          return const InlineNotice(
-            message:
-                'No live support tickets are open — preview tickets remain below.',
-          );
-        }
-        final ticket = rows.first;
-        return AdminSurface(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              AdminStatusBadge(
-                label: '${rows.length} live tickets',
-                tone: AdminDecisionTone.info,
+        final all = snapshot.data ?? const <SupportTicketDto>[];
+        final tickets = _visible(all);
+        final selected = tickets.isEmpty
+            ? null
+            : tickets.firstWhere(
+                (ticket) => ticket.publicId == _selectedId,
+                orElse: () => tickets.first,
+              );
+        return Column(
+          children: [
+            AdminSurface(
+              child: Column(
+                children: [
+                  AdminFilterBar(
+                    filters: const [
+                      'All',
+                      'open',
+                      'in_progress',
+                      'waiting_on_user',
+                      'escalated',
+                      'resolved',
+                    ],
+                    selected: _filter,
+                    onSelected: (value) => setState(() => _filter = value),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: AdminActionButton(
+                      icon: Icons.refresh_rounded,
+                      label: 'Refresh',
+                      secondary: true,
+                      onTap: _refresh,
+                    ),
+                  ),
+                ],
               ),
-              AdminStatusBadge(
-                label: ticket.priority,
-                tone: ticket.priority == 'urgent'
-                    ? AdminDecisionTone.danger
-                    : AdminDecisionTone.warning,
+            ),
+            const SizedBox(height: 16),
+            _TwoPane(
+              leftFlex: 3,
+              rightFlex: 4,
+              left: AdminSurface(
+                child: tickets.isEmpty
+                    ? const AdminEmptyState(
+                        icon: Icons.forum_outlined,
+                        title: 'No tickets here',
+                        message: 'This service queue is currently clear.',
+                      )
+                    : Column(
+                        children: [
+                          for (final ticket in tickets)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _SupportTicketCard(
+                                ticket: ticket,
+                                selected: ticket.publicId == selected?.publicId,
+                                onTap: () => setState(
+                                  () => _selectedId = ticket.publicId,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
               ),
-              Text(
-                '${ticket.publicId} · ${ticket.subject} · ${ticket.status}',
-                style: AppTextStyles.caption
-                    .copyWith(color: context.appColors.textSecondary),
+              right: AdminSurface(
+                child: selected == null
+                    ? const AdminEmptyState(
+                        icon: Icons.mark_email_read_outlined,
+                        title: 'No ticket selected',
+                        message: 'Choose a ticket to view its controls.',
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _headline(context, selected.subject),
+                          const SizedBox(height: 7),
+                          Wrap(
+                            spacing: 7,
+                            runSpacing: 7,
+                            children: [
+                              AdminStatusBadge(
+                                label: selected.publicId,
+                                tone: AdminDecisionTone.info,
+                              ),
+                              AdminStatusBadge(
+                                label: selected.status,
+                                tone: selected.status == 'resolved'
+                                    ? AdminDecisionTone.success
+                                    : AdminDecisionTone.warning,
+                              ),
+                              AdminStatusBadge(
+                                label: selected.priority,
+                                tone: selected.priority == 'urgent'
+                                    ? AdminDecisionTone.danger
+                                    : AdminDecisionTone.neutral,
+                              ),
+                              AdminStatusBadge(
+                                label: '${selected.messageCount} messages',
+                                tone: AdminDecisionTone.neutral,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          CoreTextField(
+                            controller: _reply,
+                            label: 'Write a member response',
+                            icon: Icons.reply_rounded,
+                            maxLines: 4,
+                            onChanged: (_) => setState(() {}),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              AdminActionButton(
+                                icon: Icons.send_outlined,
+                                label: 'Send response',
+                                onTap: _reply.text.trim().isEmpty || _updating
+                                    ? null
+                                    : () => _sendReply(selected),
+                              ),
+                              AdminActionButton(
+                                icon: Icons.person_add_alt_1_outlined,
+                                label: 'Assign to me',
+                                secondary: true,
+                                onTap: _updating
+                                    ? null
+                                    : () => _update(
+                                          selected,
+                                          assignToMe: true,
+                                        ),
+                              ),
+                              AdminActionButton(
+                                icon: Icons.hourglass_top_rounded,
+                                label: 'Waiting on user',
+                                secondary: true,
+                                onTap: _updating
+                                    ? null
+                                    : () => _update(
+                                          selected,
+                                          status: 'waiting_on_user',
+                                        ),
+                              ),
+                              AdminActionButton(
+                                icon: Icons.priority_high_rounded,
+                                label: 'Escalate',
+                                secondary: true,
+                                onTap: _updating
+                                    ? null
+                                    : () => _update(
+                                          selected,
+                                          status: 'escalated',
+                                        ),
+                              ),
+                              AdminActionButton(
+                                icon: Icons.task_alt_outlined,
+                                label: 'Resolve',
+                                secondary: true,
+                                onTap:
+                                    _updating || selected.status == 'resolved'
+                                        ? null
+                                        : () => _update(
+                                              selected,
+                                              status: 'resolved',
+                                            ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
               ),
-              _tinyAction(
-                context,
-                _updating ? 'Updating...' : 'Assign live',
-                _updating ? null : () => _update(ticket, ticket.status),
-              ),
-              _tinyAction(
-                context,
-                _updating ? 'Updating...' : 'Reply live',
-                _updating ? null : () => _update(ticket, 'reply'),
-              ),
-              _tinyAction(
-                context,
-                _updating ? 'Updating...' : 'Resolve live',
-                _updating ? null : () => _update(ticket, 'resolved'),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+class _SupportTicketCard extends StatelessWidget {
+  final SupportTicketDto ticket;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SupportTicketCard({
+    required this.ticket,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(0, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? colors.goldGlow.withValues(alpha: 0.12)
+              : colors.softSurface.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? colors.goldMid : colors.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 34,
+              color: selected ? colors.goldMid : Colors.transparent,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _text(context, ticket.subject, strong: true),
+                  _text(
+                    context,
+                    '${ticket.publicId} · ${ticket.category} · '
+                    '${ticket.messageCount} messages',
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: ticket.priority == 'urgent'
+                    ? colors.danger
+                    : colors.goldMid,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

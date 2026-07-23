@@ -1,16 +1,7 @@
 part of '../super_admin_screens.dart';
 
-class RevenueSettingsScreen extends StatefulWidget {
+class RevenueSettingsScreen extends StatelessWidget {
   const RevenueSettingsScreen({super.key});
-
-  @override
-  State<RevenueSettingsScreen> createState() => _RevenueSettingsScreenState();
-}
-
-class _RevenueSettingsScreenState extends State<RevenueSettingsScreen> {
-  bool _autoInvoice = true;
-  bool _autoSettlement = false;
-  bool _holdHighValue = true;
 
   @override
   Widget build(BuildContext context) {
@@ -18,132 +9,70 @@ class _RevenueSettingsScreenState extends State<RevenueSettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AdminSurface(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AdminSectionHeader(title: 'This Month'),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: const [
-                  AdminStatusBadge(
-                      label: 'Revenue PKR 2.8M',
-                      tone: AdminDecisionTone.success),
-                  AdminStatusBadge(
-                      label: '+22% vs last month',
-                      tone: AdminDecisionTone.info),
-                  AdminStatusBadge(
-                      label: '14 invoices generated',
-                      tone: AdminDecisionTone.neutral),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        AdminSurface(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AdminSectionHeader(title: 'Fee Rules'),
-              const SizedBox(height: 6),
-              _settingsToggle(
-                context,
-                title: 'Auto-generate monthly invoices',
-                subtitle:
-                    'Create invoices for all settled bookings automatically.',
-                value: _autoInvoice,
-                onChanged: (v) => setState(() => _autoInvoice = v),
-              ),
-              _settingsToggle(
-                context,
-                title: 'Auto-release settlements',
-                subtitle:
-                    'Release verified payouts without a manual review step.',
-                value: _autoSettlement,
-                onChanged: (v) => setState(() => _autoSettlement = v),
-              ),
-              _settingsToggle(
-                context,
-                title: 'Hold high-value proofs for review',
-                subtitle:
-                    'Proofs above PKR 200,000 always require manual sign-off.',
-                value: _holdHighValue,
-                onChanged: (v) => setState(() => _holdHighValue = v),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        AdminSurface(
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              AdminActionButton(
-                icon: Icons.save_outlined,
-                label: 'Save Settings',
-                onTap: () => showCoreSnack(context, 'Revenue settings saved'),
-              ),
-              AdminActionButton(
-                icon: Icons.percent_rounded,
-                label: 'Open Commission & Fees',
-                secondary: true,
-                onTap: () =>
-                    Navigator.pushNamed(context, SuperAdminRoutes.fees),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _settingsToggle(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+          padding: EdgeInsets.zero,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  title,
-                  style: AppTextStyles.label.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                Container(
+                  width: 6,
+                  decoration: BoxDecoration(
+                    color: context.appColors.goldMid,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(8),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption
-                      .copyWith(color: colors.textSecondary),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _headline(context, 'Revenue controls'),
+                        const SizedBox(height: 6),
+                        _text(
+                          context,
+                          'Commission calculations are governed by the active '
+                          'backend fee rules below. Payment verification and '
+                          'settlement release remain separate approval steps.',
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            AdminActionButton(
+                              icon: Icons.receipt_long_outlined,
+                              label: 'Payment ledger',
+                              secondary: true,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                SuperAdminRoutes.paymentLedger,
+                              ),
+                            ),
+                            AdminActionButton(
+                              icon: Icons.analytics_outlined,
+                              label: 'Revenue analytics',
+                              secondary: true,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                SuperAdminRoutes.analytics,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: colors.goldDark,
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 14),
+        const CommissionFeeScreen(),
+      ],
     );
   }
 }

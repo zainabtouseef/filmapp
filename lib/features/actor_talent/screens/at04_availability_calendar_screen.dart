@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/bookings/booking_models.dart' as booking_models;
 import '../../../core/bookings/bookings_controller.dart';
@@ -21,16 +22,25 @@ class AT04AvailabilityCalendarScreen extends StatefulWidget {
 
 class _AT04AvailabilityCalendarScreenState
     extends State<AT04AvailabilityCalendarScreen> {
-  int selectedDay = 3;
+  DateTime selectedDate = DateTime.now();
   Future<List<booking_models.AvailabilityEntry>>? _availabilityFuture;
+  List<booking_models.AvailabilityEntry> _liveEntries = const [];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final bookings = BookingsScope.maybeOf(context);
     if (bookings != null) {
-      _availabilityFuture ??= bookings.availability();
+      _availabilityFuture ??= _loadAvailability(bookings);
     }
+  }
+
+  Future<List<booking_models.AvailabilityEntry>> _loadAvailability(
+    BookingsController bookings,
+  ) async {
+    final rows = await bookings.availability();
+    if (mounted) setState(() => _liveEntries = rows);
+    return rows;
   }
 
   @override
@@ -48,8 +58,9 @@ class _AT04AvailabilityCalendarScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DateStrip(
-                    selectedDay: selectedDay,
-                    onSelected: (day) => setState(() => selectedDay = day),
+                    selectedDate: selectedDate,
+                    statuses: _dateStatuses(),
+                    onSelected: (date) => setState(() => selectedDate = date),
                   ),
                   const SizedBox(height: 12),
                   _Legend(),
@@ -58,8 +69,10 @@ class _AT04AvailabilityCalendarScreenState
             ),
             const SizedBox(height: 12),
             ActorSectionCard(
-              title: 'Live Availability Entries',
+              title: 'Availability Entries',
               icon: Icons.cloud_done_outlined,
+              actionText: _availabilityFuture == null ? null : 'Refresh',
+              onActionTap: _refreshAvailability,
               child: FutureBuilder<List<booking_models.AvailabilityEntry>>(
                 future: _availabilityFuture,
                 builder: (context, snapshot) {
@@ -71,7 +84,25 @@ class _AT04AvailabilityCalendarScreenState
                     );
                   }
                   final rows = snapshot.data ?? const [];
-                  if (snapshot.hasError || rows.isEmpty) {
+                  if (snapshot.hasError) {
+                    return Column(
+                      children: [
+                        const CoreEmptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: 'Could not load availability',
+                          message: 'Check your connection and try again.',
+                        ),
+                        const SizedBox(height: 8),
+                        CoreSecondaryButton(
+                          icon: Icons.refresh_rounded,
+                          label: 'Try again',
+                          compact: true,
+                          onTap: _refreshAvailability,
+                        ),
+                      ],
+                    );
+                  }
+                  if (rows.isEmpty) {
                     return const CoreEmptyState(
                       icon: Icons.event_available_outlined,
                       title: 'No live entries yet',
@@ -87,7 +118,7 @@ class _AT04AvailabilityCalendarScreenState
                               : Icons.event_available_outlined,
                           label: row.status,
                           value:
-                              '${row.startAt.toLocal().toString().split('.').first} → ${row.endAt.toLocal().toString().split('.').first}',
+                              '${DateFormat('MMM d, h:mm a').format(row.startAt.toLocal())} - ${DateFormat('MMM d, h:mm a').format(row.endAt.toLocal())}',
                         ),
                     ],
                   );
@@ -100,8 +131,11 @@ class _AT04AvailabilityCalendarScreenState
                 title: 'Selected Day Agenda',
                 icon: Icons.event_note_outlined,
                 actionText: 'Edit',
-                onActionTap: () => _openStatusSheet(context, selectedDay),
-                child: _Agenda(day: selectedDay),
+                onActionTap: () => _openStatusSheet(context, selectedDate),
+                child: _Agenda(
+                  date: selectedDate,
+                  status: _statusForDate(selectedDate),
+                ),
               ),
               right: ActorSectionCard(
                 title: 'Travel Limits',
@@ -123,10 +157,7 @@ class _AT04AvailabilityCalendarScreenState
                     ActorInfoRow(
                       icon: Icons.lock_clock_outlined,
                       label: 'Secured bookings',
-                      value: store.availability.values
-                          .where((s) => s == ActorAvailabilityStatus.booked)
-                          .length
-                          .toString(),
+                      value: _securedBookingCount().toString(),
                     ),
                   ],
                 ),
@@ -177,53 +208,69 @@ class _AT04AvailabilityCalendarScreenState
     );
   }
 
-  void _openStatusSheet(BuildContext context, int day) {
+  void _refreshAvailability() {
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) return;
+    setState(() => _availabilityFuture = _loadAvailability(bookings));
+  }
+
+  void _openStatusSheet(BuildContext context, DateTime date) {
     showActorSheet(
       context,
-      title: 'Set Jul $day status',
+      title: 'Set ${DateFormat('MMM d').format(date)} status',
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
           for (final status in ActorAvailabilityStatus.values)
-            ElevatedButton.icon(
-              onPressed: () async {
-                ActorTalentDemoStore.instance.setAvailability(day, status);
-                Navigator.pop(context);
-                await _saveLiveAvailability(day, status);
-              },
-              icon: Icon(_statusIcon(status), size: 18),
-              label: Text(_statusLabel(status)),
-            ),
+            if (status != ActorAvailabilityStatus.booked)
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _saveLiveAvailability(date, status);
+                },
+                icon: Icon(_statusIcon(status), size: 18),
+                label: Text(_statusLabel(status)),
+              ),
         ],
       ),
     );
   }
 
   Future<void> _saveLiveAvailability(
-    int day,
+    DateTime date,
     ActorAvailabilityStatus status,
   ) async {
-    final now = DateTime.now().toUtc();
-    final start = DateTime.utc(now.year, now.month, day, 9);
+    final start = DateTime(date.year, date.month, date.day, 9).toUtc();
     final end = start.add(const Duration(hours: 8));
+    final label = DateFormat('MMM d').format(date);
     final bookings = BookingsScope.maybeOf(context);
     if (bookings == null) {
-      actorSnack(context, 'Jul $day marked ${_statusLabel(status)}');
+      ActorTalentDemoStore.instance.setAvailability(date.day, status);
+      actorSnack(context, '$label marked ${_statusLabel(status)}');
       return;
     }
     try {
-      await bookings.createAvailability(
-        startAt: start.toIso8601String(),
-        endAt: end.toIso8601String(),
-        status: _backendStatus(status),
-        note: 'Saved from Flutter availability calendar',
-      );
+      final existing = _manualEntryForDate(date);
+      if (existing == null) {
+        await bookings.createAvailability(
+          startAt: start.toIso8601String(),
+          endAt: end.toIso8601String(),
+          status: _backendStatus(status),
+          note: 'Talent availability',
+        );
+      } else {
+        await bookings.updateAvailability(
+          entryId: existing.publicId,
+          status: _backendStatus(status),
+          note: 'Talent availability',
+        );
+      }
       if (!mounted) return;
       setState(() {
-        _availabilityFuture = bookings.availability();
+        _availabilityFuture = _loadAvailability(bookings);
       });
-      actorSnack(context, 'Jul $day marked ${_statusLabel(status)}');
+      actorSnack(context, '$label marked ${_statusLabel(status)}');
     } catch (error) {
       if (!mounted) return;
       actorSnack(context, '$error');
@@ -238,20 +285,76 @@ class _AT04AvailabilityCalendarScreenState
       ActorAvailabilityStatus.unavailable => 'blocked',
     };
   }
+
+  Map<DateTime, ActorAvailabilityStatus> _dateStatuses() {
+    return {
+      for (var offset = 0; offset < 14; offset++)
+        DateUtils.dateOnly(DateTime.now().add(Duration(days: offset))):
+            _statusForDate(DateTime.now().add(Duration(days: offset))),
+    };
+  }
+
+  ActorAvailabilityStatus _statusForDate(DateTime date) {
+    if (BookingsScope.maybeOf(context) == null) {
+      return ActorTalentDemoStore.instance.availability[date.day] ??
+          ActorAvailabilityStatus.available;
+    }
+    final matching =
+        _liveEntries.where((entry) => _entryCoversDate(entry, date));
+    if (matching.any((entry) => entry.status == 'booked')) {
+      return ActorAvailabilityStatus.booked;
+    }
+    if (matching.any((entry) => entry.status == 'blocked')) {
+      return ActorAvailabilityStatus.unavailable;
+    }
+    if (matching.any((entry) => entry.status == 'hold')) {
+      return ActorAvailabilityStatus.tentative;
+    }
+    return ActorAvailabilityStatus.available;
+  }
+
+  booking_models.AvailabilityEntry? _manualEntryForDate(DateTime date) {
+    for (final entry in _liveEntries) {
+      if (entry.sourceBookingId == null && _entryCoversDate(entry, date)) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  bool _entryCoversDate(
+    booking_models.AvailabilityEntry entry,
+    DateTime date,
+  ) {
+    final dayStart = DateUtils.dateOnly(date);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    final entryStart = entry.startAt.toLocal();
+    final entryEnd = entry.endAt.toLocal();
+    return entryStart.isBefore(dayEnd) && entryEnd.isAfter(dayStart);
+  }
+
+  int _securedBookingCount() {
+    return _liveEntries
+        .where((entry) => entry.status == 'booked')
+        .map((entry) => entry.sourceBookingId ?? entry.publicId)
+        .toSet()
+        .length;
+  }
 }
 
 class _DateStrip extends StatelessWidget {
-  final int selectedDay;
-  final ValueChanged<int> onSelected;
+  final DateTime selectedDate;
+  final Map<DateTime, ActorAvailabilityStatus> statuses;
+  final ValueChanged<DateTime> onSelected;
 
   const _DateStrip({
-    required this.selectedDay,
+    required this.selectedDate,
+    required this.statuses,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    final store = ActorTalentDemoStore.instance;
     return SizedBox(
       height: 74,
       child: ListView.separated(
@@ -259,14 +362,15 @@ class _DateStrip extends StatelessWidget {
         itemCount: 14,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final day = index + 1;
-          final status =
-              store.availability[day] ?? ActorAvailabilityStatus.available;
-          final active = day == selectedDay;
+          final date = DateUtils.dateOnly(
+            DateTime.now().add(Duration(days: index)),
+          );
+          final status = statuses[date] ?? ActorAvailabilityStatus.available;
+          final active = DateUtils.isSameDay(date, selectedDate);
           return GestureDetector(
-            onTap: () => onSelected(day),
+            onTap: () => onSelected(date),
             child: Container(
-              width: 54,
+              width: 60,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: active
@@ -283,7 +387,16 @@ class _DateStrip extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '$day',
+                    DateFormat('E').format(date),
+                    style: AppTextStyles.micro.copyWith(
+                      color: active
+                          ? context.appColors.onGold
+                          : context.appColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    DateFormat('d').format(date),
                     style: AppTextStyles.cardLabel.copyWith(
                       color: active
                           ? context.appColors.onGold
@@ -328,20 +441,22 @@ class _Legend extends StatelessWidget {
 }
 
 class _Agenda extends StatelessWidget {
-  final int day;
+  final DateTime date;
+  final ActorAvailabilityStatus status;
 
-  const _Agenda({required this.day});
+  const _Agenda({
+    required this.date,
+    required this.status,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final status = ActorTalentDemoStore.instance.availability[day] ??
-        ActorAvailabilityStatus.available;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ActorInfoRow(
           icon: _statusIcon(status),
-          label: 'Jul $day',
+          label: DateFormat('EEEE, MMM d').format(date),
           value: _statusLabel(status),
         ),
         const ActorInfoRow(

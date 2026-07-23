@@ -26,12 +26,16 @@ class UserProfile {
   final ProfileCity? city;
   final String? websiteUrl;
   final String visibility;
+  final double ratingAverage;
+  final int reviewCount;
 
   const UserProfile({
     required this.bio,
     required this.city,
     required this.websiteUrl,
     required this.visibility,
+    required this.ratingAverage,
+    required this.reviewCount,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -41,6 +45,8 @@ class UserProfile {
       city: city == null ? null : ProfileCity.fromJson(city),
       websiteUrl: json['website_url'] as String?,
       visibility: json['profile_visibility'] as String? ?? 'private',
+      ratingAverage: (json['rating_average'] as num?)?.toDouble() ?? 0,
+      reviewCount: json['review_count'] as int? ?? 0,
     );
   }
 }

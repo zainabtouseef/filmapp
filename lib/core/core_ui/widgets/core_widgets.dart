@@ -469,6 +469,7 @@ class CoreTextField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final int maxLines;
+  final bool enabled;
   final Widget? suffix;
   final ValueChanged<String>? onChanged;
 
@@ -481,6 +482,7 @@ class CoreTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.maxLines = 1,
+    this.enabled = true,
     this.suffix,
     this.onChanged,
   });
@@ -494,6 +496,7 @@ class CoreTextField extends StatelessWidget {
       keyboardType: keyboardType,
       maxLines: maxLines,
       minLines: maxLines > 1 ? 3 : 1,
+      enabled: enabled,
       onChanged: onChanged,
       style: AppTextStyles.body.copyWith(color: colors.textPrimary),
       decoration: InputDecoration(

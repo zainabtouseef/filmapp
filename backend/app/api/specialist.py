@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.api.auth import _current_user, _json_body
 from app.api.bookings import _user_payload
@@ -24,7 +24,7 @@ from app.api.projects import _optional_date
 from app.errors import APIError
 from app.extensions import db
 from app.models.base import utc_now
-from app.models.bookings import Booking
+from app.models.bookings import Booking, Conversation, ConversationMember
 from app.models.identity import User
 from app.models.marketplace import (
     ModelCampaignCategory,
@@ -60,6 +60,25 @@ from app.models.specialist import (
 from app.responses import success
 
 specialist_blueprint = Blueprint("specialist", __name__)
+
+BRAND_OPPORTUNITY_STATUSES = {"draft", "published", "paused", "closed"}
+BRAND_APPLICATION_STATUSES = {
+    "submitted",
+    "reviewing",
+    "shortlisted",
+    "negotiating",
+    "accepted",
+    "rejected",
+    "withdrawn",
+}
+BRAND_TERM_STATUSES = {"draft", "negotiating", "accepted", "rejected", "superseded"}
+CAMPAIGN_DELIVERABLE_STATUSES = {
+    "pending",
+    "submitted",
+    "revision_requested",
+    "approved",
+    "cancelled",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -266,10 +285,16 @@ def _brand_term_payload(item: BrandTerm) -> dict[str, Any]:
 def _brand_application_payload(item: BrandApplication) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
+        "opportunity": {
+            "public_id": item.opportunity.public_id,
+            "title": item.opportunity.title,
+            "status": item.opportunity.status,
+        },
         "applicant": _user_payload(item.applicant),
         "talent_profile_id": item.talent_profile.public_id
         if item.talent_profile
         else None,
+        "conversation_id": item.conversation.public_id if item.conversation else None,
         "proposal": item.proposal,
         "audience_metrics": json.loads(item.audience_metrics_json)
         if item.audience_metrics_json
@@ -277,7 +302,9 @@ def _brand_application_payload(item: BrandApplication) -> dict[str, Any]:
         "budget_ask_minor": item.budget_ask_minor,
         "currency": item.currency,
         "status": item.status,
+        "rejection_reason": item.rejection_reason,
         "terms": [_brand_term_payload(row) for row in item.terms],
+        "created_at": item.created_at.isoformat(),
     }
 
 
@@ -300,6 +327,8 @@ def _brand_opportunity_payload(
         else None,
         "status": item.status,
         "cover_file": _file_payload(item.cover_file),
+        "application_count": len(item.applications),
+        "created_at": item.created_at.isoformat(),
     }
     if include_applications:
         payload["applications"] = [
@@ -330,6 +359,7 @@ def _deliverable_payload(item: CampaignDeliverable) -> dict[str, Any]:
         "due_at": item.due_at.isoformat() if item.due_at else None,
         "proof_file": _file_payload(item.proof_file),
         "status": item.status,
+        "revision_note": item.revision_note,
         "approved_at": item.approved_at.isoformat() if item.approved_at else None,
         "metrics": [_campaign_metric_payload(row) for row in item.metrics],
     }
@@ -917,6 +947,16 @@ def create_brand_opportunity() -> ResponseReturnValue:
         project = db.session.execute(
             select(Project).where(Project.public_id == project_public_id)
         ).scalar_one_or_none()
+    status = str(payload.get("status", "draft")).strip()
+    if status not in BRAND_OPPORTUNITY_STATUSES:
+        raise _field_error("status", "Opportunity status is invalid.")
+    cover_file = None
+    if str(payload.get("cover_file_id", "")).strip():
+        cover_file = _owned_ready_file(
+            str(payload.get("cover_file_id")).strip(),
+            user.id,
+            "cover_file_id",
+        )
     item = BrandOpportunity(
         brand_profile_id=brand.id,
         project_id=project.id if project else None,
@@ -932,7 +972,8 @@ def create_brand_opportunity() -> ResponseReturnValue:
         )
         if payload.get("application_due_at")
         else None,
-        status=str(payload.get("status", "draft")).strip()[:32],
+        status=status,
+        cover_file_id=cover_file.id if cover_file else None,
     )
     db.session.add(item)
     db.session.commit()
@@ -985,6 +1026,57 @@ def get_brand_opportunity(public_id: str) -> Response:
     return jsonify(success({"opportunity": _brand_opportunity_payload(opportunity)}))
 
 
+@specialist_blueprint.patch("/brand-opportunities/<public_id>")
+def update_brand_opportunity(public_id: str) -> Response:
+    user = _current_user()
+    item = _opportunity_or_404(public_id)
+    if item.brand_profile.owner_user_id != user.id:
+        raise APIError(
+            "brand_opportunity.permission_denied",
+            "Only the brand can update this opportunity.",
+            status=403,
+        )
+    payload = _json_body()
+    if "title" in payload:
+        title = str(payload.get("title", "")).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Opportunity title is required.")
+        item.title = title[:180]
+    if "category" in payload:
+        item.category = str(payload.get("category", "")).strip()[:64]
+    if "budget_minor" in payload:
+        item.budget_minor = int(payload.get("budget_minor") or 0) or None
+    if "currency" in payload:
+        item.currency = str(payload.get("currency", "PKR")).strip()[:3]
+    if "usage_summary" in payload:
+        item.usage_summary = (
+            str(payload.get("usage_summary", "")).strip()[:2000] or None
+        )
+    if "eligibility" in payload:
+        item.eligibility = str(payload.get("eligibility", "")).strip()[:2000] or None
+    if "deliverables" in payload:
+        item.deliverables = str(payload.get("deliverables", "")).strip()[:2000] or None
+    if "application_due_at" in payload:
+        item.application_due_at = (
+            _parse_datetime(payload["application_due_at"], "application_due_at")
+            if payload.get("application_due_at")
+            else None
+        )
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip()
+        if status not in BRAND_OPPORTUNITY_STATUSES:
+            raise _field_error("status", "Opportunity status is invalid.")
+        item.status = status
+    if str(payload.get("cover_file_id", "")).strip():
+        item.cover_file_id = _owned_ready_file(
+            str(payload.get("cover_file_id")).strip(),
+            user.id,
+            "cover_file_id",
+        ).id
+    db.session.commit()
+    return jsonify(success({"opportunity": _brand_opportunity_payload(item)}))
+
+
 @specialist_blueprint.post("/brand-opportunities/<public_id>/applications")
 def create_brand_application(public_id: str) -> ResponseReturnValue:
     user = _current_user()
@@ -1030,6 +1122,33 @@ def list_brand_applications(public_id: str) -> Response:
     )
 
 
+@specialist_blueprint.get("/brand-applications")
+def list_owner_brand_applications() -> Response:
+    user = _current_user()
+    brand = _brand_for_owner(user)
+    opportunity_id = request.args.get("opportunity_id")
+    query = (
+        select(BrandApplication)
+        .join(BrandOpportunity)
+        .where(BrandOpportunity.brand_profile_id == brand.id)
+    )
+    if opportunity_id:
+        opportunity = _opportunity_or_404(opportunity_id)
+        if opportunity.brand_profile_id != brand.id:
+            raise APIError(
+                "brand_opportunity.permission_denied",
+                "Applications are not visible.",
+                status=403,
+            )
+        query = query.where(BrandApplication.opportunity_id == opportunity.id)
+    rows = db.session.execute(
+        query.order_by(BrandApplication.created_at.desc())
+    ).scalars()
+    return jsonify(
+        success({"applications": [_brand_application_payload(row) for row in rows]})
+    )
+
+
 def _application_for_participant(public_id: str, user: User) -> BrandApplication:
     application = db.session.execute(
         select(BrandApplication).where(BrandApplication.public_id == public_id)
@@ -1050,6 +1169,13 @@ def _application_for_participant(public_id: str, user: User) -> BrandApplication
     return application
 
 
+@specialist_blueprint.get("/brand-applications/<public_id>")
+def get_brand_application(public_id: str) -> Response:
+    user = _current_user()
+    application = _application_for_participant(public_id, user)
+    return jsonify(success({"application": _brand_application_payload(application)}))
+
+
 @specialist_blueprint.patch("/brand-applications/<public_id>")
 def update_brand_application(public_id: str) -> Response:
     user = _current_user()
@@ -1062,9 +1188,62 @@ def update_brand_application(public_id: str) -> Response:
         )
     payload = _json_body()
     if "status" in payload:
-        application.status = str(payload.get("status", "")).strip()[:32]
+        status = str(payload.get("status", "")).strip()
+        if status not in BRAND_APPLICATION_STATUSES:
+            raise _field_error("status", "Application status is invalid.")
+        application.status = status
+        if status != "rejected":
+            application.rejection_reason = None
+    if "rejection_reason" in payload:
+        if application.status != "rejected":
+            raise _field_error(
+                "rejection_reason",
+                "A rejection reason can only be saved for a rejected application.",
+            )
+        application.rejection_reason = (
+            str(payload.get("rejection_reason", "")).strip()[:2000] or None
+        )
     db.session.commit()
     return jsonify(success({"application": _brand_application_payload(application)}))
+
+
+@specialist_blueprint.post("/brand-applications/<public_id>/conversation")
+def ensure_brand_application_conversation(public_id: str) -> Response:
+    user = _current_user()
+    application = _application_for_participant(public_id, user)
+    if application.conversation is None:
+        conversation = Conversation(
+            project_id=application.opportunity.project_id,
+            type="brand_application",
+            title=(
+                f"{application.opportunity.title} - "
+                f"{application.applicant.display_name}"
+            )[:180],
+        )
+        db.session.add(conversation)
+        db.session.flush()
+        db.session.add_all(
+            [
+                ConversationMember(
+                    conversation_id=conversation.id,
+                    user_id=application.opportunity.brand_profile.owner_user_id,
+                ),
+                ConversationMember(
+                    conversation_id=conversation.id,
+                    user_id=application.applicant_user_id,
+                ),
+            ]
+        )
+        application.conversation = conversation
+        db.session.commit()
+    return jsonify(
+        success(
+            {
+                "conversation_id": application.conversation.public_id,
+                "application": _brand_application_payload(application),
+            }
+        )
+    )
 
 
 @specialist_blueprint.post("/brand-applications/<public_id>/terms")
@@ -1073,16 +1252,23 @@ def create_brand_term(public_id: str) -> ResponseReturnValue:
     application = _application_for_participant(public_id, user)
     payload = _json_body()
     next_version = max((row.version for row in application.terms), default=0) + 1
+    status = str(payload.get("status", "negotiating")).strip()
+    if status not in BRAND_TERM_STATUSES:
+        raise _field_error("status", "Term status is invalid.")
     term = BrandTerm(
         application_id=application.id,
         scope=str(payload.get("scope", "")).strip()[:2000] or None,
         exclusivity=str(payload.get("exclusivity", "")).strip()[:255] or None,
         approval_rights=str(payload.get("approval_rights", "")).strip()[:255] or None,
         payment_schedule_json=json.dumps(payload.get("payment_schedule", [])),
-        status=str(payload.get("status", "negotiating")).strip()[:32],
+        status=status,
         version=next_version,
     )
     db.session.add(term)
+    if status == "accepted":
+        application.status = "accepted"
+    elif application.status in {"submitted", "reviewing", "shortlisted"}:
+        application.status = "negotiating"
     db.session.commit()
     return jsonify(
         success({"application": _brand_application_payload(application)})
@@ -1108,17 +1294,32 @@ def create_campaign_deliverable() -> ResponseReturnValue:
         ).scalar_one_or_none()
     if owner_user is None:
         raise _field_error("owner_user_id", "Deliverable owner was not found.")
+    accepted_application = db.session.execute(
+        select(BrandApplication).where(
+            BrandApplication.opportunity_id == opportunity.id,
+            BrandApplication.applicant_user_id == owner_user.id,
+            BrandApplication.status == "accepted",
+        )
+    ).scalar_one_or_none()
+    if accepted_application is None:
+        raise _field_error(
+            "owner_user_id",
+            "Deliverables can only be assigned to an accepted applicant.",
+        )
     booking = None
     booking_public_id = str(payload.get("booking_id", "")).strip()
     if booking_public_id:
         booking = db.session.execute(
             select(Booking).where(Booking.public_id == booking_public_id)
         ).scalar_one_or_none()
+    label = str(payload.get("label", "")).strip()
+    if len(label) < 2:
+        raise _field_error("label", "Deliverable label is required.")
     item = CampaignDeliverable(
         opportunity_id=opportunity.id,
         booking_id=booking.id if booking else None,
         owner_user_id=owner_user.id,
-        label=str(payload.get("label", "")).strip()[:180],
+        label=label[:180],
         due_at=_parse_datetime(payload["due_at"], "due_at")
         if payload.get("due_at")
         else None,
@@ -1143,7 +1344,22 @@ def list_campaign_deliverables() -> Response:
             )
         query = query.where(CampaignDeliverable.opportunity_id == opportunity.id)
     else:
-        query = query.where(CampaignDeliverable.owner_user_id == user.id)
+        query = (
+            query.join(
+                BrandOpportunity,
+                CampaignDeliverable.opportunity_id == BrandOpportunity.id,
+            )
+            .join(
+                BrandProfile,
+                BrandOpportunity.brand_profile_id == BrandProfile.id,
+            )
+            .where(
+                or_(
+                    CampaignDeliverable.owner_user_id == user.id,
+                    BrandProfile.owner_user_id == user.id,
+                )
+            )
+        )
     rows = db.session.execute(
         query.order_by(CampaignDeliverable.created_at.desc())
     ).scalars()
@@ -1163,6 +1379,63 @@ def _deliverable_or_404(public_id: str) -> CampaignDeliverable:
     return item
 
 
+@specialist_blueprint.patch("/campaign-deliverables/<public_id>")
+def update_campaign_deliverable(public_id: str) -> Response:
+    user = _current_user()
+    item = _deliverable_or_404(public_id)
+    is_brand = item.opportunity.brand_profile.owner_user_id == user.id
+    if not is_brand:
+        raise APIError(
+            "campaign_deliverable.permission_denied",
+            "Only the brand can update this deliverable.",
+            status=403,
+        )
+    payload = _json_body()
+    if "label" in payload:
+        label = str(payload.get("label", "")).strip()
+        if len(label) < 2:
+            raise _field_error("label", "Deliverable label is required.")
+        item.label = label[:180]
+    if "due_at" in payload:
+        item.due_at = (
+            _parse_datetime(payload["due_at"], "due_at")
+            if payload.get("due_at")
+            else None
+        )
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip()
+        if status not in CAMPAIGN_DELIVERABLE_STATUSES:
+            raise _field_error("status", "Deliverable status is invalid.")
+        if status == "submitted":
+            raise _field_error(
+                "status",
+                "Only the deliverable owner can submit proof.",
+            )
+        if status == "revision_requested":
+            if item.status != "submitted" or item.proof_file_id is None:
+                raise APIError(
+                    "campaign_deliverable.not_submitted",
+                    "A submitted proof is required before requesting revision.",
+                    status=409,
+                )
+            revision_note = str(payload.get("revision_note", "")).strip()
+            if len(revision_note) < 4:
+                raise _field_error(
+                    "revision_note",
+                    "Add a clear revision request for the deliverable owner.",
+                )
+            item.revision_note = revision_note[:2000]
+        elif "revision_note" in payload:
+            item.revision_note = (
+                str(payload.get("revision_note", "")).strip()[:2000] or None
+            )
+        item.status = status
+        if status != "approved":
+            item.approved_at = None
+    db.session.commit()
+    return jsonify(success({"deliverable": _deliverable_payload(item)}))
+
+
 @specialist_blueprint.post("/campaign-deliverables/<public_id>/proof")
 def submit_campaign_deliverable_proof(public_id: str) -> Response:
     user = _current_user()
@@ -1179,6 +1452,7 @@ def submit_campaign_deliverable_proof(public_id: str) -> Response:
     )
     item.proof_file_id = file.id
     item.status = "submitted"
+    item.revision_note = None
     db.session.commit()
     return jsonify(success({"deliverable": _deliverable_payload(item)}))
 
@@ -1193,7 +1467,14 @@ def approve_campaign_deliverable(public_id: str) -> Response:
             "Only the brand can approve deliverables.",
             status=403,
         )
+    if item.status != "submitted":
+        raise APIError(
+            "campaign_deliverable.not_submitted",
+            "Proof must be submitted before approval.",
+            status=409,
+        )
     item.status = "approved"
+    item.revision_note = None
     item.approved_at = utc_now()
     db.session.commit()
     return jsonify(success({"deliverable": _deliverable_payload(item)}))

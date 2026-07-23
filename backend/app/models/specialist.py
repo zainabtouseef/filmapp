@@ -17,7 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import Base
 from app.models.base import EntityMixin
-from app.models.bookings import Booking
+from app.models.bookings import Booking, Conversation
 from app.models.files import FileAsset
 from app.models.identity import User, make_public_id
 from app.models.marketplace import City, TalentProfile
@@ -325,15 +325,21 @@ class BrandApplication(EntityMixin, Base):
     talent_profile_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("talent_profiles.id", ondelete="SET NULL")
     )
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("conversations.id", ondelete="SET NULL"),
+        unique=True,
+    )
     proposal: Mapped[str | None] = mapped_column(Text)
     audience_metrics_json: Mapped[str | None] = mapped_column(Text)
     budget_ask_minor: Mapped[int | None] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PKR")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="submitted")
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
 
     opportunity: Mapped[BrandOpportunity] = relationship(back_populates="applications")
     applicant: Mapped[User] = relationship(lazy="joined")
     talent_profile: Mapped[TalentProfile | None] = relationship(lazy="joined")
+    conversation: Mapped[Conversation | None] = relationship(lazy="joined")
     terms: Mapped[list[BrandTerm]] = relationship(
         back_populates="application",
         cascade="all, delete-orphan",
@@ -382,6 +388,7 @@ class CampaignDeliverable(EntityMixin, Base):
         ForeignKey("files.id", ondelete="SET NULL")
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    revision_note: Mapped[str | None] = mapped_column(Text)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     opportunity: Mapped[BrandOpportunity] = relationship(lazy="joined")

@@ -11,109 +11,125 @@ class PaymentReviewDetailScreen extends StatefulWidget {
 }
 
 class _PaymentReviewDetailScreenState extends State<PaymentReviewDetailScreen> {
-  String _status = 'Pending Review';
-  Future<AdminPaymentProofDetailDto?>? _detailFuture;
+  Future<AdminPaymentProofDetailDto>? _future;
   bool _deciding = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final payments = PaymentsScope.maybeOf(context);
-    final proofId = widget.proofId;
-    if (_detailFuture == null && payments != null) {
-      _detailFuture = proofId == null || proofId.isEmpty
-          ? payments.adminProofs(force: false).then((proofs) => proofs.isEmpty
-              ? null
-              : payments.adminProof(proofs.first.publicId))
-          : payments.adminProof(proofId);
-    }
+    _future ??= _load();
   }
 
-  Future<void> _decide(String decision, {String? reason}) async {
-    final payments = PaymentsScope.maybeOf(context);
-    final proofId = widget.proofId;
-    if (payments == null || proofId == null || proofId.isEmpty) {
-      setState(() {
-        _status = switch (decision) {
-          'approved' => 'Verified',
-          'rejected' => 'Rejected',
-          'clarification_requested' => 'Clarification Requested',
-          _ => 'Suspicious',
-        };
-      });
-      return;
+  Future<AdminPaymentProofDetailDto> _load() async {
+    final payments = PaymentsScope.of(context);
+    var id = widget.proofId;
+    if (id == null || id.isEmpty || id == ':id') {
+      final proofs = await payments.adminProofs();
+      if (proofs.isEmpty) {
+        throw const ApiException(
+          code: 'payment_proof.not_found',
+          message: 'No payment proof is available for review.',
+        );
+      }
+      id = proofs.first.publicId;
     }
+    return payments.adminProof(id);
+  }
+
+  void _refresh() {
+    setState(() => _future = _load());
+  }
+
+  Future<void> _decide(
+    PaymentProofDto proof,
+    String decision, {
+    String? reason,
+  }) async {
+    if (_deciding) return;
     setState(() => _deciding = true);
     try {
-      final result = await payments.decideProof(
-        proofId: proofId,
+      final result = await PaymentsScope.of(context).decideProof(
+        proofId: proof.publicId,
         decision: decision,
         reason: reason,
       );
       if (!mounted) return;
-      setState(() {
-        _status = result.proof.status.replaceAll('_', ' ');
-        _detailFuture = payments.adminProof(proofId);
-      });
       showCoreSnack(
         context,
         result.receipt == null
             ? 'Payment proof updated.'
-            : 'Payment verified. Receipt ${result.receipt!.receiptNumber} generated.',
+            : 'Payment verified. Receipt '
+                '${result.receipt!.receiptNumber} generated.',
       );
-    } catch (error) {
-      if (!mounted) return;
-      final message =
-          error is ApiException ? error.message : 'Could not update proof.';
-      showCoreSnack(context, message);
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _deciding = false);
     }
   }
 
+  Future<void> _decisionWithReason(
+    PaymentProofDto proof,
+    String decision,
+  ) async {
+    final reason = await _adminNotePrompt(
+      context,
+      title: decision == 'rejected'
+          ? 'Reject payment proof'
+          : 'Request clarification',
+      hint: decision == 'rejected'
+          ? 'Record the finance rejection reason.'
+          : 'Tell the payer what must be corrected or re-uploaded.',
+    );
+    if (!mounted || reason == null) return;
+    await _decide(proof, decision, reason: reason);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_detailFuture != null) {
-      return FutureBuilder<AdminPaymentProofDetailDto?>(
-        future: _detailFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            final message = snapshot.error is ApiException
-                ? (snapshot.error! as ApiException).message
-                : 'Could not load this payment proof.';
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return FutureBuilder<AdminPaymentProofDetailDto>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
               children: [
-                InlineNotice(message: message, tone: CoreStatusTone.warning),
-                const SizedBox(height: 16),
-                _detailContent(context),
+                AdminEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'Payment proof unavailable',
+                  message: error is ApiException
+                      ? error.message
+                      : 'The payment proof could not be loaded.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
               ],
-            );
-          }
-          final detail = snapshot.data;
-          if (detail == null) {
-            return const AdminEmptyState(
-              icon: Icons.receipt_long_outlined,
-              title: 'No payment proof selected',
-              message: 'Open a proof from the payment verification queue.',
-            );
-          }
-          return _detailContent(context, detail: detail);
-        },
-      );
-    }
-    return _detailContent(context);
+            ),
+          );
+        }
+        return _detailContent(context, snapshot.data!);
+      },
+    );
   }
 
   Widget _detailContent(
-    BuildContext context, {
-    AdminPaymentProofDetailDto? detail,
-  }) {
-    final proof = detail?.proof;
-    final status = proof == null ? _status : proof.status.replaceAll('_', ' ');
+    BuildContext context,
+    AdminPaymentProofDetailDto detail,
+  ) {
+    final proof = detail.proof;
+    final status = proof.status.replaceAll('_', ' ');
     return _TwoPane(
       leftFlex: 5,
       rightFlex: 4,
@@ -122,31 +138,20 @@ class _PaymentReviewDetailScreenState extends State<PaymentReviewDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AdminSectionHeader(
-              title: 'Proof Viewer',
+              title: 'Proof viewer',
               icon: Icons.receipt_long_outlined,
             ),
             const SizedBox(height: 12),
-            AdminProofViewer(
-              title: 'Bank transfer proof preview',
-              ocrLines: [
-                'Proof ID: ${proof?.publicId ?? 'Demo proof'}',
-                'Transaction ID: ${proof?.transactionReference ?? proof?.transactionId ?? 'HBL-884120'}',
-                'Amount: PKR ${_adminMoney((proof?.claimedAmountMinor ?? 9000000) ~/ 100)}',
-                'Method: ${_methodLabel(proof?.method ?? 'bank_transfer')}',
-                'Submitted by: ${proof?.submittedBy.displayName ?? 'Hamza Productions'}',
-              ],
-            ),
+            _PaymentProofMedia(proof: proof),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _tinyAction(context, 'Zoom',
-                    () => showCoreSnack(context, 'Zoom simulated')),
-                _tinyAction(context, 'Rotate',
-                    () => showCoreSnack(context, 'Proof rotated')),
-                _tinyAction(context, 'Download',
-                    () => showCoreSnack(context, 'Proof download simulated')),
+            AdminProofViewer(
+              title: 'Submitted payment data',
+              ocrLines: [
+                'Proof ID: ${proof.publicId}',
+                'Transaction: ${proof.transactionReference ?? proof.transactionId}',
+                'Amount: ${proof.amountLabel}',
+                'Method: ${_methodLabel(proof.method)}',
+                'Submitted by: ${proof.submittedBy.displayName}',
               ],
             ),
           ],
@@ -158,49 +163,33 @@ class _PaymentReviewDetailScreenState extends State<PaymentReviewDetailScreen> {
           children: [
             Text('CASE DETAILS', style: AppTextStyles.panelLabel),
             const SizedBox(height: 10),
-            _reviewCard(context, 'Booking Summary', [
-              proof?.bookingId ?? 'BK-2048',
-              'Milestone ${proof?.milestoneId ?? 'Deposit'}',
-              'Payment proof',
+            _reviewCard(context, 'Booking summary', [
+              proof.bookingId,
+              'Milestone ${proof.milestoneId}',
+              'Submitted by ${proof.submittedBy.displayName}',
               status,
-              'Submitted by ${proof?.submittedBy.displayName ?? 'Hamza'}'
             ]),
             _reviewDivider(context),
-            _reviewCard(context, 'Contract Payment Schedule', [
-              proof?.milestoneId ?? 'Deposit',
-              'Expected PKR ${_adminMoney((proof?.claimedAmountMinor ?? 9000000) ~/ 100)}',
-              'Schedule attached to booking',
-              'Payee locked by contract',
-              'Manual bank transfer/card sandbox allowed'
+            _reviewCard(context, 'Uploaded claim', [
+              proof.amountLabel,
+              proof.transactionReference ?? 'No bank reference supplied',
+              'Risk score ${proof.riskScore}',
+              proof.rejectionReason ?? 'No prior decision note',
             ]),
             _reviewDivider(context),
-            _reviewCard(context, 'Uploaded Claim', [
-              'Claimed PKR ${_adminMoney((proof?.claimedAmountMinor ?? 9000000) ~/ 100)}',
-              proof?.transactionReference ?? 'HBL-884120',
-              'Uploaded by ${proof?.submittedBy.displayName ?? 'Hamza'}',
-              'Risk score ${proof?.riskScore ?? 0}',
-              proof?.rejectionReason ?? 'No notes'
-            ]),
-            _reviewDivider(context),
-            _reviewCard(context, 'Bank Details on File', [
-              'Payment method ${_methodLabel(proof?.method ?? 'bank_transfer')}',
-              'Reference ${proof?.transactionReference ?? 'pending manual check'}',
-              proof?.reviewedBy == null
+            _reviewCard(context, 'Decision history', [
+              proof.reviewedBy == null
                   ? 'Awaiting finance admin decision'
-                  : 'Reviewed by ${proof!.reviewedBy!.displayName}'
+                  : 'Reviewed by ${proof.reviewedBy!.displayName}',
+              _adminDateTime(proof.reviewedAt),
+              '${detail.bookingEvents.length} linked booking events',
             ]),
             const SizedBox(height: 12),
             AdminStatusBadge(
               label: status,
-              tone: switch (proof?.status ?? _status) {
-                'verified' ||
-                'Verified' ||
-                'approved' =>
-                  AdminDecisionTone.success,
-                'rejected' ||
-                'Rejected' ||
-                'Suspicious' =>
-                  AdminDecisionTone.danger,
+              tone: switch (proof.status) {
+                'verified' => AdminDecisionTone.success,
+                'rejected' => AdminDecisionTone.danger,
                 _ => AdminDecisionTone.warning,
               },
             ),
@@ -210,49 +199,127 @@ class _PaymentReviewDetailScreenState extends State<PaymentReviewDetailScreen> {
               runSpacing: 10,
               children: [
                 AdminActionButton(
-                    icon: Icons.verified_outlined,
-                    label: _deciding ? 'Saving...' : 'Verify Payment',
-                    onTap: _deciding ? null : () => _decide('approved')),
+                  icon: Icons.verified_outlined,
+                  label: _deciding ? 'Saving...' : 'Verify payment',
+                  onTap: _deciding || proof.status == 'verified'
+                      ? null
+                      : () => _decide(proof, 'approved'),
+                ),
                 AdminActionButton(
-                    icon: Icons.cancel_outlined,
-                    label: 'Reject with Reason',
-                    secondary: true,
-                    onTap: _deciding
-                        ? null
-                        : () => _noteDialog(
-                              context,
-                              'Payment rejection reason',
-                              onSave: () => _decide(
-                                'rejected',
-                                reason: 'Rejected after finance review',
-                              ),
-                            )),
+                  icon: Icons.cancel_outlined,
+                  label: 'Reject with reason',
+                  secondary: true,
+                  onTap: _deciding
+                      ? null
+                      : () => _decisionWithReason(proof, 'rejected'),
+                ),
                 AdminActionButton(
-                    icon: Icons.contact_support_outlined,
-                    label: 'Ask Clarification',
-                    secondary: true,
-                    onTap: _deciding
-                        ? null
-                        : () => _noteDialog(
-                              context,
-                              'Clarification message',
-                              onSave: () => _decide(
-                                'clarification_requested',
-                                reason:
-                                    'Please upload a clearer payment proof.',
-                              ),
-                            )),
-                AdminActionButton(
-                    icon: Icons.warning_amber_rounded,
-                    label: 'Mark Suspicious',
-                    secondary: true,
-                    onTap: _deciding
-                        ? null
-                        : () => setState(() => _status = 'Suspicious')),
+                  icon: Icons.contact_support_outlined,
+                  label: 'Ask clarification',
+                  secondary: true,
+                  onTap: _deciding
+                      ? null
+                      : () => _decisionWithReason(
+                            proof,
+                            'clarification_requested',
+                          ),
+                ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PaymentProofMedia extends StatefulWidget {
+  final PaymentProofDto proof;
+
+  const _PaymentProofMedia({required this.proof});
+
+  @override
+  State<_PaymentProofMedia> createState() => _PaymentProofMediaState();
+}
+
+class _PaymentProofMediaState extends State<_PaymentProofMedia> {
+  int _quarterTurns = 0;
+  final _transform = TransformationController();
+
+  @override
+  void dispose() {
+    _transform.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final url = widget.proof.filePublicUrl;
+    return Container(
+      width: double.infinity,
+      height: 360,
+      decoration: BoxDecoration(
+        color: colors.softSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: url == null || url.isEmpty
+                ? Center(
+                    child: AdminEmptyState(
+                      icon: Icons.insert_drive_file_outlined,
+                      title: 'No public proof preview',
+                      message: widget.proof.fileMimeType == null
+                          ? 'Review the submitted payment metadata.'
+                          : 'File type: ${widget.proof.fileMimeType}',
+                    ),
+                  )
+                : InteractiveViewer(
+                    transformationController: _transform,
+                    minScale: 0.7,
+                    maxScale: 5,
+                    child: Center(
+                      child: RotatedBox(
+                        quarterTurns: _quarterTurns,
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const AdminEmptyState(
+                            icon: Icons.broken_image_outlined,
+                            title: 'Preview could not be rendered',
+                            message: 'Use the proof metadata for this review.',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Row(
+              children: [
+                AdminIconButton(
+                  icon: Icons.center_focus_strong_rounded,
+                  tooltip: 'Reset zoom',
+                  onTap: () => _transform.value = Matrix4.identity(),
+                ),
+                const SizedBox(width: 6),
+                AdminIconButton(
+                  icon: Icons.rotate_right_rounded,
+                  tooltip: 'Rotate proof',
+                  onTap: () => setState(
+                    () => _quarterTurns = (_quarterTurns + 1) % 4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

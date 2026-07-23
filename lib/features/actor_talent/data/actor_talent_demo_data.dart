@@ -123,7 +123,7 @@ class ActorTalentDemoData {
     ActorTask(
       id: 'task-contract',
       title: 'Contract pending signature',
-      subtitle: 'Review SC-12 stakeholder copy.',
+      subtitle: 'Review agreement and payment terms.',
       route: ActorTalentRoutes.contracts,
       icon: Icons.edit_document,
       tone: ActorTone.blue,
@@ -351,11 +351,7 @@ class ActorTalentDemoStore extends ChangeNotifier {
   bool contractSigned = false;
   bool receiptConfirmed = false;
   bool paymentIssueOpen = false;
-  bool phoneHidden = true;
-  bool emergencySupport = true;
-  bool adultContentBoundary = true;
-  bool travelConsentRequired = true;
-  String selectedOpportunityTab = 'Direct Offers';
+  String selectedOpportunityTab = 'All';
   String profileStageName = 'Ali Raza';
   String profileRealName = 'Ali Raza Khan';
   String profileCity = 'Lahore';
@@ -576,26 +572,6 @@ class ActorTalentDemoStore extends ChangeNotifier {
 
   void resetRates() {
     rates = List.of(ActorTalentDemoData.seedRates);
-    notifyListeners();
-  }
-
-  void togglePhoneHidden(bool value) {
-    phoneHidden = value;
-    notifyListeners();
-  }
-
-  void toggleEmergencySupport(bool value) {
-    emergencySupport = value;
-    notifyListeners();
-  }
-
-  void toggleAdultContentBoundary(bool value) {
-    adultContentBoundary = value;
-    notifyListeners();
-  }
-
-  void toggleTravelConsent(bool value) {
-    travelConsentRequired = value;
     notifyListeners();
   }
 

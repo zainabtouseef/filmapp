@@ -26,8 +26,13 @@ class _ReceiptsLedgerAdminScreenState extends State<ReceiptsLedgerAdminScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final payments = PaymentsScope.maybeOf(context);
-    _ledgerFuture ??= payments?.ledger(force: true);
+    _ledgerFuture ??= PaymentsScope.of(context).ledger(force: true);
+  }
+
+  void _refresh() {
+    setState(
+      () => _ledgerFuture = PaymentsScope.of(context).ledger(force: true),
+    );
   }
 
   @override
@@ -56,35 +61,44 @@ class _ReceiptsLedgerAdminScreenState extends State<ReceiptsLedgerAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_ledgerFuture != null) {
-      return FutureBuilder<List<LedgerEntryDto>>(
-        future: _ledgerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            final message = snapshot.error is ApiException
-                ? (snapshot.error! as ApiException).message
-                : 'Could not load live ledger.';
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return FutureBuilder<List<LedgerEntryDto>>(
+      future: _ledgerFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
               children: [
-                InlineNotice(message: message, tone: CoreStatusTone.warning),
-                const SizedBox(height: 16),
-                _ledgerContent(AdminMockData.ledgerEntries),
+                AdminEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'Could not load the payment ledger',
+                  message: error is ApiException
+                      ? error.message
+                      : 'Check the backend connection and try again.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
               ],
-            );
-          }
-          final rows = (snapshot.data ?? const [])
-              .map((entry) => entry.toLedgerRow())
-              .where(_matches)
-              .toList();
-          return _ledgerContent(rows);
-        },
-      );
-    }
-    return _ledgerContent(AdminMockData.ledgerEntries.where(_matches).toList());
+            ),
+          );
+        }
+        final rows = (snapshot.data ?? const [])
+            .map((entry) => entry.toLedgerRow())
+            .where(_matches)
+            .toList();
+        return _ledgerContent(rows);
+      },
+    );
   }
 
   Widget _ledgerContent(List<LedgerRowData> rows) {

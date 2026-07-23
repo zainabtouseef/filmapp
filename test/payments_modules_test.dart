@@ -1,12 +1,46 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
-import 'package:cineconnect/core/theme/app_theme.dart';
+import 'package:cineconnect/core/auth/auth_controller.dart';
+import 'package:cineconnect/core/auth/auth_repository.dart';
+import 'package:cineconnect/core/auth/token_store.dart';
+import 'package:cineconnect/core/network/api_client.dart';
 import 'package:cineconnect/core/theme/theme_controller.dart';
 import 'package:cineconnect/features/super_admin/routes/super_admin_routes.dart';
 import 'package:cineconnect/features/super_admin/screens/super_admin_screens.dart';
+import 'package:cineconnect/main.dart';
 
 void main() {
+  Widget adminApp({
+    required String route,
+    required ThemeMode mode,
+  }) {
+    final client = ApiClient(
+      httpClient: MockClient(
+        (request) async => http.Response(
+          jsonEncode(<String, Object?>{'data': <String, Object?>{}}),
+          200,
+          headers: {'content-type': 'application/json'},
+        ),
+      ),
+      baseUrl: 'https://admin.test/api/v1',
+    );
+    final authController = AuthController(
+      repository: AuthRepository(client),
+      client: client,
+      tokenStore: const TokenStore(),
+    );
+    return CineConnectApp(
+      controller: ThemeController(initialThemeMode: mode),
+      authController: authController,
+      homeOverride: SuperAdminPortalScreen(routeName: route),
+    );
+  }
+
   final routes = [
     SuperAdminRoutes.dashboard,
     SuperAdminRoutes.payments,
@@ -36,17 +70,7 @@ void main() {
             tester.view.resetDevicePixelRatio();
           });
 
-          await tester.pumpWidget(
-            ThemeControllerProvider(
-              controller: ThemeController(initialThemeMode: mode),
-              child: MaterialApp(
-                theme: AppTheme.light,
-                darkTheme: AppTheme.dark,
-                themeMode: mode,
-                home: SuperAdminPortalScreen(routeName: route),
-              ),
-            ),
-          );
+          await tester.pumpWidget(adminApp(route: route, mode: mode));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 500));
 

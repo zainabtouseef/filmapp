@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../core/admin/admin_controller.dart';
+import '../../../core/admin/admin_models.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/analytics/analytics_controller.dart';
 import '../../../core/analytics/analytics_models.dart';
 import '../../../core/analytics/analytics_widgets.dart';
-import '../../../core/core_booking/screens/booking_chat_screen.dart';
-import '../../../core/core_payment/screens/receipts_ledger_screen.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/models/shared_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
@@ -20,14 +21,6 @@ import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../core/verification/verification_models.dart' as verification;
 import '../../../shared/cards/metric_action_card.dart';
-import '../../../shared/cards/mini_trend_card.dart';
-import '../../../shared/sections/admin_action_feed_section.dart'
-    as shared_action;
-import '../../../shared/sections/admin_live_monitoring_section.dart';
-import '../../../shared/sections/admin_queue_snapshot_section.dart'
-    as shared_queue;
-import '../../../shared/sections/admin_recent_activity_section.dart';
-import '../mock_data/admin_mock_data.dart';
 import '../models/admin_models.dart';
 import '../routes/super_admin_routes.dart';
 import '../widgets/admin_widgets.dart';
@@ -203,26 +196,31 @@ class SuperAdminPortalScreen extends StatelessWidget {
       SuperAdminRoutes.reviewHubContent => const ContentModerationQueueScreen(),
       SuperAdminRoutes.verifications => const UserVerificationQueueScreen(),
       SuperAdminRoutes.verificationDetail => KycReviewDetailScreen(
-          submissionId: arguments is String ? arguments! as String : null,
+          submissionId: _idArgument('submission_id'),
         ),
       SuperAdminRoutes.contentModeration => const ContentModerationScreen(),
       SuperAdminRoutes.listingsModeration => const ListingsModerationScreen(),
       SuperAdminRoutes.bookingsMonitor => const BookingMonitorScreen(),
-      SuperAdminRoutes.bookingDetail => const BookingDetailScreen(),
+      SuperAdminRoutes.bookingDetail => BookingDetailScreen(
+          bookingId: _idArgument('booking_id'),
+        ),
       SuperAdminRoutes.payments => const PaymentsHubScreen(),
       SuperAdminRoutes.paymentQueue => const PaymentVerificationQueueScreen(),
       SuperAdminRoutes.paymentReview => PaymentReviewDetailScreen(
-          proofId: arguments is String ? arguments! as String : null,
+          proofId: _idArgument('proof_id'),
         ),
       SuperAdminRoutes.paymentLedger => const ReceiptsLedgerAdminScreen(),
       SuperAdminRoutes.paymentRevenue => const RevenueSettingsScreen(),
       SuperAdminRoutes.contractTemplates =>
         const ContractTemplateManagerScreen(),
-      SuperAdminRoutes.contractTemplateDetail =>
-        const ContractTemplateDetailScreen(),
+      SuperAdminRoutes.contractTemplateDetail => ContractTemplateDetailScreen(
+          templateId: _idArgument('template_id'),
+        ),
       SuperAdminRoutes.fees => const CommissionFeeScreen(),
       SuperAdminRoutes.disputes => const DisputeCenterScreen(),
-      SuperAdminRoutes.disputeCase => const DisputeCaseFileScreen(),
+      SuperAdminRoutes.disputeCase => DisputeCaseFileScreen(
+          disputeId: _idArgument('dispute_id'),
+        ),
       SuperAdminRoutes.users => const UserManagementScreen(),
       SuperAdminRoutes.adminRoles => const AdminRolesPermissionsScreen(),
       SuperAdminRoutes.support => const SupportCrmScreen(),
@@ -231,5 +229,14 @@ class SuperAdminPortalScreen extends StatelessWidget {
       SuperAdminRoutes.analytics => const AdminAnalyticsScreen(),
       _ => const AdminDashboardScreen(),
     };
+  }
+
+  String? _idArgument(String key) {
+    if (arguments is String) return arguments! as String;
+    if (arguments is Map) {
+      final map = arguments! as Map;
+      return map[key] as String? ?? map['id'] as String?;
+    }
+    return null;
   }
 }

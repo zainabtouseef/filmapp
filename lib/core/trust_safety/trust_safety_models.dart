@@ -157,6 +157,11 @@ class DisputeDto {
   final String status;
   final int evidenceCount;
   final int eventCount;
+  final TrustUserDto? openedBy;
+  final TrustUserDto? respondent;
+  final TrustUserDto? assignedAdmin;
+  final List<DisputeEvidenceDto> evidence;
+  final List<DisputeEventDto> events;
 
   const DisputeDto({
     required this.publicId,
@@ -169,9 +174,22 @@ class DisputeDto {
     required this.status,
     required this.evidenceCount,
     required this.eventCount,
+    this.openedBy,
+    this.respondent,
+    this.assignedAdmin,
+    this.evidence = const [],
+    this.events = const [],
   });
 
   factory DisputeDto.fromJson(Map<String, dynamic> json) {
+    final evidence = (json['evidence'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(DisputeEvidenceDto.fromJson)
+        .toList();
+    final events = (json['events'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(DisputeEventDto.fromJson)
+        .toList();
     return DisputeDto(
       publicId: json['public_id'] as String? ?? '',
       bookingId: json['booking_id'] as String? ?? '',
@@ -181,8 +199,73 @@ class DisputeDto {
       currency: json['currency'] as String? ?? 'PKR',
       severity: json['severity'] as String? ?? 'medium',
       status: json['status'] as String? ?? 'open',
-      evidenceCount: (json['evidence'] as List<dynamic>? ?? const []).length,
-      eventCount: (json['events'] as List<dynamic>? ?? const []).length,
+      evidenceCount: evidence.length,
+      eventCount: events.length,
+      openedBy: json['opened_by'] is Map<String, dynamic>
+          ? TrustUserDto.fromJson(json['opened_by'] as Map<String, dynamic>)
+          : null,
+      respondent: json['respondent'] is Map<String, dynamic>
+          ? TrustUserDto.fromJson(json['respondent'] as Map<String, dynamic>)
+          : null,
+      assignedAdmin: json['assigned_admin'] is Map<String, dynamic>
+          ? TrustUserDto.fromJson(
+              json['assigned_admin'] as Map<String, dynamic>,
+            )
+          : null,
+      evidence: evidence,
+      events: events,
+    );
+  }
+}
+
+class DisputeEvidenceDto {
+  final String publicId;
+  final String evidenceType;
+  final String description;
+  final TrustUserDto? submittedBy;
+
+  const DisputeEvidenceDto({
+    required this.publicId,
+    required this.evidenceType,
+    required this.description,
+    this.submittedBy,
+  });
+
+  factory DisputeEvidenceDto.fromJson(Map<String, dynamic> json) {
+    return DisputeEvidenceDto(
+      publicId: json['public_id'] as String? ?? '',
+      evidenceType: json['evidence_type'] as String? ?? 'evidence',
+      description: json['description'] as String? ?? '',
+      submittedBy: json['submitted_by'] is Map<String, dynamic>
+          ? TrustUserDto.fromJson(
+              json['submitted_by'] as Map<String, dynamic>,
+            )
+          : null,
+    );
+  }
+}
+
+class DisputeEventDto {
+  final String eventType;
+  final String? note;
+  final TrustUserDto? actor;
+  final DateTime? createdAt;
+
+  const DisputeEventDto({
+    required this.eventType,
+    this.note,
+    this.actor,
+    this.createdAt,
+  });
+
+  factory DisputeEventDto.fromJson(Map<String, dynamic> json) {
+    return DisputeEventDto(
+      eventType: json['event_type'] as String? ?? 'case_updated',
+      note: json['note'] as String?,
+      actor: json['actor'] is Map<String, dynamic>
+          ? TrustUserDto.fromJson(json['actor'] as Map<String, dynamic>)
+          : null,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
     );
   }
 }

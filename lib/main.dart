@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'core/admin/admin_controller.dart';
 import 'core/auth/auth_controller.dart';
 import 'core/auth/auth_repository.dart';
 import 'core/auth/token_store.dart';
@@ -38,6 +39,7 @@ Future<void> main() async {
       specialistController: SpecialistController.fromClient(apiClient),
       trustSafetyController: TrustSafetyController.fromClient(apiClient),
       analyticsController: AnalyticsController.fromClient(apiClient),
+      adminController: AdminController.fromClient(apiClient),
     ),
   );
 }
@@ -53,6 +55,7 @@ class CineConnectApp extends StatelessWidget {
   final SpecialistController? specialistController;
   final TrustSafetyController? trustSafetyController;
   final AnalyticsController? analyticsController;
+  final AdminController? adminController;
   final String initialRoute;
   final Widget? homeOverride;
 
@@ -68,6 +71,7 @@ class CineConnectApp extends StatelessWidget {
     this.specialistController,
     this.trustSafetyController,
     this.analyticsController,
+    this.adminController,
     this.initialRoute = CoreRoutes.splash,
     this.homeOverride,
   });
@@ -108,31 +112,37 @@ class CineConnectApp extends StatelessWidget {
       ),
     );
 
-    final analyticsScope = AnalyticsScope(
-      controller: analyticsController ??
-          AnalyticsController.fromClient(authController.apiClient),
-      child: TrustSafetyScope(
-        controller: trustSafetyController ??
-            TrustSafetyController.fromClient(authController.apiClient),
-        child: SpecialistScope(
-          controller: specialistController ??
-              SpecialistController.fromClient(authController.apiClient),
-          child: InsuranceScope(
-            controller: insuranceController ??
-                InsuranceController.fromClient(authController.apiClient),
-            child: OperationsScope(
-              controller: operationsController ??
-                  OperationsController.fromClient(authController.apiClient),
-              child: PaymentsScope(
-                controller: paymentsController ??
-                    PaymentsController.fromClient(authController.apiClient),
-                child: ContractsScope(
-                  controller: contractsController ??
-                      ContractsController.fromClient(authController.apiClient),
-                  child: BookingsScope(
-                    controller: bookingsController ??
-                        BookingsController.fromClient(authController.apiClient),
-                    child: app,
+    final adminScope = AdminScope(
+      controller: adminController ??
+          AdminController.fromClient(authController.apiClient),
+      child: AnalyticsScope(
+        controller: analyticsController ??
+            AnalyticsController.fromClient(authController.apiClient),
+        child: TrustSafetyScope(
+          controller: trustSafetyController ??
+              TrustSafetyController.fromClient(authController.apiClient),
+          child: SpecialistScope(
+            controller: specialistController ??
+                SpecialistController.fromClient(authController.apiClient),
+            child: InsuranceScope(
+              controller: insuranceController ??
+                  InsuranceController.fromClient(authController.apiClient),
+              child: OperationsScope(
+                controller: operationsController ??
+                    OperationsController.fromClient(authController.apiClient),
+                child: PaymentsScope(
+                  controller: paymentsController ??
+                      PaymentsController.fromClient(authController.apiClient),
+                  child: ContractsScope(
+                    controller: contractsController ??
+                        ContractsController.fromClient(
+                            authController.apiClient),
+                    child: BookingsScope(
+                      controller: bookingsController ??
+                          BookingsController.fromClient(
+                              authController.apiClient),
+                      child: app,
+                    ),
                   ),
                 ),
               ),
@@ -143,7 +153,7 @@ class CineConnectApp extends StatelessWidget {
     );
     return AuthScope(
       controller: authController,
-      child: analyticsScope,
+      child: adminScope,
     );
   }
 }

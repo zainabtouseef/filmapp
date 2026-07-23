@@ -55,6 +55,16 @@ class LocationProperty(EntityMixin, Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    pricing: Mapped[list[LocationPricing]] = relationship(
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    rules: Mapped[list[LocationRule]] = relationship(
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class LocationSpace(EntityMixin, Base):
@@ -91,6 +101,8 @@ class LocationPricing(EntityMixin, Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     conditions: Mapped[str | None] = mapped_column(Text)
 
+    property: Mapped[LocationProperty] = relationship(back_populates="pricing")
+
 
 class LocationRule(EntityMixin, Base):
     __tablename__ = "location_rules"
@@ -105,6 +117,8 @@ class LocationRule(EntityMixin, Base):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
     allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    property: Mapped[LocationProperty] = relationship(back_populates="rules")
 
 
 class LocationInspection(EntityMixin, Base):
@@ -354,6 +368,8 @@ class EquipmentTerm(EntityMixin, Base):
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PKR")
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     term_type: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    equipment_item: Mapped[EquipmentItem | None] = relationship(lazy="joined")
 
 
 class EquipmentInspection(EntityMixin, Base):

@@ -302,6 +302,9 @@ def test_brand_opportunity_and_campaign_flow(client: FlaskClient) -> None:
     applicant_headers, applicant_user_id = _register_role(
         client, "actor_talent", name="Brand Flow Applicant"
     )
+    declined_headers, _declined_user_id = _register_role(
+        client, "actor_talent", name="Brand Declined Applicant"
+    )
 
     brand_profile = client.patch(
         "/api/v1/brands/profile",
@@ -331,6 +334,21 @@ def test_brand_opportunity_and_campaign_flow(client: FlaskClient) -> None:
     assert opportunity.status_code == 201, opportunity.text
     opportunity_id = opportunity.json["data"]["opportunity"]["public_id"]
 
+    updated_opportunity = client.patch(
+        f"/api/v1/brand-opportunities/{opportunity_id}",
+        headers=brand_headers,
+        json={
+            "title": "Eid Editorial and Reels Campaign",
+            "eligibility": "Verified creative applicants",
+            "status": "published",
+        },
+    )
+    assert updated_opportunity.status_code == 200, updated_opportunity.text
+    assert (
+        updated_opportunity.json["data"]["opportunity"]["title"]
+        == "Eid Editorial and Reels Campaign"
+    )
+
     public_list = client.get("/api/v1/brand-opportunities")
     assert public_list.status_code == 200, public_list.text
     assert any(
@@ -350,12 +368,69 @@ def test_brand_opportunity_and_campaign_flow(client: FlaskClient) -> None:
     assert application.status_code == 201, application.text
     application_id = application.json["data"]["application"]["public_id"]
 
+    declined_application = client.post(
+        f"/api/v1/brand-opportunities/{opportunity_id}/applications",
+        headers=declined_headers,
+        json={
+            "proposal": "A proposal outside the current campaign audience.",
+            "audience_metrics": {"instagram": 1200},
+        },
+    )
+    assert declined_application.status_code == 201, declined_application.text
+    declined_application_id = declined_application.json["data"]["application"][
+        "public_id"
+    ]
+
     applications = client.get(
         f"/api/v1/brand-opportunities/{opportunity_id}/applications",
         headers=brand_headers,
     )
     assert applications.status_code == 200, applications.text
-    assert len(applications.json["data"]["applications"]) == 1
+    assert len(applications.json["data"]["applications"]) == 2
+
+    owner_applications = client.get(
+        "/api/v1/brand-applications",
+        headers=brand_headers,
+    )
+    assert owner_applications.status_code == 200, owner_applications.text
+    assert len(owner_applications.json["data"]["applications"]) == 2
+
+    rejected = client.patch(
+        f"/api/v1/brand-applications/{declined_application_id}",
+        headers=brand_headers,
+        json={
+            "status": "rejected",
+            "rejection_reason": "Audience fit is below the current campaign brief.",
+        },
+    )
+    assert rejected.status_code == 200, rejected.text
+    assert (
+        rejected.json["data"]["application"]["rejection_reason"]
+        == "Audience fit is below the current campaign brief."
+    )
+
+    application_detail = client.get(
+        f"/api/v1/brand-applications/{application_id}",
+        headers=brand_headers,
+    )
+    assert application_detail.status_code == 200, application_detail.text
+    assert (
+        application_detail.json["data"]["application"]["opportunity"]["public_id"]
+        == opportunity_id
+    )
+
+    conversation = client.post(
+        f"/api/v1/brand-applications/{application_id}/conversation",
+        headers=brand_headers,
+    )
+    assert conversation.status_code == 200, conversation.text
+    conversation_id = conversation.json["data"]["conversation_id"]
+    same_conversation = client.post(
+        f"/api/v1/brand-applications/{application_id}/conversation",
+        headers=applicant_headers,
+    )
+    assert same_conversation.status_code == 200, same_conversation.text
+    assert same_conversation.json["data"]["conversation_id"] == conversation_id
 
     shortlisted = client.patch(
         f"/api/v1/brand-applications/{application_id}",
@@ -378,6 +453,24 @@ def test_brand_opportunity_and_campaign_flow(client: FlaskClient) -> None:
     assert terms.status_code == 201, terms.text
     assert terms.json["data"]["application"]["terms"][0]["version"] == 1
 
+    accepted_terms = client.post(
+        f"/api/v1/brand-applications/{application_id}/terms",
+        headers=brand_headers,
+        json={
+            "scope": "6 stills 2 reels with approved usage rights",
+            "exclusivity": "90-day fashion exclusivity",
+            "approval_rights": "Brand pre-approval within two business days",
+            "payment_schedule": [
+                {"key": "advance", "percent": 50},
+                {"key": "completion", "percent": 50},
+            ],
+            "status": "accepted",
+        },
+    )
+    assert accepted_terms.status_code == 201, accepted_terms.text
+    assert accepted_terms.json["data"]["application"]["status"] == "accepted"
+    assert accepted_terms.json["data"]["application"]["terms"][1]["version"] == 2
+
     deliverable = client.post(
         "/api/v1/campaign-deliverables",
         headers=brand_headers,
@@ -397,6 +490,23 @@ def test_brand_opportunity_and_campaign_flow(client: FlaskClient) -> None:
     assert deliverables.status_code == 200, deliverables.text
     assert len(deliverables.json["data"]["deliverables"]) == 1
 
+    unfiltered_deliverables = client.get(
+        "/api/v1/campaign-deliverables",
+        headers=brand_headers,
+    )
+    assert unfiltered_deliverables.status_code == 200, unfiltered_deliverables.text
+    assert len(unfiltered_deliverables.json["data"]["deliverables"]) == 1
+
+    premature_revision = client.patch(
+        f"/api/v1/campaign-deliverables/{deliverable_id}",
+        headers=brand_headers,
+        json={
+            "status": "revision_requested",
+            "revision_note": "Use the approved product lockup.",
+        },
+    )
+    assert premature_revision.status_code == 409, premature_revision.text
+
     file_id = _file_for_user(client, applicant_user_id)
     proof = client.post(
         f"/api/v1/campaign-deliverables/{deliverable_id}/proof",
@@ -405,6 +515,28 @@ def test_brand_opportunity_and_campaign_flow(client: FlaskClient) -> None:
     )
     assert proof.status_code == 200, proof.text
     assert proof.json["data"]["deliverable"]["status"] == "submitted"
+
+    revision = client.patch(
+        f"/api/v1/campaign-deliverables/{deliverable_id}",
+        headers=brand_headers,
+        json={
+            "status": "revision_requested",
+            "revision_note": "Use the approved product lockup in the final frame.",
+        },
+    )
+    assert revision.status_code == 200, revision.text
+    assert (
+        revision.json["data"]["deliverable"]["revision_note"]
+        == "Use the approved product lockup in the final frame."
+    )
+
+    revised_proof = client.post(
+        f"/api/v1/campaign-deliverables/{deliverable_id}/proof",
+        headers=applicant_headers,
+        json={"file_id": file_id},
+    )
+    assert revised_proof.status_code == 200, revised_proof.text
+    assert revised_proof.json["data"]["deliverable"]["revision_note"] is None
 
     approved = client.post(
         f"/api/v1/campaign-deliverables/{deliverable_id}/approve",

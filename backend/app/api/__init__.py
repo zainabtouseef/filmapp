@@ -1,5 +1,6 @@
 from flask import Blueprint
 
+from app.api.admin_control import admin_control_blueprint
 from app.api.analytics import analytics_blueprint
 from app.api.app import app_blueprint
 from app.api.auth import auth_blueprint
@@ -17,6 +18,7 @@ from app.api.trust_safety import trust_safety_blueprint
 from app.api.verification import verification_blueprint
 
 api_v1 = Blueprint("api_v1", __name__)
+api_v1.register_blueprint(admin_control_blueprint)
 api_v1.register_blueprint(health_blueprint)
 api_v1.register_blueprint(app_blueprint)
 api_v1.register_blueprint(auth_blueprint)

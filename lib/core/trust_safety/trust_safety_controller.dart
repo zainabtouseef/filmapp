@@ -105,6 +105,18 @@ class TrustSafetyController extends ChangeNotifier {
     return rows;
   }
 
+  Future<DisputeDto> adminDispute(
+    String disputeId, {
+    bool force = false,
+  }) async {
+    if (!force && _adminDisputes != null) {
+      for (final dispute in _adminDisputes!) {
+        if (dispute.publicId == disputeId) return dispute;
+      }
+    }
+    return _repository.adminDispute(disputeId);
+  }
+
   Future<DisputeDto> decideDispute({
     required String disputeId,
     required String decision,

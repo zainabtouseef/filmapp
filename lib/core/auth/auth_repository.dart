@@ -193,12 +193,14 @@ class AuthRepository {
     required String bio,
     required String? cityId,
     String visibility = 'public',
+    String? websiteUrl,
   }) async {
     final response = await _client.patch(
       '/me/profile',
       body: {
         'bio': bio,
         if (cityId != null) 'city_id': cityId,
+        if (websiteUrl != null) 'website_url': websiteUrl,
         'profile_visibility': visibility,
       },
     );
@@ -220,6 +222,11 @@ class AuthRepository {
     int? dayRateMinor,
     String availabilityStatus = 'available',
     String currency = 'PKR',
+    String? ageRange,
+    String? genderIdentity,
+    int? heightCm,
+    String? unionNote,
+    int? experienceYears,
   }) async {
     final response = await _client.patch(
       '/talent/profile',
@@ -228,6 +235,11 @@ class AuthRepository {
         'availability_status': availabilityStatus,
         'currency': currency,
         if (dayRateMinor != null) 'day_rate_minor': dayRateMinor,
+        if (ageRange != null) 'age_range': ageRange,
+        if (genderIdentity != null) 'gender_identity': genderIdentity,
+        if (heightCm != null) 'height_cm': heightCm,
+        if (unionNote != null) 'union_note': unionNote,
+        if (experienceYears != null) 'experience_years': experienceYears,
         'languages': languages.map((item) => item.toJson()).toList(),
       },
     );

@@ -177,6 +177,9 @@ class PaymentProofDto {
   final PaymentUser? reviewedBy;
   final DateTime? reviewedAt;
   final String? rejectionReason;
+  final String? filePublicUrl;
+  final String? fileDownloadUrl;
+  final String? fileMimeType;
 
   const PaymentProofDto({
     required this.publicId,
@@ -192,10 +195,14 @@ class PaymentProofDto {
     required this.reviewedBy,
     required this.reviewedAt,
     required this.rejectionReason,
+    this.filePublicUrl,
+    this.fileDownloadUrl,
+    this.fileMimeType,
   });
 
   factory PaymentProofDto.fromJson(Map<String, dynamic> json) {
     final reviewer = json['reviewed_by'] as Map<String, dynamic>?;
+    final file = json['file'] as Map<String, dynamic>?;
     return PaymentProofDto(
       publicId: json['public_id'] as String? ?? '',
       transactionId: json['transaction_id'] as String? ?? '',
@@ -211,6 +218,9 @@ class PaymentProofDto {
       reviewedBy: reviewer == null ? null : PaymentUser.fromJson(reviewer),
       reviewedAt: DateTime.tryParse(json['reviewed_at'] as String? ?? ''),
       rejectionReason: json['rejection_reason'] as String?,
+      filePublicUrl: file?['public_url'] as String?,
+      fileDownloadUrl: file?['download_url'] as String?,
+      fileMimeType: file?['mime_type'] as String?,
     );
   }
 

@@ -93,15 +93,14 @@ class BrandSponsorDemoData {
     BrandOpportunity(
       id: 'opp-nova-launch',
       title: 'Nova Cola Summer Launch',
-      category: 'Product placement + social content',
+      category: 'Product placement',
       budget: 'PKR 2.4M',
       usage: 'Digital, cinema BTS, 9 months',
       eligibility: 'Youth, music, sports or campus storyline',
       deliverables: 'Hero placement, 2 reels, 6 stills, BTS mention',
       dueDate: 'Applications close Jul 22',
       status: BrandStatus.active,
-      imageUrl:
-          'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80',
+    imageUrl: 'assets/images/brand_campaign_cover.jpg',
     ),
     BrandOpportunity(
       id: 'opp-nova-campus',
@@ -330,6 +329,8 @@ class BrandSponsorDemoStore extends ChangeNotifier {
   bool assetUploadPending = false;
   int draftsCreated = 1;
   int termVersion = 2;
+  String? activeLiveOpportunityId;
+  String? activeLiveApplicationId;
 
   List<BrandTask> get activeTasks => BrandSponsorDemoData.tasks
       .where((task) => !completedTasks.contains(task.id))
@@ -390,6 +391,18 @@ class BrandSponsorDemoStore extends ChangeNotifier {
 
   void createOpportunityDraft() {
     draftsCreated++;
+    notifyListeners();
+  }
+
+  void setActiveLiveOpportunity(String? id) {
+    if (activeLiveOpportunityId == id) return;
+    activeLiveOpportunityId = id;
+    notifyListeners();
+  }
+
+  void setActiveLiveApplication(String? id) {
+    if (activeLiveApplicationId == id) return;
+    activeLiveApplicationId = id;
     notifyListeners();
   }
 

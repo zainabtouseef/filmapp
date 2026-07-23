@@ -39,18 +39,18 @@ class ActorTalentRoutes {
 
   static String titleFor(String route) {
     return switch (route) {
-      dashboard => 'Talent Dashboard',
-      profile => 'Profile Builder',
-      portfolio => 'Portfolio & Showreel',
-      calendar => 'Availability Calendar',
-      rates => 'Rate Card',
-      opportunities => 'Opportunity Inbox',
-      offerDetail => 'Offer Detail',
+      dashboard => 'Talent Workspace',
+      profile => 'Casting Profile',
+      portfolio => 'Portfolio',
+      calendar => 'Availability',
+      rates => 'Rates',
+      opportunities => 'Opportunities',
+      offerDetail => 'Offer Review',
       counteroffer => 'Counteroffer',
-      contracts => 'Contract Signing',
-      earnings => 'Earnings Security',
-      reputation => 'Reputation',
-      safety => 'Safety Controls',
+      contracts => 'Contracts',
+      earnings => 'Earnings',
+      reputation => 'Reviews',
+      safety => 'Safety & Support',
       _ => 'Actor / Talent',
     };
   }

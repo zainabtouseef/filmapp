@@ -2,163 +2,175 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/operations/operations_controller.dart';
+import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/media_equipment_demo_data.dart';
-import '../models/media_equipment_models.dart';
+import '../../../shared/widgets/status_chip.dart';
 import '../widgets/media_equipment_components.dart';
 
-class ME06RateTermsScreen extends StatelessWidget {
+class ME06RateTermsScreen extends StatefulWidget {
   const ME06RateTermsScreen({super.key});
 
   @override
+  State<ME06RateTermsScreen> createState() => _ME06RateTermsScreenState();
+}
+
+class _ME06RateTermsScreenState extends State<ME06RateTermsScreen> {
+  Future<List<EquipmentTermDto>>? _termsFuture;
+  String? _busyId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_termsFuture != null) return;
+    _reload();
+  }
+
+  void _reload() {
+    final operations = OperationsScope.maybeOf(context);
+    if (operations == null) return;
+    _termsFuture = operations.equipmentTerms(force: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final store = MediaEquipmentDemoStore.instance;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
+    if (_termsFuture == null) {
+      return const InlineNotice(
+        message: 'Preview mode. Sign in to manage rental terms.',
+        icon: Icons.visibility_outlined,
+      );
+    }
+    return FutureBuilder<List<EquipmentTermDto>>(
+      future: _termsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const InlineNotice(
+            message: 'Loading rates and rental terms...',
+            icon: Icons.hourglass_top_rounded,
+          );
+        }
+        if (snapshot.hasError) {
+          return InlineNotice(
+            message: 'Could not load rental terms: ${snapshot.error}',
+            icon: Icons.cloud_off_outlined,
+          );
+        }
+        final terms = snapshot.data ?? const [];
+        final deposit = _firstOfType(terms, 'deposit');
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             MetricActionRail(
               items: [
                 MetricActionItem(
-                  value: '${store.terms.where((item) => item.enabled).length}',
+                  value: '${terms.where((item) => item.enabled).length}',
                   icon: Icons.check_circle_outline,
-                  title: 'Enabled rates',
-                  subtitle: 'Current',
-                  accentColor: mediaToneColor(context, MediaTone.green),
+                  title: 'Enabled terms',
+                  subtitle: 'Live',
+                  accentColor: context.appColors.success,
                 ),
                 MetricActionItem(
-                  value: store.terms
-                          .firstWhere((item) => item.id == 'deposit')
-                          .enabled
-                      ? mediaMoney(
-                          store.terms
-                              .firstWhere((item) => item.id == 'deposit')
-                              .amount,
-                        )
-                      : 'Not required',
+                  value: deposit == null
+                      ? 'Not set'
+                      : mediaMoney(deposit.amountMinor ~/ 100),
                   icon: Icons.verified_user_outlined,
                   title: 'Deposit',
-                  subtitle: 'Current',
-                  accentColor: mediaToneColor(context, MediaTone.gold),
+                  subtitle: deposit?.enabled == true ? 'Required' : 'Disabled',
+                  accentColor: context.appColors.goldMid,
                 ),
                 MetricActionItem(
-                  value: store.termsPublished ? 'Published' : 'Draft',
+                  value: terms.isEmpty ? 'Setup' : 'Synced',
                   icon: Icons.rule_folder_outlined,
-                  title: 'Sync status',
-                  subtitle: 'Current',
-                  accentColor: mediaToneColor(
-                    context,
-                    store.termsPublished ? MediaTone.green : MediaTone.blue,
-                  ),
+                  title: 'Contract rules',
+                  subtitle: 'Live',
+                  accentColor: context.appColors.infoBlue,
                 ),
               ],
             ),
             const SizedBox(height: 12),
             MediaTwoColumn(
               left: MediaSectionCard(
-                title: 'Rates and terms',
+                title: 'Rates & Terms',
                 icon: Icons.rule_folder_outlined,
                 selected: true,
-                child: Column(
-                  children: [
-                    for (final term in store.terms)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _TermRow(
-                          term: term,
-                          onMinus: () => store.updateTerm(
-                            term.id,
-                            amount: (term.amount - 5000).clamp(0, 9999999),
-                          ),
-                          onPlus: () => store.updateTerm(
-                            term.id,
-                            amount: term.amount + 5000,
-                          ),
-                          onEnabled: (value) => store.updateTerm(
-                            term.id,
-                            enabled: value,
-                          ),
-                        ),
+                child: terms.isEmpty
+                    ? CoreEmptyState(
+                        icon: Icons.rule_folder_outlined,
+                        title: 'No rental terms',
+                        message:
+                            'Add daily rates, deposits, overtime, transport, cancellation, and late return rules.',
+                        actionLabel: 'Add first term',
+                        onAction: _showEditor,
+                      )
+                    : Column(
+                        children: [
+                          for (final term in terms)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _LiveTermRow(
+                                term: term,
+                                busy: _busyId == term.publicId,
+                                onAmount: (amountMinor) => _update(
+                                  term,
+                                  {'amount_minor': amountMinor},
+                                ),
+                                onEnabled: (enabled) =>
+                                    _update(term, {'enabled': enabled}),
+                                onEdit: () => _showEditor(term),
+                              ),
+                            ),
+                        ],
                       ),
-                  ],
-                ),
               ),
               right: Column(
                 children: [
                   MediaSectionCard(
-                    title: 'Booking rules',
+                    title: 'Contract Coverage',
                     icon: Icons.policy_outlined,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: const Column(
                       children: [
-                        Text(
-                          'Damage responsibility, pickup/drop, fuel, weather and cancellation terms attach to every equipment rental contract.',
-                          style: AppTextStyles.smallMeta.copyWith(
-                            color: colors.textSecondary,
-                          ),
+                        MediaInfoRow(
+                          icon: Icons.schedule_outlined,
+                          label: 'Rental duration',
+                          value: 'Define day and overtime rules',
                         ),
-                        const SizedBox(height: 12),
                         MediaInfoRow(
                           icon: Icons.local_shipping_outlined,
-                          label: 'Pickup/drop',
-                          value: 'Client pickup or paid delivery',
+                          label: 'Logistics',
+                          value: 'Clarify pickup, delivery, and fuel',
                         ),
                         MediaInfoRow(
-                          icon: Icons.cloudy_snowing,
-                          label: 'Weather clause',
-                          value: 'Drone delays allowed',
+                          icon: Icons.health_and_safety_outlined,
+                          label: 'Liability',
+                          value: 'Deposit and damage inspection',
                         ),
                         MediaInfoRow(
                           icon: Icons.cancel_outlined,
                           label: 'Cancellation',
-                          value: '24h fee applies',
-                        ),
-                        const SizedBox(height: 10),
-                        CorePrimaryButton(
-                          icon: Icons.lock_outline_rounded,
-                          label: 'Publish terms',
-                          compact: true,
-                          onTap: () => _showPublishOtp(context, store),
+                          value: 'Set notice and applicable fee',
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
                   MediaSectionCard(
-                    title: 'Sensitive controls',
-                    icon: Icons.admin_panel_settings_outlined,
+                    title: 'Term Actions',
+                    icon: Icons.tune_outlined,
                     child: Column(
                       children: [
-                        CoreSecondaryButton(
-                          icon: Icons.restart_alt_rounded,
-                          label: 'Reset defaults',
+                        CorePrimaryButton(
+                          icon: Icons.add_rounded,
+                          label: 'Add rental term',
                           compact: true,
-                          onTap: () {
-                            store.resetTerms();
-                            mediaSnack(context, 'Terms reset to defaults');
-                          },
+                          onTap: _showEditor,
                         ),
                         const SizedBox(height: 8),
-                        CoreSecondaryButton(
-                          icon: Icons.lock_person_outlined,
-                          label: 'Permission check',
-                          compact: true,
-                          onTap: () {
-                            final verified = MediaEquipmentDemoData
-                                .profile.verification
-                                .contains('verified');
-                            mediaSnack(
-                              context,
-                              verified
-                                  ? 'Permission verified - ${MediaEquipmentDemoData.profile.verification}'
-                                  : 'Permission denied - provider not verified',
-                            );
-                          },
+                        const InlineNotice(
+                          message:
+                              'Enabled terms are attached to new equipment negotiations and contract drafts.',
+                          icon: Icons.info_outline,
+                          tone: CoreStatusTone.info,
                         ),
                       ],
                     ),
@@ -172,123 +184,276 @@ class ME06RateTermsScreen extends StatelessWidget {
     );
   }
 
-  void _showPublishOtp(BuildContext context, MediaEquipmentDemoStore store) {
-    final otp = TextEditingController();
+  EquipmentTermDto? _firstOfType(
+    List<EquipmentTermDto> values,
+    String type,
+  ) {
+    for (final term in values) {
+      if (term.termType == type) return term;
+    }
+    return null;
+  }
+
+  Future<void> _update(
+    EquipmentTermDto term,
+    Map<String, dynamic> body,
+  ) async {
+    final operations = OperationsScope.maybeOf(context);
+    if (operations == null) return;
+    setState(() => _busyId = term.publicId);
+    try {
+      await operations.updateEquipmentTerm(term.publicId, body);
+      if (!mounted) return;
+      setState(_reload);
+      mediaSnack(context, '${term.label} updated');
+    } catch (error) {
+      if (mounted) mediaSnack(context, 'Could not update term: $error');
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  void _showEditor([EquipmentTermDto? term]) {
+    final label = TextEditingController(text: term?.label ?? '');
+    final note = TextEditingController(text: term?.note ?? '');
+    final amount = TextEditingController(
+      text: term == null ? '' : '${term.amountMinor ~/ 100}',
+    );
+    var type = term?.termType ?? 'daily_rate';
+    var enabled = term?.enabled ?? true;
     showMediaSheet(
       context,
-      title: 'Publish terms',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          OtpInputRow(controller: otp),
-          const SizedBox(height: 12),
-          CorePrimaryButton(
-            icon: Icons.sync_rounded,
-            label: 'Confirm publish',
-            onTap: () async {
-              if (otp.text.trim().length != 6) {
-                mediaSnack(context, 'Enter a 6-digit OTP');
-                return;
-              }
-              final operations = OperationsScope.maybeOf(context);
-              if (operations != null) {
-                try {
-                  for (final term in store.terms) {
-                    await operations.createEquipmentTerm({
-                      'label': term.label,
-                      'note': term.note,
-                      'amount_minor': term.amount * 100,
-                      'currency': 'PKR',
-                      'enabled': term.enabled,
-                      'term_type': term.id,
-                    });
+      title: term == null ? 'Add rental term' : 'Edit rental term',
+      child: StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CoreTextField(
+                controller: label,
+                label: 'Term label',
+                icon: Icons.sell_outlined,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: note,
+                label: 'Contract explanation',
+                icon: Icons.notes_outlined,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: amount,
+                label: 'Amount in PKR',
+                icon: Icons.payments_outlined,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Term type',
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: context.appColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final value in const [
+                    'daily_rate',
+                    'operator',
+                    'assistant',
+                    'transport',
+                    'overtime',
+                    'deposit',
+                    'late_fee',
+                    'cancellation',
+                  ])
+                    CoreChip(
+                      label: _title(value),
+                      selected: type == value,
+                      onTap: () => setSheetState(() => type = value),
+                    ),
+                ],
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enabled for new bookings'),
+                value: enabled,
+                onChanged: (value) => setSheetState(() => enabled = value),
+              ),
+              const SizedBox(height: 10),
+              CorePrimaryButton(
+                icon: Icons.save_outlined,
+                label: 'Save rental term',
+                onTap: () async {
+                  final amountPkr = int.tryParse(amount.text.trim());
+                  if (label.text.trim().length < 2 ||
+                      amountPkr == null ||
+                      amountPkr < 0) {
+                    mediaSnack(context, 'Enter a label and valid amount');
+                    return;
                   }
-                } catch (error) {
-                  if (context.mounted) {
-                    mediaSnack(context, 'Live terms publish skipped: $error');
+                  final operations = OperationsScope.maybeOf(context);
+                  if (operations == null) return;
+                  final body = {
+                    'label': label.text.trim(),
+                    'note': note.text.trim(),
+                    'amount_minor': amountPkr * 100,
+                    'currency': 'PKR',
+                    'enabled': enabled,
+                    'term_type': type,
+                  };
+                  try {
+                    if (term == null) {
+                      await operations.createEquipmentTerm(body);
+                    } else {
+                      await operations.updateEquipmentTerm(
+                        term.publicId,
+                        body,
+                      );
+                    }
+                    if (!mounted || !context.mounted) return;
+                    Navigator.pop(context);
+                    setState(_reload);
+                    mediaSnack(this.context, 'Rental term saved');
+                  } catch (error) {
+                    if (context.mounted) {
+                      mediaSnack(context, 'Could not save term: $error');
+                    }
                   }
-                }
-              }
-              store.publishTerms();
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              mediaSnack(context, 'Terms published to contracts');
-            },
-          ),
-        ],
+                },
+              ),
+            ],
+          );
+        },
       ),
-    ).whenComplete(otp.dispose);
+    ).whenComplete(() {
+      label.dispose();
+      note.dispose();
+      amount.dispose();
+    });
   }
 }
 
-class _TermRow extends StatelessWidget {
-  final MediaTermItem term;
-  final VoidCallback onMinus;
-  final VoidCallback onPlus;
+class _LiveTermRow extends StatelessWidget {
+  final EquipmentTermDto term;
+  final bool busy;
+  final ValueChanged<int> onAmount;
   final ValueChanged<bool> onEnabled;
+  final VoidCallback onEdit;
 
-  const _TermRow({
+  const _LiveTermRow({
     required this.term,
-    required this.onMinus,
-    required this.onPlus,
+    required this.busy,
+    required this.onAmount,
     required this.onEnabled,
+    required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final amountPkr = term.amountMinor ~/ 100;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         gradient: colors.inactiveChipGradient,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.border),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(term.icon, color: colors.goldDark, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  term.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
+          Row(
+            children: [
+              Icon(_termIcon(term.termType), color: colors.goldDark, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      term.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.cardLabel.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      term.note.isEmpty ? _title(term.termType) : term.note,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${mediaMoney(term.amount)} - ${term.note}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.statusText.copyWith(
-                    color:
-                        term.enabled ? colors.goldDark : colors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Switch.adaptive(
+                value: term.enabled,
+                onChanged: busy ? null : onEnabled,
+              ),
+            ],
           ),
-          IconButton(
-            tooltip: 'Decrease',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: onMinus,
-            icon: Icon(Icons.remove_circle_outline, color: colors.iconMuted),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              StatusChip(
+                label: mediaMoney(amountPkr),
+                color: term.enabled ? colors.goldMid : colors.textSecondary,
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Decrease by PKR 5,000',
+                onPressed: busy
+                    ? null
+                    : () => onAmount(
+                          ((amountPkr - 5000).clamp(0, 9999999)) * 100,
+                        ),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              IconButton(
+                tooltip: 'Increase by PKR 5,000',
+                onPressed:
+                    busy ? null : () => onAmount((amountPkr + 5000) * 100),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+              IconButton(
+                tooltip: 'Edit term',
+                onPressed: busy ? null : onEdit,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
           ),
-          IconButton(
-            tooltip: 'Increase',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            onPressed: onPlus,
-            icon: Icon(Icons.add_circle_outline, color: colors.goldDark),
-          ),
-          Switch.adaptive(value: term.enabled, onChanged: onEnabled),
         ],
       ),
     );
   }
+}
+
+IconData _termIcon(String type) {
+  return switch (type) {
+    'operator' || 'assistant' => Icons.engineering_outlined,
+    'transport' => Icons.local_shipping_outlined,
+    'overtime' => Icons.more_time_outlined,
+    'deposit' => Icons.verified_user_outlined,
+    'cancellation' => Icons.cancel_outlined,
+    _ => Icons.receipt_long_outlined,
+  };
+}
+
+String _title(String value) {
+  return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }

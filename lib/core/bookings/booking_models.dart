@@ -241,6 +241,7 @@ class NegotiationThread {
 class AvailabilityEntry {
   final String publicId;
   final String resourceType;
+  final String resourceId;
   final DateTime startAt;
   final DateTime endAt;
   final String status;
@@ -250,6 +251,7 @@ class AvailabilityEntry {
   const AvailabilityEntry({
     required this.publicId,
     required this.resourceType,
+    required this.resourceId,
     required this.startAt,
     required this.endAt,
     required this.status,
@@ -261,6 +263,7 @@ class AvailabilityEntry {
     return AvailabilityEntry(
       publicId: json['public_id'] as String,
       resourceType: json['resource_type'] as String? ?? 'user',
+      resourceId: json['resource_id'] as String? ?? '',
       startAt: DateTime.parse(json['start_at'] as String),
       endAt: DateTime.parse(json['end_at'] as String),
       status: json['status'] as String? ?? 'available',

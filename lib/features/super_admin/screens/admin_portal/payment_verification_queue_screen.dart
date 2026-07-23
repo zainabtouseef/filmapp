@@ -17,8 +17,13 @@ class _PaymentVerificationQueueScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final payments = PaymentsScope.maybeOf(context);
-    _proofsFuture ??= payments?.adminProofs(force: true);
+    _proofsFuture ??= PaymentsScope.of(context).adminProofs(force: true);
+  }
+
+  void _refresh() {
+    setState(
+      () => _proofsFuture = PaymentsScope.of(context).adminProofs(force: true),
+    );
   }
 
   bool _matches(AdminPaymentProof proof) {
@@ -59,33 +64,41 @@ class _PaymentVerificationQueueScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_proofsFuture != null) {
-      return FutureBuilder<List<PaymentProofDto>>(
-        future: _proofsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            final message = snapshot.error is ApiException
-                ? (snapshot.error! as ApiException).message
-                : 'Could not load live payment proofs.';
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return FutureBuilder<List<PaymentProofDto>>(
+      future: _proofsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AdminSurface(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          final error = snapshot.error;
+          return AdminSurface(
+            child: Column(
               children: [
-                InlineNotice(message: message, tone: CoreStatusTone.warning),
-                const SizedBox(height: 16),
-                _queueContent(context, AdminMockData.paymentProofs),
+                AdminEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'Could not load payment proofs',
+                  message: error is ApiException
+                      ? error.message
+                      : 'Check the backend connection and try again.',
+                ),
+                const SizedBox(height: 12),
+                AdminActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: 'Retry',
+                  secondary: true,
+                  onTap: _refresh,
+                ),
               ],
-            );
-          }
-          final proofs =
-              (snapshot.data ?? const []).map(_toAdminProof).toList();
-          return _queueContent(context, proofs);
-        },
-      );
-    }
-    return _queueContent(context, AdminMockData.paymentProofs);
+            ),
+          );
+        }
+        final proofs = (snapshot.data ?? const []).map(_toAdminProof).toList();
+        return _queueContent(context, proofs);
+      },
+    );
   }
 
   Widget _queueContent(BuildContext context, List<AdminPaymentProof> source) {
@@ -173,8 +186,7 @@ class _PaymentVerificationQueueScreenState
                 proof: proof,
                 onReview: () => Navigator.pushNamed(
                   context,
-                  SuperAdminRoutes.paymentReview,
-                  arguments: proof.proofId,
+                  SuperAdminRoutes.paymentReviewPath(proof.proofId!),
                 ),
               ),
             ),
@@ -271,7 +283,7 @@ class _PaymentProofRow extends StatelessWidget {
               children: [
                 AdminRiskBadge(label: proof.risk, risk: risk),
                 AdminSlaBadge(age: proof.age),
-                _ReviewOutlineButton(label: 'Review', onTap: onReview),
+                _tinyAction(context, 'Review', onReview),
               ],
             );
             final receiptIcon = Container(

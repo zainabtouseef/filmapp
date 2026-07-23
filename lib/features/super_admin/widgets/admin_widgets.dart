@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -14,6 +15,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_section_header.dart' as shared_layout;
 import '../../../shared/layout/admin_top_bar.dart';
+import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/sections/admin_filter_bar.dart' as shared_filters;
 import '../../../shared/widgets/premium_data_table.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -45,12 +47,25 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   @override
   Widget build(BuildContext context) {
+    final routedChild = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _AdminRouteHeading(
+          title: widget.title,
+          subtitle: widget.subtitle,
+          route: widget.currentRoute,
+        ),
+        const SizedBox(height: 16),
+        widget.child,
+      ],
+    );
     return AdminScreenScaffold(
       title: widget.title,
       currentRoute: widget.currentRoute,
+      showHeading: false,
       topBarBuilder: (context, wide, onMenuTap) => AdminTopBar(
-        title: widget.title,
-        onNavTap: wide ? null : onMenuTap,
+        wide: wide,
+        onMenuTap: onMenuTap,
       ),
       sideNavBuilder: (context, currentRoute, onRouteTap) => AdminSidebar(
         currentRoute: currentRoute,
@@ -67,19 +82,227 @@ class _AdminShellState extends State<AdminShell> {
         ),
       ),
       floatingMenuBuilder: (context, open, currentRoute, onClose, onRouteTap) =>
-          AdminFloatingMenuOverlay(
+          FloatingPortalMenuOverlay(
         open: open,
         currentRoute: currentRoute,
+        items: [
+          for (final item in AdminMockData.navItems)
+            FloatingPortalMenuItem(
+              route: item.route,
+              label: item.label,
+              icon: item.icon,
+            ),
+        ],
+        statusTitle: 'Super Admin',
+        statusSubtitle: 'Platform control center',
+        statusIcon: Icons.admin_panel_settings_outlined,
         onClose: onClose,
         onRouteTap: onRouteTap,
+        isRouteActive: _isRouteActive,
       ),
       onRouteSelected: _go,
-      child: widget.child,
+      child: routedChild,
     );
   }
 
   void _go(BuildContext context, String route) {
     Navigator.pushNamed(context, route);
+  }
+}
+
+class _AdminRouteHeading extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String route;
+
+  const _AdminRouteHeading({
+    required this.title,
+    required this.subtitle,
+    required this.route,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final heading = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 22,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: colors.goldMid,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    _eyebrow,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.micro.copyWith(
+                      color: colors.goldDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              title,
+              maxLines: constraints.maxWidth < 440 ? 2 : 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.heroSerifNumber.copyWith(
+                color: colors.textPrimary,
+                fontSize: constraints.maxWidth < 440 ? 26 : 30,
+              ),
+            ),
+            const SizedBox(height: 5),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Text(
+                subtitle,
+                style: AppTextStyles.bodyMuted.copyWith(
+                  color: colors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        );
+        if (constraints.maxWidth < 660) return heading;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: heading),
+            const SizedBox(width: 16),
+            const AdminStatusBadge(
+              label: 'Super Admin',
+              icon: Icons.admin_panel_settings_outlined,
+              tone: AdminDecisionTone.warning,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String get _eyebrow {
+    return switch (route) {
+      SuperAdminRoutes.reviewHub ||
+      SuperAdminRoutes.reviewHubPeople ||
+      SuperAdminRoutes.reviewHubListings ||
+      SuperAdminRoutes.reviewHubContent =>
+        'TRUST DESK · REVIEW QUEUES',
+      SuperAdminRoutes.verifications ||
+      SuperAdminRoutes.verificationDetail =>
+        'IDENTITY · ACCESS CLEARANCE',
+      SuperAdminRoutes.contentModeration ||
+      SuperAdminRoutes.listingsModeration =>
+        'MARKETPLACE · CONTENT SAFETY',
+      SuperAdminRoutes.bookingsMonitor ||
+      SuperAdminRoutes.bookingDetail =>
+        'OPERATIONS · BOOKING CONTROL',
+      SuperAdminRoutes.payments ||
+      SuperAdminRoutes.paymentQueue ||
+      SuperAdminRoutes.paymentReview ||
+      SuperAdminRoutes.paymentLedger ||
+      SuperAdminRoutes.paymentRevenue ||
+      SuperAdminRoutes.fees =>
+        'FINANCE · PLATFORM SETTLEMENTS',
+      SuperAdminRoutes.contractTemplates ||
+      SuperAdminRoutes.contractTemplateDetail =>
+        'LEGAL · CONTRACT GOVERNANCE',
+      SuperAdminRoutes.disputes ||
+      SuperAdminRoutes.disputeCase =>
+        'TRUST · CASE RESOLUTION',
+      SuperAdminRoutes.users ||
+      SuperAdminRoutes.adminRoles =>
+        'ACCESS · ROLE GOVERNANCE',
+      SuperAdminRoutes.support ||
+      SuperAdminRoutes.broadcasts =>
+        'SERVICE · COMMUNICATIONS',
+      SuperAdminRoutes.auditLogs => 'SECURITY · FORENSIC EVENTS',
+      SuperAdminRoutes.analytics => 'INTELLIGENCE · PLATFORM HEALTH',
+      _ => 'PLATFORM COMMAND · LIVE OPERATIONS',
+    };
+  }
+}
+
+class _AdminIdentityCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AdminIdentityCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final user = AuthScope.maybeOf(context)?.user;
+    final name = user?.displayName ?? AdminMockData.adminName;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: colors.softSurface.withValues(alpha: 0.58),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: colors.goldMid.withValues(alpha: 0.16),
+              child: Text(
+                name.trim().isEmpty
+                    ? 'A'
+                    : name.trim().substring(0, 1).toUpperCase(),
+                style: AppTextStyles.label.copyWith(
+                  color: colors.goldDark,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Super Admin',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: colors.iconMuted,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -97,22 +320,30 @@ class AdminSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      width: 276,
-      margin: const EdgeInsets.fromLTRB(14, 14, 0, 14),
+      width: 272,
+      margin: const EdgeInsets.fromLTRB(12, 12, 0, 12),
       child: GlassContainer(
-        radius: 24,
-        padding: const EdgeInsets.all(16),
+        radius: 8,
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _AdminBrand(),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             AdminStatusBadge(
-              label: 'Super Admin Control Room',
+              label: 'Platform online',
               icon: Icons.security_rounded,
-              tone: AdminDecisionTone.warning,
+              tone: AdminDecisionTone.success,
             ),
             const SizedBox(height: 18),
+            Text(
+              'PLATFORM CONTROL',
+              style: AppTextStyles.micro.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
             Expanded(
               child: ListView.separated(
                 itemCount: AdminMockData.navItems.length,
@@ -120,25 +351,37 @@ class AdminSidebar extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final item = AdminMockData.navItems[index];
                   final active = _isRouteActive(currentRoute, item.route);
-                  return GestureDetector(
+                  return InkWell(
                     onTap: () => onRouteTap(item.route),
+                    borderRadius: BorderRadius.circular(8),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
+                      constraints: const BoxConstraints(minHeight: 46),
                       decoration: BoxDecoration(
-                        gradient: active
-                            ? colors.activeChipGradient
-                            : colors.inactiveChipGradient,
-                        borderRadius: BorderRadius.circular(16),
+                        color: active
+                            ? colors.goldGlow.withValues(
+                                alpha: colors.isLight ? 0.12 : 0.08,
+                              )
+                            : colors.surface.withValues(
+                                alpha: colors.isLight ? 0.5 : 0.2,
+                              ),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: active ? colors.goldMid : colors.border,
                         ),
                       ),
                       child: Row(
                         children: [
+                          Container(
+                            width: 4,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color:
+                                  active ? colors.goldMid : Colors.transparent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           Icon(
                             item.icon,
                             color: active ? colors.goldDark : colors.iconMuted,
@@ -158,6 +401,19 @@ class AdminSidebar extends StatelessWidget {
                               ),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: active
+                                  ? colors.goldMid
+                                  : colors.textSecondary
+                                      .withValues(alpha: 0.28),
+                            ),
+                          ),
+                          const SizedBox(width: 11),
                         ],
                       ),
                     ),
@@ -165,12 +421,10 @@ class AdminSidebar extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 12),
-            AdminActionButton(
-              icon: Icons.logout_rounded,
-              label: 'Logout',
-              secondary: true,
-              onTap: () => logoutToLogin(context),
+            const SizedBox(height: 10),
+            _AdminIdentityCard(
+              onTap: () =>
+                  Navigator.pushNamed(context, CoreRoutes.profileRoles),
             ),
           ],
         ),
@@ -180,54 +434,59 @@ class AdminSidebar extends StatelessWidget {
 }
 
 class AdminTopBar extends StatelessWidget {
-  final String title;
-  final VoidCallback? onNavTap;
+  final bool wide;
+  final VoidCallback onMenuTap;
 
   const AdminTopBar({
     super.key,
-    required this.title,
-    this.onNavTap,
+    required this.wide,
+    required this.onMenuTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final width = MediaQuery.sizeOf(context).width;
-    final compact = width < 620;
+    final compact = !wide;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final narrow = compact && viewportWidth < 520;
+    final hideAvatar = compact && viewportWidth < 390;
+    final canGoBack = wide || Navigator.canPop(context);
+    final adminName = AuthScope.maybeOf(context)?.user?.displayName ??
+        AdminMockData.adminName;
     return AdminTopBarFrame(
       compact: compact,
       child: Row(
         children: [
           AdminIconButton(
-            icon: onNavTap == null
-                ? Icons.arrow_back_rounded
-                : Icons.menu_rounded,
-            tooltip: onNavTap == null ? 'Back' : 'Menu',
-            onTap: onNavTap ?? () => navigateCoreBack(context),
+            icon: canGoBack ? Icons.arrow_back_rounded : Icons.menu_rounded,
+            tooltip: canGoBack ? 'Back' : 'Menu',
+            onTap: canGoBack ? () => navigateCoreBack(context) : onMenuTap,
           ),
           SizedBox(width: compact ? 8 : 12),
-          if (!compact) ...[
-            const _AdminBrand(compact: true),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: AdminCommandButton(
-              label: compact
-                  ? 'Search admin...'
-                  : 'Search bookings, users, contracts, payments...',
+          SizedBox(
+            width: compact ? 108 : null,
+            child: const _AdminBrand(compact: true),
+          ),
+          if (narrow) ...[
+            const Spacer(),
+            AdminIconButton(
+              icon: Icons.search_rounded,
+              tooltip: 'Search admin',
               onTap: () => showAdminCommandSheet(context),
             ),
-          ),
+          ] else ...[
+            SizedBox(width: compact ? 8 : 16),
+            Expanded(
+              child: AdminCommandButton(
+                label: compact
+                    ? 'Search admin...'
+                    : 'Search bookings, users, contracts, payments...',
+                onTap: () => showAdminCommandSheet(context),
+              ),
+            ),
+          ],
           SizedBox(width: compact ? 8 : 12),
-          ThemeToggleButton(size: compact ? 34 : 38),
-          SizedBox(width: compact ? 8 : 10),
-          AdminIconButton(
-            icon: Icons.logout_rounded,
-            tooltip: 'Logout',
-            onTap: () => logoutToLogin(context),
-          ),
-          if (!compact) ...[
-            const SizedBox(width: 10),
+          if (wide) ...[
             AdminIconButton(
               icon: Icons.notifications_none_rounded,
               tooltip: 'Notifications',
@@ -236,32 +495,42 @@ class AdminTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
-          if (width >= 720) ...[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AdminMockData.adminName,
-                  style: AppTextStyles.label.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w900,
+          if (!hideAvatar)
+            Tooltip(
+              message: 'Admin profile',
+              child: InkWell(
+                onTap: () =>
+                    Navigator.pushNamed(context, CoreRoutes.profileRoles),
+                borderRadius: BorderRadius.circular(20),
+                child: CircleAvatar(
+                  radius: compact ? 17 : 19,
+                  backgroundColor: colors.goldMid.withValues(alpha: 0.16),
+                  child: Text(
+                    adminName.trim().isEmpty
+                        ? 'A'
+                        : adminName.trim().substring(0, 1).toUpperCase(),
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.goldDark,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                const AdminStatusBadge(
-                  label: 'Super Admin',
-                  tone: AdminDecisionTone.warning,
-                ),
-              ],
+              ),
+            ),
+          SizedBox(width: compact ? 8 : 10),
+          ThemeToggleButton(size: compact ? 34 : 38),
+          if (wide) ...[
+            const SizedBox(width: 10),
+            AdminIconButton(
+              icon: Icons.logout_rounded,
+              tooltip: 'Logout',
+              onTap: () => logoutToLogin(context),
             ),
             const SizedBox(width: 10),
-          ],
-          if (!compact) ...[
-            AdminIconButton(
-              icon: Icons.account_circle_outlined,
-              tooltip: 'Profile menu',
-              onTap: () => showCoreSnack(context, 'Profile menu simulated'),
+            const AdminStatusBadge(
+              label: 'Super Admin',
+              icon: Icons.workspace_premium_outlined,
+              tone: AdminDecisionTone.warning,
             ),
           ],
         ],

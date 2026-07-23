@@ -72,6 +72,17 @@ class ModelExtensionPortalScreen extends StatelessWidget {
       navRoutes: ModelExtensionRoutes.primaryNav,
       navDestinations: _modelBottomDestinations,
       menuEntries: _modelMenuEntries,
+      workspaceLayout: true,
+      workspaceTitle: 'Model Workspace',
+      workspaceSectionLabel: 'MODEL / CAMPAIGNS',
+      workspaceBadgeLabel: 'Model',
+      workspaceStatusSubtitle:
+          'Campaign fit, usage rights, portfolio and brand safety',
+      workspaceSearchHint: 'Search campaign settings and usage rights...',
+      workspaceSearchRoute: ModelExtensionRoutes.usageRights,
+      workspaceProfileRoute: ModelExtensionRoutes.categories,
+      workspaceIcon: Icons.style_outlined,
+      workspaceEyebrow: _modelEyebrow,
       child: _screenFor(routeName),
     );
   }
@@ -86,4 +97,15 @@ class ModelExtensionPortalScreen extends StatelessWidget {
       _ => const MD01CampaignCategoriesScreen(),
     };
   }
+}
+
+String _modelEyebrow(String route) {
+  return switch (route) {
+    ModelExtensionRoutes.categories => 'Model workspace · campaign fit',
+    ModelExtensionRoutes.usageRights => 'Licensing · territories · exclusivity',
+    ModelExtensionRoutes.portfolio => 'Portfolio · categories · visibility',
+    ModelExtensionRoutes.rateByUsage => 'Commercial rates · usage scope',
+    ModelExtensionRoutes.brandSafety => 'Boundaries · restrictions · review',
+    _ => 'Model campaign workspace',
+  };
 }

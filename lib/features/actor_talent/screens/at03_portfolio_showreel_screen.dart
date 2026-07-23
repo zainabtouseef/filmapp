@@ -30,6 +30,7 @@ class _AT03PortfolioShowreelScreenState
   String filter = 'All';
   Future<List<MarketplacePortfolioItem>>? _itemsFuture;
   bool _started = false;
+  bool _previewMode = false;
   bool _uploading = false;
   String? _busyItemId;
 
@@ -61,6 +62,7 @@ class _AT03PortfolioShowreelScreenState
   void _reload() {
     final controller = AuthScope.maybeOf(context);
     setState(() {
+      _previewMode = controller == null;
       _itemsFuture = controller == null
           ? Future<List<MarketplacePortfolioItem>>.error(
               const ApiException(
@@ -96,6 +98,12 @@ class _AT03PortfolioShowreelScreenState
                 return const _PortfolioLoadingState();
               }
               if (snapshot.hasError) {
+                if (!_previewMode) {
+                  return _PortfolioError(
+                    message: _friendlyError(snapshot.error),
+                    onRetry: _reload,
+                  );
+                }
                 return AnimatedBuilder(
                   animation: ActorTalentDemoStore.instance,
                   builder: (context, _) => _PortfolioFallbackGrid(
@@ -270,6 +278,26 @@ class _AT03PortfolioShowreelScreenState
   }
 
   Future<void> _deleteItem(MarketplacePortfolioItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove portfolio item?'),
+        content: Text(
+          '${item.title} will be removed from your public portfolio. The uploaded source file is not deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     await _mutateItem(
       item,
       () => AuthScope.of(context).deletePortfolioItem(item.publicId),
@@ -400,13 +428,13 @@ class _AT03PortfolioShowreelScreenState
         'auth.invalid_token' =>
           'Sign in to manage portfolio media.',
         'validation.invalid' =>
-          'Live data unavailable — showing preview data. Complete your talent profile before adding portfolio media.',
+          'Complete your talent profile before adding portfolio media.',
         'network.offline' =>
-          'Live data unavailable — showing preview data. Check your connection and retry.',
-        _ => 'Live data unavailable — showing preview data.',
+          'Portfolio media is unavailable offline. Check your connection and retry.',
+        _ => 'Could not load portfolio media. Try again.',
       };
     }
-    return 'Live data unavailable — showing preview data.';
+    return 'Could not load portfolio media. Try again.';
   }
 }
 
@@ -611,11 +639,13 @@ class _PortfolioCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: CorePrimaryButton(
-                  icon: Icons.star_outline_rounded,
-                  label: cover ? 'Cover' : 'Cover',
+                  icon: cover
+                      ? Icons.check_circle_outline
+                      : Icons.star_outline_rounded,
+                  label: cover ? 'Current cover' : 'Set cover',
                   compact: true,
                   loading: busy,
-                  onTap: busy ? null : onCover,
+                  onTap: busy || cover ? null : onCover,
                 ),
               ),
             ],
@@ -679,6 +709,36 @@ class _PortfolioLoadingState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PortfolioError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _PortfolioError({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: 'Could not load portfolio',
+          message: message,
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

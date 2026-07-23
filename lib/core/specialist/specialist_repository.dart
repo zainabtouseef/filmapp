@@ -147,6 +147,20 @@ class SpecialistRepository {
     );
   }
 
+  Future<BrandOpportunityDto> updateBrandOpportunity(
+    String opportunityId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.patch(
+      '/brand-opportunities/$opportunityId',
+      body: body,
+    );
+    return BrandOpportunityDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['opportunity']
+          as Map<String, dynamic>,
+    );
+  }
+
   Future<List<BrandOpportunityDto>> brandOpportunities({
     bool mine = true,
   }) async {
@@ -192,6 +206,28 @@ class SpecialistRepository {
         .toList();
   }
 
+  Future<List<BrandApplicationDto>> ownerBrandApplications({
+    String? opportunityId,
+  }) async {
+    final suffix = opportunityId == null || opportunityId.isEmpty
+        ? ''
+        : '?opportunity_id=${Uri.encodeComponent(opportunityId)}';
+    final response = await _client.get('/brand-applications$suffix');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['applications'] as List<dynamic>? ?? const [])
+        .map((item) =>
+            BrandApplicationDto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<BrandApplicationDto> brandApplication(String applicationId) async {
+    final response = await _client.get('/brand-applications/$applicationId');
+    return BrandApplicationDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['application']
+          as Map<String, dynamic>,
+    );
+  }
+
   Future<BrandApplicationDto> updateBrandApplication(
       String applicationId, Map<String, dynamic> body) async {
     final response =
@@ -202,9 +238,25 @@ class SpecialistRepository {
     );
   }
 
-  Future<Map<String, dynamic>> createBrandTerms(
-      String applicationId, Map<String, dynamic> body) {
-    return _client.post('/brand-applications/$applicationId/terms', body: body);
+  Future<BrandApplicationDto> createBrandTerms(
+      String applicationId, Map<String, dynamic> body) async {
+    final response = await _client.post(
+      '/brand-applications/$applicationId/terms',
+      body: body,
+    );
+    return BrandApplicationDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['application']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<String> ensureBrandApplicationConversation(
+      String applicationId) async {
+    final response = await _client.post(
+      '/brand-applications/$applicationId/conversation',
+    );
+    return (response['data'] as Map<String, dynamic>)['conversation_id']
+        as String;
   }
 
   Future<CampaignDeliverableDto> createCampaignDeliverable(
@@ -233,6 +285,30 @@ class SpecialistRepository {
       String deliverableId) async {
     final response =
         await _client.post('/campaign-deliverables/$deliverableId/approve');
+    return CampaignDeliverableDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['deliverable']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<CampaignDeliverableDto> updateCampaignDeliverable(
+    String deliverableId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.patch(
+      '/campaign-deliverables/$deliverableId',
+      body: body,
+    );
+    return CampaignDeliverableDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['deliverable']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<CampaignDeliverableDto> createCampaignMetric(
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.post('/campaign-metrics', body: body);
     return CampaignDeliverableDto.fromJson(
       (response['data'] as Map<String, dynamic>)['deliverable']
           as Map<String, dynamic>,
@@ -289,6 +365,16 @@ class SpecialistRepository {
     );
   }
 
+  Future<ModelUsageRightDto> updateModelUsageRight(
+      String rightId, Map<String, dynamic> body) async {
+    final response =
+        await _client.patch('/model/usage-rights/$rightId', body: body);
+    return ModelUsageRightDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['usage_right']
+          as Map<String, dynamic>,
+    );
+  }
+
   Future<List<ModelUsageRateDto>> modelUsageRates() async {
     final response = await _client.get('/model/usage-rates');
     final data = response['data'] as Map<String, dynamic>;
@@ -300,6 +386,16 @@ class SpecialistRepository {
   Future<ModelUsageRateDto> createModelUsageRate(
       Map<String, dynamic> body) async {
     final response = await _client.post('/model/usage-rates', body: body);
+    return ModelUsageRateDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['usage_rate']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<ModelUsageRateDto> updateModelUsageRate(
+      String rateId, Map<String, dynamic> body) async {
+    final response =
+        await _client.patch('/model/usage-rates/$rateId', body: body);
     return ModelUsageRateDto.fromJson(
       (response['data'] as Map<String, dynamic>)['usage_rate']
           as Map<String, dynamic>,

@@ -23,6 +23,21 @@ class AdminMockData {
       route: SuperAdminRoutes.reviewHub,
     ),
     AdminNavItem(
+      label: 'Verifications',
+      icon: Icons.badge_outlined,
+      route: SuperAdminRoutes.verifications,
+    ),
+    AdminNavItem(
+      label: 'Listings',
+      icon: Icons.storefront_outlined,
+      route: SuperAdminRoutes.listingsModeration,
+    ),
+    AdminNavItem(
+      label: 'Moderation',
+      icon: Icons.policy_outlined,
+      route: SuperAdminRoutes.contentModeration,
+    ),
+    AdminNavItem(
       label: 'Payments',
       icon: Icons.payments_outlined,
       route: SuperAdminRoutes.payments,
@@ -43,9 +58,24 @@ class AdminMockData {
       route: SuperAdminRoutes.contractTemplates,
     ),
     AdminNavItem(
+      label: 'Fees',
+      icon: Icons.percent_rounded,
+      route: SuperAdminRoutes.fees,
+    ),
+    AdminNavItem(
       label: 'Users & Access',
       icon: Icons.groups_2_outlined,
       route: SuperAdminRoutes.users,
+    ),
+    AdminNavItem(
+      label: 'Admin Management',
+      icon: Icons.admin_panel_settings_outlined,
+      route: SuperAdminRoutes.adminRoles,
+    ),
+    AdminNavItem(
+      label: 'Support',
+      icon: Icons.support_agent_outlined,
+      route: SuperAdminRoutes.support,
     ),
     AdminNavItem(
       label: 'Communications',
@@ -53,7 +83,7 @@ class AdminMockData {
       route: SuperAdminRoutes.broadcasts,
     ),
     AdminNavItem(
-      label: 'Audit Logs',
+      label: 'Activity Log',
       icon: Icons.assignment_outlined,
       route: SuperAdminRoutes.auditLogs,
     ),
