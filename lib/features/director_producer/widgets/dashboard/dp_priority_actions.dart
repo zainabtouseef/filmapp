@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
 import '../dp_status_chip.dart';
-import 'dp_dashboard_insights.dart';
 
 /// "Needs your attention" — a compact preview of the three highest-priority
 /// items, with the full list available from the parent section action.
 class DPPriorityActions extends StatelessWidget {
-  const DPPriorityActions({super.key});
+  final List<DirectorPriorityAction> items;
+
+  const DPPriorityActions({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final sourceItems = dpPriorityItems();
-    final items = sourceItems.take(3).toList();
-    if (sourceItems.isEmpty) {
+    final previewItems = items.take(3).toList();
+    if (items.isEmpty) {
       return Row(
         children: [
           Icon(Icons.check_circle_outline_rounded,
@@ -35,9 +37,9 @@ class DPPriorityActions extends StatelessWidget {
 
     return Column(
       children: [
-        for (var i = 0; i < items.length; i++) ...[
-          _PriorityCard(item: items[i]),
-          if (i != items.length - 1) const SizedBox(height: 10),
+        for (var i = 0; i < previewItems.length; i++) ...[
+          _PriorityCard(item: previewItems[i]),
+          if (i != previewItems.length - 1) const SizedBox(height: 10),
         ],
       ],
     );
@@ -45,20 +47,23 @@ class DPPriorityActions extends StatelessWidget {
 }
 
 class _PriorityCard extends StatelessWidget {
-  final DpPriorityItem item;
+  final DirectorPriorityAction item;
 
   const _PriorityCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final color = dpToneColor(context, item.tone);
+    final color = dpToneColor(context, item.dpTone);
+    final route = item.route.contains(':id')
+        ? DirectorProducerRoutes.projectDetail
+        : item.route;
     return DPGlassCard(
       accentColor: color,
       padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
       onTap: () => Navigator.pushNamed(
         context,
-        item.route,
+        route,
         arguments: item.argument,
       ),
       child: Row(
@@ -67,7 +72,10 @@ class _PriorityCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DpDotLabel(label: item.urgency.toUpperCase(), tone: item.tone),
+                DpDotLabel(
+                  label: item.urgency.toUpperCase(),
+                  tone: item.dpTone,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   item.title,

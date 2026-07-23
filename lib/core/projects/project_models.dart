@@ -181,6 +181,7 @@ class Project {
   final int? estimatedBudgetMinor;
   final String currency;
   final String visibility;
+  final UploadedFile? coverFile;
   final int progressPercent;
   final int requirementCount;
   final int memberCount;
@@ -201,6 +202,7 @@ class Project {
     required this.estimatedBudgetMinor,
     required this.currency,
     required this.visibility,
+    required this.coverFile,
     required this.progressPercent,
     required this.requirementCount,
     required this.memberCount,
@@ -214,6 +216,7 @@ class Project {
     final rawMembers = json['members'] as List<dynamic>? ?? const [];
     final rawRequirements = json['requirements'] as List<dynamic>? ?? const [];
     final cityJson = json['city'] as Map<String, dynamic>?;
+    final coverFileJson = json['cover_file'] as Map<String, dynamic>?;
     return Project(
       publicId: json['public_id'] as String,
       title: json['title'] as String? ?? 'Untitled project',
@@ -226,6 +229,8 @@ class Project {
       estimatedBudgetMinor: json['estimated_budget_minor'] as int?,
       currency: json['currency'] as String? ?? 'PKR',
       visibility: json['visibility'] as String? ?? 'private',
+      coverFile:
+          coverFileJson == null ? null : UploadedFile.fromJson(coverFileJson),
       progressPercent: json['progress_percent'] as int? ?? 0,
       requirementCount: json['requirement_count'] as int? ?? 0,
       memberCount: json['member_count'] as int? ?? rawMembers.length,
@@ -261,6 +266,7 @@ class Project {
       paymentsStatus: '$memberCount members',
       team: members.map((item) => item.displayName).toList(),
       progress: (progressPercent.clamp(0, 100)) / 100,
+      coverImageUrl: coverFile?.publicUrl,
     );
   }
 }

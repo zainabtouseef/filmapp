@@ -42,6 +42,9 @@ class Project(EntityMixin, Base):
     city_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("cities.id", ondelete="SET NULL")
     )
+    cover_file_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("files.id", ondelete="SET NULL")
+    )
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
@@ -54,6 +57,7 @@ class Project(EntityMixin, Base):
 
     owner: Mapped[User] = relationship(lazy="joined")
     city: Mapped[City | None] = relationship(lazy="joined")
+    cover_file: Mapped[FileAsset | None] = relationship(lazy="joined")
     members: Mapped[list[ProjectMember]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",

@@ -63,6 +63,7 @@ def _optional_date(value: Any, field: str) -> date | None:
         return None
     if not isinstance(value, str):
         raise _field_error(field, "Date must be formatted as YYYY-MM-DD.")
+    value = value.split("T", 1)[0]
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
@@ -194,6 +195,7 @@ def _project_payload(
         "project_type": project.project_type,
         "description": project.description,
         "city": _city_payload(project.city),
+        "cover_file": _file_payload(project.cover_file),
         "start_date": project.start_date.isoformat() if project.start_date else None,
         "end_date": project.end_date.isoformat() if project.end_date else None,
         "status": project.status,
@@ -296,7 +298,20 @@ def _owned_ready_project_file(public_id: str | None, user: User) -> FileAsset:
     return file
 
 
-def _apply_project_payload(project: Project, payload: dict[str, Any]) -> None:
+def _owned_public_project_cover(public_id: str | None, user: User) -> FileAsset | None:
+    if public_id in {None, ""}:
+        return None
+    file = _owned_ready_project_file(public_id, user)
+    if file.visibility != "public":
+        raise _field_error("cover_file_id", "Project cover image must be public.")
+    if not file.mime_type.startswith("image/"):
+        raise _field_error("cover_file_id", "Project cover must be an image file.")
+    return file
+
+
+def _apply_project_payload(
+    project: Project, payload: dict[str, Any], *, actor: User
+) -> None:
     if "title" in payload:
         title = str(payload.get("title", "")).strip()
         if len(title) < 2:
@@ -312,6 +327,12 @@ def _apply_project_payload(project: Project, payload: dict[str, Any]) -> None:
     if "city_id" in payload:
         city = _city_by_public_id(str(payload.get("city_id", "")).strip() or None)
         project.city_id = city.id if city else None
+    if "cover_file_id" in payload:
+        cover_file = _owned_public_project_cover(
+            str(payload.get("cover_file_id", "")).strip() or None,
+            actor,
+        )
+        project.cover_file_id = cover_file.id if cover_file else None
     if "start_date" in payload:
         project.start_date = _optional_date(payload.get("start_date"), "start_date")
     if "end_date" in payload:
@@ -443,7 +464,7 @@ def create_project() -> ResponseReturnValue:
         project_type="film",
         organization_id=str(payload.get("organization_id", "")).strip()[:40] or None,
     )
-    _apply_project_payload(project, payload)
+    _apply_project_payload(project, payload, actor=user)
     db.session.add(project)
     db.session.flush()
     db.session.add(
@@ -485,7 +506,7 @@ def update_project(public_id: str) -> Response:
             "Only the project owner can update project settings.",
             status=403,
         )
-    _apply_project_payload(project, _json_body())
+    _apply_project_payload(project, _json_body(), actor=user)
     db.session.commit()
     return jsonify(success({"project": _project_payload(project, include_nested=True)}))
 

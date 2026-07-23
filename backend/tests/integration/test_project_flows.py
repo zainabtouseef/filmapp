@@ -61,8 +61,34 @@ def _file_for_current_user(client: FlaskClient, headers: dict[str, str]) -> str:
         return file.public_id
 
 
+def _public_image_for_current_user(client: FlaskClient, headers: dict[str, str]) -> str:
+    me = client.get("/api/v1/me", headers=headers)
+    assert me.status_code == 200, me.text
+    user_public_id = me.json["data"]["public_id"]
+    with client.application.app_context():
+        user = db.session.execute(
+            select(User).where(User.public_id == user_public_id)
+        ).scalar_one()
+        file = FileAsset(
+            owner_user_id=user.id,
+            storage_key=f"project-covers/{uuid.uuid4().hex}.jpg",
+            bucket="local-public",
+            mime_type="image/jpeg",
+            size_bytes=54321,
+            checksum_sha256="3" * 64,
+            visibility="public",
+            scan_status="clean",
+            processing_status="ready",
+            original_name="project-cover.jpg",
+        )
+        db.session.add(file)
+        db.session.commit()
+        return file.public_id
+
+
 def test_project_requirement_and_skills_flow(client: FlaskClient) -> None:
     headers = _register_role(client, "director_producer")
+    cover_file_id = _public_image_for_current_user(client, headers)
 
     skills = client.get("/api/v1/skills?category=acting", headers=headers)
     assert skills.status_code == 200, skills.text
@@ -94,11 +120,14 @@ def test_project_requirement_and_skills_flow(client: FlaskClient) -> None:
             "currency": "PKR",
             "visibility": "private",
             "progress_percent": 10,
+            "cover_file_id": cover_file_id,
         },
     )
     assert created.status_code == 201, created.text
     project = created.json["data"]["project"]
     assert project["title"] == "Aurora Biscuit TVC"
+    assert project["cover_file"]["public_id"] == cover_file_id
+    assert project["cover_file"]["public_url"].startswith("https://media.test/")
     assert project["members"][0]["permissions"]["manage_project"] is True
     project_id = project["public_id"]
 
@@ -160,6 +189,15 @@ def test_project_requirement_and_skills_flow(client: FlaskClient) -> None:
     )
     assert updated_project.status_code == 200
     assert updated_project.json["data"]["project"]["progress_percent"] == 35
+
+    private_doc_id = _file_for_current_user(client, headers)
+    rejected_cover = client.patch(
+        f"/api/v1/projects/{project_id}",
+        headers=headers,
+        json={"cover_file_id": private_doc_id},
+    )
+    assert rejected_cover.status_code == 422
+    assert "cover_file_id" in rejected_cover.json["error"]["fields"]
 
 
 def test_project_role_and_member_scope(client: FlaskClient) -> None:

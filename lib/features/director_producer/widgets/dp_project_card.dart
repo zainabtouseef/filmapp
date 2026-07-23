@@ -41,6 +41,28 @@ class DPProjectCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (project.coverImageUrl?.isNotEmpty == true) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: AspectRatio(
+                  aspectRatio: 16 / 7,
+                  child: Image.network(
+                    project.coverImageUrl!,
+                    fit: BoxFit.cover,
+                    semanticLabel: '${project.title} project cover',
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: colors.softSurface,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.movie_creation_outlined,
+                        color: colors.iconMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

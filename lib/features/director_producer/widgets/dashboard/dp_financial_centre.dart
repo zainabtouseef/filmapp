@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/cards/cine_card_system.dart';
 import '../../../../shared/formatters/cine_format.dart';
-import '../../data/director_producer_demo_data.dart';
 import '../../models/dp_payment.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
@@ -13,17 +13,24 @@ import '../dp_holographic_button.dart';
 /// The Financial Command Centre — ledger health plus three payment previews,
 /// with the complete ledger available from the parent section action.
 class DPFinancialCentre extends StatelessWidget {
-  const DPFinancialCentre({super.key});
+  final List<DpPayment> payments;
+  final DirectorDashboardSummary summary;
+
+  const DPFinancialCentre({
+    super.key,
+    required this.payments,
+    required this.summary,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final payments = DirectorProducerDemoData.payments;
-    final total = payments.fold<int>(0, (sum, p) => sum + p.amount);
+    final paid = summary.paidMinor ~/ 100;
+    final pending = summary.pendingPaymentMinor ~/ 100;
+    final total = paid + pending;
     final verified = payments.where((p) => p.status == 'Verified');
     final underReview = payments.where((p) => p.status == 'Proof Uploaded');
     final due = payments.where((p) => p.status == 'Due');
     final rejected = payments.where((p) => p.status == 'Rejected');
-    final paid = verified.fold<int>(0, (sum, p) => sum + p.amount);
     final progress = total == 0 ? 0.0 : paid / total;
     final attention = [...rejected, ...due].take(3).toList();
 
@@ -82,21 +89,34 @@ class _LegendDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = cineToneColor(context, tone);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
+    Widget dot() => Container(
           width: 5,
           height: 5,
           decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        ),
-        const SizedBox(width: 5),
-        Text(
+        );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.hasBoundedWidth && constraints.maxWidth < 64) {
+          return Align(alignment: Alignment.centerLeft, child: dot());
+        }
+        final text = Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: AppTextStyles.caption
               .copyWith(color: color, fontWeight: FontWeight.w700),
-        ),
-      ],
+        );
+        if (!constraints.hasBoundedWidth) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [dot(), const SizedBox(width: 5), text],
+          );
+        }
+        return Row(
+          children: [dot(), const SizedBox(width: 5), Flexible(child: text)],
+        );
+      },
     );
   }
 }
@@ -132,22 +152,17 @@ class _PaymentTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        payment.stakeholder,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.cardTitle.copyWith(
-                          color: colors.textPrimary,
-                          fontSize: 14.5,
-                        ),
-                      ),
-                    ),
-                    _LegendDot(label: payment.status, tone: tone),
-                  ],
+                Text(
+                  payment.stakeholder,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    color: colors.textPrimary,
+                    fontSize: 14.5,
+                  ),
                 ),
+                const SizedBox(height: 4),
+                _LegendDot(label: payment.status, tone: tone),
                 const SizedBox(height: 5),
                 Text(
                   '${payment.booking} · ${CineFormat.currency(payment.amount)} · ${payment.dueDate}',

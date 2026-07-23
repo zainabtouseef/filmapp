@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
-import '../data/director_producer_demo_data.dart';
+import '../../../core/marketplace/marketplace_models.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/projects/project_models.dart';
+import '../../../core/projects/projects_controller.dart';
+import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../models/dp_candidate.dart';
-import '../models/dp_project.dart';
-import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_booking_status_spine.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
-import '../widgets/dp_project_console_widgets.dart';
 import '../widgets/dp_status_chip.dart';
 
 class DPBookingRequestFormScreen extends StatefulWidget {
@@ -32,15 +36,14 @@ class DPBookingRequestFormScreen extends StatefulWidget {
 
 class _DPBookingRequestFormScreenState
     extends State<DPBookingRequestFormScreen> {
-  late String _projectId =
-      widget.projectId ?? DirectorProducerDemoData.projects.first.id;
+  Future<_BookingFormData>? _future;
+  List<Project> _projects = const [];
+  List<ProjectRequirement> _requirements = const [];
+  MarketplaceListing? _listing;
+  DpCandidate? _candidate;
+  String? _projectId;
   String? _requirementId;
-  late final DpCandidate _candidate =
-      DirectorProducerDemoData.candidates.firstWhere(
-    (item) => item.id == widget.candidateId,
-    orElse: () => DirectorProducerDemoData.candidates.first,
-  );
-  late final String _category = widget.category ?? _candidate.category;
+  String? _category;
   final _dates = TextEditingController();
   final _fee = TextEditingController();
   final _deposit = TextEditingController(text: '30');
@@ -54,12 +57,72 @@ class _DPBookingRequestFormScreenState
   final _dynamicB = TextEditingController();
   final _dynamicC = TextEditingController();
   int _step = 0;
+  bool _sending = false;
 
   @override
-  void initState() {
-    super.initState();
-    final requirements = dpRequirementsForProject(_projectId);
-    _requirementId = requirements.isEmpty ? null : requirements.first.id;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<_BookingFormData> _load() async {
+    final listingId = widget.candidateId;
+    final auth = AuthScope.maybeOf(context);
+    final projectsController = ProjectsScope.maybeOf(context);
+    if (listingId == null || listingId.isEmpty) {
+      throw const ApiException(
+        code: 'validation.missing_listing',
+        message: 'Open booking request from a live marketplace listing.',
+      );
+    }
+    if (auth == null || !auth.isAuthenticated) {
+      throw const ApiException(
+        code: 'auth.required',
+        message: 'Sign in to compose a live booking request.',
+      );
+    }
+    if (projectsController == null) {
+      throw const ApiException(
+        code: 'projects.scope_missing',
+        message: 'Projects are not available in this session.',
+      );
+    }
+    final listing = await auth.marketplaceListing(listingId);
+    final projects = await projectsController.projects();
+    if (projects.isEmpty) {
+      throw const ApiException(
+        code: 'projects.empty',
+        message: 'Create a live project before sending booking requests.',
+      );
+    }
+    final initialProjectId =
+        projects.any((project) => project.publicId == widget.projectId)
+            ? widget.projectId!
+            : projects.first.publicId;
+    final requirements =
+        await projectsController.requirements(initialProjectId);
+    return _BookingFormData(
+      listing: listing,
+      projects: projects,
+      requirements: requirements,
+      projectId: initialProjectId,
+    );
+  }
+
+  void _acceptData(_BookingFormData data) {
+    if (_listing?.publicId == data.listing.publicId &&
+        _projectId == data.projectId &&
+        _requirements.length == data.requirements.length) {
+      return;
+    }
+    _listing = data.listing;
+    _candidate = data.listing.toCandidate();
+    _category = widget.category ?? _candidate!.category;
+    _projects = data.projects;
+    _requirements = data.requirements;
+    _projectId = data.projectId;
+    _requirementId =
+        data.requirements.isEmpty ? null : data.requirements.first.publicId;
     _prefillFromSelection();
   }
 
@@ -82,8 +145,11 @@ class _DPBookingRequestFormScreenState
 
   void _prefillFromSelection() {
     final requirement = _selectedRequirement;
-    _dates.text = requirement?.dates ?? 'Select shoot dates';
-    _fee.text = requirement?.budgetRange ?? _candidate.rateRange;
+    final project = _project;
+    _dates.text = requirement == null
+        ? _projectDateLabel(project)
+        : _requirementDateLabel(requirement);
+    _fee.text = _feeLabel(requirement, _candidate);
     _deliverables.text = _schema.deliverablesHint;
     _usageRights.text = _schema.usageRightsHint;
     _conditions.text = 'Counteroffers allowed; chat remains in booking record.';
@@ -92,19 +158,22 @@ class _DPBookingRequestFormScreenState
     _dynamicC.text = _schema.fieldHints[2];
   }
 
-  DpProject get _project => dpProjectForId(_projectId);
+  Project get _project => _projects.firstWhere(
+        (project) => project.publicId == _projectId,
+        orElse: () => _projects.first,
+      );
 
-  DpRequirement? get _selectedRequirement {
+  ProjectRequirement? get _selectedRequirement {
     if (_requirementId == null) return null;
-    final requirements = dpRequirementsForProject(_projectId);
-    if (requirements.isEmpty) return null;
-    return DirectorProducerDemoData.requirements.firstWhere(
-      (item) => item.id == _requirementId,
-      orElse: () => requirements.first,
+    if (_requirements.isEmpty) return null;
+    return _requirements.firstWhere(
+      (item) => item.publicId == _requirementId,
+      orElse: () => _requirements.first,
     );
   }
 
-  _BookingSchema get _schema => _BookingSchema.forCategory(_category);
+  _BookingSchema get _schema =>
+      _BookingSchema.forCategory(_category ?? 'Talent');
 
   int get _scheduleTotal {
     return (_parsePercent(_deposit.text) +
@@ -118,6 +187,27 @@ class _DPBookingRequestFormScreenState
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<_BookingFormData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const DPGlassCard(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _BookingErrorState(
+            message: _friendlyError(snapshot.error),
+            onRetry: () => setState(() => _future = _load()),
+          );
+        }
+        _acceptData(snapshot.data!);
+        return _buildLoaded(context);
+      },
+    );
+  }
+
+  Widget _buildLoaded(BuildContext context) {
     final steps = [
       'Project',
       'Requirement',
@@ -167,19 +257,23 @@ class _DPBookingRequestFormScreenState
   Widget _stepBody() {
     return switch (_step) {
       0 => _ProjectAttachStep(
-          projectId: _projectId,
-          onProjectChanged: (value) {
+          projects: _projects,
+          projectId: _projectId!,
+          onProjectChanged: (value) async {
+            final projectsController = ProjectsScope.of(context);
+            final requirements = await projectsController.requirements(value);
             setState(() {
               _projectId = value;
-              final requirements = dpRequirementsForProject(value);
+              _requirements = requirements;
               _requirementId =
-                  requirements.isEmpty ? null : requirements.first.id;
+                  requirements.isEmpty ? null : requirements.first.publicId;
               _prefillFromSelection();
             });
           },
         ),
       1 => _RequirementStep(
           project: _project,
+          requirements: _requirements,
           selectedRequirementId: _requirementId,
           onRequirementChanged: (value) {
             setState(() {
@@ -189,7 +283,7 @@ class _DPBookingRequestFormScreenState
           },
         ),
       2 => _TermsStep(
-          candidate: _candidate,
+          candidate: _candidate!,
           schema: _schema,
           dates: _dates,
           fee: _fee,
@@ -209,8 +303,8 @@ class _DPBookingRequestFormScreenState
       _ => _ReviewStep(
           project: _project,
           requirement: _selectedRequirement,
-          candidate: _candidate,
-          category: _category,
+          candidate: _candidate!,
+          category: _category ?? _candidate!.category,
           schema: _schema,
           dates: _dates.text,
           fee: _fee.text,
@@ -223,6 +317,7 @@ class _DPBookingRequestFormScreenState
           scheduleTotal: _scheduleTotal,
           onSaveDraft: _saveDraft,
           onSend: _send,
+          sending: _sending,
         ),
     };
   }
@@ -242,22 +337,112 @@ class _DPBookingRequestFormScreenState
     );
   }
 
-  void _send() {
+  Future<void> _send() async {
     if (_scheduleTotal != 100) {
       dpSnack(context, 'Payment schedule must total 100%.');
       setState(() => _step = 2);
       return;
     }
-    dpSnack(context, 'Booking request sent to ${_candidate.name}.');
-    Navigator.pushNamed(context, DirectorProducerRoutes.bargaining);
+    final bookings = BookingsScope.maybeOf(context);
+    final listing = _listing;
+    if (bookings == null || listing == null || _projectId == null) {
+      dpSnack(context, 'Live booking service is unavailable.');
+      return;
+    }
+    final feeMinor = _moneyFromLabel(_fee.text) * 100;
+    if (feeMinor <= 0) {
+      dpSnack(context, 'Enter a valid fee before sending.');
+      setState(() => _step = 2);
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      await bookings.createAndSendBooking(
+        projectId: _projectId!,
+        listingId: listing.publicId,
+        requirementId: _requirementId,
+        startAt: _startIso(),
+        endAt: _endIso(),
+        feeMinor: feeMinor,
+        currency: listing.currency,
+        message: _conditions.text,
+      );
+      if (!mounted) return;
+      dpSnack(context, 'Booking request sent to ${_candidate!.name}.');
+      Navigator.pushNamed(context, DirectorProducerRoutes.bargaining);
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      dpSnack(context, exception.message);
+    } catch (_) {
+      if (!mounted) return;
+      dpSnack(context, 'Could not send the booking request right now.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  String _friendlyError(Object? error) {
+    if (error is ApiException) {
+      return switch (error.code) {
+        'auth.required' ||
+        'auth.invalid_token' =>
+          'Sign in to compose live booking requests.',
+        'network.offline' =>
+          'Live booking context is unavailable. Check your connection and retry.',
+        _ => error.message,
+      };
+    }
+    return 'Live booking context is unavailable right now.';
+  }
+
+  String _startIso() {
+    final start = _selectedRequirement?.startDate ?? _project.startDate;
+    return (start ?? DateTime.now().add(const Duration(days: 1)))
+        .toUtc()
+        .toIso8601String();
+  }
+
+  String _endIso() {
+    final end = _selectedRequirement?.endDate ?? _project.endDate;
+    final fallback = DateTime.now().add(const Duration(days: 2));
+    return (end ?? fallback).toUtc().toIso8601String();
+  }
+
+  String _projectDateLabel(Project project) {
+    return _dateRange(project.startDate, project.endDate);
+  }
+
+  String _requirementDateLabel(ProjectRequirement requirement) {
+    return _dateRange(requirement.startDate, requirement.endDate);
+  }
+
+  String _feeLabel(ProjectRequirement? requirement, DpCandidate? candidate) {
+    if (requirement?.budgetMinMinor != null ||
+        requirement?.budgetMaxMinor != null) {
+      final min = requirement?.budgetMinMinor == null
+          ? null
+          : requirement!.budgetMinMinor! ~/ 100;
+      final max = requirement?.budgetMaxMinor == null
+          ? null
+          : requirement!.budgetMaxMinor! ~/ 100;
+      final currency = requirement?.currency ?? 'PKR';
+      if (min != null && max != null) {
+        return '$currency ${_shortMoney(min)}-${_shortMoney(max)}';
+      }
+      if (min != null) return 'From $currency ${_shortMoney(min)}';
+      return 'Up to $currency ${_shortMoney(max!)}';
+    }
+    return candidate?.rateRange ?? 'Rate on request';
   }
 }
 
 class _ProjectAttachStep extends StatelessWidget {
+  final List<Project> projects;
   final String projectId;
   final ValueChanged<String> onProjectChanged;
 
   const _ProjectAttachStep({
+    required this.projects,
     required this.projectId,
     required this.onProjectChanged,
   });
@@ -279,9 +464,9 @@ class _ProjectAttachStep extends StatelessWidget {
               prefixIcon: Icon(Icons.movie_creation_outlined),
             ),
             items: [
-              for (final project in DirectorProducerDemoData.projects)
+              for (final project in projects)
                 DropdownMenuItem(
-                  value: project.id,
+                  value: project.publicId,
                   child: Text(
                     project.title,
                     maxLines: 1,
@@ -310,19 +495,20 @@ class _ProjectAttachStep extends StatelessWidget {
 }
 
 class _RequirementStep extends StatelessWidget {
-  final DpProject project;
+  final Project project;
+  final List<ProjectRequirement> requirements;
   final String? selectedRequirementId;
   final ValueChanged<String?> onRequirementChanged;
 
   const _RequirementStep({
     required this.project,
+    required this.requirements,
     required this.selectedRequirementId,
     required this.onRequirementChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final requirements = dpRequirementsForProject(project.id);
     return DPSectionCard(
       title: 'Requirement link',
       icon: Icons.rule_folder_outlined,
@@ -330,7 +516,7 @@ class _RequirementStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButtonFormField<String?>(
-            key: ValueKey('${project.id}-$selectedRequirementId'),
+            key: ValueKey('${project.publicId}-$selectedRequirementId'),
             initialValue: selectedRequirementId,
             isExpanded: true,
             decoration: const InputDecoration(
@@ -344,7 +530,7 @@ class _RequirementStep extends StatelessWidget {
               ),
               for (final requirement in requirements)
                 DropdownMenuItem<String?>(
-                  value: requirement.id,
+                  value: requirement.publicId,
                   child: Text(
                     requirement.title,
                     maxLines: 1,
@@ -365,7 +551,8 @@ class _RequirementStep extends StatelessWidget {
               children: [
                 for (final requirement in requirements)
                   DPStatusChip(
-                    label: '${requirement.category}: ${requirement.status}',
+                    label:
+                        '${requirement.displayCategory}: ${_titleCase(requirement.status)}',
                     tone: DpTone.info,
                   ),
               ],
@@ -594,8 +781,8 @@ class _ScheduleBuilder extends StatelessWidget {
 }
 
 class _ReviewStep extends StatelessWidget {
-  final DpProject project;
-  final DpRequirement? requirement;
+  final Project project;
+  final ProjectRequirement? requirement;
   final DpCandidate candidate;
   final String category;
   final _BookingSchema schema;
@@ -609,6 +796,7 @@ class _ReviewStep extends StatelessWidget {
   final int scheduleTotal;
   final VoidCallback onSaveDraft;
   final VoidCallback onSend;
+  final bool sending;
 
   const _ReviewStep({
     required this.project,
@@ -626,6 +814,7 @@ class _ReviewStep extends StatelessWidget {
     required this.scheduleTotal,
     required this.onSaveDraft,
     required this.onSend,
+    required this.sending,
   });
 
   @override
@@ -670,11 +859,160 @@ class _ReviewStep extends StatelessWidget {
               Expanded(
                 child: DPHolographicButton(
                   label: 'Send Booking Request',
-                  icon: Icons.send_rounded,
-                  onTap: onSend,
+                  icon: sending
+                      ? Icons.hourglass_top_rounded
+                      : Icons.send_rounded,
+                  onTap: sending ? null : onSend,
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingFormData {
+  final MarketplaceListing listing;
+  final List<Project> projects;
+  final List<ProjectRequirement> requirements;
+  final String projectId;
+
+  const _BookingFormData({
+    required this.listing,
+    required this.projects,
+    required this.requirements,
+    required this.projectId,
+  });
+}
+
+class _BookingErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _BookingErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DPGlassCard(
+      accentColor: colors.warning,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.cloud_off_outlined, color: colors.warning, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Could not load booking composer',
+                  style: AppTextStyles.cardTitle.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  message,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: onRetry,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Retry'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => Navigator.pushNamed(
+                        context,
+                        DirectorProducerRoutes.marketplace,
+                      ),
+                      icon: const Icon(Icons.travel_explore_outlined),
+                      label: const Text('Open marketplace'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class DPProjectBreadcrumbs extends StatelessWidget {
+  final Project project;
+  final String current;
+
+  const DPProjectBreadcrumbs({
+    super.key,
+    required this.project,
+    required this.current,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Icon(Icons.account_tree_outlined, size: 16, color: colors.goldDark),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            '${project.title} / $current',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class DPDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const DPDetailRow({super.key, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textTertiary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -758,4 +1096,56 @@ class _BookingSchema {
       showUsageRights: true,
     );
   }
+}
+
+String _dateRange(DateTime? start, DateTime? end) {
+  if (start == null && end == null) return 'Select shoot dates';
+  if (start != null && end != null) {
+    return '${_shortDate(start)} - ${_shortDate(end)}';
+  }
+  if (start != null) return 'From ${_shortDate(start)}';
+  return 'Until ${_shortDate(end!)}';
+}
+
+String _shortDate(DateTime value) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[value.month - 1]} ${value.day}';
+}
+
+String _shortMoney(int value) {
+  if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+  if (value >= 1000) return '${(value / 1000).round()}k';
+  return '$value';
+}
+
+int _moneyFromLabel(String label) {
+  final normalized = label.toLowerCase().replaceAll(',', '');
+  final matches = RegExp(r'(\d+(?:\.\d+)?)').allMatches(normalized).toList();
+  if (matches.isEmpty) return 0;
+  final value = double.tryParse(matches.last.group(1) ?? '0') ?? 0;
+  if (normalized.contains('m')) return (value * 1000000).round();
+  if (normalized.contains('k')) return (value * 1000).round();
+  return value.round();
+}
+
+String _titleCase(String value) {
+  return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .where((part) => part.trim().isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }

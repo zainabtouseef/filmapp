@@ -19,7 +19,7 @@ from app.models.kyc import KycDocument, KycSubmission, VerificationEvent
 from app.policies import require_permission
 from app.responses import success
 from app.security import as_utc
-from app.services.local_storage import resolve_path, save_stream
+from app.services.local_storage import public_url_for, resolve_path, save_stream
 
 verification_blueprint = Blueprint("verification", __name__)
 
@@ -29,6 +29,17 @@ ALLOWED_UPLOAD_MIME_TYPES = {
     "image/webp",
     "application/pdf",
     "video/mp4",
+}
+PUBLIC_UPLOAD_PURPOSES = {
+    "profile_media",
+    "project_cover",
+    "location_media",
+    "equipment_media",
+}
+IMAGE_UPLOAD_PURPOSES = {
+    "project_cover",
+    "location_media",
+    "equipment_media",
 }
 
 
@@ -66,6 +77,7 @@ def _serialize_file(file: FileAsset) -> dict[str, Any]:
         "processing_status": file.processing_status,
         "original_name": file.original_name,
         "download_url": f"/api/v1/files/{file.public_id}/download",
+        "public_url": public_url_for(file),
     }
 
 
@@ -144,6 +156,7 @@ def presign_upload() -> ResponseReturnValue:
     if purpose not in {
         "kyc_document",
         "profile_media",
+        "project_cover",
         "payment_proof",
         "project_document",
         "location_media",
@@ -156,6 +169,8 @@ def presign_upload() -> ResponseReturnValue:
         raise _field_error("purpose", "Unsupported upload purpose.")
     if mime_type not in ALLOWED_UPLOAD_MIME_TYPES:
         raise _field_error("mime_type", "Unsupported file type.")
+    if purpose in IMAGE_UPLOAD_PURPOSES and not mime_type.startswith("image/"):
+        raise _field_error("mime_type", "This upload purpose requires an image file.")
     if not original_name:
         raise _field_error("original_name", "Original file name is required.")
     original_name = _safe_original_name(original_name)
@@ -173,7 +188,7 @@ def presign_upload() -> ResponseReturnValue:
         mime_type=mime_type,
         max_bytes=max_bytes,
         storage_key=storage_key,
-        bucket="private",
+        bucket="public" if purpose in PUBLIC_UPLOAD_PURPOSES else "private",
         original_name=original_name,
         expires_at=expires_at,
     )
@@ -274,7 +289,9 @@ def complete_upload(public_id: str) -> ResponseReturnValue:
         mime_type=upload.mime_type,
         size_bytes=upload.received_size_bytes,
         checksum_sha256=upload.received_checksum_sha256,
-        visibility="authorized",
+        visibility=(
+            "public" if upload.purpose in PUBLIC_UPLOAD_PURPOSES else "authorized"
+        ),
         scan_status="pending",
         processing_status="pending",
         original_name=upload.original_name,

@@ -80,6 +80,8 @@ def resolve_path(file_asset: FileAsset) -> Path:
 def public_url_for(file_asset: FileAsset) -> str | None:
     if file_asset.visibility != "public":
         return None
+    if file_asset.scan_status != "clean" or file_asset.processing_status != "ready":
+        return None
     base_url = str(current_app.config.get("PUBLIC_MEDIA_BASE_URL") or "").rstrip("/")
     if not base_url:
         return None

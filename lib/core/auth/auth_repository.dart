@@ -255,6 +255,12 @@ class AuthRepository {
         .toList();
   }
 
+  Future<MarketplaceListing> marketplaceListing(String publicId) async {
+    final response = await _client.get('/marketplace/listings/$publicId');
+    final data = response['data'] as Map<String, dynamic>;
+    return MarketplaceListing.fromJson(data['listing'] as Map<String, dynamic>);
+  }
+
   Future<MarketplaceListing> publishMarketplaceListing({
     required String title,
     required String summary,

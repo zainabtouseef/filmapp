@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/director/director_discovery_models.dart';
+import '../../../core/marketplace/marketplace_models.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
+import '../widgets/dp_empty_state.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
-import '../widgets/dp_project_console_widgets.dart';
 import '../widgets/dp_status_chip.dart';
 
-class DPStakeholderProfileScreen extends StatelessWidget {
+class DPStakeholderProfileScreen extends StatefulWidget {
   final String? candidateId;
   final String? profileType;
   final String? projectId;
@@ -24,56 +27,175 @@ class DPStakeholderProfileScreen extends StatelessWidget {
   });
 
   @override
+  State<DPStakeholderProfileScreen> createState() =>
+      _DPStakeholderProfileScreenState();
+}
+
+class _DPStakeholderProfileScreenState
+    extends State<DPStakeholderProfileScreen> {
+  Future<Object>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<Object> _load() async {
+    final id = widget.candidateId;
+    final auth = AuthScope.maybeOf(context);
+    if (id == null || id.isEmpty) {
+      throw const ApiException(
+        code: 'validation.missing_listing',
+        message: 'Open a live marketplace listing to view its profile.',
+      );
+    }
+    if (auth == null || !auth.isAuthenticated) {
+      throw const ApiException(
+        code: 'auth.required',
+        message: 'Sign in to load the live stakeholder profile.',
+      );
+    }
+    final directorRoute = _DirectorDiscoveryRoute.tryParse(id);
+    if (directorRoute != null) {
+      return auth.directorDiscoveryItem(
+        kind: directorRoute.kind,
+        publicId: directorRoute.publicId,
+      );
+    }
+    return auth.marketplaceListing(id);
+  }
+
+  void _retry() {
+    setState(() => _future = _load());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final candidate = DirectorProducerDemoData.candidates.firstWhere(
-      (item) => item.id == candidateId,
-      orElse: () => DirectorProducerDemoData.candidates.first,
-    );
-    final type = profileType ?? candidate.category;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DPProjectBreadcrumbs(
-          project: projectId == null ? null : dpProjectForId(projectId),
-          current: candidate.name,
-        ),
-        const SizedBox(height: 10),
-        _ProfileHero(candidate: candidate, type: type),
-        const SizedBox(height: 14),
-        _ProfileTemplate(candidate: candidate, type: type),
-        const SizedBox(height: 14),
-        DPGlassCard(
-          selected: true,
-          child: Row(
+    return FutureBuilder<Object>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const DPGlassCard(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return _ProfileErrorState(
+            message: _friendlyError(snapshot.error),
+            onRetry: _retry,
+          );
+        }
+        final data = snapshot.data!;
+        if (data is DirectorDiscoveryItem) {
+          final candidate = data.toCandidate();
+          final type = widget.profileType ?? candidate.category;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: DPHolographicButton(
-                  label: 'Shortlist to project',
-                  icon: Icons.favorite_border_rounded,
-                  onTap: () => _showShortlistHint(context, candidate),
-                  secondary: true,
-                ),
+              DPProjectBreadcrumbs(
+                project: null,
+                current: candidate.name,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: DPHolographicButton(
-                  label: 'Select / Send Request',
-                  icon: Icons.send_rounded,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    DirectorProducerRoutes.bookingRequest,
-                    arguments: {
-                      'candidateId': candidate.id,
-                      'projectId': projectId,
-                      'category': type,
-                    },
-                  ),
+              const SizedBox(height: 10),
+              _ProfileHero(candidate: candidate, type: type),
+              const SizedBox(height: 14),
+              _LiveDirectorDiscoveryProfile(item: data, candidate: candidate),
+              const SizedBox(height: 14),
+              DPGlassCard(
+                selected: true,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: DPHolographicButton(
+                        label: candidate.marketplaceListingId == null
+                            ? 'Provider action pending'
+                            : 'Shortlist to project',
+                        icon: candidate.marketplaceListingId == null
+                            ? Icons.link_off_rounded
+                            : Icons.favorite_border_rounded,
+                        onTap: candidate.marketplaceListingId == null
+                            ? () => _showProviderActionPending(
+                                  context,
+                                  candidate,
+                                )
+                            : () => _showShortlistHint(context, candidate),
+                        secondary: true,
+                      ),
+                    ),
+                    if (candidate.marketplaceListingId != null) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: DPHolographicButton(
+                          label: 'Select / Send Request',
+                          icon: Icons.send_rounded,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            DirectorProducerRoutes.bookingRequest,
+                            arguments: {
+                              'candidateId': candidate.marketplaceListingId,
+                              'projectId': widget.projectId,
+                              'category': type,
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
-      ],
+          );
+        }
+        final listing = data as MarketplaceListing;
+        final candidate = listing.toCandidate();
+        final type = widget.profileType ?? candidate.category;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DPProjectBreadcrumbs(
+              project: null,
+              current: candidate.name,
+            ),
+            const SizedBox(height: 10),
+            _ProfileHero(candidate: candidate, type: type),
+            const SizedBox(height: 14),
+            _LiveListingProfile(listing: listing, candidate: candidate),
+            const SizedBox(height: 14),
+            DPGlassCard(
+              selected: true,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: DPHolographicButton(
+                      label: 'Shortlist to project',
+                      icon: Icons.favorite_border_rounded,
+                      onTap: () => _showShortlistHint(context, candidate),
+                      secondary: true,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DPHolographicButton(
+                      label: 'Select / Send Request',
+                      icon: Icons.send_rounded,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        DirectorProducerRoutes.bookingRequest,
+                        arguments: {
+                          'candidateId': candidate.id,
+                          'projectId': widget.projectId,
+                          'category': type,
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -83,6 +205,97 @@ class DPStakeholderProfileScreen extends StatelessWidget {
         content: Text(
           'Use Discover ♡ to choose project → requirement for ${candidate.name}.',
         ),
+      ),
+    );
+  }
+
+  void _showProviderActionPending(BuildContext context, DpCandidate candidate) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${candidate.name} is a live provider profile. Booking and shortlist actions need a marketplace listing link first.',
+        ),
+      ),
+    );
+  }
+
+  String _friendlyError(Object? error) {
+    if (error is ApiException) {
+      return switch (error.code) {
+        'auth.required' ||
+        'auth.invalid_token' =>
+          'Sign in to load live stakeholder details.',
+        'network.offline' =>
+          'Live stakeholder details are unavailable. Check your connection and retry.',
+        _ => error.message,
+      };
+    }
+    return 'Live stakeholder details are unavailable right now.';
+  }
+}
+
+class _DirectorDiscoveryRoute {
+  final String kind;
+  final String publicId;
+
+  const _DirectorDiscoveryRoute({
+    required this.kind,
+    required this.publicId,
+  });
+
+  static _DirectorDiscoveryRoute? tryParse(String value) {
+    final parts = value.split(':');
+    if (parts.length != 3 || parts.first != 'director') return null;
+    return _DirectorDiscoveryRoute(kind: parts[1], publicId: parts[2]);
+  }
+}
+
+class _ProfileErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ProfileErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DPGlassCard(
+      accentColor: colors.warning,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.cloud_off_outlined, color: colors.warning, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Could not load live profile',
+                  style: AppTextStyles.cardTitle.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  message,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Retry'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -115,6 +328,14 @@ class _ProfileHero extends StatelessWidget {
                   ],
                 ),
               ),
+              child: candidate.imageUrl == null
+                  ? null
+                  : Image.network(
+                      candidate.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox.shrink(),
+                    ),
             ),
             Positioned.fill(
               child: DecoratedBox(
@@ -168,7 +389,7 @@ class _ProfileHero extends StatelessWidget {
                               const SizedBox(height: 6),
                               dpText(
                                 context,
-                                '$type • ${candidate.city} • Urdu, Punjabi, English',
+                                '$type • ${candidate.city}',
                                 strong: true,
                               ),
                             ],
@@ -187,19 +408,6 @@ class _ProfileHero extends StatelessWidget {
                             tone: DpTone.success,
                             icon: Icons.verified_outlined,
                           ),
-                        if (candidate.isNew)
-                          const DPStatusChip(
-                            label: 'NEW',
-                            tone: DpTone.warning,
-                          ),
-                        DPStatusChip(
-                          label: '${candidate.rating} rating',
-                          tone: DpTone.warning,
-                        ),
-                        DPStatusChip(
-                          label: '${candidate.completedBookings} completed',
-                          tone: DpTone.success,
-                        ),
                         DPStatusChip(
                           label: candidate.available
                               ? 'Available on dates'
@@ -221,628 +429,257 @@ class _ProfileHero extends StatelessWidget {
   }
 }
 
-class _ProfileTemplate extends StatelessWidget {
-  final DpCandidate candidate;
-  final String type;
-
-  const _ProfileTemplate({required this.candidate, required this.type});
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = type.toLowerCase();
-    if (normalized.contains('location')) {
-      return _LocationProfile(candidate: candidate);
-    }
-    if (normalized.contains('equipment') || normalized.contains('media')) {
-      return _EquipmentProfile(candidate: candidate);
-    }
-    if (normalized.contains('crew')) {
-      return _CrewProfile(candidate: candidate);
-    }
-    if (normalized.contains('model')) {
-      return _ModelProfile(candidate: candidate);
-    }
-    if (normalized.contains('agenc') || normalized.contains('partner')) {
-      return _AgencyProfile(candidate: candidate);
-    }
-    return _ActorProfile(candidate: candidate);
-  }
-}
-
-class _ActorProfile extends StatelessWidget {
+class _LiveListingProfile extends StatelessWidget {
+  final MarketplaceListing listing;
   final DpCandidate candidate;
 
-  const _ActorProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _ShowreelSection(candidate: candidate),
-          right: _SnapshotSection(candidate: candidate),
-        ),
-        const SizedBox(height: 12),
-        const _GallerySection(
-          title: 'Categorized video portfolio',
-          icon: Icons.video_library_outlined,
-          filters: ['Dramas (4)', 'Films / Movies (4)', 'Web Series (2)'],
-          tiles: [
-            'Dramas · Lead · 2026',
-            'Dramas · Supporting · 2025',
-            'Films · Lead · 2025',
-            'Films · Cameo · 2024',
-            'Web Series · Lead · 2026',
-            'Web Series · Supporting · 2025',
-          ],
-        ),
-        const SizedBox(height: 12),
-        const _GallerySection(
-          title: 'Photo gallery',
-          filters: ['Headshots', 'Full-length', 'Editorial', 'On-set'],
-          tiles: [
-            'Headshots',
-            'Full-length',
-            'Editorial',
-            'On-set',
-            'Headshots',
-            'Full-length',
-          ],
-        ),
-        const SizedBox(height: 12),
-        DPTwoColumn(
-          left: _WorkHistorySection(
-            title: 'Work history / credits',
-            rows: const [
-              ('Northern Sky · Drama', 'Supporting Lead · 2026 · Ayaan Films'),
-              ('Bank Forward · TVC', 'Principal · 2025 · Orbit Brands'),
-              ('Stage Line · Theatre', 'Lead · 2024 · Lahore Arts'),
-            ],
-          ),
-          right: _SocialsRateAvailabilitySection(candidate: candidate),
-        ),
-      ],
-    );
-  }
-}
-
-class _ModelProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _ModelProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _ShowreelSection(
-            candidate: candidate,
-            title: 'Featured reel',
-            caption: 'Runway + editorial reel • in-app playback',
-          ),
-          right: const _InfoSection(
-            title: 'Comp card',
-            icon: Icons.straighten_outlined,
-            rows: [
-              ('Height', "5'9\""),
-              ('Bust · Waist · Hip', '34-24-35'),
-              ('Shoe size', '8 (US)'),
-              ('Hair · Eyes', 'Black · Brown'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const _GallerySection(
-          title: 'Portfolio',
-          filters: ['Editorial (5)', 'Commercial (3)', 'Runway (4)'],
-          tiles: [
-            'Editorial',
-            'Editorial',
-            'Commercial',
-            'Commercial',
-            'Runway',
-            'Runway'
-          ],
-        ),
-        const SizedBox(height: 12),
-        const _GallerySection(
-          title: 'Photo gallery',
-          filters: ['Headshots', 'Full-length', 'Beauty'],
-          tiles: [
-            'Headshots',
-            'Full-length',
-            'Beauty',
-            'Headshots',
-            'Full-length',
-            'Beauty'
-          ],
-        ),
-        const SizedBox(height: 12),
-        DPTwoColumn(
-          left: _WorkHistorySection(
-            title: 'Work history / credits',
-            rows: const [
-              ('Noor Couture Campaign', 'Editorial model · 2026'),
-              ('Lahore Fashion Week', 'Runway · 2025'),
-              ('City Mag Cover', 'Editorial · 2024'),
-            ],
-          ),
-          right: _SocialsRateAvailabilitySection(candidate: candidate),
-        ),
-      ],
-    );
-  }
-}
-
-class _CrewProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _CrewProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _InfoSection(
-            title: 'Department & specialty',
-            icon: Icons.groups_2_outlined,
-            rows: [
-              ('Department', candidate.skills.first),
-              ('Specialty', candidate.notes),
-              ('Kit owned', 'Yes — full package'),
-              ('Crew size', 'Solo + 1 assistant'),
-            ],
-          ),
-          right: _InfoSection(
-            title: 'Rate card',
-            icon: Icons.receipt_long_outlined,
-            rows: [
-              ('Day rate', candidate.rateRange),
-              (
-                'Overtime',
-                '${_pkr((dpMoneyFromLabel(candidate.rateRange) * 0.14).round())} / hr'
-              ),
-              (
-                'Kit fee',
-                '${_pkr((dpMoneyFromLabel(candidate.rateRange) * 0.3).round())} / day'
-              ),
-              ('Travel', 'Billed at cost'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const _GallerySection(
-          title: 'Showreel & stills',
-          filters: ['Feature', 'TVC', 'Documentary'],
-          tiles: [
-            'Feature',
-            'Feature',
-            'TVC',
-            'TVC',
-            'Documentary',
-            'Documentary'
-          ],
-        ),
-        const SizedBox(height: 12),
-        _WorkHistorySection(
-          title: 'Work history / credits',
-          rows: const [
-            ('Jhelum Drama Pilot', 'DOP · 2026'),
-            ('Echo Street Music Video', 'DOP · 2026'),
-            ('Northern Sky', 'Camera operator · 2025'),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _InfoSection(
-          title: 'Socials, availability, reviews',
-          icon: Icons.public_outlined,
-          rows: [
-            (
-              'Instagram',
-              '${candidate.instagramHandle} · ${(candidate.instagramFollowers / 1000).toStringAsFixed(1)}k',
-            ),
-            (
-              'Availability',
-              candidate.available ? 'Open for selected dates' : 'Limited dates',
-            ),
-            ('Reviews', '${candidate.rating}/5'),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _LocationProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _LocationProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    final dayRate = dpMoneyFromLabel(candidate.rateRange);
-    return Column(
-      children: [
-        const _GallerySection(
-          title: 'Photo gallery',
-          filters: ['Main hall', 'Cyclorama', 'Green room', 'Exterior'],
-          tiles: [
-            'Main hall',
-            'Cyclorama',
-            'Green room',
-            'Exterior',
-            'Main hall',
-            'Cyclorama'
-          ],
-        ),
-        const SizedBox(height: 12),
-        DPTwoColumn(
-          left: const _InfoSection(
-            title: 'Specs',
-            icon: Icons.location_city_outlined,
-            rows: [
-              ('Size', '4,200 sq ft'),
-              ('Ceiling height', '18 ft'),
-              ('Power', '3-phase, 200A'),
-              ('Parking', '12 vehicles'),
-            ],
-          ),
-          right: _InfoSection(
-            title: 'Rate card',
-            icon: Icons.receipt_long_outlined,
-            rows: [
-              ('Half day', _pkr((dayRate * 0.6).round())),
-              ('Full day', _pkr(dayRate)),
-              ('Weekly', _pkr((dayRate * 5.5).round())),
-              ('Permits', 'Included'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _WorkHistorySection(
-          title: 'Recent bookings',
-          rows: const [
-            ('Aurora Biscuit TVC', 'Pre-production · Jul 2026'),
-            ('Echo Street Music Video', 'Wrapped · Jul 2026'),
-            ('Bank Forward TVC', 'Wrapped · 2025'),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _InfoSection(
-          title: 'Address, availability, reviews',
-          icon: Icons.public_outlined,
-          rows: [
-            ('Address', '${candidate.city} · exact address on booking'),
-            (
-              'Availability',
-              candidate.available ? 'Open weekdays' : 'Limited dates',
-            ),
-            ('Reviews', '${candidate.rating}/5'),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _EquipmentProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _EquipmentProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    final dayRate = dpMoneyFromLabel(candidate.rateRange);
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _InfoSection(
-            title: 'Spec sheet',
-            icon: Icons.video_camera_back_outlined,
-            rows: [
-              ('Kit', candidate.skills.join(', ')),
-              ('Output', 'HMI equivalent'),
-              ('Accessories', 'Stands, diffusion, gel kit'),
-              ('Power draw', '2.4kW total'),
-            ],
-          ),
-          right: _InfoSection(
-            title: 'Rate card',
-            icon: Icons.receipt_long_outlined,
-            rows: [
-              ('Day', _pkr(dayRate)),
-              ('Week', _pkr((dayRate * 5).round())),
-              ('Deposit', '${_pkr((dayRate * 1.2).round())} refundable'),
-              ('Insurance', 'Included'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const _GallerySection(
-          title: 'Photos',
-          filters: ['Kit', 'On-set', 'Case'],
-          tiles: ['Kit', 'Kit', 'On-set', 'On-set', 'Case', 'Case'],
-        ),
-        const SizedBox(height: 12),
-        _WorkHistorySection(
-          title: 'Recent rentals',
-          rows: const [
-            ('Echo Street Music Video', 'Jul 2026'),
-            ('Noor Couture Campaign', 'Jul 2026'),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _InfoSection(
-          title: 'Condition, availability, reviews',
-          icon: Icons.public_outlined,
-          rows: [
-            ('Condition', 'Excellent — serviced monthly'),
-            (
-              'Availability',
-              candidate.available ? 'Available now' : 'Limited dates',
-            ),
-            ('Reviews', '${candidate.rating}/5'),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _AgencyProfile extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _AgencyProfile({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _GallerySection(
-          title: 'Roster preview',
-          filters: ['Lead talent', 'Background', 'Kids'],
-          tiles: [
-            'Talent 01',
-            'Talent 02',
-            'Talent 03',
-            'Talent 04',
-            'Talent 05',
-            'Talent 06'
-          ],
-        ),
-        const SizedBox(height: 12),
-        DPTwoColumn(
-          left: _InfoSection(
-            title: 'Agency details',
-            icon: Icons.corporate_fare_outlined,
-            rows: [
-              ('Roster size', '120 talents'),
-              ('Specialties', candidate.skills.join(', ')),
-              ('Response time', '4h median'),
-              ('Active contracts', '${candidate.completedBookings ~/ 3}'),
-            ],
-          ),
-          right: _InfoSection(
-            title: 'Rate & terms',
-            icon: Icons.receipt_long_outlined,
-            rows: [
-              ('Commission', '12% standard'),
-              ('Casting fee', candidate.rateRange),
-              ('Payment terms', '50% upfront'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _WorkHistorySection(
-          title: 'Recent placements',
-          rows: const [
-            ('Aurora Biscuit TVC', 'Casting · Jul 2026'),
-            ('Hunza Winter Film', 'Casting · Jul 2026'),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _InfoSection(
-          title: 'Office, availability, reviews',
-          icon: Icons.public_outlined,
-          rows: [
-            ('Office', '${candidate.city} · exact address on booking'),
-            ('Reviews', '${candidate.rating}/5'),
-            (
-              'Availability',
-              candidate.available ? 'Accepting new briefs' : 'Limited capacity',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _ShowreelSection extends StatelessWidget {
-  final DpCandidate candidate;
-  final String title;
-  final String? caption;
-
-  const _ShowreelSection({
+  const _LiveListingProfile({
+    required this.listing,
     required this.candidate,
-    this.title = 'Featured showreel',
-    this.caption,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    final media = listing.media
+        .where((item) => item.file?.publicUrl != null)
+        .take(6)
+        .toList();
+    return Column(
+      children: [
+        DPTwoColumn(
+          left: _ProfileSection(
+            title: 'Live profile summary',
+            icon: Icons.badge_outlined,
+            children: [
+              dpText(context, listing.summary),
+              const SizedBox(height: 12),
+              DPDetailRow(label: 'Listing type', value: candidate.category),
+              DPDetailRow(label: 'City', value: candidate.city),
+              DPDetailRow(label: 'Rate', value: candidate.rateRange),
+              DPDetailRow(label: 'Owner', value: listing.ownerName),
+              DPDetailRow(
+                label: 'Verification',
+                value: listing.verificationStatus,
+              ),
+            ],
+          ),
+          right: _ProfileSection(
+            title: 'Booking readiness',
+            icon: Icons.event_available_outlined,
+            children: [
+              DPDetailRow(
+                label: 'Availability',
+                value: candidate.available
+                    ? 'Available for selected dates'
+                    : 'Limited dates',
+              ),
+              DPDetailRow(
+                label: 'Contact policy',
+                value: 'Phone/address reveal after booking visibility rules',
+              ),
+              DPDetailRow(
+                label: 'Source',
+                value: 'Live marketplace database',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (media.isEmpty)
+          const DPEmptyState(
+            icon: Icons.photo_library_outlined,
+            title: 'No public gallery yet',
+            message:
+                'This listing has no approved public media attached in the database.',
+          )
+        else
+          _LiveGallerySection(media: media),
+      ],
+    );
+  }
+}
+
+class _LiveDirectorDiscoveryProfile extends StatelessWidget {
+  final DirectorDiscoveryItem item;
+  final DpCandidate candidate;
+
+  const _LiveDirectorDiscoveryProfile({
+    required this.item,
+    required this.candidate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = item.sections.where((section) {
+      return section.rows.any((row) => row.value.trim().isNotEmpty);
+    }).toList();
+    return Column(
+      children: [
+        DPTwoColumn(
+          left: _ProfileSection(
+            title: 'Live provider summary',
+            icon: Icons.storefront_outlined,
+            children: [
+              dpText(context, item.summary),
+              const SizedBox(height: 12),
+              DPDetailRow(label: 'Provider type', value: candidate.category),
+              DPDetailRow(label: 'City', value: candidate.city),
+              DPDetailRow(label: 'Rate', value: candidate.rateRange),
+              DPDetailRow(label: 'Owner', value: item.ownerName ?? 'Not shown'),
+              DPDetailRow(
+                label: 'Verification',
+                value: item.verificationStatus,
+              ),
+            ],
+          ),
+          right: _ProfileSection(
+            title: 'Director readiness',
+            icon: Icons.fact_check_outlined,
+            children: [
+              DPDetailRow(
+                label: 'Availability',
+                value: candidate.available
+                    ? 'Marked available in provider database'
+                    : 'Limited or pending status',
+              ),
+              const DPDetailRow(
+                label: 'Booking status',
+                value:
+                    'Profile view only until provider record is linked to a marketplace listing.',
+              ),
+              const DPDetailRow(
+                label: 'Source',
+                value: 'Live provider-specific Director discovery database',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final section in sections) ...[
+          _ProfileSection(
+            title: section.title,
+            icon: Icons.info_outline_rounded,
+            children: [
+              if (section.rows.isEmpty)
+                const DPEmptyState(
+                  icon: Icons.info_outline_rounded,
+                  title: 'No details yet',
+                  message:
+                      'This provider has not filled this section in the database.',
+                )
+              else
+                for (final row in section.rows)
+                  DPDetailRow(label: row.label, value: row.value),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (item.media.isEmpty)
+          const DPEmptyState(
+            icon: Icons.photo_library_outlined,
+            title: 'No public gallery yet',
+            message:
+                'This provider has no approved public media attached in the database.',
+          )
+        else
+          _LiveGallerySection(media: item.media),
+      ],
+    );
+  }
+}
+
+class _LiveGallerySection extends StatelessWidget {
+  final List<MarketplaceListingMedia> media;
+
+  const _LiveGallerySection({required this.media});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ProfileSection(
+      title: 'Public gallery',
+      icon: Icons.photo_library_outlined,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final item in media)
+              _PhotoTile(
+                label: item.caption ?? item.file?.originalName ?? 'Media',
+                imageUrl: item.file?.publicUrl,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class DPProjectBreadcrumbs extends StatelessWidget {
+  final Object? project;
+  final String current;
+
+  const DPProjectBreadcrumbs({super.key, this.project, required this.current});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return _ProfileSection(
-      title: title,
-      icon: Icons.play_circle_outline_rounded,
+    return Row(
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: colors.cardGradient,
-              border: Border.all(color: colors.border),
-            ),
-            child: Center(
-              child: Icon(Icons.play_circle_fill_rounded,
-                  color: colors.goldDark, size: 48),
+        Icon(Icons.travel_explore_outlined, size: 16, color: colors.goldDark),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'Marketplace / $current',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        dpText(
-          context,
-          caption ?? '${candidate.name} selected reel • in-app playback',
-        ),
       ],
     );
   }
 }
 
-class _SnapshotSection extends StatelessWidget {
-  final DpCandidate candidate;
+class DPDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
 
-  const _SnapshotSection({required this.candidate});
+  const DPDetailRow({super.key, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return _ProfileSection(
-      title: 'Booking intelligence',
-      icon: Icons.insights_outlined,
-      children: [
-        DPDetailRow(label: 'Rate card', value: candidate.rateRange),
-        DPDetailRow(label: 'Response time', value: '2h 20m median'),
-        DPDetailRow(label: 'Completion history', value: '96% on-platform'),
-        const DPDetailRow(label: 'Disputes', value: '0 open'),
-      ],
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textTertiary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
-
-/// One reusable gallery shape (filter chips + tile grid) covering every
-/// "gallery" style section across categories — video portfolios, photo
-/// galleries, showreels & stills, roster previews all render identically.
-class _GallerySection extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<String> filters;
-  final List<String> tiles;
-
-  const _GallerySection({
-    required this.title,
-    this.icon = Icons.photo_library_outlined,
-    required this.filters,
-    required this.tiles,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _ProfileSection(
-      title: title,
-      icon: icon,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final filter in filters)
-              DPStatusChip(label: filter, tone: DpTone.info),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final tile in tiles) _PhotoTile(label: tile),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// Plain label/value rows section — used for specs, rate cards, comp
-/// cards, and the socials/availability/reviews block per category.
-class _InfoSection extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<(String, String)> rows;
-
-  const _InfoSection({
-    required this.title,
-    required this.icon,
-    required this.rows,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _ProfileSection(
-      title: title,
-      icon: icon,
-      children: [
-        for (final row in rows) DPDetailRow(label: row.$1, value: row.$2),
-      ],
-    );
-  }
-}
-
-/// Same label/value row shape as [_InfoSection], used for work history,
-/// recent bookings/rentals/placements — kept as a separate name to match
-/// the design's distinct "history" section type.
-class _WorkHistorySection extends StatelessWidget {
-  final String title;
-  final List<(String, String)> rows;
-
-  const _WorkHistorySection({required this.title, required this.rows});
-
-  @override
-  Widget build(BuildContext context) {
-    return _ProfileSection(
-      title: title,
-      icon: Icons.workspace_premium_outlined,
-      children: [
-        for (final row in rows) DPDetailRow(label: row.$1, value: row.$2),
-      ],
-    );
-  }
-}
-
-class _SocialsRateAvailabilitySection extends StatelessWidget {
-  final DpCandidate candidate;
-
-  const _SocialsRateAvailabilitySection({required this.candidate});
-
-  @override
-  Widget build(BuildContext context) {
-    return _ProfileSection(
-      title: 'Socials, rates, availability, reviews',
-      icon: Icons.public_outlined,
-      children: [
-        DPDetailRow(
-          label: 'Instagram',
-          value:
-              '${candidate.instagramHandle} · ${(candidate.instagramFollowers / 1000).toStringAsFixed(1)}k',
-        ),
-        DPDetailRow(label: 'Rate card', value: candidate.rateRange),
-        DPDetailRow(
-          label: 'Availability',
-          value:
-              candidate.available ? 'Open for selected dates' : 'Limited dates',
-        ),
-        DPDetailRow(label: 'Reviews', value: '${candidate.rating}/5'),
-      ],
-    );
-  }
-}
-
-String _pkr(int amount) {
-  if (amount >= 1000000) return 'PKR ${(amount / 1000000).toStringAsFixed(1)}M';
-  if (amount >= 1000) return 'PKR ${(amount / 1000).round()}k';
-  return 'PKR $amount';
 }
 
 class _ProfileSection extends StatelessWidget {
@@ -871,8 +708,9 @@ class _ProfileSection extends StatelessWidget {
 
 class _PhotoTile extends StatelessWidget {
   final String label;
+  final String? imageUrl;
 
-  const _PhotoTile({required this.label});
+  const _PhotoTile({required this.label, this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -885,6 +723,13 @@ class _PhotoTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         gradient: colors.goldGradient,
         border: Border.all(color: colors.border),
+        image: imageUrl == null
+            ? null
+            : DecorationImage(
+                image: NetworkImage(imageUrl!),
+                fit: BoxFit.cover,
+                onError: (_, __) {},
+              ),
       ),
       child: Align(
         alignment: Alignment.bottomLeft,

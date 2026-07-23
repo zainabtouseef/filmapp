@@ -15,6 +15,7 @@ class DpProject {
   final String paymentsStatus;
   final List<String> team;
   final double progress;
+  final String? coverImageUrl;
 
   const DpProject({
     required this.id,
@@ -33,5 +34,6 @@ class DpProject {
     required this.paymentsStatus,
     required this.team,
     required this.progress,
+    this.coverImageUrl,
   });
 }

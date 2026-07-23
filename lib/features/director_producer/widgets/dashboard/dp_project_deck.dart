@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 
-import '../../data/director_producer_demo_data.dart';
+import '../../../../core/theme/app_color_scheme.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../models/dp_project.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_project_card.dart';
 
 /// The "Project Command Deck" — three active-production previews, with the
 /// complete list available from the parent section action.
 class DPProjectDeck extends StatelessWidget {
-  const DPProjectDeck({super.key});
+  final List<DpProject> projects;
+
+  const DPProjectDeck({super.key, required this.projects});
 
   @override
   Widget build(BuildContext context) {
-    final projects = DirectorProducerDemoData.projects;
+    final colors = context.appColors;
+    if (projects.isEmpty) {
+      return Text(
+        'No live projects are available yet. Create a project to start the command deck.',
+        style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(

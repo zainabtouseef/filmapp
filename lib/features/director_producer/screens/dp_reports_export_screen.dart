@@ -1,44 +1,101 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/analytics/analytics_controller.dart';
+import '../../../core/analytics/analytics_models.dart';
 import '../../../core/analytics/analytics_widgets.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 
-class DPReportsExportScreen extends StatelessWidget {
+class DPReportsExportScreen extends StatefulWidget {
   const DPReportsExportScreen({super.key});
 
   @override
+  State<DPReportsExportScreen> createState() => _DPReportsExportScreenState();
+}
+
+class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
+  Future<List<ExportJobDto>>? _future;
+  bool _generating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final analytics = AnalyticsScope.maybeOf(context);
+    if (analytics != null) _future ??= analytics.exports(force: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final reports = DirectorProducerDemoData.reports;
+    final future = _future;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         dpHeaderAction(
           context,
           icon: Icons.file_download_outlined,
-          label: 'Generate',
-          onTap: () => dpSnack(context, 'Report generation started'),
+          label: _generating ? 'Generating...' : 'Generate bookings export',
+          onTap: _generating ? () {} : _generateBookingsExport,
         ),
         const SizedBox(height: 8),
-        DPResponsiveGrid(
-          minWidth: 320,
-          children: reports
-              .map(
-                (report) => _ReportCard(
-                  title: report.title,
-                  project: report.project,
-                  sections: report.sections,
-                  date: report.generatedDate,
-                  status: report.status,
-                ),
-              )
-              .toList(),
-        ),
+        if (future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in required',
+            message: 'Connect a live account to view export jobs.',
+          )
+        else
+          FutureBuilder<List<ExportJobDto>>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const CoreEmptyState(
+                  icon: Icons.hourglass_top_rounded,
+                  title: 'Loading exports',
+                  message: 'Fetching live report jobs from the database.',
+                );
+              }
+              if (snapshot.hasError) {
+                return CoreEmptyState(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Reports unavailable',
+                  message:
+                      'Could not load live export jobs from the database. Check the API connection and try again.',
+                  actionLabel: 'Retry',
+                  onAction: _reload,
+                );
+              }
+              final reports = snapshot.data ?? const [];
+              if (reports.isEmpty) {
+                return const CoreEmptyState(
+                  icon: Icons.file_download_outlined,
+                  title: 'No exports yet',
+                  message:
+                      'Generate a bookings, ledger, or dispute export to populate this screen from the database.',
+                );
+              }
+              return DPResponsiveGrid(
+                minWidth: 320,
+                children: reports.map((report) {
+                  return _ReportCard(
+                    title: '${_titleCase(report.exportType)} Export',
+                    project: report.publicId,
+                    sections: [
+                      report.exportType.replaceAll('_', ' '),
+                      '${report.rowCount} rows',
+                    ],
+                    date: report.completedAt ?? report.requestedAt,
+                    status: _titleCase(report.status),
+                    exportType: report.exportType,
+                  );
+                }).toList(),
+              );
+            },
+          ),
         const SizedBox(height: 14),
         DPSectionCard(
           title: 'Export Builder',
@@ -58,6 +115,41 @@ class DPReportsExportScreen extends StatelessWidget {
       ],
     );
   }
+
+  Future<void> _generateBookingsExport() async {
+    final analytics = AnalyticsScope.maybeOf(context);
+    if (analytics == null) {
+      dpSnack(context, 'Sign in to generate live exports');
+      return;
+    }
+    setState(() => _generating = true);
+    try {
+      final job = await analytics.createExport('bookings');
+      if (!mounted) return;
+      dpSnack(
+          context, 'Export ${job.publicId} ready with ${job.rowCount} rows');
+      setState(() => _future = analytics.exports(force: true));
+    } catch (error) {
+      if (!mounted) return;
+      dpSnack(context, 'Could not generate live export right now');
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
+  void _reload() {
+    final analytics = AnalyticsScope.maybeOf(context);
+    if (analytics == null) return;
+    setState(() => _future = analytics.exports(force: true));
+  }
+
+  String _titleCase(String value) {
+    return value
+        .split(RegExp(r'[_\\s-]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
 }
 
 class _ReportCard extends StatelessWidget {
@@ -66,6 +158,7 @@ class _ReportCard extends StatelessWidget {
   final List<String> sections;
   final String date;
   final String status;
+  final String exportType;
 
   const _ReportCard({
     required this.title,
@@ -73,6 +166,7 @@ class _ReportCard extends StatelessWidget {
     required this.sections,
     required this.date,
     required this.status,
+    required this.exportType,
   });
 
   @override
@@ -116,7 +210,7 @@ class _ReportCard extends StatelessWidget {
               ),
               const Spacer(),
               ExportActionButton(
-                exportType: 'bookings',
+                exportType: exportType,
                 label: 'Export',
                 builder: (context, onTap, label) => DPHolographicButton(
                   label: label,

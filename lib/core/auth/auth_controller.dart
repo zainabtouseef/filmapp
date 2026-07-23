@@ -4,6 +4,9 @@ import 'package:flutter/widgets.dart';
 
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
+import '../director/director_dashboard_models.dart';
+import '../director/director_discovery_models.dart';
+import '../director/director_repository.dart';
 import '../marketplace/marketplace_models.dart';
 import '../profile/profile_models.dart';
 import '../uploads/upload_repository.dart';
@@ -217,6 +220,10 @@ class AuthController extends ChangeNotifier {
     return _repository.marketplaceListings(type: type, query: query);
   }
 
+  Future<MarketplaceListing> marketplaceListing(String publicId) {
+    return _repository.marketplaceListing(publicId);
+  }
+
   Future<MarketplaceListing> publishMarketplaceListing({
     required String title,
     required String summary,
@@ -323,6 +330,34 @@ class AuthController extends ChangeNotifier {
 
   Future<void> addToDefaultShortlist(String listingId) {
     return _repository.addToDefaultShortlist(listingId);
+  }
+
+  Future<DirectorDashboard> directorDashboard() {
+    return DirectorRepository(_client).dashboard();
+  }
+
+  Future<DirectorSchedule> directorSchedule({String? projectId}) {
+    return DirectorRepository(_client).schedule(projectId: projectId);
+  }
+
+  Future<DirectorDiscoveryBundle> directorDiscovery({
+    String? category,
+    String? query,
+  }) {
+    return DirectorRepository(_client).discovery(
+      category: category,
+      query: query,
+    );
+  }
+
+  Future<DirectorDiscoveryItem> directorDiscoveryItem({
+    required String kind,
+    required String publicId,
+  }) {
+    return DirectorRepository(_client).discoveryItem(
+      kind: kind,
+      publicId: publicId,
+    );
   }
 
   Future<void> clearSession() async {

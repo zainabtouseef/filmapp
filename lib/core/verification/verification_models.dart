@@ -5,7 +5,9 @@ class UploadedFile {
   final String scanStatus;
   final String processingStatus;
   final String originalName;
+  final String visibility;
   final String? downloadUrl;
+  final String? publicUrl;
 
   const UploadedFile({
     required this.publicId,
@@ -14,7 +16,9 @@ class UploadedFile {
     required this.scanStatus,
     required this.processingStatus,
     required this.originalName,
+    required this.visibility,
     this.downloadUrl,
+    this.publicUrl,
   });
 
   factory UploadedFile.fromJson(Map<String, dynamic> json) {
@@ -25,7 +29,9 @@ class UploadedFile {
       scanStatus: json['scan_status'] as String,
       processingStatus: json['processing_status'] as String,
       originalName: json['original_name'] as String,
+      visibility: json['visibility'] as String? ?? 'authorized',
       downloadUrl: json['download_url'] as String?,
+      publicUrl: json['public_url'] as String?,
     );
   }
 }

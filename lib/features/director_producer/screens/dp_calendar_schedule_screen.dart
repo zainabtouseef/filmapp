@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/director/director_dashboard_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../models/dp_schedule_item.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -21,8 +22,15 @@ class DPCalendarScheduleScreen extends StatefulWidget {
 
 class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
   String? _projectId;
+  Future<DirectorSchedule>? _scheduleFuture;
   bool _synced = false;
   Timer? _syncResetTimer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleFuture ??= _loadSchedule();
+  }
 
   @override
   void dispose() {
@@ -32,25 +40,38 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
 
   void _sync() {
     _syncResetTimer?.cancel();
-    setState(() => _synced = true);
+    setState(() {
+      _synced = true;
+      _scheduleFuture = _loadSchedule();
+    });
     _syncResetTimer = Timer(const Duration(milliseconds: 1600), () {
       if (mounted) setState(() => _synced = false);
     });
   }
 
-  void _openCallSheet() {
-    final projectTitle =
-        _projectId == null ? null : dpProjectTitleForId(_projectId);
-    final events = dpScheduleForProject(projectTitle);
-    final todaysEvents = events
-        .where((event) => event.date == 'Today' || event.date == 'Jul 21')
-        .toList();
-    final rows = todaysEvents.isEmpty ? events.take(3).toList() : todaysEvents;
+  Future<DirectorSchedule> _loadSchedule() {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) {
+      throw StateError('Auth scope is missing.');
+    }
+    return auth.directorSchedule(projectId: _projectId);
+  }
+
+  Future<void> _openCallSheet() async {
+    DirectorSchedule? schedule;
+    try {
+      schedule = await (_scheduleFuture ?? _loadSchedule());
+    } catch (_) {
+      if (!mounted) return;
+      dpSnack(context, 'Could not load the live call sheet.');
+      return;
+    }
+    if (!mounted) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _CallSheet(events: rows),
+      builder: (sheetContext) => _CallSheet(callSheet: schedule!.callSheet),
     );
   }
 
@@ -75,7 +96,10 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
             children: [
               DPProjectScopePicker(
                 selectedProjectId: _projectId,
-                onChanged: (value) => setState(() => _projectId = value),
+                onChanged: (value) => setState(() {
+                  _projectId = value;
+                  _scheduleFuture = _loadSchedule();
+                }),
               ),
               const SizedBox(height: 12),
               ProductionCalendar(
@@ -89,19 +113,7 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
         DPSectionCard(
           title: 'Schedule risk watch',
           icon: Icons.warning_amber_rounded,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              dpBullet(context, 'Night exterior overlaps with crew hold.'),
-              dpBullet(context, 'Drone ridge requires permit before Aug 8.'),
-              dpBullet(context, 'Weather buffer suggested for mountain days.'),
-              const SizedBox(height: 12),
-              const DPStatusChip(
-                label: '2 schedule risks',
-                tone: DpTone.danger,
-              ),
-            ],
-          ),
+          child: _ScheduleRiskWatch(future: _scheduleFuture),
         ),
         const SizedBox(height: 12),
         DPHolographicButton(
@@ -116,15 +128,16 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
 }
 
 class _CallSheet extends StatelessWidget {
-  final List<DpScheduleItem> events;
+  final DirectorCallSheet callSheet;
 
-  const _CallSheet({required this.events});
+  const _CallSheet({required this.callSheet});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final crew = <String>{for (final event in events) ...event.stakeholders};
-    final label = events.isEmpty ? 'Today' : events.first.date;
+    final events = callSheet.dpEvents;
+    final crew = <String>{...callSheet.crew};
+    final label = callSheet.label;
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       minChildSize: 0.4,
@@ -199,7 +212,7 @@ class _CallSheet extends StatelessWidget {
                     _CallSheetBlock(
                       icon: Icons.wb_sunny_outlined,
                       title: 'Weather',
-                      body: '31°C, clear — no rain cover needed.',
+                      body: callSheet.weatherSummary,
                     ),
                     const SizedBox(height: 12),
                     _CallSheetBlock(
@@ -222,6 +235,53 @@ class _CallSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ScheduleRiskWatch extends StatelessWidget {
+  final Future<DirectorSchedule>? future;
+
+  const _ScheduleRiskWatch({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    final value = future;
+    if (value == null) {
+      return dpText(context, 'Live schedule risks unavailable.');
+    }
+    return FutureBuilder<DirectorSchedule>(
+      future: value,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return dpText(context, 'Loading live schedule risks…');
+        }
+        if (snapshot.hasError) {
+          return dpText(context, 'Could not load live schedule risks.');
+        }
+        final risks = snapshot.data?.risks ?? const [];
+        if (risks.isEmpty) {
+          return const DPStatusChip(
+            label: 'No live risk records',
+            tone: DpTone.neutral,
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final risk in risks.take(5)) ...[
+              dpBullet(context, '${risk.projectTitle}: ${risk.message}'),
+              const SizedBox(height: 6),
+            ],
+            DPStatusChip(
+              label: '${risks.length} live schedule risks',
+              tone: risks.any((risk) => risk.riskLevel == 'high')
+                  ? DpTone.danger
+                  : DpTone.warning,
+            ),
+          ],
+        );
+      },
     );
   }
 }

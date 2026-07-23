@@ -5,6 +5,7 @@ from app.api.app import app_blueprint
 from app.api.auth import auth_blueprint
 from app.api.bookings import bookings_blueprint
 from app.api.contracts import contracts_blueprint
+from app.api.director import director_blueprint
 from app.api.health import health_blueprint
 from app.api.insurance import insurance_blueprint
 from app.api.marketplace import marketplace_blueprint
@@ -24,6 +25,7 @@ api_v1.register_blueprint(marketplace_blueprint)
 api_v1.register_blueprint(projects_blueprint)
 api_v1.register_blueprint(bookings_blueprint)
 api_v1.register_blueprint(contracts_blueprint)
+api_v1.register_blueprint(director_blueprint)
 api_v1.register_blueprint(payments_blueprint)
 api_v1.register_blueprint(operations_blueprint)
 api_v1.register_blueprint(insurance_blueprint)

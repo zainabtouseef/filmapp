@@ -974,8 +974,8 @@ class _DPCreateProjectWizardScreenState
         title: _title.text.trim(),
         projectType: _type,
         description: description,
-        startDate: _startDate?.toIso8601String(),
-        endDate: _endDate?.toIso8601String(),
+        startDate: _apiDate(_startDate),
+        endDate: _apiDate(_endDate),
         estimatedBudgetMinor: _parseMinor(_budgetMax.text),
       );
 
@@ -1014,7 +1014,7 @@ class _DPCreateProjectWizardScreenState
       });
     } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() => _errors['submit'] = error.message);
+      setState(() => _errors['submit'] = _friendlyApiError(error));
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -1065,6 +1065,21 @@ class _DPCreateProjectWizardScreenState
     final whole = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
     if (whole == null) return null;
     return whole * 100;
+  }
+
+  String? _apiDate(DateTime? value) {
+    if (value == null) return null;
+    return value.toIso8601String().split('T').first;
+  }
+
+  String _friendlyApiError(ApiException error) {
+    if (error.fields.isEmpty) return error.message;
+    final fieldMessages = error.fields.entries
+        .expand(
+          (entry) => entry.value.map((message) => '${entry.key}: $message'),
+        )
+        .join('\n');
+    return '${error.message}\n$fieldMessages';
   }
 }
 

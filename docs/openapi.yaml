@@ -21,6 +21,7 @@ tags:
   - name: Profiles
   - name: Marketplace
   - name: Projects
+  - name: Director
   - name: Bookings
   - name: Contracts
   - name: Legal
@@ -68,6 +69,101 @@ paths:
                 $ref: "#/components/schemas/HealthEnvelope"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+  /director/dashboard:
+    get:
+      tags: [Director]
+      operationId: getDirectorDashboard
+      summary: Director/Producer dashboard aggregate
+      responses:
+        "200":
+          description: Database-backed dashboard summary for the authenticated Director/Producer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectorDashboardEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /director/schedule:
+    get:
+      tags: [Director]
+      operationId: getDirectorSchedule
+      summary: Director/Producer schedule aggregate
+      parameters:
+        - in: query
+          name: project_id
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Database-backed production schedule, risk watch, and call-sheet summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectorScheduleEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /director/discovery:
+    get:
+      tags: [Director]
+      operationId: getDirectorDiscovery
+      summary: Director/Producer provider-specific discovery feed
+      parameters:
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Database-backed discovery cards for non-talent provider records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectorDiscoveryEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /director/discovery/{kind}/{public_id}:
+    get:
+      tags: [Director]
+      operationId: getDirectorDiscoveryItem
+      summary: Director/Producer provider-specific discovery detail
+      parameters:
+        - in: path
+          name: kind
+          required: true
+          schema:
+            type: string
+            enum: [actor, model, location, equipment, agency, distribution]
+        - in: path
+          name: public_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rich detail DTO for a provider-specific Director discovery record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectorDiscoveryItemEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /app/bootstrap:
     get:
       tags: [App]
@@ -4450,6 +4546,226 @@ components:
                 $ref: "#/components/schemas/Role"
         meta:
           $ref: "#/components/schemas/Meta"
+    DirectorDashboardEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [dashboard]
+          properties:
+            dashboard:
+              type: object
+              additionalProperties: false
+              required:
+                - summary
+                - projects
+                - timeline
+                - payments_attention
+                - pipeline
+                - activity
+                - priority_actions
+              properties:
+                summary:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    - active_projects
+                    - project_count
+                    - committed_budget_minor
+                    - paid_minor
+                    - pending_payment_minor
+                    - secured_bookings
+                    - attention_count
+                    - currency
+                  properties:
+                    active_projects:
+                      type: integer
+                      minimum: 0
+                    project_count:
+                      type: integer
+                      minimum: 0
+                    committed_budget_minor:
+                      type: integer
+                      minimum: 0
+                    paid_minor:
+                      type: integer
+                      minimum: 0
+                    pending_payment_minor:
+                      type: integer
+                      minimum: 0
+                    secured_bookings:
+                      type: integer
+                      minimum: 0
+                    attention_count:
+                      type: integer
+                      minimum: 0
+                    currency:
+                      type: string
+                      pattern: "^[A-Z]{3}$"
+                projects:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Project"
+                timeline:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                payments_attention:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                pipeline:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                activity:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                priority_actions:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        meta:
+          $ref: "#/components/schemas/Meta"
+    DirectorScheduleEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [schedule]
+          properties:
+            schedule:
+              type: object
+              additionalProperties: false
+              required: [events, risks, call_sheet]
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                risks:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                call_sheet:
+                  type: object
+                  additionalProperties: true
+        meta:
+          $ref: "#/components/schemas/Meta"
+    DirectorDiscoveryEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [discovery]
+          properties:
+            discovery:
+              type: object
+              additionalProperties: false
+              required: [items, facets]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/DirectorDiscoveryItem"
+                facets:
+                  type: object
+                  additionalProperties: true
+        meta:
+          $ref: "#/components/schemas/Meta"
+    DirectorDiscoveryItemEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [item]
+          properties:
+            item:
+              $ref: "#/components/schemas/DirectorDiscoveryItem"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    DirectorDiscoveryItem:
+      type: object
+      additionalProperties: true
+      required:
+        - public_id
+        - kind
+        - category
+        - title
+        - summary
+        - rate_label
+        - verification_status
+        - tags
+        - media
+      properties:
+        public_id:
+          type: string
+        kind:
+          type: string
+          enum: [actor, model, location, equipment, agency, distribution]
+        listing_id:
+          type: string
+          nullable: true
+        category:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        summary:
+          type: string
+        city:
+          $ref: "#/components/schemas/City"
+        owner:
+          type: object
+          additionalProperties: true
+        rate_from_minor:
+          type: integer
+          nullable: true
+        currency:
+          type: string
+        rate_label:
+          type: string
+        verification_status:
+          type: string
+        rating_average:
+          type: integer
+        available:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        media:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        sections:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
     PublicConfigEnvelope:
       type: object
       additionalProperties: false
@@ -4741,6 +5057,8 @@ components:
           type: string
         download_url:
           type: string
+        public_url:
+          type: [string, "null"]
     FileAssetEnvelope:
       type: object
       additionalProperties: false
@@ -5388,7 +5706,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        [public_id, owner, organization_id, title, project_type, description, city, start_date, end_date, status, estimated_budget_minor, currency, visibility, progress_percent, requirement_count, member_count, created_at, updated_at]
+        [public_id, owner, organization_id, title, project_type, description, city, cover_file, start_date, end_date, status, estimated_budget_minor, currency, visibility, progress_percent, requirement_count, member_count, created_at, updated_at]
       properties:
         public_id:
           type: string
@@ -5412,6 +5730,10 @@ components:
         city:
           oneOf:
             - $ref: "#/components/schemas/City"
+            - type: "null"
+        cover_file:
+          oneOf:
+            - $ref: "#/components/schemas/FileAsset"
             - type: "null"
         start_date:
           type: [string, "null"]
@@ -5460,6 +5782,9 @@ components:
           type: string
         city_id:
           type: [string, "null"]
+        cover_file_id:
+          type: [string, "null"]
+          description: Public clean image file id to use as the project cover.
         start_date:
           type: [string, "null"]
           format: date

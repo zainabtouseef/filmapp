@@ -1,46 +1,48 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/cards/cine_card_system.dart';
 import '../../../../shared/formatters/cine_format.dart';
-import '../../data/director_producer_demo_data.dart';
-import '../../models/dp_contract.dart';
-import '../../models/dp_negotiation.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
-import '../dp_project_console_widgets.dart' show dpMoneyFromLabel;
 
 /// Deals & Contracts — three pipeline-stage previews, with the complete
 /// pipeline available from the parent section action.
 class DPDealPipeline extends StatelessWidget {
-  const DPDealPipeline({super.key});
+  final List<DirectorPipelineItem> items;
+
+  const DPDealPipeline({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
-    final negotiations = DirectorProducerDemoData.negotiations;
-    final contracts = DirectorProducerDemoData.contracts;
-
-    final negotiating = negotiations
-        .where(
-            (n) => ['Their move', 'Your move', 'Expiring'].contains(n.status))
+    final bookings = items.where((item) => item.kind == 'booking').toList();
+    final contracts = items.where((item) => item.kind == 'contract').toList();
+    final negotiating = bookings
+        .where((item) =>
+            ['sent', 'under_negotiation'].contains(item.status.toLowerCase()))
         .toList();
-    final accepted = negotiations.where((n) => n.status == 'Accepted').toList();
-    final contractSent =
-        contracts.where((c) => c.status == 'Pending Signature').toList();
-    final signed = contracts.where((c) => c.status == 'Signed').toList();
+    final accepted = bookings
+        .where((item) => ['accepted', 'confirmed', 'secured']
+            .contains(item.status.toLowerCase()))
+        .toList();
+    final contractSent = contracts
+        .where((item) => item.status.toLowerCase().contains('pending'))
+        .toList();
+    final signed = contracts
+        .where((item) => item.status.toLowerCase().contains('signed'))
+        .toList();
 
-    int negotiationTotal(List<DpNegotiation> negs) =>
-        negs.fold<int>(0, (sum, n) => sum + dpMoneyFromLabel(n.currentRate));
-    int contractTotal(List<DpContract> cons) =>
-        cons.fold<int>(0, (sum, c) => sum + dpMoneyFromLabel(c.value));
+    int valueTotal(List<DirectorPipelineItem> stageItems) => stageItems
+        .fold<int>(0, (sum, item) => sum + ((item.valueMinor ?? 0) ~/ 100));
 
     final stages = [
       _DealStageCard(
         label: 'Negotiating',
         tone: CineTone.warning,
         count: negotiating.length,
-        total: negotiationTotal(negotiating),
+        total: valueTotal(negotiating),
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       ),
@@ -48,7 +50,7 @@ class DPDealPipeline extends StatelessWidget {
         label: 'Offer accepted',
         tone: CineTone.information,
         count: accepted.length,
-        total: negotiationTotal(accepted),
+        total: valueTotal(accepted),
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       ),
@@ -56,7 +58,7 @@ class DPDealPipeline extends StatelessWidget {
         label: 'Contract sent',
         tone: CineTone.premium,
         count: contractSent.length,
-        total: contractTotal(contractSent),
+        total: valueTotal(contractSent),
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.contracts),
       ),
@@ -64,7 +66,7 @@ class DPDealPipeline extends StatelessWidget {
         label: 'Signed',
         tone: CineTone.positive,
         count: signed.length,
-        total: contractTotal(signed),
+        total: valueTotal(signed),
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.contracts),
       ),

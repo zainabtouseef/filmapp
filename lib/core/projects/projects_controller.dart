@@ -35,6 +35,7 @@ class ProjectsController extends ChangeNotifier {
     String? endDate,
     int? estimatedBudgetMinor,
     String currency = 'PKR',
+    String? coverFileId,
   }) async {
     final project = await _repository.createProject(
       title: title,
@@ -45,6 +46,7 @@ class ProjectsController extends ChangeNotifier {
       endDate: endDate,
       estimatedBudgetMinor: estimatedBudgetMinor,
       currency: currency,
+      coverFileId: coverFileId,
     );
     await projects(force: true);
     return project;

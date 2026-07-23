@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
-import '../models/dp_negotiation.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
 import '../widgets/dp_holographic_button.dart';
@@ -81,9 +80,13 @@ class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
           );
         }
         if (snapshot.hasError) {
-          return _DemoNegotiationThread(
-            negotiationId: widget.negotiationId,
-            onClose: widget.onClose,
+          return CoreEmptyState(
+            icon: Icons.cloud_off_rounded,
+            title: 'Negotiation unavailable',
+            message:
+                'Could not load this live offer thread from the database. Retry after checking the API connection.',
+            actionLabel: 'Retry',
+            onAction: _reload,
           );
         }
         return _LiveNegotiationThread(
@@ -98,6 +101,10 @@ class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
         );
       },
     );
+  }
+
+  void _reload() {
+    setState(() => _future = _load());
   }
 
   Future<void> _sendCounter(NegotiationThread thread) async {
@@ -452,156 +459,6 @@ class _LiveNegotiationThread extends StatelessWidget {
             arguments: thread.booking.conversationId,
           ),
           onDecline: () => onDecline(thread),
-        ),
-      ],
-    );
-  }
-}
-
-class _DemoNegotiationThread extends StatefulWidget {
-  final String? negotiationId;
-  final VoidCallback? onClose;
-
-  const _DemoNegotiationThread({this.negotiationId, this.onClose});
-
-  @override
-  State<_DemoNegotiationThread> createState() => _DemoNegotiationThreadState();
-}
-
-class _DemoNegotiationThreadState extends State<_DemoNegotiationThread> {
-  late final DpNegotiation negotiation;
-  late List<DpNegotiationRound> _rounds;
-  late String _status;
-  late final _rate = TextEditingController(text: negotiation.currentRate);
-  final _schedule = TextEditingController(text: '30% / 40% / 30%');
-
-  @override
-  void initState() {
-    super.initState();
-    final negotiations = DirectorProducerDemoData.negotiations;
-    negotiation = negotiations.firstWhere(
-      (item) => item.id == widget.negotiationId,
-      orElse: () => negotiations.first,
-    );
-    _rounds = List.of(negotiation.rounds);
-    _status = negotiation.status;
-  }
-
-  @override
-  void dispose() {
-    _rate.dispose();
-    _schedule.dispose();
-    super.dispose();
-  }
-
-  void _sendCounter() {
-    setState(() {
-      _rounds = [
-        ..._rounds,
-        DpNegotiationRound(
-          round: _rounds.length + 1,
-          sentBy: 'Producer',
-          rate: _rate.text.trim(),
-          dates: negotiation.rounds.isNotEmpty
-              ? negotiation.rounds.last.dates
-              : '',
-          schedule: _schedule.text.trim(),
-          conditions: '',
-          message: 'Counter sent from preview mode.',
-          timestamp: 'Just now',
-          expiry: negotiation.expiry,
-        ),
-      ];
-      _status = 'Their move';
-    });
-    dpSnack(context, 'Counter sent');
-  }
-
-  void _accept() {
-    setState(() => _status = 'Accepted');
-    dpSnack(context, 'Offer accepted');
-    widget.onClose?.call();
-  }
-
-  void _decline() {
-    setState(() => _status = 'Withdrawn');
-    dpSnack(context, 'Negotiation declined');
-    widget.onClose?.call();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _LivePreview(
-      negotiation: negotiation,
-      status: _status,
-      rounds: _rounds,
-      rate: _rate,
-      schedule: _schedule,
-      onCounter: _sendCounter,
-      onAccept: _accept,
-      onDecline: _decline,
-      onClose: widget.onClose,
-    );
-  }
-}
-
-class _LivePreview extends StatelessWidget {
-  final DpNegotiation negotiation;
-  final String status;
-  final List<DpNegotiationRound> rounds;
-  final TextEditingController rate;
-  final TextEditingController schedule;
-  final VoidCallback onCounter;
-  final VoidCallback onAccept;
-  final VoidCallback onDecline;
-  final VoidCallback? onClose;
-
-  const _LivePreview({
-    required this.negotiation,
-    required this.status,
-    required this.rounds,
-    required this.rate,
-    required this.schedule,
-    required this.onCounter,
-    required this.onAccept,
-    required this.onDecline,
-    required this.onClose,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ThreadHeader(
-          name: negotiation.candidate,
-          subtitle: '${negotiation.project} · ${negotiation.requirement}',
-          onClose: onClose,
-        ),
-        const SizedBox(height: 18),
-        const _SectionLabel(icon: Icons.trending_up_rounded, label: 'Rounds'),
-        const SizedBox(height: 10),
-        for (var i = 0; i < rounds.length; i++)
-          DPNegotiationRoundCard(round: rounds[i]),
-        const SizedBox(height: 8),
-        Container(height: 1, color: context.appColors.borderMuted),
-        const SizedBox(height: 16),
-        const _SectionLabel(icon: Icons.tune_rounded, label: 'Counter offer'),
-        const SizedBox(height: 12),
-        _FieldBox(label: 'Rate', controller: rate),
-        const SizedBox(height: 10),
-        _FieldBox(label: 'Payment schedule', controller: schedule),
-        const SizedBox(height: 20),
-        _ThreadFooter(
-          name: negotiation.candidate,
-          sending: false,
-          onAccept: onAccept,
-          onCounter: onCounter,
-          onChat: () => Navigator.pushNamed(
-            context,
-            DirectorProducerRoutes.room,
-          ),
-          onDecline: onDecline,
         ),
       ],
     );

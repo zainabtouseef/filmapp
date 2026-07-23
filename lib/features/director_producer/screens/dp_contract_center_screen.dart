@@ -7,7 +7,6 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -33,6 +32,7 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final future = _future;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -44,40 +44,69 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
           onTap: _generating ? () {} : _generateFromAcceptedBooking,
         ),
         const SizedBox(height: 8),
-        FutureBuilder<List<CineContract>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CoreEmptyState(
-                icon: Icons.hourglass_top_rounded,
-                title: 'Loading contracts',
-                message: 'Fetching live agreement records.',
+        if (future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in required',
+            message: 'Connect a live Director account to view contracts.',
+          )
+        else
+          FutureBuilder<List<CineContract>>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const CoreEmptyState(
+                  icon: Icons.hourglass_top_rounded,
+                  title: 'Loading contracts',
+                  message: 'Fetching live agreement records.',
+                );
+              }
+              if (snapshot.hasError) {
+                return CoreEmptyState(
+                  icon: Icons.cloud_off_rounded,
+                  title: 'Contracts unavailable',
+                  message:
+                      'Could not load live agreement records from the database. Check the API connection and try again.',
+                  actionLabel: 'Retry',
+                  onAction: _reload,
+                );
+              }
+              final contracts = snapshot.data ?? const [];
+              if (contracts.isEmpty) {
+                return const CoreEmptyState(
+                  icon: Icons.article_outlined,
+                  title: 'No contracts yet',
+                  message:
+                      'Accept a booking and generate a contract to populate this center from the database.',
+                );
+              }
+              return DPResponsiveGrid(
+                minWidth: 310,
+                children: [
+                  for (final contract in contracts)
+                    _ContractCard(
+                      title: contract.title,
+                      project: contract.projectId,
+                      stakeholder: contract.counterpartySummary,
+                      value: contract.displayValue,
+                      status: contract.statusLabel,
+                      progress: contract.signatureProgress,
+                      date: contract.effectiveDate ?? 'Draft',
+                      contractId: contract.publicId,
+                      onRequestReview: () => _requestReview(contract),
+                    ),
+                ],
               );
-            }
-            if (snapshot.hasError || (snapshot.data ?? const []).isEmpty) {
-              return _DemoContractGrid();
-            }
-            return DPResponsiveGrid(
-              minWidth: 310,
-              children: [
-                for (final contract in snapshot.data!)
-                  _ContractCard(
-                    title: contract.title,
-                    project: contract.projectId,
-                    stakeholder: contract.counterpartySummary,
-                    value: contract.displayValue,
-                    status: contract.statusLabel,
-                    progress: contract.signatureProgress,
-                    date: contract.effectiveDate ?? 'Draft',
-                    contractId: contract.publicId,
-                    onRequestReview: () => _requestReview(contract),
-                  ),
-              ],
-            );
-          },
-        ),
+            },
+          ),
       ],
     );
+  }
+
+  void _reload() {
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts == null) return;
+    setState(() => _future = contracts.contracts(force: true));
   }
 
   Future<void> _generateFromAcceptedBooking() async {
@@ -117,31 +146,6 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
       if (!mounted) return;
       dpSnack(context, '$error');
     }
-  }
-}
-
-class _DemoContractGrid extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final contracts = DirectorProducerDemoData.contracts;
-    return DPResponsiveGrid(
-      minWidth: 310,
-      children: contracts
-          .map(
-            (contract) => _ContractCard(
-              title: contract.title,
-              project: contract.project,
-              stakeholder: contract.candidate,
-              value: contract.value,
-              status: contract.status,
-              progress: contract.signatureProgress,
-              date: contract.createdDate,
-              contractId: null,
-              onRequestReview: null,
-            ),
-          )
-          .toList(),
-    );
   }
 }
 

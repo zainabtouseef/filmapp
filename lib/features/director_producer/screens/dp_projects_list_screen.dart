@@ -5,7 +5,6 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
 import '../models/dp_project.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
@@ -80,13 +79,15 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const _ProjectsLoadingState();
         }
-        final warning =
-            snapshot.hasError ? _friendlyError(snapshot.error) : null;
-        final allProjects = snapshot.hasError
-            ? DirectorProducerDemoData.projects
-            : (snapshot.data ?? const <Project>[])
-                .map((p) => p.toDpProject())
-                .toList();
+        if (snapshot.hasError) {
+          return _ProjectsErrorState(
+            message: _friendlyError(snapshot.error),
+            onRetry: _reload,
+          );
+        }
+        final allProjects = (snapshot.data ?? const <Project>[])
+            .map((p) => p.toDpProject())
+            .toList();
         final filtered = _filterProjects(allProjects);
         final needingAction =
             allProjects.where((p) => p.pendingActions > 0).length;
@@ -109,14 +110,17 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
               onChanged: (value) => setState(() => _filter = value),
             ),
             const SizedBox(height: 14),
-            if (warning != null) ...[
-              _InlineWarning(message: warning),
-              const SizedBox(height: 12),
-            ],
-            if (filtered.isEmpty)
+            if (allProjects.isEmpty)
+              const DPEmptyState(
+                icon: Icons.movie_creation_outlined,
+                title: 'No live projects yet',
+                message:
+                    'Create your first production to start seeing real project cards here.',
+              )
+            else if (filtered.isEmpty)
               const DPEmptyState(
                 icon: Icons.movie_filter_outlined,
-                title: 'No matching projects',
+                title: 'No matching live projects',
                 message: 'Try a different search term or status filter.',
               )
             else
@@ -160,13 +164,13 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
       return switch (error.code) {
         'auth.required' ||
         'auth.invalid_token' =>
-          'Sign in to load live projects — showing preview projects.',
+          'Sign in to load live projects.',
         'network.offline' =>
-          'Live projects unavailable — showing preview projects. Check your connection and retry.',
-        _ => 'Live projects unavailable — showing preview projects.',
+          'Live projects are unavailable. Check your connection and retry.',
+        _ => error.message,
       };
     }
-    return 'Live projects unavailable — showing preview projects.';
+    return 'Live projects are unavailable right now.';
   }
 }
 
@@ -244,32 +248,65 @@ class _ProjectsLoadingState extends StatelessWidget {
   }
 }
 
-class _InlineWarning extends StatelessWidget {
+class _ProjectsErrorState extends StatelessWidget {
   final String message;
+  final VoidCallback onRetry;
 
-  const _InlineWarning({required this.message});
+  const _ProjectsErrorState({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.goldMid.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.goldMid.withValues(alpha: 0.28)),
-      ),
-      child: Row(
+    return DPGlassCard(
+      accentColor: colors.warning,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: colors.goldMid, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
+          DPPageHeader(
+            eyebrow: 'Live projects',
+            title: 'Projects',
+            actionLabel: 'New Project',
+            actionIcon: Icons.add_rounded,
+            onActionTap: () => Navigator.pushNamed(
+              context,
+              DirectorProducerRoutes.createProject,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.cloud_off_outlined, color: colors.warning, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Could not load live projects',
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      message,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
             ),
           ),
         ],

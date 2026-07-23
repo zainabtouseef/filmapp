@@ -11,6 +11,7 @@ class MarketplaceListing {
   final String currency;
   final String verificationStatus;
   final String ownerName;
+  final List<MarketplaceListingMedia> media;
 
   const MarketplaceListing({
     required this.publicId,
@@ -22,11 +23,13 @@ class MarketplaceListing {
     required this.currency,
     required this.verificationStatus,
     required this.ownerName,
+    required this.media,
   });
 
   factory MarketplaceListing.fromJson(Map<String, dynamic> json) {
     final city = json['city'] as Map<String, dynamic>?;
     final owner = json['owner'] as Map<String, dynamic>? ?? const {};
+    final rawMedia = json['media'] as List<dynamic>? ?? const [];
     return MarketplaceListing(
       publicId: json['public_id'] as String,
       listingType: json['listing_type'] as String,
@@ -37,6 +40,11 @@ class MarketplaceListing {
       currency: json['currency'] as String? ?? 'PKR',
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       ownerName: owner['display_name'] as String? ?? 'CineConnect member',
+      media: rawMedia
+          .map((item) =>
+              MarketplaceListingMedia.fromJson(item as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
     );
   }
 
@@ -48,9 +56,17 @@ class MarketplaceListing {
     final initials = words.take(2).map((word) => word[0].toUpperCase()).join();
     return DpCandidate(
       id: publicId,
+      profileId: publicId,
+      marketplaceListingId: publicId,
       name: title,
       category: switch (listingType) {
         'talent' => 'Talent',
+        'actor' => 'Actors',
+        'model' => 'Models',
+        'location' => 'Locations',
+        'equipment' => 'Media & Equipment',
+        'agency' => 'Agencies',
+        'distribution' => 'Distribution',
         _ => listingType,
       },
       city: cityName,
@@ -60,8 +76,17 @@ class MarketplaceListing {
       available: true,
       skills: [currency, ownerName],
       avatarLabel: initials.isEmpty ? 'CC' : initials,
+      imageUrl: coverImageUrl,
       notes: summary,
     );
+  }
+
+  String? get coverImageUrl {
+    if (media.isEmpty) return null;
+    for (final item in media) {
+      if (item.isCover) return item.file?.publicUrl;
+    }
+    return media.first.file?.publicUrl;
   }
 
   String _priceLabel() {
@@ -75,6 +100,29 @@ class MarketplaceListing {
       return '$currency ${(whole / 1000).round()}k';
     }
     return '$currency $whole';
+  }
+}
+
+class MarketplaceListingMedia {
+  final UploadedFile? file;
+  final int sortOrder;
+  final bool isCover;
+  final String? caption;
+
+  const MarketplaceListingMedia({
+    required this.file,
+    required this.sortOrder,
+    required this.isCover,
+    required this.caption,
+  });
+
+  factory MarketplaceListingMedia.fromJson(Map<String, dynamic> json) {
+    return MarketplaceListingMedia(
+      file: MarketplacePortfolioItem._uploadedFileOrNull(json['file']),
+      sortOrder: json['sort_order'] as int? ?? 100,
+      isCover: json['is_cover'] as bool? ?? false,
+      caption: json['caption'] as String?,
+    );
   }
 }
 
@@ -146,12 +194,16 @@ class MarketplaceShortlistItem {
 
 class MarketplaceShortlist {
   final String publicId;
+  final String? projectId;
+  final String? requirementId;
   final String name;
   final List<MarketplaceShortlistItem> items;
   final DateTime? createdAt;
 
   const MarketplaceShortlist({
     required this.publicId,
+    required this.projectId,
+    required this.requirementId,
     required this.name,
     required this.items,
     required this.createdAt,
@@ -161,6 +213,8 @@ class MarketplaceShortlist {
     final rawItems = json['items'] as List<dynamic>? ?? const [];
     return MarketplaceShortlist(
       publicId: json['public_id'] as String,
+      projectId: json['project_id'] as String?,
+      requirementId: json['requirement_id'] as String?,
       name: json['name'] as String,
       items: rawItems
           .map((item) =>

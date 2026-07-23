@@ -190,6 +190,9 @@ def test_profile_talent_and_marketplace_listing_flow(client: FlaskClient) -> Non
     assert published.status_code == 201, published.text
     listing_id = published.json["data"]["listing"]["public_id"]
     assert published.json["data"]["listing"]["media"][0]["file"]["public_id"] == file_id
+    assert published.json["data"]["listing"]["media"][0]["file"][
+        "public_url"
+    ].startswith("https://media.test/")
 
     search = client.get("/api/v1/marketplace/listings?type=talent&q=Ali")
     assert search.status_code == 200
@@ -201,6 +204,9 @@ def test_profile_talent_and_marketplace_listing_flow(client: FlaskClient) -> Non
     assert detail.status_code == 200
     assert detail.json["data"]["listing"]["title"] == "Ali Marketplace — Actor"
     assert detail.json["data"]["listing"]["media"][0]["caption"] == "Drama Headshot"
+    assert detail.json["data"]["listing"]["media"][0]["file"][
+        "download_url"
+    ].startswith("/api/v1/files/")
 
     facets = client.get("/api/v1/marketplace/facets")
     assert facets.status_code == 200

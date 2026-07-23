@@ -41,20 +41,22 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: colors.softSurface,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  candidate.avatarLabel,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.goldDark,
-                    fontWeight: FontWeight.w800,
-                  ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: candidate.imageUrl?.isNotEmpty == true
+                      ? Image.network(
+                          candidate.imageUrl!,
+                          fit: BoxFit.cover,
+                          semanticLabel: '${candidate.name} profile image',
+                          errorBuilder: (context, error, stackTrace) =>
+                              _AvatarFallback(
+                            label: candidate.avatarLabel,
+                          ),
+                        )
+                      : _AvatarFallback(label: candidate.avatarLabel),
                 ),
               ),
               const SizedBox(width: 10),
@@ -164,5 +166,27 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
       _savingShortlist = false;
       _shortlisted = saved || _shortlisted;
     });
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  final String label;
+
+  const _AvatarFallback({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      color: colors.softSurface,
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: AppTextStyles.cardLabel.copyWith(
+          color: colors.goldDark,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }

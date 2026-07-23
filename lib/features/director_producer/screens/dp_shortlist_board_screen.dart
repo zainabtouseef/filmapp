@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
-import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
@@ -126,7 +125,14 @@ class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
               );
             }
             if (snapshot.hasError) {
-              return _fallbackBoard(context);
+              return CoreEmptyState(
+                icon: Icons.cloud_off_rounded,
+                title: 'Shortlists unavailable',
+                message:
+                    'Could not load saved searches and shortlist boards from the database. Check the API connection and try again.',
+                actionLabel: 'Retry',
+                onAction: _refresh,
+              );
             }
             final bundle = snapshot.data!;
             final hasLiveRows = bundle.savedSearches.isNotEmpty ||
@@ -162,8 +168,6 @@ class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _fallbackBoard(context, compact: true),
                 ],
               );
             }
@@ -188,43 +192,6 @@ class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
                   onSelect: _selectShortlistItem,
                 ),
               ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _fallbackBoard(BuildContext context, {bool compact = false}) {
-    final columns = const ['Talent', 'Models', 'Crew', 'Locations'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!compact) ...[
-          DPStatusChip(
-            label: 'Live shortlists unavailable — showing preview data',
-            tone: DpTone.warning,
-          ),
-          const SizedBox(height: 10),
-        ],
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = context.isDesktopWidth
-                ? (constraints.maxWidth - 36) / 4
-                : 278.0;
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final column in columns) ...[
-                    SizedBox(
-                        width: width,
-                        child: _DemoShortlistColumn(category: column)),
-                    if (column != columns.last) const SizedBox(width: 12),
-                  ],
-                ],
-              ),
             );
           },
         ),
@@ -560,80 +527,6 @@ class _MiniAction extends StatelessWidget {
       icon: icon,
       onTap: loading ? null : onTap,
       secondary: true,
-    );
-  }
-}
-
-class _DemoShortlistColumn extends StatelessWidget {
-  final String category;
-
-  const _DemoShortlistColumn({required this.category});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final items = DirectorProducerDemoData.candidates
-        .where((candidate) => candidate.category == category)
-        .take(4)
-        .toList();
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            category.toUpperCase(),
-            style: AppTextStyles.sectionHeaderStyle.copyWith(
-              color: colors.textPrimary,
-              fontSize: 14,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _DemoShortlistCard(item: item),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DemoShortlistCard extends StatelessWidget {
-  final DpCandidate item;
-
-  const _DemoShortlistCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return DPGlassCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: dpText(context, item.name, strong: true)),
-              DPStatusChip(label: '${item.rating}', tone: DpTone.warning),
-            ],
-          ),
-          const SizedBox(height: 6),
-          dpText(context, '${item.city} · ${item.rateRange}'),
-          const SizedBox(height: 10),
-          DPHolographicButton(
-            label: 'Compare',
-            icon: Icons.compare_arrows_rounded,
-            onTap: () => Navigator.pushNamed(
-              context,
-              DirectorProducerRoutes.profile,
-              arguments: item.id,
-            ),
-            secondary: true,
-          ),
-        ],
-      ),
     );
   }
 }

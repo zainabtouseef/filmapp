@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/bookings/booking_models.dart';
+import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/contracts/contract_models.dart';
+import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/payments/payment_models.dart';
+import '../../../core/payments/payments_controller.dart';
+import '../../../core/projects/project_models.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart'
@@ -9,6 +18,7 @@ import '../models/dp_booking.dart';
 import '../models/dp_contract.dart';
 import '../models/dp_payment.dart';
 import '../models/dp_project.dart';
+import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_booking_status_spine.dart';
 import '../widgets/dp_budget_health_bar.dart';
@@ -34,6 +44,7 @@ class DPProjectDetailScreen extends StatefulWidget {
 
 class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
   late int _tab = _tabIndex(widget.initialTab);
+  Future<_ProjectHubData>? _future;
 
   static const _tabs = [
     'Overview',
@@ -57,62 +68,307 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final project = dpProjectForId(widget.projectId);
-    final bookings = dpBookingsForProject(project.id);
-    final contracts = dpContractsForProject(project.title);
-    final payments = dpPaymentsForProject(project.title);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DPProjectBreadcrumbs(project: project, current: _tabs[_tab]),
-        const SizedBox(height: 6),
-        DPPageHeader(
-          eyebrow: '${project.status} · ${project.city}',
-          title: 'Project Hub',
-          actionLabel: 'Open Room',
-          actionIcon: Icons.forum_outlined,
-          onActionTap: () => Navigator.pushNamed(
-            context,
-            DirectorProducerRoutes.room,
-            arguments: project.id,
-          ),
-        ),
-        const SizedBox(height: 10),
-        _ProjectHeader(
-          project: project,
-          bookings: bookings,
-          contracts: contracts,
-          payments: payments,
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var i = 0; i < _tabs.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: DpDotChip(
-                    label: _tabs[i],
-                    active: _tab == i,
-                    onTap: () => setState(() => _tab = i),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        _ProjectTabBody(
-          tab: _tabs[_tab],
-          project: project,
-          bookings: bookings,
-          contracts: contracts,
-          payments: payments,
-        ),
-      ],
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<_ProjectHubData> _load() async {
+    final projects = ProjectsScope.maybeOf(context);
+    final bookingsController = BookingsScope.maybeOf(context);
+    final contractsController = ContractsScope.maybeOf(context);
+    final paymentsController = PaymentsScope.maybeOf(context);
+    if (projects == null) {
+      throw Exception('Projects scope is missing.');
+    }
+    final projectId = widget.projectId;
+    final project = projectId == null
+        ? (await projects.projects(force: true)).first
+        : await projects.project(projectId);
+    final requirements = await projects
+        .requirements(project.publicId)
+        .catchError((_) => <ProjectRequirement>[]);
+
+    final liveBookings = bookingsController == null
+        ? <Booking>[]
+        : await bookingsController.bookings(force: true).catchError(
+              (_) => <Booking>[],
+            );
+    final bookings = liveBookings
+        .where((booking) => booking.projectId == project.publicId)
+        .map(_toDpBooking)
+        .toList();
+
+    final liveContracts = contractsController == null
+        ? <CineContract>[]
+        : await contractsController.contracts(force: true).catchError(
+              (_) => <CineContract>[],
+            );
+    final contracts = liveContracts
+        .where((contract) => contract.projectId == project.publicId)
+        .map((contract) => _toDpContract(contract, project.title))
+        .toList();
+
+    PaymentDashboardDto? liveDashboard;
+    if (paymentsController != null) {
+      try {
+        liveDashboard = await paymentsController.dashboard(force: true);
+      } catch (_) {
+        liveDashboard = null;
+      }
+    }
+    final bookingIds = bookings.map((booking) => booking.id).toSet();
+    final contractIds = contracts.map((contract) => contract.id).toSet();
+    final payments = (liveDashboard?.schedules ?? const <PaymentScheduleDto>[])
+        .where(
+          (schedule) =>
+              bookingIds.contains(schedule.bookingId) ||
+              (schedule.contractId != null &&
+                  contractIds.contains(schedule.contractId)),
+        )
+        .expand(_toDpPayments)
+        .toList();
+
+    return _ProjectHubData(
+      project: _toDpProject(
+        project,
+        bookings: bookings,
+        contracts: contracts,
+        payments: payments,
+      ),
+      requirements: requirements
+          .map((requirement) => requirement.toDpRequirement())
+          .toList(),
+      bookings: bookings,
+      contracts: contracts,
+      payments: payments,
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_ProjectHubData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CoreEmptyState(
+            icon: Icons.hourglass_top_rounded,
+            title: 'Loading project hub',
+            message: 'Fetching live project, bookings, contracts and payments.',
+          );
+        }
+        if (snapshot.hasError) {
+          return CoreEmptyState(
+            icon: Icons.cloud_off_rounded,
+            title: 'Project hub unavailable',
+            message:
+                'Could not load this project from the database. Open a real project and retry.',
+            actionLabel: 'Retry',
+            onAction: () => setState(() => _future = _load()),
+          );
+        }
+        final data = snapshot.data!;
+        final project = data.project;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DPProjectBreadcrumbs(project: project, current: _tabs[_tab]),
+            const SizedBox(height: 6),
+            DPPageHeader(
+              eyebrow: '${project.status} · ${project.city}',
+              title: 'Project Hub',
+              actionLabel: 'Open Room',
+              actionIcon: Icons.forum_outlined,
+              onActionTap: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.room,
+                arguments: project.id,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _ProjectHeader(
+              project: project,
+              bookings: data.bookings,
+              contracts: data.contracts,
+              payments: data.payments,
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (var i = 0; i < _tabs.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: DpDotChip(
+                        label: _tabs[i],
+                        active: _tab == i,
+                        onTap: () => setState(() => _tab = i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _ProjectTabBody(
+              tab: _tabs[_tab],
+              project: project,
+              requirements: data.requirements,
+              bookings: data.bookings,
+              contracts: data.contracts,
+              payments: data.payments,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  DpProject _toDpProject(
+    Project project, {
+    required List<DpBooking> bookings,
+    required List<DpContract> contracts,
+    required List<DpPayment> payments,
+  }) {
+    final estimated = project.estimatedBudgetMinor == null
+        ? 0
+        : project.estimatedBudgetMinor! ~/ 100;
+    final committed = contracts.fold<int>(
+        0, (sum, contract) => sum + dpMoneyFromLabel(contract.value));
+    final paid = payments
+        .where((payment) => payment.status == 'Verified')
+        .fold<int>(0, (sum, payment) => sum + payment.amount);
+    final progress = (project.progressPercent.clamp(0, 100)) / 100;
+    return DpProject(
+      id: project.publicId,
+      title: project.title,
+      type: _titleCase(project.projectType),
+      city: project.city?.name ?? 'Pakistan',
+      dateRange: _dateRange(project.startDate, project.endDate),
+      status: _titleCase(project.status),
+      estimatedBudget: estimated,
+      confirmedCost: committed,
+      budgetHealth: estimated == 0
+          ? 0
+          : (committed / estimated).clamp(0.0, 1.0).toDouble(),
+      pendingActions: project.requirementCount,
+      shootDate: _shortDate(project.startDate),
+      bookingsCount: bookings.length,
+      contractsCount: contracts.length,
+      paymentsStatus:
+          paid == 0 ? 'No verified payments' : 'PKR ${_short(paid)} paid',
+      team: project.members.map((member) => member.displayName).toList(),
+      progress: progress.toDouble(),
+      coverImageUrl: project.coverFile?.publicUrl,
+    );
+  }
+
+  DpBooking _toDpBooking(Booking booking) {
+    return DpBooking(
+      id: booking.publicId,
+      projectId: booking.projectId,
+      requirement: booking.requirementId ?? _titleCase(booking.category),
+      candidate: booking.provider.displayName,
+      statusIndex: _bookingStatusIndex(booking.status),
+      fee: booking.activeOffer?.feeLabel ??
+          (booking.agreedAmountMinor == null
+              ? 'Rate TBD'
+              : '${booking.currency} ${_short(booking.agreedAmountMinor! ~/ 100)}'),
+      dateRange: _dateRange(booking.startAt, booking.endAt),
+      stage: _titleCase(booking.status),
+      expiry:
+          booking.expiresAt == null ? 'Open' : _shortDate(booking.expiresAt),
+    );
+  }
+
+  DpContract _toDpContract(CineContract contract, String projectTitle) {
+    return DpContract(
+      id: contract.publicId,
+      title: contract.title,
+      project: projectTitle,
+      candidate: contract.counterpartySummary,
+      value: contract.displayValue,
+      status: _titleCase(contract.status),
+      signatureProgress: contract.signatureProgress,
+      createdDate: contract.effectiveDate ?? 'Draft',
+    );
+  }
+
+  Iterable<DpPayment> _toDpPayments(PaymentScheduleDto schedule) {
+    return schedule.milestones.map((milestone) {
+      return DpPayment(
+        id: milestone.publicId,
+        booking: schedule.bookingId,
+        stakeholder: schedule.contractId ?? 'Contract pending',
+        amount: milestone.amountMinor ~/ 100,
+        dueDate: _shortDate(milestone.dueAt),
+        stage: milestone.name,
+        status: _paymentStatus(milestone.status),
+      );
+    });
+  }
+
+  int _bookingStatusIndex(String status) {
+    return switch (status) {
+      'accepted' || 'secured' => 9,
+      'under_negotiation' => 5,
+      'sent' => 3,
+      'rejected' || 'cancelled' => 1,
+      _ => 2,
+    };
+  }
+
+  String _paymentStatus(String status) {
+    return switch (status) {
+      'proof_submitted' => 'Proof Uploaded',
+      'verified' => 'Verified',
+      'rejected' => 'Rejected',
+      _ => 'Due',
+    };
+  }
+
+  String _titleCase(String value) {
+    return value
+        .replaceAll('_', ' ')
+        .split(RegExp(r'\\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
+
+  String _dateRange(DateTime? start, DateTime? end) {
+    if (start == null && end == null) return 'Dates TBD';
+    if (start == null) return 'Until ${_shortDate(end)}';
+    if (end == null) return 'From ${_shortDate(start)}';
+    return '${_shortDate(start)} - ${_shortDate(end)}';
+  }
+
+  String _shortDate(DateTime? value) {
+    if (value == null) return 'TBD';
+    return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+  }
+
+  String _short(int amount) {
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K';
+    return '$amount';
+  }
+}
+
+class _ProjectHubData {
+  final DpProject project;
+  final List<DpRequirement> requirements;
+  final List<DpBooking> bookings;
+  final List<DpContract> contracts;
+  final List<DpPayment> payments;
+
+  const _ProjectHubData({
+    required this.project,
+    required this.requirements,
+    required this.bookings,
+    required this.contracts,
+    required this.payments,
+  });
 }
 
 class _ProjectHeader extends StatelessWidget {
@@ -141,10 +397,9 @@ class _ProjectHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final poster = Container(
                 width: 74,
                 height: 92,
                 decoration: BoxDecoration(
@@ -152,37 +407,68 @@ class _ProjectHeader extends StatelessWidget {
                   gradient: colors.goldGradient,
                   border: Border.all(color: colors.border),
                 ),
-                child: Icon(Icons.movie_filter_rounded,
-                    color: colors.onGold, size: 34),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
+                child: Icon(
+                  Icons.movie_filter_rounded,
+                  color: colors.onGold,
+                  size: 34,
+                ),
+              );
+              final titleBlock = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    project.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.sectionTitle.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 22,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 6,
+                    children: [
+                      DpDotLabel(label: project.type, tone: DpTone.warning),
+                      DpDotLabel(label: project.status, tone: DpTone.info),
+                    ],
+                  ),
+                ],
+              );
+
+              if (constraints.maxWidth < 340) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      project.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.sectionTitle.copyWith(
-                        color: colors.textPrimary,
-                        fontSize: 22,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 14,
-                      runSpacing: 6,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        DpDotLabel(label: project.type, tone: DpTone.warning),
-                        DpDotLabel(label: project.status, tone: DpTone.info),
+                        poster,
+                        const SizedBox(width: 14),
+                        Expanded(child: titleBlock),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: _ProgressRing(value: project.progress),
+                    ),
                   ],
-                ),
-              ),
-              _ProgressRing(value: project.progress),
-            ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  poster,
+                  const SizedBox(width: 14),
+                  Expanded(child: titleBlock),
+                  const SizedBox(width: 10),
+                  _ProgressRing(value: project.progress),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -200,36 +486,36 @@ class _ProjectHeader extends StatelessWidget {
           const SizedBox(height: 12),
           Container(height: 1, color: colors.borderMuted),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Wrap(
+            spacing: 14,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 18,
-                  runSpacing: 10,
-                  children: [
-                    _BudgetStat(
-                      label: 'Budget',
-                      value:
-                          'PKR ${(project.estimatedBudget / 1000000).toStringAsFixed(1)}M',
-                    ),
-                    _BudgetStat(
-                      label: 'Committed',
-                      value:
-                          'PKR ${(project.confirmedCost / 1000000).toStringAsFixed(1)}M',
-                      color: colors.goldDark,
-                    ),
-                    _BudgetStat(
-                      label: 'Paid',
-                      value: 'PKR ${(paid / 1000).round()}K',
-                      color: colors.success,
-                    ),
-                    _BudgetStat(
-                      label: 'Signed',
-                      value: '$signed/${contracts.length}',
-                    ),
-                  ],
-                ),
+              Wrap(
+                spacing: 18,
+                runSpacing: 10,
+                children: [
+                  _BudgetStat(
+                    label: 'Budget',
+                    value:
+                        'PKR ${(project.estimatedBudget / 1000000).toStringAsFixed(1)}M',
+                  ),
+                  _BudgetStat(
+                    label: 'Committed',
+                    value:
+                        'PKR ${(project.confirmedCost / 1000000).toStringAsFixed(1)}M',
+                    color: colors.goldDark,
+                  ),
+                  _BudgetStat(
+                    label: 'Paid',
+                    value: 'PKR ${(paid / 1000).round()}K',
+                    color: colors.success,
+                  ),
+                  _BudgetStat(
+                    label: 'Signed',
+                    value: '$signed/${contracts.length}',
+                  ),
+                ],
               ),
               AvatarStack(
                 avatars: [
@@ -279,6 +565,7 @@ class _BudgetStat extends StatelessWidget {
 class _ProjectTabBody extends StatelessWidget {
   final String tab;
   final DpProject project;
+  final List<DpRequirement> requirements;
   final List<DpBooking> bookings;
   final List<DpContract> contracts;
   final List<DpPayment> payments;
@@ -286,6 +573,7 @@ class _ProjectTabBody extends StatelessWidget {
   const _ProjectTabBody({
     required this.tab,
     required this.project,
+    required this.requirements,
     required this.bookings,
     required this.contracts,
     required this.payments,
@@ -294,7 +582,11 @@ class _ProjectTabBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (tab) {
-      'Overview' => _OverviewTab(project: project, bookings: bookings),
+      'Overview' => _OverviewTab(
+          project: project,
+          requirements: requirements,
+          bookings: bookings,
+        ),
       'Budget & Costs' =>
         _BudgetTab(project: project, bookings: bookings, contracts: contracts),
       'Shortlists' => DPProjectScopedShortlists(project: project),
@@ -314,13 +606,17 @@ class _ProjectTabBody extends StatelessWidget {
 
 class _OverviewTab extends StatelessWidget {
   final DpProject project;
+  final List<DpRequirement> requirements;
   final List<DpBooking> bookings;
 
-  const _OverviewTab({required this.project, required this.bookings});
+  const _OverviewTab({
+    required this.project,
+    required this.requirements,
+    required this.bookings,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final requirements = dpRequirementsForProject(project.id);
     return DPTwoColumn(
       left: DPSectionCard(
         title: 'Build your production',
@@ -362,7 +658,11 @@ class _BudgetTab extends StatelessWidget {
           child: Column(
             children: [
               DPBudgetHealthBar(
-                value: project.confirmedCost / project.estimatedBudget,
+                value: project.estimatedBudget == 0
+                    ? 0
+                    : (project.confirmedCost / project.estimatedBudget)
+                        .clamp(0.0, 1.0)
+                        .toDouble(),
                 label: 'Committed against estimate',
               ),
               const SizedBox(height: 12),

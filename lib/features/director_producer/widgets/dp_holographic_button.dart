@@ -37,27 +37,37 @@ class DPHolographicButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final text = Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.statusText.copyWith(
+                color: secondary ? colors.textPrimary : colors.onGold,
+              ),
+            );
+            final iconWidget = Icon(
               icon,
               color: secondary ? colors.textPrimary : colors.onGold,
               size: 17,
-            ),
-            const SizedBox(width: 7),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.statusText.copyWith(
-                  color: secondary ? colors.textPrimary : colors.onGold,
-                ),
-              ),
-            ),
-          ],
+            );
+            if (!constraints.hasBoundedWidth) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [iconWidget, const SizedBox(width: 7), text],
+              );
+            }
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                iconWidget,
+                const SizedBox(width: 7),
+                Flexible(child: text),
+              ],
+            );
+          },
         ),
       ),
     );

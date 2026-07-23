@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/cards/cine_card_system.dart';
-import '../../data/director_producer_demo_data.dart';
 import '../../models/dp_schedule_item.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
@@ -21,18 +20,14 @@ CineTone _eventTone(DpScheduleItem event) {
 /// Today's production timeline — the next three events, with the full
 /// schedule available from the parent section action.
 class DPTodayTimeline extends StatelessWidget {
-  const DPTodayTimeline({super.key});
+  final List<DpScheduleItem> events;
+
+  const DPTodayTimeline({super.key, required this.events});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final events = DirectorProducerDemoData.schedule
-        .where((event) => event.date == 'Today' || event.date == 'Jul 21')
-        .toList();
-    final rows = events.isEmpty
-        ? DirectorProducerDemoData.schedule.take(3).toList()
-        : events;
-    final previewRows = rows.take(3).toList();
+    final previewRows = events.take(3).toList();
 
     if (previewRows.isEmpty) {
       return Text(

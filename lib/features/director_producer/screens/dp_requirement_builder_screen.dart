@@ -4,7 +4,6 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
-import '../data/director_producer_demo_data.dart';
 import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
@@ -156,13 +155,13 @@ class _DPRequirementBuilderScreenState
               );
             }
             if (snapshot.hasError) {
-              final requirements = DirectorProducerDemoData.requirements
-                  .where((req) => req.category == _category)
-                  .toList();
-              return _RequirementGrid(
-                requirements: requirements,
-                warning:
-                    'Live requirements unavailable — showing preview requirements.',
+              return CoreEmptyState(
+                icon: Icons.cloud_off_rounded,
+                title: 'Requirements unavailable',
+                message:
+                    'Could not load live project requirements from the database. Open a real project and retry.',
+                actionLabel: 'Retry',
+                onAction: _reload,
               );
             }
             final requirements = (snapshot.data ?? const [])
@@ -227,27 +226,14 @@ class _DPRequirementBuilderScreenState
 
 class _RequirementGrid extends StatelessWidget {
   final List<DpRequirement> requirements;
-  final String? warning;
 
-  const _RequirementGrid({required this.requirements, this.warning});
+  const _RequirementGrid({required this.requirements});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (warning != null) ...[
-          DPGlassCard(
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline_rounded, size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: dpText(context, warning!)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
         if (requirements.isEmpty)
           const DPEmptyState(
             icon: Icons.rule_folder_outlined,

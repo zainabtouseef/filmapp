@@ -3,11 +3,11 @@
 ## Current status
 
 - Current master-report version: 1.0
-- Current phase: Flutter/backend wiring M10 live-domain validation
-- Current vertical slice: Production Flutter web static deployment, same-domain API routing, CORS verification, and final manual walkthrough prep
+- Current phase: Director portal database-only perfection
+- Current vertical slice: Director portal database-only cleanup through live schedule/risk/call-sheet wiring and project-scoped shortlist grouping; next is richer provider-specific Director discovery DTOs
 - Overall status: Phases 0, 1, 2, and 3 complete locally; Phase 4 profile/marketplace/portfolio/saved-search/shortlist foundation complete locally; Phase 5 projects/requirements/skills and project-room files/decisions foundation complete locally; Phase 6 booking/offer/counter/accept, booking inbox, manual availability blocks, availability lock, and conversation foundation complete locally; Phase 7 contract generation, signatures, legal review queue/decision, and addendum foundation complete locally; Phase 8 sandbox payment schedules, proof review, ledger, receipts, and payout-account foundation complete locally; Phase 9 location/equipment inspections, damage claims, safety checks/incidents/check-ins, **and insurance partner/policy/claim/evidence** backend now fully complete locally and in production (the insurance tables were missed in the original 2026-07-17 Phase 9 pass and closed out 2026-07-18); Phase 10 casting agency roster/audition/self-tape/notes/commission, brand opportunity/application/terms/deliverable/metrics, model rights/rates/restrictions, and distribution contact/release/handover/report foundation complete locally; Phase 11 reviews/dimensions/requests, reports/blocks, moderation cases/events, disputes/evidence/events, support tickets/messages, and announcements/notifications foundation complete locally; Phase 12 personal/admin dashboards, admin analytics, synchronous CSV export jobs, Sentry wiring, production DB backups, and a dependency security patch complete locally and deployed to production
-- Last updated: 2026-07-18
-- Updated by: Claude Code
+- Last updated: 2026-07-22
+- Updated by: Codex
 
 ## Environment status
 
@@ -58,6 +58,7 @@
 | `81af73d41ffc` | Export jobs (synchronous CSV export records) | yes | no | yes |
 | `0f25fa31c34f` | Insurance partner profiles, policies, claims, and claim evidence (Phase 9 gap closed) | yes | no | yes |
 | `a7b8c9d0e1f2` | Local-disk binary upload receipt metadata (`binary_received_at`, server-computed size/checksum) | yes | no | yes |
+| `b8c9d0e1f2a3` | Director project cover file reference (`projects.cover_file_id`) | yes | no | yes |
 
 ## Completed endpoints
 
@@ -277,6 +278,7 @@
 | POST | `/api/v1/notifications/read-all` | bearer JWT, current user only | yes | notification center |
 | POST | `/api/v1/push-devices` | bearer JWT, token tokenized/not returned | yes | notification center push registration |
 | GET | `/api/v1/me/dashboard` | bearer JWT, current user only | yes | portal dashboard KPI strips |
+| GET | `/api/v1/director/dashboard` | bearer JWT, director/producer project scope | yes | Director home dashboard |
 | GET | `/api/v1/admin/dashboard` | bearer JWT, reviewer/finance-admin/support-agent/super-admin only | yes | Super Admin dashboard |
 | GET | `/api/v1/admin/analytics` | bearer JWT, reviewer/finance-admin/support-agent/super-admin only | yes | Super Admin analytics |
 | POST | `/api/v1/exports` | bearer JWT, synchronous CSV generation, admin-only export types gated | yes | supported CSV export actions |
@@ -482,6 +484,25 @@
 | Flutter web production live-domain deployment | pass, production web build deployed to `/var/www/cineconnect/web`; Nginx serves Flutter at `https://cine.nalexustechnologies.com`, preserves `/api/` proxy to Gunicorn and `/media/` alias, SPA fallback works for deep links, `/api/v1/health/ready` returns ok, and live-origin CORS preflight returns `access-control-allow-origin: https://cine.nalexustechnologies.com` | 2026-07-18 |
 | `flutter analyze` | pass | 2026-07-18 |
 | `flutter test` | pass, 361 widget tests | 2026-07-18 |
+| Director portal route overflow regression | pass, `flutter test test/director_producer_portal_test.dart --reporter compact` | 2026-07-22 |
+| `flutter analyze` | pass | 2026-07-22 |
+| `flutter test` | pass, full suite | 2026-07-22 |
+| Backend unit tests | pass, 15 unit tests | 2026-07-22 |
+| Backend targeted lint | pass, `.venv/bin/ruff check backend/app ... project/marketplace tests ... cover migration` | 2026-07-22 |
+| Backend targeted integration modules | skipped as expected without `RUN_INTEGRATION_TESTS=1`, MySQL, and Redis | 2026-07-22 |
+| OpenAPI YAML parse check | pass, 183 paths | 2026-07-22 |
+| Production migration (`flask db upgrade` for Director project cover files) | pass, current head `b8c9d0e1f2a3` | 2026-07-22 |
+| Production backend redeploy | pass, rebuilt `cineconnect-prod-api:latest`, restarted API/worker/scheduler, internal and external health checks pass | 2026-07-22 |
+| Production OpenAPI smoke | pass, live `/api/v1/openapi.yaml` has 183 paths and `Project.cover_file` | 2026-07-22 |
+| Production CORS smoke | pass, `https://cine.nalexustechnologies.com` origin allowed for `/api/v1/projects` preflight | 2026-07-22 |
+| Production Flutter web build/deploy | pass, `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1`; synced to `/var/www/cineconnect/web` | 2026-07-22 |
+| Director public media seed | pass, 20 public file rows, 10 project covers, and 10 listing media covers seeded in production | 2026-07-22 |
+| Production media smoke | pass, listing detail and project list expose `public_url`; `/media/...jpg` returns `image/jpeg` 200 | 2026-07-22 |
+| Director dashboard aggregate endpoint | pass, live `GET /api/v1/director/dashboard` returns summary/projects/timeline/payments/pipeline/activity/priority for demo DP account | 2026-07-22 |
+| Director dashboard Flutter live wiring/deploy | pass, dashboard screen/widget layer no longer imports `DirectorProducerDemoData`; `flutter analyze`, Director route tests, full Flutter tests, production web build, live root smoke, and authenticated live `/director/dashboard` smoke pass | 2026-07-22 |
+| Director projects/listing discovery fallback removal | pass, `DPProjectsListScreen` and live talent branch of `DPMarketplaceDiscoveryScreen` no longer use `DirectorProducerDemoData`; web redeployed; live `/projects` and `/marketplace/listings?type=talent` smokes pass | 2026-07-22 |
+| Director stakeholder profile live listing detail | pass, `DPStakeholderProfileScreen` no longer reads `DirectorProducerDemoData`; live listing detail and seeded public media smoke pass; web redeployed | 2026-07-22 |
+| Director booking request composer live send path | pass, `DPBookingRequestFormScreen` no longer reads `DirectorProducerDemoData`; it loads live listing/project/requirements and sends through `BookingsScope.createAndSendBooking`; web redeployed | 2026-07-22 |
 
 ## Decisions made
 
@@ -546,6 +567,100 @@
 - Phase 12 hardening: Sentry SDK now initializes (Flask integration, `send_default_pii=False`) whenever `SENTRY_DSN` is set and is a safe no-op otherwise; daily production MySQL backups (`mysqldump` + gzip, 14-day local retention) run via cron at 02:00 UTC on the production server; `pip-audit` found and fixed 7 known CVEs (see Tests last run); announcement fan-out no longer silently truncates at a fixed user cap after this was caught by a flaky-looking test failure that turned out to be a real bug
 
 ## Session log
+
+### 2026-07-22 — Director portal perfection B1/B2 implementation and deploy
+
+- Goal: start implementing `docs/DIRECTOR_PORTAL_DATABASE_PERFECTION_PLAN.md` with public media URL support and project cover-image support before removing Director demo fallbacks.
+- Backend changes: public upload purposes now include `project_cover`; public URLs are emitted only for `visibility='public'`, `scan_status='clean'`, and `processing_status='ready'`; marketplace/listing file payloads expose `public_url`; projects now support nullable `cover_file_id` with owned/public/image validation and return `cover_file`.
+- Flutter changes: uploaded files parse `visibility` and `public_url`; marketplace listings parse/sort media and pass cover images into Director candidate cards; projects parse `cover_file.public_url` and render cover images in project cards; Director narrow-layout overflows in console/discovery/shortlist/project detail widgets were fixed.
+- Migration(s): `b8c9d0e1f2a3` adds `projects.cover_file_id`; applied in production on 2026-07-22.
+- Deploy: synced backend/docs to `/var/www/cineconnect/release`, added `PUBLIC_MEDIA_BASE_URL=https://cine.nalexustechnologies.com/media` and local storage roots to the server env, rebuilt `cineconnect-prod-api:latest`, ran `flask db upgrade`, restarted `cineconnect-api`/`cineconnect-worker`/`cineconnect-scheduler`, built Flutter web with the live API base, and synced `build/web` to `/var/www/cineconnect/web`.
+- Tests: backend compile, targeted Ruff, backend unit tests, OpenAPI parse, `flutter analyze`, Director portal route test, and full `flutter test` all pass locally. Live health, migration-head, OpenAPI, CORS, app-root, and public listing endpoint smokes pass. Integration modules are present but skipped locally until MySQL/Redis integration environment is started with `RUN_INTEGRATION_TESTS=1`.
+- Incomplete work: public image seed/import, Director dashboard aggregate endpoint, live project/candidate image data walkthrough after seed, and screen-by-screen removal of `DirectorProducerDemoData`.
+
+### 2026-07-22 — Director public media seed
+
+- Goal: make the first 10 Director demo projects and first 10 actor/talent demo listings visibly image-backed from production storage/database rather than local Flutter demo assets.
+- Files changed: added `backend/scripts/seed_director_public_media.py` and `docs/DIRECTOR_PUBLIC_MEDIA_SOURCES.md`.
+- Production seed: downloaded Pakistan-relevant Wikimedia-hosted landmark/location images locally, synced them to `/var/www/cineconnect/storage/public/demo/cineconnect-director-public-media-2026-07-22`, then ran the seed in offline mode inside the deployed API image.
+- Results: created 20 clean/ready public `FileAsset` rows, attached 10 `projects.cover_file_id` values, and created 10 public `ListingMedia` cover rows.
+- Verification: `DEMO-LST-AT-001` detail returns `DEMO-DIR-LISTING-MEDIA-001.public_url`; `DEMO-PROJ-001` appears in the DP project list with `DEMO-DIR-PROJ-MEDIA-001.public_url`; direct `/media/.../lahore-fort-river-lights.jpg` returns HTTP 200 `image/jpeg`.
+- Incomplete work: Director dashboard aggregate endpoint and replacing remaining `DirectorProducerDemoData` runtime imports screen-by-screen.
+
+### 2026-07-22 — Director dashboard aggregate endpoint
+
+- Goal: add the B3 backend aggregate needed to refactor the Director dashboard away from local `DirectorProducerDemoData`.
+- Backend changes: added `GET /api/v1/director/dashboard` under a new Director API blueprint. The endpoint returns summary metrics, project previews with `cover_file.public_url`, upcoming booking timeline rows, payment attention rows, pipeline rows, activity rows, and priority actions for the authenticated Director/Producer scope.
+- OpenAPI: added `Director` tag, `/director/dashboard` path, and `DirectorDashboardEnvelope`.
+- Deploy: synced backend/docs, rebuilt `cineconnect-prod-api:latest`, and restarted API/worker/scheduler.
+- Verification: local Ruff/compile/backend unit tests pass; live smoke with `dp01@demo.cine.nalexustechnologies.com` returns `active_projects=3`, 3 project previews, 3 timeline rows, 2 payment attention rows, 4 pipeline rows, 3 activity rows, and 3 priority actions. First project includes a true public cover URL.
+- Incomplete work: Flutter dashboard DTO/repository/controller and screen/widget refactor to consume this endpoint.
+
+### 2026-07-22 — Director dashboard Flutter live wiring and deploy
+
+- Goal: complete F2 from `docs/DIRECTOR_PORTAL_DATABASE_PERFECTION_PLAN.md` so the Director home dashboard reads from production-backed API data instead of local demo arrays.
+- Flutter changes: added `lib/core/director/director_dashboard_models.dart` and `lib/core/director/director_repository.dart`; exposed `AuthController.directorDashboard()`; converted `DPHomeDashboardScreen` to load the authenticated live dashboard future; refactored `DPCommandHeader`, `DPPulseStrip`, `DPTodayTimeline`, `DPProjectDeck`, `DPFinancialCentre`, `DPDealPipeline`, `DPPriorityActions`, `DPActivityFeed`, and `DPDiscoverySnapshot` to receive live payload data; deleted `dp_dashboard_insights.dart`.
+- Demo-data cleanup: the Director dashboard screen/widget layer now has no `DirectorProducerDemoData`, `dpPriorityItems`, or `DpPriorityItem` references. Deeper Director screens still require their own passes.
+- Deploy: built Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced `build/web` to `/var/www/cineconnect/web`.
+- Verification: `flutter analyze`, `flutter test test/director_producer_portal_test.dart --reporter compact`, full `flutter test --reporter compact`, and production web build pass. Live root returns HTTP 200, and the live demo Director account authenticates and fetches `/api/v1/director/dashboard` with 3 active projects, 3 project previews, 3 timeline rows, 2 payment attention rows, 4 pipeline rows, and 3 priority actions.
+- Incomplete work: remove local demo-data fallbacks from `DPProjectsListScreen`, `DPMarketplaceDiscoveryScreen`, stakeholder profile, booking request, bargaining/negotiation, contracts, payments, project room, requirement builder, project accounts, reports, and shared Director console widgets.
+
+### 2026-07-22 — Director projects list and talent discovery fallback removal
+
+- Goal: continue the database-only Director portal cleanup by removing fake populated fallbacks from the next two highly visible screens.
+- Flutter changes: `DPProjectsListScreen` now uses only live `ProjectsScope.projects()` data and shows proper loading/error/retry/empty states; `DPMarketplaceDiscoveryScreen` now uses only live authenticated marketplace listings for `All`/`Talent`, removes local candidate fallback, and loads live projects/requirements for the shortlist picker.
+- Product truthfulness: non-backed marketplace categories (`Models`, `Crew`, `Locations`, `Media & Equipment`, `Agencies`) now show a backend-gap empty state instead of fake cards until `/director/discovery` or generalized marketplace support is implemented.
+- Deploy: rebuilt Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification: `flutter analyze`, Director portal route regression, and full Flutter suite pass. Live root returns HTTP 200 with new timestamp; live demo DP account gets 3 DB projects from `/projects` and live DB talent listings from `/marketplace/listings?type=talent`.
+- Incomplete work: build generalized Director discovery backend for non-talent provider types and continue demo-data removal from stakeholder profile, booking request, bargaining/negotiation, contracts, payments, project room, requirement builder, project accounts, reports, and shared Director console widgets.
+
+### 2026-07-22 — Director stakeholder profile live listing detail
+
+- Goal: remove the stakeholder profile screen's local candidate/template dependency and use live listing detail where an existing backend endpoint already exists.
+- Flutter changes: added `AuthRepository.marketplaceListing(...)` and `AuthController.marketplaceListing(...)`; `DPStakeholderProfileScreen` now loads `/marketplace/listings/{listing_id}`, renders live listing summary/owner/city/rate/verification/media, and shows loading/error/retry states.
+- Demo-data cleanup: removed direct `DirectorProducerDemoData.candidates` usage and removed hardcoded actor/model/crew/location/equipment/agency profile templates from this screen. Rich provider-specific profile sections are intentionally deferred until the planned Director discovery/detail DTO exists.
+- Deploy: rebuilt Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification: `flutter analyze`, Director portal route regression, and full Flutter suite pass. Live root returns HTTP 200 with new timestamp; live listing detail smoke passes; seeded `DEMO-LST-AT-001` returns 2 public media rows with `public_url`.
+- Incomplete work: implement richer `/director/discovery`/detail backend for non-talent provider types and continue demo-data removal from booking request, bargaining/negotiation, contracts, payments, project room, requirement builder, project accounts, reports, and shared Director console widgets.
+
+### 2026-07-22 — Director booking request composer live context and send path
+
+- Goal: convert the booking composer from local demo defaults to live listing/project/requirement context and wire the Send action to the deployed booking backend.
+- Flutter changes: `DPBookingRequestFormScreen` now loads marketplace listing detail through `AuthController.marketplaceListing`, live projects and selected-project requirements through `ProjectsScope`, and sends through `BookingsScope.createAndSendBooking`.
+- Demo-data cleanup: removed `DirectorProducerDemoData` and shared console helper dependency from the booking composer. Missing auth/listing/projects now renders loading/error/retry state instead of fake records.
+- Deploy: rebuilt Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification: `flutter analyze`, Director portal route regression, and full Flutter suite pass. Live root returns HTTP 200 with new timestamp; read-only smokes for `/projects`, `/projects/DEMO-PROJ-001/requirements`, and `/marketplace/listings/DEMO-LST-AT-001` pass. No production booking was created during smoke.
+- Incomplete work: continue demo-data removal from bargaining/negotiation, contracts, payments, project room, requirement builder, project accounts, reports, and shared Director console widgets.
+
+### 2026-07-22 — Director remaining visible screen demo-data removal
+
+- Goal: finish the Director/Producer database-only UI cleanup for the remaining visible portal screens without adding backend records.
+- Flutter changes: removed populated demo fallback rendering from bargaining, negotiation detail, contracts, payments, project accounts, project room, requirement builder, shortlist board, reports/export center, calendar risk/watch copy, and shared project console widgets.
+- Project Detail: `DPProjectDetailScreen` now loads a live project hub from `ProjectsScope`, `BookingsScope`, `ContractsScope`, and `PaymentsScope`, then converts backend DTOs into the existing Director card models.
+- Shared console widgets: project picker and project rail now use live `ProjectsScope` data; schedule/calendar surfaces with no exact backend endpoint show live-empty/backend-gap copy instead of fabricated schedule/weather/risk rows; project-scoped shortlist columns no longer invent candidate cards.
+- Demo-data cleanup: `rg` confirms no active `DirectorProducerDemoData` references remain under `lib/features/director_producer` except the data file declaration itself.
+- Deploy: rebuilt Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced `build/web` to `/var/www/cineconnect/web`.
+- Verification: `flutter analyze`, `flutter test test/director_producer_portal_test.dart --reporter compact`, and full `flutter test --reporter compact` pass. Live web root returns HTTP 200 and `/api/v1/health/live` returns `status=ok`.
+- Incomplete work: add real production schedule/risk/call-sheet backend endpoints, add richer project-scoped shortlist data if required, and add provider-specific Director discovery/detail DTOs for non-talent marketplace types.
+
+### 2026-07-22 — Director schedule endpoint and Calendar live wiring
+
+- Goal: replace the remaining Calendar schedule/risk/call-sheet backend-gap copy with a real Director-owned aggregate endpoint.
+- Backend changes: added `GET /api/v1/director/schedule`, scoped to projects visible to the authenticated Director/Producer. It derives events from project dates, active booking windows, contract checkpoints, payment milestones, and recent project-room items; computes risk rows for incomplete project dates, unsigned contracts, and overdue unverified payment milestones; and returns a lightweight call-sheet summary from the next live event.
+- Flutter changes: added `DirectorSchedule`, `DirectorScheduleEvent`, `DirectorScheduleRisk`, and `DirectorCallSheet` DTOs; added `DirectorRepository.schedule(...)` and `AuthController.directorSchedule(...)`; wired `ProductionCalendar`, the Calendar risk watch, and the call-sheet bottom sheet to `/director/schedule`.
+- OpenAPI: added `/director/schedule` and `DirectorScheduleEnvelope`.
+- Deploy: rsynced backend/docs to `/var/www/cineconnect/release`, rebuilt `cineconnect-prod-api:latest`, recreated API/worker/scheduler containers, rebuilt Flutter web with the production API base, and synced `build/web` to `/var/www/cineconnect/web`.
+- Verification: backend compile and targeted Ruff pass; OpenAPI YAML parse confirms the new path/schema; backend pytest pass locally with 15 passed and 28 integration tests skipped pending MySQL/Redis integration mode; `flutter analyze`, Director portal route regression, and full Flutter suite pass. Live smokes pass: `/health/live`, `/health/ready`, `/director/schedule`, `/director/schedule?project_id=DEMO-PROJ-001`, and web root HTTP 200.
+- Incomplete work: real weather provider credentials, persisted/sent call-sheet documents or notifications if required, richer provider-specific Director discovery/detail DTOs, and optional project-scoped shortlist grouping.
+
+### 2026-07-22 — Director project-scoped shortlist grouping
+
+- Goal: finish the smaller remaining Project Detail shortlist gap using existing backend saved-shortlist data.
+- Flutter changes: `MarketplaceShortlist` now parses `project_id` and `requirement_id`; `DPProjectScopedShortlists` loads live shortlist boards through `AuthController.shortlistBundle()` and renders items under the matching live requirement column when `board.requirementId == requirement.id`.
+- Backend: no code, migration, or redeploy required for this sub-slice because `/shortlists` already returns `requirement_id`.
+- Deploy: rebuilt Flutter web with the production API base and synced it to `/var/www/cineconnect/web`.
+- Verification: `flutter analyze`, Director portal route regression, and full Flutter suite pass. Live web root returns HTTP 200.
+- Incomplete work: add an in-tab flow for creating requirement-scoped shortlist boards if needed, and continue with richer provider-specific Director discovery/detail DTOs.
 
 ### 2026-07-18 — Flutter/backend wiring M10 cleanup audit started
 
@@ -1028,3 +1143,98 @@
 - Verification: TLS certificate matches `cine.nalexustechnologies.com` and renews automatically
 - Incomplete work: Phase 2 identity/authentication and Flutter integration
 - Exact next task: add identity/access migrations, Argon2id/JWT rotation services, RBAC policies, auth endpoints, and Flutter API/token layers
+
+### 2026-07-22 — Director provider-specific discovery/detail DTOs
+
+- Goal: make non-talent Director Marketplace categories show real database provider records with rich detail DTOs instead of backend-gap/fake data states.
+- Files changed: `backend/app/api/director.py`, `docs/openapi.yaml`, `lib/core/director/director_discovery_models.dart`, `lib/core/director/director_repository.dart`, `lib/core/auth/auth_controller.dart`, Director marketplace/profile screens, and Director portal perfection plan docs.
+- Endpoints:
+  - `GET /api/v1/director/discovery`
+  - `GET /api/v1/director/discovery/{kind}/{public_id}`
+- Backend DTO sources:
+  - Locations from `location_properties`, `location_spaces`, `location_pricing`, and `location_rules`.
+  - Media & Equipment from `equipment_provider_profiles`, `equipment_items`, `equipment_packages`, and `equipment_terms`.
+  - Agencies from `casting_agencies` and `agency_talent`.
+  - Distribution partners from `distribution_partner_profiles` for future Director expansion.
+- Flutter behavior:
+  - Director Marketplace `All` combines existing talent marketplace listings with provider-specific Director discovery rows.
+  - Director Marketplace `Locations`, `Media & Equipment`, and `Agencies` now load real API records.
+  - Provider-specific cards open Stakeholder Profile using `director:{kind}:{public_id}` arguments.
+  - Stakeholder Profile renders provider-specific detail sections and gallery placeholders from live DTOs.
+  - Request/shortlist for provider-specific records shows an explicit pending-linking message instead of sending an invalid listing ID.
+- Tests:
+  - `compileall` and targeted Ruff pass for `backend/app/api/director.py`.
+  - OpenAPI YAML parse confirms both new paths.
+  - Backend tests: 15 passed, 28 skipped because local MySQL/Redis integration mode was not enabled.
+  - `flutter analyze` passes.
+  - `flutter test test/director_producer_portal_test.dart --reporter compact` passes.
+  - `flutter test --reporter compact` passes.
+- Deployment:
+  - Backend release synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` restarted.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Production smoke:
+  - `/api/v1/health/ready` returns database and Redis `ok`.
+  - Director discovery returns 13 location records, 13 media/equipment records, and 11 agency records for the demo Director account.
+  - Location detail smoke for `DEMO-LOC-006` returns 4 detail sections.
+  - Web root returns HTTP 200.
+- Incomplete work:
+  - Crew still needs a dedicated crew-provider schema or explicit mapping from existing talent/project-role data.
+
+### 2026-07-22 — Actor/Model discovery separation and marketplace bridge
+
+- Goal: separate Actors and Models in Director discovery, and make Actor/Model/provider discovery records usable by existing marketplace shortlist and booking flows.
+- Files changed: `backend/app/api/director.py`, `backend/app/api/marketplace.py`, `backend/scripts/sync_marketplace_provider_listings.py`, `docs/openapi.yaml`, Director discovery Flutter models, marketplace models, Director marketplace screen, Stakeholder Profile screen, and progress docs.
+- Backend behavior:
+  - Director discovery kind `actor` now reads `talent_profiles`.
+  - Director discovery kind `model` now reads `model_profiles`.
+  - Actor detail returns profile/language/public-profile sections.
+  - Model detail returns profile/campaign-category/usage-rate/usage-right/restricted-category sections.
+  - All rich discovery items now include `listing_id` when connected to a public marketplace listing.
+  - Saved searches now allow `actor`, `model`, `location`, `equipment`, `agency`, and `distribution` listing types.
+- Marketplace bridge:
+  - Added an idempotent sync script for existing profile/provider records.
+  - The sync creates/updates public marketplace listings for actors, models, locations, equipment providers, agencies, and distribution partners using the existing generic `marketplace_listings` table.
+  - No shortlist schema migration was required; existing shortlist items still point to `marketplace_listings.id`.
+  - No booking schema migration was required; booking requests already use public marketplace listing ids.
+- Flutter behavior:
+  - Director Marketplace visible category is now `Actors` instead of `Talent`.
+  - Legacy `/discover/Talent` routes normalize to `Actors`.
+  - Director Marketplace loads all visible categories through Director discovery instead of mixing direct listing and discovery feeds.
+  - `DpCandidate` now keeps separate `profileId` and `marketplaceListingId`.
+  - Profile opens rich Actor/Model/provider detail via `profileId`.
+  - Request/shortlist actions use `marketplaceListingId`.
+  - Rich provider/Actor/Model profile pages show Send Request when a listing id exists.
+- Tests:
+  - Backend compile and targeted Ruff pass.
+  - OpenAPI YAML parse confirms Actor/Model enum support and `listing_id`.
+  - Backend tests: 15 passed, 28 skipped because local MySQL/Redis integration mode was not enabled.
+  - `flutter analyze` passes.
+  - `flutter test test/director_producer_portal_test.dart --reporter compact` passes.
+  - `flutter test --reporter compact` passes.
+- Deployment:
+  - Backend release synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` restarted.
+  - Production marketplace sync ran successfully:
+    - 16 actor listings
+    - 11 model listings
+    - 13 location listings
+    - 13 equipment listings
+    - 11 agency listings
+    - 11 distribution listings
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Production smoke:
+  - `/api/v1/health/ready` returns database and Redis `ok`.
+  - Actors: 16 records, 0 missing `listing_id`.
+  - Models: 11 records, 0 missing `listing_id`.
+  - Locations: 13 records, 0 missing `listing_id`.
+  - Media & Equipment: 13 records, 0 missing `listing_id`.
+  - Agencies: 11 records, 0 missing `listing_id`.
+  - Actor marketplace detail opens from returned listing id.
+  - Actor rich detail returns 3 sections with `listing_id`.
+  - Model rich detail returns 5 sections with `listing_id`.
+  - Web root returns HTTP 200.
+- Incomplete work:
+  - Crew still needs a dedicated crew-provider schema or a deliberate mapping from existing crew profiles/project roles into marketplace listings.

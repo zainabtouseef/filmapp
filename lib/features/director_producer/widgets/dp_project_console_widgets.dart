@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/director/director_dashboard_models.dart';
+import '../../../core/marketplace/marketplace_models.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
 import '../models/dp_booking.dart';
-import '../models/dp_candidate.dart';
 import '../models/dp_contract.dart';
 import '../models/dp_payment.dart';
 import '../models/dp_project.dart';
@@ -18,10 +20,23 @@ import 'dp_layout_helpers.dart';
 import 'dp_status_chip.dart';
 
 DpProject dpProjectForId(String? projectId) {
-  final projects = DirectorProducerDemoData.projects;
-  return projects.firstWhere(
-    (project) => project.id == projectId,
-    orElse: () => projects.first,
+  return DpProject(
+    id: projectId ?? 'project-unavailable',
+    title: 'Project unavailable',
+    type: 'Project',
+    city: 'Database',
+    dateRange: 'No live project selected',
+    status: 'Unavailable',
+    estimatedBudget: 0,
+    confirmedCost: 0,
+    budgetHealth: 0,
+    pendingActions: 0,
+    shootDate: 'TBD',
+    bookingsCount: 0,
+    contractsCount: 0,
+    paymentsStatus: 'No live data',
+    team: const [],
+    progress: 0,
   );
 }
 
@@ -29,53 +44,27 @@ String dpProjectTitleForId(String? projectId) =>
     dpProjectForId(projectId).title;
 
 String dpProjectIdForTitle(String projectTitle) {
-  return DirectorProducerDemoData.projects
-      .firstWhere(
-        (project) => project.title == projectTitle,
-        orElse: () => DirectorProducerDemoData.projects.first,
-      )
-      .id;
+  return 'project-unavailable';
 }
 
 List<DpRequirement> dpRequirementsForProject(String projectId) {
-  return DirectorProducerDemoData.requirements
-      .where((requirement) => requirement.projectId == projectId)
-      .toList();
+  return const [];
 }
 
 List<DpBooking> dpBookingsForProject(String projectId) {
-  return DirectorProducerDemoData.bookings
-      .where((booking) => booking.projectId == projectId)
-      .toList();
+  return const [];
 }
 
 List<DpContract> dpContractsForProject(String projectTitle) {
-  return DirectorProducerDemoData.contracts
-      .where((contract) => contract.project == projectTitle)
-      .toList();
+  return const [];
 }
 
 List<DpPayment> dpPaymentsForProject(String projectTitle) {
-  final contractNames = dpContractsForProject(projectTitle)
-      .map((contract) => contract.title)
-      .toSet();
-  final stakeholderNames = dpContractsForProject(projectTitle)
-      .map((contract) => contract.candidate)
-      .toSet();
-  return DirectorProducerDemoData.payments
-      .where(
-        (payment) =>
-            contractNames.any(payment.booking.contains) ||
-            stakeholderNames.contains(payment.stakeholder),
-      )
-      .toList();
+  return const [];
 }
 
 List<DpScheduleItem> dpScheduleForProject(String? projectTitle) {
-  if (projectTitle == null) return DirectorProducerDemoData.schedule;
-  return DirectorProducerDemoData.schedule
-      .where((item) => item.project == projectTitle)
-      .toList();
+  return const [];
 }
 
 int dpMoneyFromLabel(String value) {
@@ -125,6 +114,10 @@ class DPProjectScopePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final projects = ProjectsScope.maybeOf(context);
+    if (projects == null) {
+      return dpText(context, 'Live project picker unavailable.');
+    }
     return Container(
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 260),
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -134,24 +127,39 @@ class DPProjectScopePicker extends StatelessWidget {
         border: Border.all(color: colors.border),
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<String?>(
-          value: selectedProjectId,
-          isExpanded: true,
-          icon: Icon(Icons.expand_more_rounded, color: colors.iconMuted),
-          style: AppTextStyles.label.copyWith(color: colors.textPrimary),
-          onChanged: onChanged,
-          items: [
-            if (includeAll)
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('All projects'),
-              ),
-            for (final project in DirectorProducerDemoData.projects)
-              DropdownMenuItem<String?>(
-                value: project.id,
-                child: Text(project.title),
-              ),
-          ],
+        child: FutureBuilder(
+          future: projects.projects(),
+          builder: (context, snapshot) {
+            final rows = snapshot.data ?? const [];
+            final validValue =
+                rows.any((project) => project.publicId == selectedProjectId)
+                    ? selectedProjectId
+                    : null;
+            return DropdownButton<String?>(
+              value: validValue,
+              isExpanded: true,
+              icon: Icon(Icons.expand_more_rounded, color: colors.iconMuted),
+              style: AppTextStyles.label.copyWith(color: colors.textPrimary),
+              onChanged: snapshot.hasError ? null : onChanged,
+              items: [
+                if (includeAll)
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All projects'),
+                  ),
+                for (final project in rows)
+                  DropdownMenuItem<String?>(
+                    value: project.publicId,
+                    child: Text(project.title),
+                  ),
+                if (rows.isEmpty && !includeAll)
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('No live projects'),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -352,7 +360,14 @@ class ProductionCalendar extends StatefulWidget {
 
 class _ProductionCalendarState extends State<ProductionCalendar> {
   late ProductionCalendarMode _mode = widget.initialMode;
+  Future<DirectorSchedule>? _future;
   int? _selectedDay;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
 
   @override
   void didUpdateWidget(covariant ProductionCalendar oldWidget) {
@@ -361,15 +376,21 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
       setState(() {
         _mode = ProductionCalendarMode.today;
         _selectedDay = null;
+        _future = _load();
       });
     }
   }
 
+  Future<DirectorSchedule> _load() {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) {
+      throw StateError('Auth scope is missing.');
+    }
+    return auth.directorSchedule(projectId: widget.projectId);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final projectTitle =
-        widget.projectId == null ? null : dpProjectTitleForId(widget.projectId);
-    final events = dpScheduleForProject(projectTitle);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -378,16 +399,40 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
           onChanged: (value) => setState(() => _mode = value),
         ),
         const SizedBox(height: 12),
-        switch (_mode) {
-          ProductionCalendarMode.today => _TodayTimeline(events: events),
-          ProductionCalendarMode.month => _MonthCalendar(
-              events: events,
-              selectedDay: _selectedDay,
-              onDaySelected: (day) => setState(() => _selectedDay = day),
-            ),
-          ProductionCalendarMode.list =>
-            _AgendaList(events: events.take(widget.listLimit).toList()),
-        },
+        FutureBuilder<DirectorSchedule>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return dpText(context, 'Loading live production schedule…');
+            }
+            if (snapshot.hasError) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  dpText(context, 'Could not load live production schedule.'),
+                  const SizedBox(height: 8),
+                  DPHolographicButton(
+                    label: 'Retry',
+                    icon: Icons.refresh_rounded,
+                    onTap: () => setState(() => _future = _load()),
+                    secondary: true,
+                  ),
+                ],
+              );
+            }
+            final events = snapshot.data?.dpEvents ?? const [];
+            return switch (_mode) {
+              ProductionCalendarMode.today => _TodayTimeline(events: events),
+              ProductionCalendarMode.month => _MonthCalendar(
+                  events: events,
+                  selectedDay: _selectedDay,
+                  onDaySelected: (day) => setState(() => _selectedDay = day),
+                ),
+              ProductionCalendarMode.list =>
+                _AgendaList(events: events.take(widget.listLimit).toList()),
+            };
+          },
+        ),
       ],
     );
   }
@@ -705,19 +750,41 @@ class DPProjectsRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final project in DirectorProducerDemoData.projects) ...[
-            SizedBox(
-              width: 280,
-              child: _ConsoleProjectCard(project: project, onScope: onScope),
-            ),
-            const SizedBox(width: 10),
-          ],
-        ],
-      ),
+    final projects = ProjectsScope.maybeOf(context);
+    if (projects == null) {
+      return dpText(context, 'Live projects unavailable.');
+    }
+    return FutureBuilder(
+      future: projects.projects(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return dpText(context, 'Loading live projects…');
+        }
+        if (snapshot.hasError) {
+          return dpText(context, 'Could not load live projects.');
+        }
+        final rows = (snapshot.data ?? const [])
+            .map((project) => project.toDpProject())
+            .toList();
+        if (rows.isEmpty) {
+          return dpText(context, 'No live projects yet.');
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final project in rows) ...[
+                SizedBox(
+                  width: 280,
+                  child:
+                      _ConsoleProjectCard(project: project, onScope: onScope),
+                ),
+                const SizedBox(width: 10),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -1108,26 +1175,70 @@ class DPProjectScopedShortlists extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final requirements = dpRequirementsForProject(project.id);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth > 900
-            ? (constraints.maxWidth - 24) / 3
-            : 292.0;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final requirement in requirements) ...[
-                SizedBox(
-                  width: width.clamp(280.0, 380.0),
-                  child: _RequirementShortlistColumn(requirement: requirement),
-                ),
-                const SizedBox(width: 12),
-              ],
-            ],
-          ),
+    final projects = ProjectsScope.maybeOf(context);
+    final auth = AuthScope.maybeOf(context);
+    if (projects == null || auth == null) {
+      return dpText(context, 'Live shortlists unavailable.');
+    }
+    return FutureBuilder(
+      future: projects.requirements(project.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return dpText(context, 'Loading live project requirements…');
+        }
+        if (snapshot.hasError) {
+          return dpText(context, 'Could not load live project requirements.');
+        }
+        final requirements = (snapshot.data ?? const [])
+            .map((requirement) => requirement.toDpRequirement())
+            .toList();
+        if (requirements.isEmpty) {
+          return dpText(
+            context,
+            'No live requirements yet. Add requirements before shortlisting.',
+          );
+        }
+        return FutureBuilder(
+          future: auth.shortlistBundle(),
+          builder: (context, shortlistSnapshot) {
+            if (shortlistSnapshot.connectionState == ConnectionState.waiting) {
+              return dpText(context, 'Loading live shortlist boards…');
+            }
+            if (shortlistSnapshot.hasError) {
+              return dpText(context, 'Could not load live shortlist boards.');
+            }
+            final shortlists = shortlistSnapshot.data?.shortlists ?? const [];
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth > 900
+                    ? (constraints.maxWidth - 24) / 3
+                    : 292.0;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final requirement in requirements) ...[
+                        SizedBox(
+                          width: width.clamp(280.0, 380.0),
+                          child: _RequirementShortlistColumn(
+                            requirement: requirement,
+                            shortlists: shortlists
+                                .where(
+                                  (board) =>
+                                      board.requirementId == requirement.id,
+                                )
+                                .toList(),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -1136,15 +1247,17 @@ class DPProjectScopedShortlists extends StatelessWidget {
 
 class _RequirementShortlistColumn extends StatelessWidget {
   final DpRequirement requirement;
+  final List<MarketplaceShortlist> shortlists;
 
-  const _RequirementShortlistColumn({required this.requirement});
+  const _RequirementShortlistColumn({
+    required this.requirement,
+    required this.shortlists,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final items = DirectorProducerDemoData.candidates
-        .where((candidate) => _matchesRequirement(candidate, requirement))
-        .take(4)
-        .toList();
+    final items = shortlists.expand((board) => board.items).toList()
+      ..sort((a, b) => a.rank.compareTo(b.rank));
     return DPSectionCard(
       title: requirement.title,
       icon: Icons.view_kanban_outlined,
@@ -1160,44 +1273,56 @@ class _RequirementShortlistColumn extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          for (final candidate in items)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 9),
-              child: _ScopedCandidateTile(candidate: candidate),
+          if (items.isEmpty)
+            dpText(
+              context,
+              'No saved shortlist items for this requirement yet.',
+            )
+          else
+            for (final item in items.take(6))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 9),
+                child: _ScopedShortlistTile(item: item),
+              ),
+          const SizedBox(height: 10),
+          DPHolographicButton(
+            label: items.isEmpty ? 'Find live matches' : 'Add more matches',
+            icon: Icons.manage_search_rounded,
+            onTap: () => Navigator.pushNamed(
+              context,
+              DirectorProducerRoutes.marketplace,
             ),
+            secondary: true,
+          ),
         ],
       ),
     );
   }
-
-  bool _matchesRequirement(DpCandidate candidate, DpRequirement requirement) {
-    if (requirement.category == 'Roles') return candidate.category == 'Talent';
-    if (requirement.category == candidate.category) return true;
-    if (requirement.category == 'Media & Equipment') {
-      return candidate.category == 'Media & Equipment';
-    }
-    return false;
-  }
 }
 
-class _ScopedCandidateTile extends StatelessWidget {
-  final DpCandidate candidate;
+class _ScopedShortlistTile extends StatelessWidget {
+  final MarketplaceShortlistItem item;
 
-  const _ScopedCandidateTile({required this.candidate});
+  const _ScopedShortlistTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
+    final candidate = item.listing.toCandidate();
     return DPGlassCard(
       padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(child: dpText(context, candidate.name, strong: true)),
+              dpText(context, candidate.name, strong: true),
               DPStatusChip(
-                label: candidate.verified ? 'Verified' : 'Needs KYC',
-                tone: candidate.verified ? DpTone.success : DpTone.warning,
+                label: item.status == 'selected' ? 'Selected' : '#${item.rank}',
+                tone:
+                    item.status == 'selected' ? DpTone.success : DpTone.warning,
               ),
             ],
           ),

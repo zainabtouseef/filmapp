@@ -35,6 +35,7 @@ class ProjectsRepository {
     int? estimatedBudgetMinor,
     String currency = 'PKR',
     String status = 'active',
+    String? coverFileId,
   }) async {
     final response = await _client.post(
       '/projects',
@@ -48,6 +49,8 @@ class ProjectsRepository {
         if (endDate != null && endDate.isNotEmpty) 'end_date': endDate,
         if (estimatedBudgetMinor != null)
           'estimated_budget_minor': estimatedBudgetMinor,
+        if (coverFileId != null && coverFileId.isNotEmpty)
+          'cover_file_id': coverFileId,
         'currency': currency,
         'status': status,
         'visibility': 'project_members',

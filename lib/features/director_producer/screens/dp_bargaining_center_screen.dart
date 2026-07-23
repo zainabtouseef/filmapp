@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
-import '../models/dp_negotiation.dart';
 import '../widgets/dp_empty_state.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
@@ -24,16 +23,6 @@ DpTone _filterTone(String key) {
   };
 }
 
-String _demoFilterKey(DpNegotiation negotiation) {
-  return switch (negotiation.status) {
-    'Your move' || 'Expiring' => 'Your move',
-    'Their move' => 'Replied',
-    'Accepted' => 'Locked',
-    'Withdrawn' => 'Closed',
-    _ => 'All',
-  };
-}
-
 String _liveFilterKey(String status) {
   return switch (status) {
     'accepted' => 'Locked',
@@ -44,7 +33,7 @@ String _liveFilterKey(String status) {
 
 /// Presents the full negotiation thread (rounds, counter-offer form,
 /// accept, chat) as a tall bottom sheet instead of a page navigation —
-/// same real API/demo-fallback logic, just a different presentation.
+/// same live API logic, just a different presentation.
 void openNegotiationSheet(BuildContext context, String? negotiationId) {
   final colors = context.appColors;
   showModalBottomSheet<void>(
@@ -99,19 +88,27 @@ class DPBargainingCenterScreen extends StatefulWidget {
 }
 
 class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
-  late Future<List<NegotiationThread>> _future;
+  Future<List<NegotiationThread>>? _future;
   String _filter = 'All';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future = BookingsScope.of(context).negotiations();
+    _future ??= BookingsScope.maybeOf(context)?.negotiations();
   }
 
   @override
   Widget build(BuildContext context) {
+    final future = _future;
+    if (future == null) {
+      return const CoreEmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in required',
+        message: 'Connect a live Director account to view bargaining threads.',
+      );
+    }
     return FutureBuilder<List<NegotiationThread>>(
-      future: _future,
+      future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const DPEmptyState(
@@ -121,7 +118,14 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
           );
         }
         if (snapshot.hasError) {
-          return _DemoNegotiations(filter: _filter, onFilter: _setFilter);
+          return CoreEmptyState(
+            icon: Icons.cloud_off_rounded,
+            title: 'Negotiations unavailable',
+            message:
+                'Could not load live booking threads from the database. Check the API connection and try again.',
+            actionLabel: 'Retry',
+            onAction: _reload,
+          );
         }
         final all = snapshot.data ?? const [];
         if (all.isEmpty) {
@@ -134,6 +138,23 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
         final negotiations = _filter == 'All'
             ? all
             : all.where((n) => _liveFilterKey(n.status) == _filter).toList();
+        if (negotiations.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _BargainingHeader(count: all.length),
+              const SizedBox(height: 12),
+              _FilterRow(value: _filter, onChanged: _setFilter),
+              const SizedBox(height: 12),
+              CoreEmptyState(
+                icon: Icons.filter_alt_off_rounded,
+                title: 'No $_filter negotiations',
+                message:
+                    'This filter has no live database records right now. Switch filters or send a new booking request.',
+              ),
+            ],
+          );
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -168,6 +189,12 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
   }
 
   void _setFilter(String filter) => setState(() => _filter = filter);
+
+  void _reload() {
+    final bookings = BookingsScope.maybeOf(context);
+    if (bookings == null) return;
+    setState(() => _future = bookings.negotiations());
+  }
 
   String _statusLabel(String status) {
     return switch (status) {
@@ -218,59 +245,6 @@ class _FilterRow extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _DemoNegotiations extends StatelessWidget {
-  final String filter;
-  final ValueChanged<String> onFilter;
-
-  const _DemoNegotiations({required this.filter, required this.onFilter});
-
-  @override
-  Widget build(BuildContext context) {
-    final all = DirectorProducerDemoData.negotiations;
-    final negotiations = filter == 'All'
-        ? all
-        : all.where((n) => _demoFilterKey(n) == filter).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _BargainingHeader(count: all.length),
-        const SizedBox(height: 12),
-        _FilterRow(value: filter, onChanged: onFilter),
-        const SizedBox(height: 12),
-        DPSectionCard(
-          title: 'Preview mode',
-          icon: Icons.info_outline_rounded,
-          child: dpText(
-            context,
-            'Live negotiations unavailable — showing preview threads.',
-          ),
-        ),
-        const SizedBox(height: 12),
-        DPResponsiveGrid(
-          minWidth: 300,
-          children: negotiations
-              .map(
-                (negotiation) => _NegotiationCard(
-                  title: negotiation.candidate,
-                  project: negotiation.project,
-                  subtitle: negotiation.requirement,
-                  rate: negotiation.currentRate,
-                  status: negotiation.status,
-                  tone: _filterTone(_demoFilterKey(negotiation)),
-                  expiry: negotiation.expiry == 'Locked' ||
-                          negotiation.expiry == 'Closed'
-                      ? null
-                      : negotiation.expiry,
-                  onTap: () => openNegotiationSheet(context, negotiation.id),
-                ),
-              )
-              .toList(),
-        ),
-      ],
     );
   }
 }

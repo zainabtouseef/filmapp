@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/formatters/cine_format.dart';
-import '../../data/director_producer_demo_data.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
 
@@ -11,25 +11,19 @@ import '../dp_glass_card.dart';
 /// grid from the source design (Active productions / Paid-pending /
 /// Bookings secured), values computed live from demo-data state.
 class DPPulseStrip extends StatelessWidget {
-  const DPPulseStrip({super.key});
+  final DirectorDashboardSummary summary;
+
+  const DPPulseStrip({super.key, required this.summary});
 
   @override
   Widget build(BuildContext context) {
-    final projects = DirectorProducerDemoData.projects;
-    final bookings = DirectorProducerDemoData.bookings;
-    final payments = DirectorProducerDemoData.payments;
-
-    final paid = payments
-        .where((payment) => payment.status == 'Verified')
-        .fold<int>(0, (sum, payment) => sum + payment.amount);
-    final pending = payments
-        .where((payment) => payment.status != 'Verified')
-        .fold<int>(0, (sum, payment) => sum + payment.amount);
+    final paid = summary.paidMinor ~/ 100;
+    final pending = summary.pendingPaymentMinor ~/ 100;
 
     final tiles = [
       _PulseTile(
         label: 'Active productions',
-        value: '${projects.where((p) => p.status != 'Closed').length}',
+        value: '${summary.activeProjects}',
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.projects),
       ),
@@ -42,7 +36,7 @@ class DPPulseStrip extends StatelessWidget {
       ),
       _PulseTile(
         label: 'Bookings secured',
-        value: '${bookings.where((b) => b.statusIndex >= 8).length}',
+        value: '${summary.securedBookings}',
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       ),

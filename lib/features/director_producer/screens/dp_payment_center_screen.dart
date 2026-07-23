@@ -5,7 +5,6 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/director_producer_demo_data.dart';
 import '../models/dp_payment.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -32,37 +31,48 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_future != null) {
-      return FutureBuilder<PaymentDashboardDto>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CoreEmptyState(
-              icon: Icons.hourglass_top_rounded,
-              title: 'Loading payment center',
-              message: 'Fetching schedules and ledger totals.',
-            );
-          }
-          if (!snapshot.hasError && snapshot.data != null) {
-            return _PaymentCenterContent(
-              payments: _toDpPayments(snapshot.data!.schedules),
-              tab: _tab,
-              onTab: (value) => setState(() => _tab = value),
-            );
-          }
-          return _PaymentCenterContent(
-            payments: DirectorProducerDemoData.payments,
-            tab: _tab,
-            onTab: (value) => setState(() => _tab = value),
-          );
-        },
+    final future = _future;
+    if (future == null) {
+      return const CoreEmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in required',
+        message: 'Connect a live Director account to view payment schedules.',
       );
     }
-    return _PaymentCenterContent(
-      payments: DirectorProducerDemoData.payments,
-      tab: _tab,
-      onTab: (value) => setState(() => _tab = value),
+    return FutureBuilder<PaymentDashboardDto>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CoreEmptyState(
+            icon: Icons.hourglass_top_rounded,
+            title: 'Loading payment center',
+            message: 'Fetching schedules and ledger totals.',
+          );
+        }
+        if (snapshot.hasError) {
+          return CoreEmptyState(
+            icon: Icons.cloud_off_rounded,
+            title: 'Payment center unavailable',
+            message:
+                'Could not load live payment schedules from the database. Check the API connection and try again.',
+            actionLabel: 'Retry',
+            onAction: _reload,
+          );
+        }
+        final payments = _toDpPayments(snapshot.data?.schedules ?? const []);
+        return _PaymentCenterContent(
+          payments: payments,
+          tab: _tab,
+          onTab: (value) => setState(() => _tab = value),
+        );
+      },
     );
+  }
+
+  void _reload() {
+    final payments = PaymentsScope.maybeOf(context);
+    if (payments == null) return;
+    setState(() => _future = payments.dashboard(force: true));
   }
 
   List<DpPayment> _toDpPayments(List<PaymentScheduleDto> schedules) {

@@ -114,3 +114,4 @@ class TestConfig(Config):
             os.path.join(os.path.dirname(__file__), "../.storage/test/public")
         )
     )
+    PUBLIC_MEDIA_BASE_URL = "https://media.test"

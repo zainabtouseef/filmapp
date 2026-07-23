@@ -29,6 +29,7 @@ from app.models.marketplace import (
     UserProfile,
 )
 from app.responses import success
+from app.services.local_storage import public_url_for
 
 marketplace_blueprint = Blueprint("marketplace", __name__)
 
@@ -111,6 +112,7 @@ def _talent_payload(profile: TalentProfile | None) -> dict[str, Any] | None:
 def _file_payload(file: FileAsset | None) -> dict[str, Any] | None:
     if file is None:
         return None
+    public_url = public_url_for(file)
     return {
         "public_id": file.public_id,
         "mime_type": file.mime_type,
@@ -119,6 +121,8 @@ def _file_payload(file: FileAsset | None) -> dict[str, Any] | None:
         "scan_status": file.scan_status,
         "processing_status": file.processing_status,
         "original_name": file.original_name,
+        "download_url": f"/api/v1/files/{file.public_id}/download",
+        "public_url": public_url,
     }
 
 
@@ -656,8 +660,17 @@ def create_saved_search() -> ResponseReturnValue:
         raise _field_error("name", "Saved search name is required.")
     city = _city_by_public_id(str(payload.get("city_id", "")).strip() or None)
     listing_type = str(payload.get("listing_type", "")).strip() or None
-    if listing_type and listing_type != "talent":
-        raise _field_error("listing_type", "Only talent saved searches are enabled.")
+    supported_listing_types = {
+        "actor",
+        "model",
+        "location",
+        "equipment",
+        "agency",
+        "distribution",
+        "talent",
+    }
+    if listing_type and listing_type not in supported_listing_types:
+        raise _field_error("listing_type", "Unsupported saved-search listing type.")
     filters = payload.get("filters") or {}
     if not isinstance(filters, dict):
         raise _field_error("filters", "Filters must be an object.")

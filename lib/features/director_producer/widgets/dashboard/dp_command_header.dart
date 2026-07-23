@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/core_ui/core_routes.dart';
+import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/formatters/cine_format.dart';
-import '../../data/director_producer_demo_data.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
 import '../dp_holographic_button.dart';
-import 'dp_dashboard_insights.dart';
 
 /// The dashboard's command header: a cinematic hero card carrying the
 /// day's greeting, committed budget, and primary actions. Search and
 /// logout already live in the shell's own top bar, so this doesn't
 /// repeat them.
 class DPCommandHeader extends StatelessWidget {
-  const DPCommandHeader({super.key});
+  final DirectorDashboardSummary summary;
+
+  const DPCommandHeader({super.key, required this.summary});
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -26,18 +27,11 @@ class DPCommandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeProjects = DirectorProducerDemoData.projects
-        .where((p) => p.status != 'Closed')
-        .length;
-    final actionCount = dpPriorityItems().length;
-    final committedBudget = DirectorProducerDemoData.projects
-        .fold<int>(0, (sum, project) => sum + project.confirmedCost);
-
     return _HeroCard(
       greeting: '$_greeting, Producer',
-      activeProjects: activeProjects,
-      actionCount: actionCount,
-      committedBudget: committedBudget,
+      activeProjects: summary.activeProjects,
+      actionCount: summary.attentionCount,
+      committedBudget: summary.committedBudgetMinor ~/ 100,
     );
   }
 }

@@ -4,13 +4,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
-import '../data/director_producer_demo_data.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
@@ -74,12 +74,13 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
           );
         }
         if (snapshot.hasError) {
-          final feedItems = DirectorProducerDemoData.roomItems.take(6).toList();
-          final fileItems = DirectorProducerDemoData.roomItems.skip(6).toList();
-          return _RoomFallback(
-            feedItems: feedItems,
-            fileItems: fileItems,
-            warning: 'Live project room unavailable — showing preview room.',
+          return CoreEmptyState(
+            icon: Icons.cloud_off_rounded,
+            title: 'Project room unavailable',
+            message:
+                'Could not load the live project room from the database. Open a real project and retry.',
+            actionLabel: 'Retry',
+            onAction: _reload,
           );
         }
         final room = snapshot.data!;
@@ -265,65 +266,6 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
     if (diff.inHours < 1) return '${diff.inMinutes}m';
     if (diff.inDays < 1) return '${diff.inHours}h';
     return '${diff.inDays}d';
-  }
-}
-
-class _RoomFallback extends StatelessWidget {
-  final List<List<String>> feedItems;
-  final List<List<String>> fileItems;
-  final String warning;
-
-  const _RoomFallback({
-    required this.feedItems,
-    required this.fileItems,
-    required this.warning,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DPSectionCard(
-          title: 'Preview Mode',
-          icon: Icons.info_outline_rounded,
-          child: dpText(context, warning),
-        ),
-        const SizedBox(height: 8),
-        DPTwoColumn(
-          left: DPSectionCard(
-            title: 'Team Feed',
-            icon: Icons.chat_bubble_outline_rounded,
-            child: Column(
-              children: [
-                for (var i = 0; i < feedItems.length; i++)
-                  _RoomFeedItem(
-                    author: feedItems[i][0],
-                    text: feedItems[i][1],
-                    time: feedItems[i][2],
-                    showDivider: i != feedItems.length - 1,
-                  ),
-              ],
-            ),
-          ),
-          right: DPSectionCard(
-            title: 'Files & Decisions',
-            icon: Icons.folder_copy_outlined,
-            child: Column(
-              children: [
-                for (var i = 0; i < fileItems.length; i++)
-                  _RoomFileItem(
-                    kind: fileItems[i][0],
-                    title: fileItems[i][1],
-                    status: fileItems[i][2],
-                    showDivider: i != fileItems.length - 1,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }
 
