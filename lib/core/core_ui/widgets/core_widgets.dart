@@ -593,6 +593,7 @@ class UploadCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool uploaded;
+  final bool loading;
   final VoidCallback? onTap;
 
   const UploadCard({
@@ -600,6 +601,7 @@ class UploadCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.uploaded,
+    this.loading = false,
     required this.onTap,
   });
 
@@ -622,9 +624,11 @@ class UploadCard extends StatelessWidget {
                     .withValues(alpha: 0.12),
               ),
               child: Icon(
-                uploaded
-                    ? Icons.check_circle_outline
-                    : Icons.cloud_upload_outlined,
+                loading
+                    ? Icons.hourglass_top_rounded
+                    : uploaded
+                        ? Icons.check_circle_outline
+                        : Icons.cloud_upload_outlined,
                 color: uploaded ? colors.success : colors.goldMid,
               ),
             ),
@@ -650,7 +654,20 @@ class UploadCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: colors.iconMuted),
+            if (loading)
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  color: colors.goldMid,
+                ),
+              )
+            else
+              Icon(
+                uploaded ? Icons.edit_outlined : Icons.chevron_right_rounded,
+                color: uploaded ? colors.success : colors.iconMuted,
+              ),
           ],
         ),
       ),

@@ -95,9 +95,12 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
 
   Future<void> _pickDocumentForSlot(String slot) async {
     try {
+      final isIdentitySide = slot == 'front' || slot == 'back';
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+        allowedExtensions: isIdentitySide
+            ? const ['jpg', 'jpeg', 'png', 'webp']
+            : const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
         withData: true,
       );
       if (result == null || result.files.isEmpty) return;
@@ -160,10 +163,12 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         (_frontFile == null ||
             _backFile == null ||
             _documentNumber.text.trim().isEmpty)) {
-      setState(
-        () => _formError =
-            'Upload both identity images and add the document number.',
-      );
+      final missing = <String>[
+        if (_frontFile == null) 'CNIC/passport front image',
+        if (_backFile == null) 'CNIC/passport back image',
+        if (_documentNumber.text.trim().isEmpty) 'document number',
+      ];
+      setState(() => _formError = 'Missing: ${missing.join(', ')}.');
       return;
     }
     if (_step == 1 && _selfieFile == null) {
@@ -302,8 +307,9 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             title: 'CNIC/passport front',
             subtitle: _frontFile == null
                 ? 'Upload a clear front-side image'
-                : 'Saved for admin review · ${_frontFile!.scanStatus}',
+                : 'Saved: ${_frontFile!.originalName} · ${_frontFile!.scanStatus}',
             uploaded: _frontUploaded,
+            loading: _loadingUpload == 'front',
             onTap: _loadingUpload == null
                 ? () => _pickDocumentForSlot('front')
                 : null,
@@ -313,8 +319,9 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             title: 'CNIC/passport back',
             subtitle: _backFile == null
                 ? 'Upload a clear back-side image'
-                : 'Saved for admin review · ${_backFile!.scanStatus}',
+                : 'Saved: ${_backFile!.originalName} · ${_backFile!.scanStatus}',
             uploaded: _backUploaded,
+            loading: _loadingUpload == 'back',
             onTap: _loadingUpload == null
                 ? () => _pickDocumentForSlot('back')
                 : null,
@@ -413,8 +420,9 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
                 title: doc,
                 subtitle: _roleDocFile == null
                     ? 'Attach PDF, image or portfolio link proof'
-                    : 'Saved for admin review · ${_roleDocFile!.scanStatus}',
+                    : 'Saved: ${_roleDocFile!.originalName} · ${_roleDocFile!.scanStatus}',
                 uploaded: _roleDocUploaded,
+                loading: _loadingUpload == 'role',
                 onTap: _loadingUpload == null
                     ? () => _pickDocumentForSlot('role')
                     : null,

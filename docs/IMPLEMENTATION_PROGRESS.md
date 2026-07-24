@@ -1291,6 +1291,16 @@
 - Next:
   - Seed/verify live MySQL data and add backend APIs for explicit gap screens.
 
+### 2026-07-24 — KYC CNIC upload UX fix
+
+- Fixed the signup/KYC identity upload step after manual report that uploading one CNIC image gave no clear feedback and continuing still produced the required-upload error.
+- `UploadCard` now supports a loading state and shows a saved/edit state instead of a static chevron.
+- KYC front/back identity upload cards now show per-slot loading, saved filename, and scan status.
+- CNIC/passport front/back picker now focuses on image extensions (`jpg`, `jpeg`, `png`, `webp`); role proof upload still allows PDF/image.
+- Step validation now names the exact missing item: front image, back image, and/or document number.
+- Verification: `flutter analyze` passed; `flutter test test/widget_test.dart` passed.
+- Production deployment: rebuilt Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1`, synced to production web root, and HTTPS root returned HTTP 200.
+
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 
 - Goal: make non-talent Director Marketplace categories show real database provider records with rich detail DTOs instead of backend-gap/fake data states.
