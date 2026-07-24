@@ -7,7 +7,6 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -114,10 +113,10 @@ class _LO03AvailabilityCalendarScreenState
           tone: LocationTone.blue,
           child: _future == null
               ? const CoreEmptyState(
-                  icon: Icons.visibility_outlined,
-                  title: 'Preview calendar',
+                  icon: Icons.cloud_sync_outlined,
+                  title: 'Sign in to load calendar',
                   message:
-                      'Sign in to load booking-generated and manual availability.',
+                      'Booking-generated and manual availability entries are fetched from the backend.',
                 )
               : FutureBuilder<List<AvailabilityEntry>>(
                   future: _future,
@@ -221,13 +220,7 @@ class _LO03AvailabilityCalendarScreenState
     final bookings = _bookings;
     final label = DateFormat('MMM d').format(_selectedDate);
     if (bookings == null) {
-      LocationOwnerDemoStore.instance
-          .setCalendarStatus(_selectedDate.day, status);
-      locationSnack(
-        context,
-        '$label marked ${locationCalendarLabel(status)}',
-      );
-      setState(() {});
+      locationSnack(context, 'Sign in to update availability for $label');
       return;
     }
     final start =
@@ -264,8 +257,7 @@ class _LO03AvailabilityCalendarScreenState
 
   LocationCalendarStatus _statusForDate(DateTime date) {
     if (_bookings == null) {
-      return LocationOwnerDemoStore.instance.calendar[date.day] ??
-          LocationCalendarStatus.available;
+      return LocationCalendarStatus.available;
     }
     final matching = _entries.where((entry) => _entryCoversDate(entry, date));
     if (matching.any((entry) => entry.status == 'booked')) {

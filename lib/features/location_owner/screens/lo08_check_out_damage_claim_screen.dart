@@ -14,7 +14,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -87,7 +86,14 @@ class _LO08CheckOutDamageClaimScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to start check-out',
+        message:
+            'Check-out inspections, comparison evidence, damage claims and claim evidence are fetched from the backend.',
+      );
+    }
     return FutureBuilder<_CheckOutData>(
       future: _future,
       builder: (context, snapshot) {
@@ -661,24 +667,6 @@ class _LO08CheckOutDamageClaimScreenState
       'webp' => 'image/webp',
       _ => 'image/jpeg',
     };
-  }
-
-  Widget _buildPreview() {
-    return LocationSectionCard(
-      title: 'Check-out preview',
-      icon: Icons.verified_user_outlined,
-      selected: true,
-      child: Column(
-        children: [
-          for (final item in LocationOwnerDemoStore.instance.inspection)
-            LocationInfoRow(
-              icon: Icons.compare_outlined,
-              label: item.area,
-              value: 'Comparison pending',
-            ),
-        ],
-      ),
-    );
   }
 }
 

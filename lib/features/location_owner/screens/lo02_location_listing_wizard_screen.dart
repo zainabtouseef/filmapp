@@ -10,7 +10,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -111,7 +110,14 @@ class _LO02LocationListingWizardScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_operations == null && !_loaded) _seedPreview();
+    if (_operations == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to manage properties',
+        message:
+            'Property profile, media, spaces, private address token, publication status and listing data are saved to the backend.',
+      );
+    }
     if (_loading) {
       return const Center(
         child: Padding(
@@ -207,16 +213,14 @@ class _LO02LocationListingWizardScreenState
       right: Column(
         children: [
           LocationSectionCard(
-            title: 'Public preview',
+            title: 'Public listing view',
             icon: Icons.visibility_outlined,
             tone: LocationTone.blue,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 LocationMediaFrame(
-                  imageUrl: _operations == null
-                      ? LocationOwnerDemoStore.instance.activeProperty.imageUrl
-                      : _coverImageUrl,
+                  imageUrl: _coverImageUrl,
                   title:
                       _name.text.trim().isEmpty ? 'Property name' : _name.text,
                   badge: '${_type.toUpperCase()} · ${_area.text}',
@@ -439,11 +443,7 @@ class _LO02LocationListingWizardScreenState
     _step = originalStep;
     final operations = _operations;
     if (operations == null) {
-      LocationOwnerDemoStore.instance.submitListing();
-      locationSnack(
-        context,
-        publish ? 'Preview property published' : 'Preview draft saved',
-      );
+      locationSnack(context, 'Sign in to save property listings');
       return;
     }
     setState(() {
@@ -482,7 +482,7 @@ class _LO02LocationListingWizardScreenState
               status: publish ? 'published' : 'draft',
             );
       _propertyId = property.publicId;
-      LocationOwnerDemoStore.instance.setActiveLiveProperty(property.publicId);
+      LocationOwnerSelectionStore.instance.setActiveProperty(property.publicId);
       await _createMissingSpaces(operations, property);
       if (publish) await _publishWithMediaRetry(operations, property);
       final refreshed = await operations.locationProperties(force: true);
@@ -593,24 +593,6 @@ class _LO02LocationListingWizardScreenState
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
-  }
-
-  void _seedPreview() {
-    if (_loaded) return;
-    final property = LocationOwnerDemoStore.instance.activeProperty;
-    _name.text = property.name;
-    _type = property.type;
-    _city.text = property.city;
-    _area.text = property.area;
-    _exactAddress.text = 'Private address';
-    _description.text =
-        'Production-ready property with flexible interior and exterior areas.';
-    _capacity.text = '${property.capacity}';
-    _parking.text = '${property.parking}';
-    _spaces.text = 'Living room, kitchen, driveway, rooftop';
-    _powerBackup = property.powerBackup;
-    _accessible = property.accessible;
-    _loaded = true;
   }
 
   List<String> _spaceNames() {

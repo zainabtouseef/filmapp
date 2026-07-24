@@ -10,7 +10,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -63,7 +62,14 @@ class _LO10PropertyPerformanceScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load property insights',
+        message:
+            'Property readiness, booking status, ratings and portfolio actions are calculated from backend records.',
+      );
+    }
     return FutureBuilder<_InsightsData>(
       future: _future,
       builder: (context, snapshot) {
@@ -262,11 +268,11 @@ class _LO10PropertyPerformanceScreenState
                             _PropertyHealthRow(
                               property: property,
                               active: property.publicId ==
-                                  LocationOwnerDemoStore
-                                      .instance.activeLivePropertyId,
+                                  LocationOwnerSelectionStore
+                                      .instance.activePropertyId,
                               onTap: () {
-                                LocationOwnerDemoStore.instance
-                                    .setActiveLiveProperty(property.publicId);
+                                LocationOwnerSelectionStore.instance
+                                    .setActiveProperty(property.publicId);
                                 setState(() {});
                               },
                             ),
@@ -298,24 +304,6 @@ class _LO10PropertyPerformanceScreenState
         property.spaces.isNotEmpty &&
         property.pricing.any((item) => item.enabled && item.amountMinor > 0) &&
         property.rules.isNotEmpty;
-  }
-
-  Widget _buildPreview() {
-    return LocationSectionCard(
-      title: 'Property insights preview',
-      icon: Icons.analytics_outlined,
-      selected: true,
-      child: Column(
-        children: [
-          for (final property in LocationOwnerDemoData.properties)
-            LocationInfoRow(
-              icon: Icons.location_city_outlined,
-              label: property.name,
-              value: '${property.rating.toStringAsFixed(1)} rating',
-            ),
-        ],
-      ),
-    );
   }
 }
 

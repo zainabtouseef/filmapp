@@ -16,9 +16,9 @@ import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../routes/location_owner_routes.dart';
 import 'location_owner_components.dart';
+import 'location_owner_live.dart';
 
 typedef LocationOwnerMenuEntry = ({
   String route,
@@ -177,11 +177,11 @@ class _LocationWorkspaceScaffoldState
     try {
       final properties = await operations.locationProperties();
       if (properties.isEmpty) return;
-      final store = LocationOwnerDemoStore.instance;
-      final selected = store.activeLivePropertyId;
+      final store = LocationOwnerSelectionStore.instance;
+      final selected = store.activePropertyId;
       if (selected == null ||
           !properties.any((property) => property.publicId == selected)) {
-        store.setActiveLiveProperty(properties.first.publicId);
+        store.setActiveProperty(properties.first.publicId);
       }
     } catch (_) {
       return;
@@ -596,7 +596,7 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final operations = OperationsScope.maybeOf(context);
-    final store = LocationOwnerDemoStore.instance;
+    final store = LocationOwnerSelectionStore.instance;
     return Container(
       width: 276,
       margin: const EdgeInsets.fromLTRB(14, 14, 0, 14),
@@ -632,7 +632,6 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
                 const SizedBox(height: 12),
                 _PropertySwitcherCard(
                   property: active,
-                  previewName: store.activeProperty.name,
                   onTap: () => _showPropertySwitcher(
                     context,
                     properties: properties,
@@ -720,7 +719,7 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
   void _showPropertySwitcher(
     BuildContext context, {
     required List<LocationPropertyDto>? properties,
-    required LocationOwnerDemoStore store,
+    required LocationOwnerSelectionStore store,
   }) {
     showLocationSheet(
       context,
@@ -739,24 +738,9 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
                     property.areaName,
                   ].where((value) => value.isNotEmpty).join(' · '),
                   status: property.status,
-                  selected: property.publicId == store.activeLivePropertyId,
+                  selected: property.publicId == store.activePropertyId,
                   onTap: () {
-                    store.setActiveLiveProperty(property.publicId);
-                    Navigator.pop(context);
-                  },
-                ),
-              )
-          else if (properties == null)
-            for (final property in LocationOwnerDemoData.properties)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _PropertySheetRow(
-                  title: property.name,
-                  subtitle: '${property.type} · ${property.publicAddress}',
-                  status: 'Preview',
-                  selected: property.id == store.activePropertyId,
-                  onTap: () {
-                    store.setActiveProperty(property.id);
+                    store.setActiveProperty(property.publicId);
                     Navigator.pop(context);
                   },
                 ),
@@ -780,21 +764,19 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
 
 class _PropertySwitcherCard extends StatelessWidget {
   final LocationPropertyDto? property;
-  final String previewName;
   final VoidCallback onTap;
 
   const _PropertySwitcherCard({
     required this.property,
-    required this.previewName,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final title = property?.name ?? previewName;
+    final title = property?.name ?? 'Create property';
     final subtitle = property == null
-        ? 'Preview property'
+        ? 'No backend property selected'
         : [
             property!.propertyType.replaceAll('_', ' '),
             property!.status,
@@ -964,10 +946,10 @@ class _LocationWorkspaceBottomNav extends StatelessWidget {
 
 LocationPropertyDto? _activeLiveProperty(
   List<LocationPropertyDto>? properties,
-  LocationOwnerDemoStore store,
+  LocationOwnerSelectionStore store,
 ) {
   if (properties == null || properties.isEmpty) return null;
-  final selected = store.activeLivePropertyId;
+  final selected = store.activePropertyId;
   for (final property in properties) {
     if (property.publicId == selected) return property;
   }

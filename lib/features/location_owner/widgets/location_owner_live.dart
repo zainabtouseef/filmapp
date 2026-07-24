@@ -1,18 +1,46 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/operations/operations_models.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
+
+class LocationOwnerSelectionStore extends ChangeNotifier {
+  LocationOwnerSelectionStore._();
+
+  static final instance = LocationOwnerSelectionStore._();
+
+  String? activePropertyId;
+
+  void setActiveProperty(String? propertyId) {
+    if (activePropertyId == propertyId) return;
+    activePropertyId = propertyId;
+    notifyListeners();
+  }
+}
 
 LocationPropertyDto? activeLocationProperty(
   List<LocationPropertyDto> properties,
 ) {
   if (properties.isEmpty) return null;
-  final selected = LocationOwnerDemoStore.instance.activeLivePropertyId;
+  final selected = LocationOwnerSelectionStore.instance.activePropertyId;
   for (final property in properties) {
     if (property.publicId == selected) return property;
   }
   return properties.first;
+}
+
+String locationBookingStatusLabel(LocationBookingStatus status) {
+  return switch (status) {
+    LocationBookingStatus.requestReceived => 'Request',
+    LocationBookingStatus.underNegotiation => 'Negotiating',
+    LocationBookingStatus.contractPending => 'Contract',
+    LocationBookingStatus.depositPending => 'Deposit Due',
+    LocationBookingStatus.secured => 'Secured',
+    LocationBookingStatus.inProgress => 'Live',
+    LocationBookingStatus.closed => 'Closed',
+    LocationBookingStatus.disputed => 'Issue',
+  };
 }
 
 LocationBookingStatus locationBookingStatusFromBooking(Booking booking) {

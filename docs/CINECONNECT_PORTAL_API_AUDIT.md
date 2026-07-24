@@ -57,7 +57,7 @@ Status meanings:
 | Super Admin | LIVE/CLEANED | `admin_mock_data.dart` removed and deleted on 2026-07-24; no `DemoData`, `DemoStore`, `admin_mock_data`, or `mock_data` runtime matches remain under `lib/features/super_admin` | Admin, Analytics, Payments, TrustSafety, Verification | Continue manual walkthrough and admin action smoke; shared core mock imports remain outside the Super Admin feature. |
 | Media/Equipment | LIVE/CLEANED | `media_equipment_demo_data.dart` deleted on 2026-07-24; no feature-level `DemoData`, `DemoStore`, `mock_data`, or static-demo runtime matches remain | Operations, Bookings, Payments, TrustSafety | Continue live walkthrough and database seeding checks. |
 | Brand Sponsor | LIVE/CLEANED | `brand_sponsor_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `BrandSponsorDemoData`, `BrandSponsorDemoStore`, `brand_sponsor_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Specialist, Payments, Auth | Continue live walkthrough and verify seeded brand applications/deliverables/payments cover each screen. |
-| Location Owner | PARTIAL | `LocationOwnerDemoData`, `LocationOwnerDemoStore` | Operations, Bookings, Payments, Auth | APIs exist for most workflows; replace shell/store and performance/ledger fallbacks. |
+| Location Owner | LIVE/CLEANED | `location_owner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `LocationOwnerDemoData`, `LocationOwnerDemoStore`, `location_owner_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Operations, Bookings, Payments, Auth | Continue live walkthrough and verify seeded property/bookings/inspection/payment records cover each screen. |
 | Actor/Talent | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth, Bookings, Contracts, Payments, TrustSafety | Many existing APIs; rate-card/profile/reputation gaps need careful handling. |
 | Model Extension | PARTIAL | `ModelExtensionDemoData`, `ModelExtensionDemoStore` | Specialist, Auth | Model APIs exist; remove local profile/rates/restrictions fallbacks. |
 | Casting Agency | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist only on first screens | Specialist APIs exist but most screens still local. |
@@ -143,21 +143,24 @@ Replacement path:
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| LO-01 Dashboard | PARTIAL | `LocationOwnerDemoData`, `LocationOwnerDemoStore` | Operations, Bookings, Payments |
-| LO-02 Listing Wizard | PARTIAL | `LocationOwnerDemoStore` | Auth, Operations |
-| LO-03 Availability | PARTIAL | `LocationOwnerDemoStore` | Bookings |
-| LO-04 Pricing | PARTIAL | `LocationOwnerDemoStore` | Operations |
-| LO-05 Rules | PARTIAL | `LocationOwnerDemoStore` | Operations |
-| LO-06 Booking Requests | PARTIAL | `LocationOwnerDemoData`, `LocationOwnerDemoStore` | Auth, Bookings |
-| LO-07 Check-in | PARTIAL | `LocationOwnerDemoStore` | Auth, Bookings, Operations |
-| LO-08 Check-out/Damage | PARTIAL | `LocationOwnerDemoStore` | Auth, Bookings, Operations |
-| LO-09 Earnings | PARTIAL | `LocationOwnerDemoData` | Auth, Payments |
-| LO-10 Performance | PARTIAL | `LocationOwnerDemoData`, `LocationOwnerDemoStore` | Operations, Bookings |
+| LO-01 Dashboard | CLEANED | none | Operations, Bookings, Payments |
+| LO-02 Listing Wizard | CLEANED | none | Auth, Operations |
+| LO-03 Availability | CLEANED | none | Bookings |
+| LO-04 Pricing | CLEANED | none | Operations |
+| LO-05 Rules | CLEANED | none | Operations |
+| LO-06 Booking Requests | CLEANED | none | Auth, Bookings |
+| LO-07 Check-in | CLEANED | none | Auth, Bookings, Operations |
+| LO-08 Check-out/Damage | CLEANED | none | Auth, Bookings, Operations |
+| LO-09 Earnings | CLEANED | none | Auth, Payments |
+| LO-10 Performance | CLEANED | none | Operations, Bookings |
 
-Replacement path:
+Cleanup result:
 
-- Use location properties/spaces/pricing/rules, availability, bookings, inspections, damage claims, payments, payout accounts.
-- Add backend property performance rollup if current endpoints cannot calculate dashboard/performance efficiently.
+- LO-01 through LO-10 now render backend data or explicit sign-in/property/empty/error states.
+- Offline preview/demo branches were removed from dashboard, listing wizard, availability, pricing, rules, booking requests, check-in, check-out/damage, earnings, and performance.
+- `LocationOwnerDemoStore` was replaced with `LocationOwnerSelectionStore`, which stores only the selected backend property ID and contains no business/demo data.
+- Shared booking status labels now live in `location_owner_live.dart` instead of demo data.
+- Verified with `flutter analyze` and `flutter test test/location_owner_portal_test.dart`.
 
 ### 4.7 Media/Equipment
 

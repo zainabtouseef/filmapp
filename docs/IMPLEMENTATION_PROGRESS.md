@@ -4,7 +4,7 @@
 
 - Current master-report version: 1.0
 - Current phase: Other portals database-only perfection
-- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 Super Admin, Media/Equipment, and Brand Sponsor static-data cleanup complete; next is Location Owner or Actor/Talent static-store removal
+- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 Super Admin, Media/Equipment, Brand Sponsor, and Location Owner static-data cleanup complete; next is Actor/Talent or Model Extension static-store removal
 - Overall status: Phases 0, 1, 2, and 3 complete locally; Phase 4 profile/marketplace/portfolio/saved-search/shortlist foundation complete locally; Phase 5 projects/requirements/skills and project-room files/decisions foundation complete locally; Phase 6 booking/offer/counter/accept, booking inbox, manual availability blocks, availability lock, and conversation foundation complete locally; Phase 7 contract generation, signatures, legal review queue/decision, and addendum foundation complete locally; Phase 8 sandbox payment schedules, proof review, ledger, receipts, and payout-account foundation complete locally; Phase 9 location/equipment inspections, damage claims, safety checks/incidents/check-ins, **and insurance partner/policy/claim/evidence** backend now fully complete locally and in production (the insurance tables were missed in the original 2026-07-17 Phase 9 pass and closed out 2026-07-18); Phase 10 casting agency roster/audition/self-tape/notes/commission, brand opportunity/application/terms/deliverable/metrics, model rights/rates/restrictions, and distribution contact/release/handover/report foundation complete locally; Phase 11 reviews/dimensions/requests, reports/blocks, moderation cases/events, disputes/evidence/events, support tickets/messages, and announcements/notifications foundation complete locally; Phase 12 personal/admin dashboards, admin analytics, synchronous CSV export jobs, Sentry wiring, production DB backups, and a dependency security patch complete locally and deployed to production
 - Last updated: 2026-07-24
 - Updated by: Codex
@@ -1199,8 +1199,19 @@
   - `flutter analyze` passed.
   - `flutter test test/brand_sponsor_portal_test.dart` passed.
   - Flutter web was rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and deployed to `https://cine.nalexustechnologies.com`; HTTPS root returned HTTP 200 after sync.
+- Location Owner static-data cleanup:
+  - Removed `LocationOwnerDemoData`/`LocationOwnerDemoStore` usage from LO-01 dashboard, LO-02 listing wizard, LO-03 availability, LO-04 pricing, LO-05 rules, LO-06 booking requests, LO-07 check-in, LO-08 check-out/damage, LO-09 earnings, LO-10 performance, shared live helpers, shell, and components.
+  - Replaced unauthenticated/demo preview branches with explicit sign-in/live-backend empty states.
+  - Kept live create/update flows connected to Operations, Bookings, Auth, and Payments controllers.
+  - Replaced demo active-property selection with `LocationOwnerSelectionStore`, which stores only the selected backend property ID.
+  - Moved location booking status label mapping into `location_owner_live.dart`.
+  - Deleted `lib/features/location_owner/data/location_owner_demo_data.dart`.
+  - Feature static search is clean: no `LocationOwnerDemoData`, `LocationOwnerDemoStore`, `location_owner_demo_data`, `_buildPreview`, `Preview`, or `preview` runtime matches under `lib/features/location_owner`.
+  - `flutter analyze` passed.
+  - `flutter test test/location_owner_portal_test.dart` passed.
+  - Flutter web was rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and deployed to `https://cine.nalexustechnologies.com`; HTTPS root returned HTTP 200 after sync.
 - Next:
-  - Deploy the latest Flutter web build, then continue with Location Owner, Actor/Talent, or Model Extension static-store removal.
+  - Deploy the latest Flutter web build, then continue with Actor/Talent or Model Extension static-store removal.
 
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 

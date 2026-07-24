@@ -8,8 +8,8 @@ import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
+import 'location_owner_live.dart';
 
 Color locationToneColor(BuildContext context, LocationTone tone) {
   final colors = context.appColors;
@@ -586,7 +586,7 @@ class LocationBookingStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: LocationOwnerDemoData.bookingStatusLabel(status),
+      label: locationBookingStatusLabel(status),
       color: locationStatusColor(context, status),
     );
   }

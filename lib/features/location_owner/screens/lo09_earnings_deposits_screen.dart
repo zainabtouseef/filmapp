@@ -11,7 +11,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../widgets/location_owner_components.dart';
 import '../widgets/location_owner_live.dart';
@@ -58,7 +57,14 @@ class _LO09EarningsDepositsScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load earnings',
+        message:
+            'Earnings, deposit releases, payout accounts and ledger rows are fetched from the backend.',
+      );
+    }
     return FutureBuilder<_EarningsData>(
       future: _future,
       builder: (context, snapshot) {
@@ -291,24 +297,6 @@ class _LO09EarningsDepositsScreenState
 
   String _minorMoney(int amountMinor) {
     return 'PKR ${compactLocationMoney(amountMinor ~/ 100)}';
-  }
-
-  Widget _buildPreview() {
-    return LocationSectionCard(
-      title: 'Earnings preview',
-      icon: Icons.payments_outlined,
-      selected: true,
-      child: Column(
-        children: [
-          for (final item in LocationOwnerDemoData.ledger)
-            LocationInfoRow(
-              icon: Icons.receipt_long_outlined,
-              label: item.label,
-              value: item.amount,
-            ),
-        ],
-      ),
-    );
   }
 }
 

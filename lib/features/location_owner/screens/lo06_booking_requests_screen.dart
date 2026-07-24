@@ -8,7 +8,6 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/location_owner_demo_data.dart';
 import '../widgets/location_owner_components.dart';
 import '../widgets/location_owner_live.dart';
 
@@ -57,7 +56,14 @@ class _LO06BookingRequestsScreenState extends State<LO06BookingRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load booking requests',
+        message:
+            'Location booking requests, offers, counteroffers and chat links are fetched from the backend.',
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -372,62 +378,7 @@ class _LO06BookingRequestsScreenState extends State<LO06BookingRequestsScreen> {
       ),
     );
   }
-
-  Widget _buildPreview() {
-    final store = LocationOwnerDemoStore.instance;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _RequestCommandBar(
-          query: '',
-          selectedFilter: 'All',
-          selectedSort: 'Newest',
-          onQueryChanged: _noopString,
-          onFilterChanged: _noopString,
-          onSortChanged: _noopString,
-          onRefresh: _noop,
-        ),
-        const SizedBox(height: 12),
-        LocationResponsiveGrid(
-          minWidth: 320,
-          children: [
-            for (final request in LocationOwnerDemoData.requests)
-              GlassSectionCard(
-                radius: 18,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      request.project,
-                      style: AppTextStyles.cardLabel.copyWith(
-                        color: context.appColors.textPrimary,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${request.producer} · ${request.dates}',
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: context.appColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    LocationBookingStatusChip(
-                      status: store.requestStatus(request),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
 }
-
-void _noopString(String _) {}
-void _noop() {}
 
 class _RequestCommandBar extends StatelessWidget {
   final String query;

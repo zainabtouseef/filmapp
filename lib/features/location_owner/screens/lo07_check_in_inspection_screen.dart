@@ -13,7 +13,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -84,7 +83,14 @@ class _LO07CheckInInspectionScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to start check-in',
+        message:
+            'Check-in inspections, property spaces, booking handover records and evidence are fetched from the backend.',
+      );
+    }
     return FutureBuilder<_InspectionData>(
       future: _future,
       builder: (context, snapshot) {
@@ -572,25 +578,6 @@ class _LO07CheckInInspectionScreenState
       'webp' => 'image/webp',
       _ => 'image/jpeg',
     };
-  }
-
-  Widget _buildPreview() {
-    final items = LocationOwnerDemoStore.instance.inspection;
-    return LocationSectionCard(
-      title: 'Check-in preview',
-      icon: Icons.fact_check_outlined,
-      selected: true,
-      child: Column(
-        children: [
-          for (final item in items)
-            LocationInfoRow(
-              icon: Icons.camera_alt_outlined,
-              label: item.area,
-              value: 'Evidence pending',
-            ),
-        ],
-      ),
-    );
   }
 }
 

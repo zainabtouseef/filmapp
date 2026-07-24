@@ -12,7 +12,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -68,7 +67,14 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview(context);
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load location data',
+        message:
+            'This dashboard only shows backend properties, booking requests, calendar activity and payment records.',
+      );
+    }
     return FutureBuilder<_DashboardData>(
       future: _future,
       builder: (context, snapshot) {
@@ -300,53 +306,6 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
               ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreview(BuildContext context) {
-    final store = LocationOwnerDemoStore.instance;
-    final property = store.activeProperty;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        LocationKpiRail(metrics: LocationOwnerDemoData.metrics),
-        const SizedBox(height: 12),
-        LocationTwoColumn(
-          left: LocationSectionCard(
-            title: 'Property portfolio',
-            icon: Icons.location_city_outlined,
-            selected: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LocationMediaFrame(
-                  imageUrl: property.imageUrl,
-                  title: property.name,
-                  badge: property.publicAddress,
-                  fallbackIcon: Icons.location_city_outlined,
-                  aspectRatio: 16 / 8.8,
-                ),
-                const SizedBox(height: 12),
-                LocationInfoRow(
-                  icon: Icons.groups_2_outlined,
-                  label: 'Crew capacity',
-                  value: '${property.capacity}',
-                ),
-                LocationInfoRow(
-                  icon: Icons.local_parking_outlined,
-                  label: 'Parking',
-                  value: '${property.parking}',
-                ),
-              ],
-            ),
-          ),
-          right: LocationSectionCard(
-            title: 'Preview tasks',
-            icon: Icons.priority_high_rounded,
-            child: LocationTaskRail(tasks: store.activeTasks),
-          ),
         ),
       ],
     );

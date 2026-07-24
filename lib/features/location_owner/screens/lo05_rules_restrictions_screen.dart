@@ -7,7 +7,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -144,7 +143,14 @@ class _LO05RulesRestrictionsScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to manage rules',
+        message:
+            'Property rules and restrictions are loaded from backend property records.',
+      );
+    }
     return FutureBuilder<List<LocationPropertyDto>>(
       future: _future,
       builder: (context, snapshot) {
@@ -312,25 +318,6 @@ class _LO05RulesRestrictionsScreenState
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildPreview() {
-    final rules = LocationOwnerDemoStore.instance.rules;
-    return LocationSectionCard(
-      title: 'Property rules preview',
-      icon: Icons.rule_folder_outlined,
-      selected: true,
-      child: Column(
-        children: [
-          for (final rule in rules)
-            LocationInfoRow(
-              icon: rule.icon,
-              label: rule.label,
-              value: rule.allowed ? 'Allowed' : 'Restricted',
-            ),
-        ],
-      ),
     );
   }
 

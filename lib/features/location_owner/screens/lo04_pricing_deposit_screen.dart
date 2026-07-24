@@ -7,7 +7,6 @@ import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/location_owner_demo_data.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -83,7 +82,14 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_future == null) return _buildPreview();
+    if (_future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to manage rates',
+        message:
+            'Rate cards and deposits are loaded from backend property pricing records.',
+      );
+    }
     return FutureBuilder<List<LocationPropertyDto>>(
       future: _future,
       builder: (context, snapshot) {
@@ -282,25 +288,6 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildPreview() {
-    final preview = LocationOwnerDemoStore.instance.prices;
-    return LocationSectionCard(
-      title: 'Rate card preview',
-      icon: Icons.price_change_outlined,
-      selected: true,
-      child: Column(
-        children: [
-          for (final rate in preview)
-            LocationInfoRow(
-              icon: Icons.payments_outlined,
-              label: rate.label,
-              value: locationMoney(rate.amount),
-            ),
-        ],
-      ),
     );
   }
 
