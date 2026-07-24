@@ -8,7 +8,6 @@ import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/media_equipment_demo_data.dart';
 import '../models/media_equipment_models.dart';
 
 Color mediaToneColor(BuildContext context, MediaTone tone) {
@@ -72,6 +71,21 @@ String mediaAvailabilityLabel(MediaAvailabilityStatus status) {
     MediaAvailabilityStatus.booked => 'Booked',
     MediaAvailabilityStatus.maintenance => 'Maintenance',
     MediaAvailabilityStatus.transit => 'In transit',
+  };
+}
+
+String mediaBookingStatusLabel(MediaBookingStatus status) {
+  return switch (status) {
+    MediaBookingStatus.requestReceived => 'REQUEST RECEIVED',
+    MediaBookingStatus.underNegotiation => 'UNDER NEGOTIATION',
+    MediaBookingStatus.contractPending => 'CONTRACT PENDING',
+    MediaBookingStatus.depositPending => 'DEPOSIT PENDING',
+    MediaBookingStatus.secured => 'SECURED BOOKING',
+    MediaBookingStatus.inProgress => 'IN PROGRESS',
+    MediaBookingStatus.returned => 'RETURNED',
+    MediaBookingStatus.closed => 'CLOSED',
+    MediaBookingStatus.rejected => 'REJECTED',
+    MediaBookingStatus.disputed => 'DISPUTED',
   };
 }
 
@@ -508,7 +522,7 @@ class MediaBookingStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: MediaEquipmentDemoData.bookingStatusLabel(status),
+      label: mediaBookingStatusLabel(status),
       color: mediaStatusColor(context, status),
     );
   }

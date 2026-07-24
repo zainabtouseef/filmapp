@@ -55,7 +55,7 @@ Status meanings:
 | --- | --- | --- | --- | --- |
 | Director/Producer | LIVE/mostly clean | none found in main screens | Auth, Projects, Bookings, Contracts, Payments, Analytics | Keep stable; only fix bugs while other portals are wired. |
 | Super Admin | LIVE/CLEANED | `admin_mock_data.dart` removed and deleted on 2026-07-24; no `DemoData`, `DemoStore`, `admin_mock_data`, or `mock_data` runtime matches remain under `lib/features/super_admin` | Admin, Analytics, Payments, TrustSafety, Verification | Continue manual walkthrough and admin action smoke; shared core mock imports remain outside the Super Admin feature. |
-| Media/Equipment | PARTIAL but closest to live | `MediaEquipmentDemoData` in inventory/widgets; demo store still exists | Operations, Bookings, Payments, TrustSafety | Good early win; most screens already use live scopes. |
+| Media/Equipment | LIVE/CLEANED | `media_equipment_demo_data.dart` deleted on 2026-07-24; no feature-level `DemoData`, `DemoStore`, `mock_data`, or static-demo runtime matches remain | Operations, Bookings, Payments, TrustSafety | Continue live walkthrough and database seeding checks. |
 | Brand Sponsor | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist, Payments, Auth | Needs live dashboard/application/deliverable/payment replacement. |
 | Location Owner | PARTIAL | `LocationOwnerDemoData`, `LocationOwnerDemoStore` | Operations, Bookings, Payments, Auth | APIs exist for most workflows; replace shell/store and performance/ledger fallbacks. |
 | Actor/Talent | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth, Bookings, Contracts, Payments, TrustSafety | Many existing APIs; rate-card/profile/reputation gaps need careful handling. |
@@ -162,7 +162,7 @@ Replacement path:
 | --- | --- | --- | --- |
 | ME-01 Dashboard | LIVE/PARTIAL | none in screen | Operations, Bookings |
 | ME-02 Provider Profile | LIVE/PARTIAL | none in screen | Operations |
-| ME-03 Inventory | PARTIAL | `MediaEquipmentDemoData` fallback | Operations |
+| ME-03 Inventory | CLEANED | Former `MediaEquipmentDemoData` fallback removed; API errors now show retry/empty state, not preview items | Operations |
 | ME-04 Packages | LIVE/PARTIAL | none in screen | Operations |
 | ME-05 Availability | LIVE/PARTIAL | none in screen | Bookings, Operations |
 | ME-06 Terms | LIVE/PARTIAL | none in screen | Operations |
@@ -171,11 +171,12 @@ Replacement path:
 | ME-09 Return | LIVE/PARTIAL | inspection workspace | Operations, Bookings |
 | ME-10 Earnings/Ratings | LIVE/PARTIAL | none in screen | Auth, Operations, Bookings, Payments, TrustSafety |
 
-Replacement path:
+Cleanup result:
 
-- This is the best first portal after Admin/Backend deploy.
-- Remove remaining `MediaEquipmentDemoData` fallback from inventory and shared widgets.
-- Ensure empty inventory shows empty state rather than seeded Dart inventory.
+- Removed `MediaEquipmentDemoData` import from inventory manager and shared components.
+- Moved booking status labels into real component helper `mediaBookingStatusLabel`.
+- Deleted `lib/features/media_equipment/data/media_equipment_demo_data.dart`.
+- Empty/error states now show database-backed retry/empty messaging instead of static preview records.
 
 ### 4.8 Crew Services
 

@@ -1181,8 +1181,16 @@
   - `rg -n "DemoData|DemoStore|admin_mock_data|mock_data|shared_mock_data|sample|static demo" lib/features/super_admin lib/core -g '*.dart'` now shows no matches under `lib/features/super_admin`; remaining matches are shared core screens to handle separately.
   - `flutter analyze` passed.
   - `flutter test test/super_admin_portal_test.dart` passed.
+- Media/Equipment static-data cleanup:
+  - Removed `MediaEquipmentDemoData` import from `ME03InventoryManagerScreen`.
+  - Replaced unauthenticated/API-error inventory preview lists with sign-in/error/empty states.
+  - Moved booking status label mapping from demo data into `mediaBookingStatusLabel`.
+  - Deleted `lib/features/media_equipment/data/media_equipment_demo_data.dart`.
+  - Feature static search is clean: no `DemoData`, `DemoStore`, `media_equipment_demo_data`, `mock_data`, `sample`, or `static demo` matches under `lib/features/media_equipment`.
+  - `flutter analyze` passed.
+  - `flutter test test/media_equipment_portal_test.dart` passed.
 - Next:
-  - Deploy the updated Flutter web bundle, push the P0/P1/P2/P3 docs/code, then continue with shared core mock cleanup or Media/Equipment static fallback removal.
+  - Continue with shared core mock cleanup, Brand Sponsor static-store removal, or Location Owner static-store removal.
 
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 

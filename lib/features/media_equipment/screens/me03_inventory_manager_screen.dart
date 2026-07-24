@@ -7,7 +7,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/media_equipment_demo_data.dart';
 import '../widgets/media_equipment_components.dart';
 
 class ME03InventoryManagerScreen extends StatefulWidget {
@@ -95,9 +94,11 @@ class _ME03InventoryManagerScreenState
         ),
         const SizedBox(height: 12),
         if (_itemsFuture == null)
-          _PreviewInventory(
-            query: _query,
-            filter: _filter,
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to manage live inventory',
+            message:
+                'Equipment inventory is loaded from the backend database after authentication.',
           )
         else
           FutureBuilder<List<EquipmentItemDto>>(
@@ -114,16 +115,25 @@ class _ME03InventoryManagerScreenState
                 );
               }
               if (snapshot.hasError) {
-                return Column(
-                  children: [
-                    const InlineNotice(
-                      message:
-                          'Live inventory is unavailable. Preview items are shown.',
-                      icon: Icons.cloud_off_outlined,
-                    ),
-                    const SizedBox(height: 10),
-                    _PreviewInventory(query: _query, filter: _filter),
-                  ],
+                return MediaSectionCard(
+                  title: 'Live Inventory',
+                  icon: Icons.cloud_off_outlined,
+                  child: Column(
+                    children: [
+                      const CoreEmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Could not load live inventory',
+                        message:
+                            'No static preview items are shown. Retry the database-backed inventory request.',
+                      ),
+                      const SizedBox(height: 10),
+                      CoreSecondaryButton(
+                        icon: Icons.refresh_rounded,
+                        label: 'Retry',
+                        onTap: () => setState(_reload),
+                      ),
+                    ],
+                  ),
                 );
               }
               final rows = _filtered(snapshot.data ?? const []);
@@ -316,7 +326,10 @@ class _ME03InventoryManagerScreenState
                   final operations = OperationsScope.maybeOf(context);
                   if (operations == null) {
                     Navigator.pop(context);
-                    mediaSnack(this.context, 'Preview mode only');
+                    mediaSnack(
+                      this.context,
+                      'Sign in to manage backend inventory.',
+                    );
                     return;
                   }
                   final body = <String, dynamic>{
@@ -496,69 +509,6 @@ class _LiveInventoryCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PreviewInventory extends StatelessWidget {
-  final String query;
-  final String filter;
-
-  const _PreviewInventory({
-    required this.query,
-    required this.filter,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = MediaEquipmentDemoData.inventory.where((item) {
-      final categoryMatch = filter == 'All' ||
-          item.category.toLowerCase() == filter.toLowerCase();
-      final searchMatch = query.trim().isEmpty ||
-          '${item.category} ${item.modelName} ${item.condition}'
-              .toLowerCase()
-              .contains(query.toLowerCase());
-      return categoryMatch && searchMatch;
-    });
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 10),
-          child: InlineNotice(
-            message: 'Preview mode. Sign in to manage live inventory.',
-            icon: Icons.visibility_outlined,
-          ),
-        ),
-        MediaResponsiveGrid(
-          minWidth: 300,
-          children: [
-            for (final item in rows)
-              GlassSectionCard(
-                radius: 8,
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(_categoryIcon(item.category)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        item.modelName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    StatusChip(
-                      label: item.available ? 'Available' : 'Booked',
-                      color: item.available
-                          ? context.appColors.success
-                          : context.appColors.goldMid,
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ],
     );
   }
 }
