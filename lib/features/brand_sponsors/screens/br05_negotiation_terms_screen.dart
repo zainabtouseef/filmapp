@@ -8,7 +8,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -92,7 +91,14 @@ class _BR05NegotiationTermsScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_specialist == null) return _buildPreview(context);
+    if (_specialist == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to negotiate terms',
+        message:
+            'Applications, versioned terms, chat links and acceptance status are loaded from the backend.',
+      );
+    }
     if (_loading && !_loaded) {
       return const Center(
         child: Padding(
@@ -438,8 +444,6 @@ class _BR05NegotiationTermsScreenState
   }
 
   void _selectApplication(BrandApplicationDto application) {
-    BrandSponsorDemoStore.instance
-        .setActiveLiveApplication(application.publicId);
     setState(() => _selectedId = application.publicId);
     if (application.terms.isEmpty) {
       _scope.text = application.proposal;
@@ -568,76 +572,6 @@ class _BR05NegotiationTermsScreenState
     } finally {
       if (mounted) setState(() => _openingChat = false);
     }
-  }
-
-  Widget _buildPreview(BuildContext context) {
-    final term = BrandSponsorDemoStore.instance.activeTerm;
-    return BrandTwoColumn(
-      left: BrandSectionCard(
-        title: 'Deal terms',
-        icon: Icons.handshake_outlined,
-        selected: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _DealAvatar(name: term.applicant),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    term.applicant,
-                    style: AppTextStyles.cardTitle.copyWith(
-                      color: context.appColors.textPrimary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                BrandStatusChip(status: term.status),
-              ],
-            ),
-            const SizedBox(height: 14),
-            CoreTextField(
-              controller: TextEditingController(text: term.scope),
-              label: 'Campaign scope and deliverables',
-              icon: Icons.fact_check_outlined,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: TextEditingController(text: term.exclusivity),
-              label: 'Category exclusivity and duration',
-              icon: Icons.lock_outline_rounded,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: TextEditingController(text: term.approvalRights),
-              label: 'Approval rights and response window',
-              icon: Icons.approval_outlined,
-              maxLines: 3,
-            ),
-          ],
-        ),
-      ),
-      right: BrandSectionCard(
-        title: 'Version history',
-        icon: Icons.history_rounded,
-        tone: BrandTone.purple,
-        child: Column(
-          children: [
-            for (final item in BrandSponsorDemoData.terms)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.description_outlined),
-                title: Text(item.applicant),
-                subtitle: Text(item.paymentSchedule),
-                trailing: BrandStatusChip(status: item.status),
-              ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

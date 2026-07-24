@@ -8,8 +8,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
-import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
@@ -84,7 +82,14 @@ class _BR04ApplicationsInboxScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_specialist == null) return _buildPreview(context);
+    if (_specialist == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load applications',
+        message:
+            'The proposal queue only shows applications fetched from the backend for your published opportunities.',
+      );
+    }
     if (_loading && !_loaded) {
       return const Center(
         child: Padding(
@@ -374,8 +379,6 @@ class _BR04ApplicationsInboxScreenState
   }
 
   Future<void> _beginNegotiation(BrandApplicationDto application) async {
-    BrandSponsorDemoStore.instance
-        .setActiveLiveApplication(application.publicId);
     if (application.status != 'negotiating' &&
         application.status != 'accepted') {
       await _changeStatus(application, 'negotiating');
@@ -485,8 +488,6 @@ class _BR04ApplicationsInboxScreenState
   }
 
   void _showApplication(BrandApplicationDto application) {
-    BrandSponsorDemoStore.instance
-        .setActiveLiveApplication(application.publicId);
     showBrandSheet(
       context,
       title: application.applicant.displayName,
@@ -586,53 +587,6 @@ class _BR04ApplicationsInboxScreenState
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPreview(BuildContext context) {
-    final store = BrandSponsorDemoStore.instance;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        BrandSectionCard(
-          title: 'Proposal review queue',
-          icon: Icons.move_to_inbox_outlined,
-          selected: true,
-          child: Column(
-            children: [
-              BrandSearchField(
-                hintText: 'Search applicant, opportunity or proposal',
-                onChanged: (_) {},
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final label in const [
-                    'All',
-                    'Awaiting review',
-                    'Shortlisted',
-                    'Negotiating',
-                  ])
-                    CoreChip(label: label, selected: label == 'All'),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        BrandResponsiveGrid(
-          minWidth: 330,
-          children: [
-            for (final application in BrandSponsorDemoData.applications)
-              _PreviewApplicationCard(
-                application: application,
-                status: store.applicationStatus(application),
-              ),
-          ],
-        ),
-      ],
     );
   }
 }
@@ -809,67 +763,6 @@ class _ApplicantAvatar extends StatelessWidget {
           color: context.appColors.infoBlue,
           fontWeight: FontWeight.w900,
         ),
-      ),
-    );
-  }
-}
-
-class _PreviewApplicationCard extends StatelessWidget {
-  final BrandApplication application;
-  final BrandStatus status;
-
-  const _PreviewApplicationCard({
-    required this.application,
-    required this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassSectionCard(
-      radius: 18,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _ApplicantAvatar(name: application.applicant),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  application.applicant,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardTitle.copyWith(
-                    color: context.appColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              BrandStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            application.proposal,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body.copyWith(
-              color: context.appColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          BrandInfoRow(
-            icon: Icons.groups_outlined,
-            label: 'Audience',
-            value: application.audience,
-          ),
-          BrandInfoRow(
-            icon: Icons.payments_outlined,
-            label: 'Budget ask',
-            value: application.budgetAsk,
-          ),
-        ],
       ),
     );
   }

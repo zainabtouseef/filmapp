@@ -8,8 +8,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
-import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
@@ -82,7 +80,14 @@ class _BR06CampaignTrackerScreenState extends State<BR06CampaignTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_specialist == null) return _buildPreview(context);
+    if (_specialist == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load campaign delivery',
+        message:
+            'Campaign deliverables, proof files, revision notes and metrics are loaded from the backend.',
+      );
+    }
     if (_loading && !_loaded) {
       return const Center(
         child: Padding(
@@ -646,90 +651,6 @@ class _BR06CampaignTrackerScreenState extends State<BR06CampaignTrackerScreen> {
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
     return '$value';
   }
-
-  Widget _buildPreview(BuildContext context) {
-    final store = BrandSponsorDemoStore.instance;
-    final items = BrandSponsorDemoData.deliverables.where((item) {
-      final status = store.deliverableStatus(item);
-      return switch (_tab) {
-        'Awaiting proof' => status == BrandStatus.pending,
-        'Review' =>
-          status == BrandStatus.reviewing || status == BrandStatus.delivered,
-        'Revision' => status == BrandStatus.revision,
-        'Approved' => status == BrandStatus.approved,
-        _ => true,
-      };
-    }).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: '2',
-              icon: Icons.schedule_outlined,
-              title: 'Awaiting proof',
-              subtitle: 'Campaign outputs',
-              accentColor: context.appColors.goldDark,
-            ),
-            MetricActionItem(
-              value: '1',
-              icon: Icons.rate_review_outlined,
-              title: 'Ready to review',
-              subtitle: 'Proof submitted',
-              accentColor: context.appColors.infoBlue,
-            ),
-            MetricActionItem(
-              value: '1',
-              icon: Icons.verified_outlined,
-              title: 'Approved',
-              subtitle: 'Campaign outputs',
-              accentColor: context.appColors.success,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        BrandSectionCard(
-          title: 'Campaign deliverables',
-          icon: Icons.fact_check_outlined,
-          selected: true,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final tab in const [
-                  'All',
-                  'Awaiting proof',
-                  'Review',
-                  'Revision',
-                  'Approved',
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CoreChip(
-                      label: tab,
-                      selected: _tab == tab,
-                      onTap: () => setState(() => _tab = tab),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        BrandResponsiveGrid(
-          minWidth: 330,
-          children: [
-            for (final item in items)
-              _PreviewDeliverableCard(
-                item: item,
-                status: store.deliverableStatus(item),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
 }
 
 class _CampaignDeliverableCard extends StatelessWidget {
@@ -886,66 +807,6 @@ class _MetricInput extends StatelessWidget {
       label: label,
       icon: icon,
       keyboardType: TextInputType.number,
-    );
-  }
-}
-
-class _PreviewDeliverableCard extends StatelessWidget {
-  final BrandDeliverable item;
-  final BrandStatus status;
-
-  const _PreviewDeliverableCard({
-    required this.item,
-    required this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassSectionCard(
-      radius: 18,
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BrandMediaFrame(
-            imageUrl: item.imageUrl,
-            title: item.label,
-            badge: item.dueDate,
-            fallbackIcon: Icons.fact_check_outlined,
-            aspectRatio: 16 / 9,
-            compact: true,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardTitle.copyWith(
-                    color: context.appColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              BrandStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 8),
-          BrandInfoRow(
-            icon: Icons.person_outline_rounded,
-            label: 'Owner',
-            value: item.owner,
-          ),
-          BrandInfoRow(
-            icon: Icons.upload_file_outlined,
-            label: 'Proof',
-            value: item.proof,
-          ),
-        ],
-      ),
     );
   }
 }

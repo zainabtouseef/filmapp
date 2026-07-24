@@ -10,7 +10,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
@@ -93,7 +92,12 @@ class _BR07PaymentsRecordsScreenState extends State<BR07PaymentsRecordsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_specialist == null && _payments == null) {
-      return _buildPreview(context);
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load finance records',
+        message:
+            'Payment schedules, milestones, ledger entries and accepted rights records are loaded from the backend.',
+      );
     }
     if (_loading && !_loaded) {
       return const Center(
@@ -382,118 +386,6 @@ class _BR07PaymentsRecordsScreenState extends State<BR07PaymentsRecordsScreen> {
       return matchesFilter && (lower.isEmpty || haystack.contains(lower));
     }).toList();
   }
-
-  Widget _buildPreview(BuildContext context) {
-    final store = BrandSponsorDemoStore.instance;
-    final rows = BrandSponsorDemoData.payments.where((item) {
-      final status = store.paymentStatus(item);
-      return switch (_filter) {
-        'Due' =>
-          status == BrandStatus.pending || status == BrandStatus.paymentPending,
-        'Pending verification' => status == BrandStatus.paymentPending,
-        'Released' => status == BrandStatus.verified,
-        'Issue' => status == BrandStatus.disputed,
-        _ => true,
-      };
-    }).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: 'PKR 7.8M',
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Recorded spend',
-              subtitle: 'Campaign finance',
-              accentColor: context.appColors.success,
-            ),
-            MetricActionItem(
-              value: 'PKR 1.6M',
-              icon: Icons.pending_actions_outlined,
-              title: 'Pending release',
-              subtitle: '2 milestones',
-              accentColor: context.appColors.goldDark,
-            ),
-            MetricActionItem(
-              value: '14',
-              icon: Icons.policy_outlined,
-              title: 'Accepted deals',
-              subtitle: 'Rights records',
-              accentColor: context.appColors.infoPurple,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        BrandTwoColumn(
-          left: BrandSectionCard(
-            title: 'Payment milestones',
-            icon: Icons.account_tree_outlined,
-            selected: true,
-            child: Column(
-              children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final filter in const [
-                        'All',
-                        'Due',
-                        'Pending verification',
-                        'Released',
-                        'Issue',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: CoreChip(
-                            label: filter,
-                            selected: _filter == filter,
-                            onTap: () => setState(() => _filter = filter),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                for (final item in rows)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _PreviewPaymentRow(
-                      item: item,
-                      status: store.paymentStatus(item),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          right: BrandSectionCard(
-            title: 'Accepted usage rights',
-            icon: Icons.policy_outlined,
-            tone: BrandTone.purple,
-            child: Column(
-              children: const [
-                BrandInfoRow(
-                  icon: Icons.campaign_outlined,
-                  label: 'Campaign',
-                  value: 'Nova Cola Summer Launch',
-                ),
-                BrandInfoRow(
-                  icon: Icons.public_outlined,
-                  label: 'Usage',
-                  value: 'Pakistan | 9 months',
-                ),
-                BrandInfoRow(
-                  icon: Icons.verified_outlined,
-                  label: 'Approvals',
-                  value: 'Brand pre-approval',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _MilestoneRecord {
@@ -734,74 +626,6 @@ class _LedgerRow extends StatelessWidget {
               color: context.appColors.textPrimary,
               fontWeight: FontWeight.w900,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewPaymentRow extends StatelessWidget {
-  final BrandPaymentItem item;
-  final BrandStatus status;
-
-  const _PreviewPaymentRow({
-    required this.item,
-    required this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassSectionCard(
-      radius: 8,
-      padding: const EdgeInsets.all(11),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.payments_outlined,
-                color: context.appColors.goldDark,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  item.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: context.appColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                item.amount,
-                style: AppTextStyles.cardLabel.copyWith(
-                  color: context.appColors.textPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${item.payee} | ${item.dueDate}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: context.appColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              BrandStatusChip(status: status),
-            ],
           ),
         ],
       ),

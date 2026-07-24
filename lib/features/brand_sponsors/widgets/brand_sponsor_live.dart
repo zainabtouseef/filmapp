@@ -1,16 +1,12 @@
 import '../../../core/network/api_exception.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../shared/formatters/cine_format.dart';
-import '../data/brand_sponsor_demo_data.dart';
+import '../models/brand_sponsor_models.dart';
 
 BrandOpportunityDto? activeBrandOpportunity(
   List<BrandOpportunityDto> opportunities,
 ) {
   if (opportunities.isEmpty) return null;
-  final selected = BrandSponsorDemoStore.instance.activeLiveOpportunityId;
-  for (final opportunity in opportunities) {
-    if (opportunity.publicId == selected) return opportunity;
-  }
   return opportunities.first;
 }
 
@@ -18,10 +14,6 @@ BrandApplicationDto? activeBrandApplication(
   List<BrandApplicationDto> applications,
 ) {
   if (applications.isEmpty) return null;
-  final selected = BrandSponsorDemoStore.instance.activeLiveApplicationId;
-  for (final application in applications) {
-    if (application.publicId == selected) return application;
-  }
   for (final application in applications) {
     if (application.status == 'negotiating' ||
         application.status == 'shortlisted') {
@@ -50,6 +42,24 @@ String readableBrandStatus(String value) {
       .where((part) => part.isNotEmpty)
       .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
+}
+
+String brandStatusLabel(BrandStatus status) {
+  return switch (status) {
+    BrandStatus.draft => 'Draft',
+    BrandStatus.active => 'Active',
+    BrandStatus.pending => 'Pending',
+    BrandStatus.reviewing => 'Reviewing',
+    BrandStatus.shortlisted => 'Shortlisted',
+    BrandStatus.negotiation => 'Negotiation',
+    BrandStatus.approved => 'Approved',
+    BrandStatus.revision => 'Revision',
+    BrandStatus.delivered => 'Delivered',
+    BrandStatus.paymentPending => 'Payment Due',
+    BrandStatus.verified => 'Verified',
+    BrandStatus.closed => 'Closed',
+    BrandStatus.disputed => 'Issue',
+  };
 }
 
 String brandAudienceSummary(Map<String, dynamic> metrics) {

@@ -6,7 +6,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
 import 'brand_sponsor_live.dart';
 
@@ -538,7 +537,7 @@ class BrandStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: BrandSponsorDemoData.statusLabel(status),
+      label: brandStatusLabel(status),
       color: brandStatusColor(context, status),
     );
   }

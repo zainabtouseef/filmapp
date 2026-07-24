@@ -56,7 +56,7 @@ Status meanings:
 | Director/Producer | LIVE/mostly clean | none found in main screens | Auth, Projects, Bookings, Contracts, Payments, Analytics | Keep stable; only fix bugs while other portals are wired. |
 | Super Admin | LIVE/CLEANED | `admin_mock_data.dart` removed and deleted on 2026-07-24; no `DemoData`, `DemoStore`, `admin_mock_data`, or `mock_data` runtime matches remain under `lib/features/super_admin` | Admin, Analytics, Payments, TrustSafety, Verification | Continue manual walkthrough and admin action smoke; shared core mock imports remain outside the Super Admin feature. |
 | Media/Equipment | LIVE/CLEANED | `media_equipment_demo_data.dart` deleted on 2026-07-24; no feature-level `DemoData`, `DemoStore`, `mock_data`, or static-demo runtime matches remain | Operations, Bookings, Payments, TrustSafety | Continue live walkthrough and database seeding checks. |
-| Brand Sponsor | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist, Payments, Auth | Needs live dashboard/application/deliverable/payment replacement. |
+| Brand Sponsor | LIVE/CLEANED | `brand_sponsor_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `BrandSponsorDemoData`, `BrandSponsorDemoStore`, `brand_sponsor_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Specialist, Payments, Auth | Continue live walkthrough and verify seeded brand applications/deliverables/payments cover each screen. |
 | Location Owner | PARTIAL | `LocationOwnerDemoData`, `LocationOwnerDemoStore` | Operations, Bookings, Payments, Auth | APIs exist for most workflows; replace shell/store and performance/ledger fallbacks. |
 | Actor/Talent | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth, Bookings, Contracts, Payments, TrustSafety | Many existing APIs; rate-card/profile/reputation gaps need careful handling. |
 | Model Extension | PARTIAL | `ModelExtensionDemoData`, `ModelExtensionDemoStore` | Specialist, Auth | Model APIs exist; remove local profile/rates/restrictions fallbacks. |
@@ -86,18 +86,21 @@ Status meanings:
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| BR-01 Dashboard | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist, Payments |
-| BR-02 Profile | PARTIAL | `BrandSponsorDemoData.profile` | Auth, Specialist |
-| BR-03 Opportunity Composer | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Auth, Specialist |
-| BR-04 Applications Inbox | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist |
-| BR-05 Negotiation Terms | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist |
-| BR-06 Campaign Tracker | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist |
-| BR-07 Payments Records | PARTIAL | `BrandSponsorDemoData`, `BrandSponsorDemoStore` | Specialist, Payments |
+| BR-01 Dashboard | CLEANED | none | Specialist, Payments |
+| BR-02 Profile | CLEANED | none | Auth, Specialist |
+| BR-03 Opportunity Composer | CLEANED | none | Auth, Specialist |
+| BR-04 Applications Inbox | CLEANED | none | Specialist |
+| BR-05 Negotiation Terms | CLEANED | none | Specialist |
+| BR-06 Campaign Tracker | CLEANED | none | Specialist |
+| BR-07 Payments Records | CLEANED | none | Specialist, Payments |
 
-Replacement path:
+Cleanup result:
 
-- Use `/brands/profile`, `/brand-opportunities`, `/brand-applications`, `/campaign-deliverables`, `/campaign-metrics`, `/payments/dashboard`, `/ledger`.
-- Delete runtime usage of `BrandSponsorDemoStore` once live selected opportunity/application IDs come from backend.
+- BR-01 through BR-07 now render backend data or explicit sign-in/profile/empty/error states.
+- Offline preview/demo branches were removed from dashboard, profile, opportunity composer, applications inbox, negotiation terms, campaign tracker, and payments records.
+- `BrandSponsorDemoStore` selection mutations were removed; live selection comes from fetched DTOs in each screen.
+- Shared status labels now live in `brand_sponsor_live.dart` instead of demo data.
+- Verified with `flutter analyze` and `flutter test test/brand_sponsor_portal_test.dart`.
 
 ### 4.4 Actor/Talent
 

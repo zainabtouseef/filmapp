@@ -11,7 +11,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
@@ -91,7 +90,14 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_specialist == null && !_loaded) _seedPreview();
+    if (_specialist == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to manage brand profile',
+        message:
+            'Brand identity, trust status, logo and billing details are loaded from the backend after login.',
+      );
+    }
     if (_loading && !_loaded) {
       return const Center(
         child: Padding(
@@ -356,7 +362,7 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
       return;
     }
     if (_specialist == null) {
-      brandSnack(context, 'Preview profile saved');
+      brandSnack(context, 'Sign in to save the brand profile');
       return;
     }
     setState(() {
@@ -413,16 +419,6 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
           code: 'brand.profile_failed',
           message: 'The brand profile could not be saved.',
         );
-  }
-
-  void _seedPreview() {
-    final profile = BrandSponsorDemoData.profile;
-    _name.text = profile.name;
-    _category.text = profile.category;
-    _representative.text = profile.representative;
-    _description.text = profile.description;
-    _logoUrl = profile.imageUrl;
-    _loaded = true;
   }
 
   String _imageMimeType(String? extension) {

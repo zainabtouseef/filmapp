@@ -11,7 +11,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -95,7 +94,14 @@ class _BR03OpportunityComposerScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_specialist == null && !_loaded) _seedPreview();
+    if (_specialist == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to manage opportunities',
+        message:
+            'Opportunity drafts, covers, publishing status and application counts are loaded from the backend.',
+      );
+    }
     if (_loading && !_loaded) {
       return const Center(
         child: Padding(
@@ -267,7 +273,7 @@ class _BR03OpportunityComposerScreenState
       right: Column(
         children: [
           BrandSectionCard(
-            title: 'Public preview',
+            title: 'Public brief view',
             icon: Icons.visibility_outlined,
             tone: BrandTone.blue,
             child: Column(
@@ -356,8 +362,6 @@ class _BR03OpportunityComposerScreenState
   }
 
   void _selectOpportunity(BrandOpportunityDto opportunity) {
-    BrandSponsorDemoStore.instance
-        .setActiveLiveOpportunity(opportunity.publicId);
     setState(() {
       _selectedId = opportunity.publicId;
       _title.text = opportunity.title;
@@ -377,7 +381,6 @@ class _BR03OpportunityComposerScreenState
   }
 
   void _newOpportunity() {
-    BrandSponsorDemoStore.instance.setActiveLiveOpportunity(null);
     setState(() {
       _selectedId = null;
       _title.clear();
@@ -462,9 +465,7 @@ class _BR03OpportunityComposerScreenState
       return;
     }
     if (_specialist == null) {
-      BrandSponsorDemoStore.instance.createOpportunityDraft();
-      brandSnack(
-          context, publish ? 'Preview published' : 'Preview draft saved');
+      brandSnack(context, 'Sign in to save opportunities');
       return;
     }
     setState(() {
@@ -485,8 +486,6 @@ class _BR03OpportunityComposerScreenState
         if (_coverFileId != null) 'cover_file_id': _coverFileId,
       };
       final opportunity = await _saveWithMediaRetry(body);
-      BrandSponsorDemoStore.instance
-          .setActiveLiveOpportunity(opportunity.publicId);
       final opportunities = await _specialist!.brandOpportunities(force: true);
       if (!mounted) return;
       setState(() => _opportunities = opportunities);
@@ -535,7 +534,7 @@ class _BR03OpportunityComposerScreenState
     String status,
   ) async {
     if (_specialist == null) {
-      brandSnack(context, 'Preview status updated');
+      brandSnack(context, 'Sign in to update opportunity status');
       return;
     }
     try {
@@ -555,19 +554,6 @@ class _BR03OpportunityComposerScreenState
       if (!mounted) return;
       brandSnack(context, brandApiMessage(error));
     }
-  }
-
-  void _seedPreview() {
-    final opportunity = BrandSponsorDemoData.opportunities.first;
-    _title.text = opportunity.title;
-    _category = 'Product placement';
-    _budget.text = '2400000';
-    _usage.text = opportunity.usage;
-    _eligibility.text = opportunity.eligibility;
-    _deliverables.text = opportunity.deliverables;
-    _dueAt = DateTime.now().add(const Duration(days: 14));
-    _coverUrl = opportunity.imageUrl;
-    _loaded = true;
   }
 
   String _apiCategory(String value) =>

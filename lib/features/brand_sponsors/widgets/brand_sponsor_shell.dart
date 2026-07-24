@@ -15,7 +15,6 @@ import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../routes/brand_sponsor_routes.dart';
 import 'brand_sponsor_live.dart';
 
@@ -539,7 +538,6 @@ class _BrandWorkspaceSidebar extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: AnimatedBuilder(
           animation: Listenable.merge([
-            BrandSponsorDemoStore.instance,
             if (specialist != null) specialist,
           ]),
           builder: (context, _) {
@@ -565,7 +563,6 @@ class _BrandWorkspaceSidebar extends StatelessWidget {
                 const SizedBox(height: 12),
                 _BrandIdentityCard(
                   profile: profile,
-                  preview: specialist == null,
                   onTap: () => onRouteTap(BrandSponsorRoutes.profile),
                 ),
                 const SizedBox(height: 14),
@@ -648,24 +645,19 @@ class _BrandWorkspaceSidebar extends StatelessWidget {
 
 class _BrandIdentityCard extends StatelessWidget {
   final BrandProfileDto? profile;
-  final bool preview;
   final VoidCallback onTap;
 
   const _BrandIdentityCard({
     required this.profile,
-    required this.preview,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final demo = BrandSponsorDemoData.profile;
-    final name =
-        profile?.name ?? (preview ? demo.name : 'Create brand profile');
-    final category =
-        profile?.category ?? (preview ? demo.category : 'Identity required');
-    final status = profile?.trustStatus ?? (preview ? 'Preview' : 'Pending');
+    final name = profile?.name ?? 'Create brand profile';
+    final category = profile?.category ?? 'Identity required';
+    final status = profile?.trustStatus ?? 'Pending';
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,

@@ -7,7 +7,6 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/brand_sponsor_demo_data.dart';
 import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -89,7 +88,14 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_specialist == null) return _buildPreview(context);
+    if (_specialist == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load brand data',
+        message:
+            'This dashboard only shows live opportunities, applications, deliverables and payments fetched from the backend.',
+      );
+    }
     if (_loading && !_loaded) {
       return const Center(
         child: Padding(
@@ -202,8 +208,6 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                 : _ActiveOpportunity(
                     opportunity: active,
                     onApplications: () {
-                      BrandSponsorDemoStore.instance
-                          .setActiveLiveOpportunity(active.publicId);
                       Navigator.pushNamed(
                         context,
                         BrandSponsorRoutes.applications,
@@ -261,38 +265,6 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                 ),
               ),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreview(BuildContext context) {
-    final opportunity = BrandSponsorDemoStore.instance.primaryOpportunity;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        BrandKpiRail(metrics: BrandSponsorDemoData.metrics),
-        const SizedBox(height: 12),
-        BrandTwoColumn(
-          left: BrandSectionCard(
-            title: 'Active brief',
-            icon: Icons.campaign_outlined,
-            selected: true,
-            child: BrandMediaFrame(
-              imageUrl: opportunity.imageUrl,
-              title: opportunity.title,
-              badge: opportunity.category,
-              fallbackIcon: Icons.campaign_outlined,
-              aspectRatio: 16 / 8.8,
-            ),
-          ),
-          right: BrandSectionCard(
-            title: 'Preview tasks',
-            icon: Icons.priority_high_rounded,
-            child: BrandTaskRail(
-              tasks: BrandSponsorDemoStore.instance.activeTasks,
-            ),
           ),
         ),
       ],
@@ -384,8 +356,6 @@ class _ActiveOpportunity extends StatelessWidget {
                 label: 'Edit brief',
                 compact: true,
                 onTap: () {
-                  BrandSponsorDemoStore.instance
-                      .setActiveLiveOpportunity(opportunity.publicId);
                   Navigator.pushNamed(
                     context,
                     BrandSponsorRoutes.composer,

@@ -4,7 +4,7 @@
 
 - Current master-report version: 1.0
 - Current phase: Other portals database-only perfection
-- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; next is P3 Super Admin static-data removal/API completion
+- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 Super Admin, Media/Equipment, and Brand Sponsor static-data cleanup complete; next is Location Owner or Actor/Talent static-store removal
 - Overall status: Phases 0, 1, 2, and 3 complete locally; Phase 4 profile/marketplace/portfolio/saved-search/shortlist foundation complete locally; Phase 5 projects/requirements/skills and project-room files/decisions foundation complete locally; Phase 6 booking/offer/counter/accept, booking inbox, manual availability blocks, availability lock, and conversation foundation complete locally; Phase 7 contract generation, signatures, legal review queue/decision, and addendum foundation complete locally; Phase 8 sandbox payment schedules, proof review, ledger, receipts, and payout-account foundation complete locally; Phase 9 location/equipment inspections, damage claims, safety checks/incidents/check-ins, **and insurance partner/policy/claim/evidence** backend now fully complete locally and in production (the insurance tables were missed in the original 2026-07-17 Phase 9 pass and closed out 2026-07-18); Phase 10 casting agency roster/audition/self-tape/notes/commission, brand opportunity/application/terms/deliverable/metrics, model rights/rates/restrictions, and distribution contact/release/handover/report foundation complete locally; Phase 11 reviews/dimensions/requests, reports/blocks, moderation cases/events, disputes/evidence/events, support tickets/messages, and announcements/notifications foundation complete locally; Phase 12 personal/admin dashboards, admin analytics, synchronous CSV export jobs, Sentry wiring, production DB backups, and a dependency security patch complete locally and deployed to production
 - Last updated: 2026-07-24
 - Updated by: Codex
@@ -1189,8 +1189,18 @@
   - Feature static search is clean: no `DemoData`, `DemoStore`, `media_equipment_demo_data`, `mock_data`, `sample`, or `static demo` matches under `lib/features/media_equipment`.
   - `flutter analyze` passed.
   - `flutter test test/media_equipment_portal_test.dart` passed.
+- Brand Sponsor static-data cleanup:
+  - Removed `BrandSponsorDemoData`/`BrandSponsorDemoStore` usage from BR-01 dashboard, BR-02 profile, BR-03 opportunity composer, BR-04 applications inbox, BR-05 negotiation terms, BR-06 campaign tracker, BR-07 payments records, shared live helpers, shell, and components.
+  - Replaced unauthenticated/demo preview branches with explicit sign-in/live-backend empty states.
+  - Kept live create/update flows connected to Specialist, Auth, and Payments controllers.
+  - Moved brand status label mapping into `brand_sponsor_live.dart`.
+  - Deleted `lib/features/brand_sponsors/data/brand_sponsor_demo_data.dart`.
+  - Feature static search is clean: no `BrandSponsorDemoData`, `BrandSponsorDemoStore`, `brand_sponsor_demo_data`, `_buildPreview`, `Preview`, or `preview` runtime matches under `lib/features/brand_sponsors`.
+  - `flutter analyze` passed.
+  - `flutter test test/brand_sponsor_portal_test.dart` passed.
+  - Flutter web was rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and deployed to `https://cine.nalexustechnologies.com`; HTTPS root returned HTTP 200 after sync.
 - Next:
-  - Continue with shared core mock cleanup, Brand Sponsor static-store removal, or Location Owner static-store removal.
+  - Deploy the latest Flutter web build, then continue with Location Owner, Actor/Talent, or Model Extension static-store removal.
 
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 
