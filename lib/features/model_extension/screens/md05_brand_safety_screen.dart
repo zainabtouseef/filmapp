@@ -7,9 +7,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
-import '../data/model_extension_demo_data.dart';
 
-/// MD-05 Brand Safety Preferences
 class MD05BrandSafetyScreen extends StatefulWidget {
   const MD05BrandSafetyScreen({super.key});
 
@@ -18,93 +16,104 @@ class MD05BrandSafetyScreen extends StatefulWidget {
 }
 
 class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
-  Future<List<ModelRestrictedCategoryDto>>? _restrictedFuture;
-  Future<ModelProfileDto?>? _profileFuture;
+  SpecialistController? _specialist;
+  Future<_SafetyData>? _future;
+  List<_RestrictionDraft> _restricted = const [];
+  bool _saving = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
-    _restrictedFuture ??= specialist?.modelRestrictedCategories(force: true);
-    _profileFuture ??= specialist?.modelProfile(force: true);
+    if (specialist == null || identical(specialist, _specialist)) return;
+    _specialist = specialist;
+    _future = _load(specialist);
+  }
+
+  Future<_SafetyData> _load(SpecialistController specialist) async {
+    final profile = await specialist.modelProfile(force: true);
+    final restricted = await specialist.modelRestrictedCategories(force: true);
+    return _SafetyData(profile: profile, restricted: restricted);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ModelExtensionDemoStore.instance,
-      builder: (context, _) {
-        final store = ModelExtensionDemoStore.instance;
+    final future = _future;
+    if (future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load brand safety',
+        message:
+            'Model visibility, private safety notes and restricted categories are fetched from the backend.',
+      );
+    }
+    return FutureBuilder<_SafetyData>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return CoreEmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Brand safety unavailable',
+            message: 'Could not load live brand safety preferences.',
+            actionLabel: 'Try again',
+            onAction: _reload,
+          );
+        }
+        final data = snapshot.data!;
+        if (_restricted.isEmpty) {
+          _restricted = _draftsFor(data.restricted);
+        }
+        final blocked = _restricted.where((item) => item.blocked).toList();
         return Column(
           children: [
             ActorSectionCard(
               title: 'Offer Screening',
               icon: Icons.shield_outlined,
-              selected: store.autoFlagViolations,
+              selected: blocked.isNotEmpty,
               child: Column(
                 children: [
-                  if (_profileFuture != null)
-                    FutureBuilder<ModelProfileDto?>(
-                      future: _profileFuture,
-                      builder: (context, snapshot) {
-                        final profile = snapshot.data;
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const InlineNotice(
-                            message: 'Loading live safety profile...',
-                            icon: Icons.hourglass_top_rounded,
-                          );
-                        }
-                        if (profile == null) return const SizedBox.shrink();
-                        return Column(
-                          children: [
-                            _ModelSafetySwitch(
-                              label: 'Public model discovery',
-                              subtitle: profile.publicVisibility
-                                  ? 'Directors can discover this model extension.'
-                                  : 'The model extension is hidden from discovery.',
-                              value: profile.publicVisibility,
-                              onChanged: _updateVisibility,
-                            ),
-                            ActorInfoRow(
-                              icon: Icons.notes_outlined,
-                              label: 'Safety notes',
-                              value:
-                                  profile.brandSafetyNotes?.trim().isNotEmpty ==
-                                          true
-                                      ? profile.brandSafetyNotes!
-                                      : 'No private review notes added',
-                            ),
-                            const SizedBox(height: 8),
-                            CoreSecondaryButton(
-                              icon: Icons.edit_note_outlined,
-                              label: 'Edit safety notes',
-                              compact: true,
-                              onTap: () => _showNotes(profile),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                        );
-                      },
-                    ),
                   _ModelSafetySwitch(
-                    label: 'Auto-flag violations',
-                    subtitle:
-                        'Offers violating preferences are marked before inbox.',
-                    value: store.autoFlagViolations,
-                    onChanged: store.toggleAutoFlag,
+                    label: 'Public model discovery',
+                    subtitle: data.profile?.publicVisibility == true
+                        ? 'Directors can discover this model extension.'
+                        : 'The model extension is hidden from discovery.',
+                    value: data.profile?.publicVisibility ?? false,
+                    onChanged: _updateVisibility,
                   ),
+                  ActorInfoRow(
+                    icon: Icons.notes_outlined,
+                    label: 'Safety notes',
+                    value: data.profile?.brandSafetyNotes?.trim().isNotEmpty ==
+                            true
+                        ? data.profile!.brandSafetyNotes!
+                        : 'No private review notes added',
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.edit_note_outlined,
+                    label: 'Edit safety notes',
+                    compact: true,
+                    onTap: () => _showNotes(data.profile),
+                  ),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       StatusChip(
-                        label:
-                            '${store.restricted.where((item) => item.blocked).length} blocked',
+                        label: '${blocked.length} blocked',
                         color: context.appColors.danger,
                       ),
                       StatusChip(
-                        label: 'Notifies counterparty',
+                        label: 'Backend restrictions',
                         color: context.appColors.infoBlue,
                       ),
                     ],
@@ -116,115 +125,52 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
             ActorSectionCard(
               title: 'Restricted Categories',
               icon: Icons.block_rounded,
+              actionText: _saving ? 'Saving...' : 'Save',
+              onActionTap: _saving ? null : _saveRestrictions,
               child: Column(
                 children: [
-                  if (_restrictedFuture != null)
-                    FutureBuilder<List<ModelRestrictedCategoryDto>>(
-                      future: _restrictedFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: InlineNotice(
-                              message: 'Loading live brand safety rules...',
-                              icon: Icons.hourglass_top_rounded,
-                            ),
-                          );
-                        }
-                        final rows = snapshot.data ?? const [];
-                        if (rows.isEmpty) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message:
-                                'Live brand safety connected: ${rows.where((row) => row.blocked).length}/${rows.length} restricted.',
-                            icon: Icons.cloud_done_outlined,
-                            tone: CoreStatusTone.success,
-                          ),
-                        );
-                      },
-                    ),
-                  for (final category in store.restricted)
+                  InlineNotice(
+                    message:
+                        'Live brand safety connected: ${blocked.length}/${_restricted.length} restricted.',
+                    icon: Icons.cloud_done_outlined,
+                    tone: CoreStatusTone.success,
+                  ),
+                  const SizedBox(height: 10),
+                  for (final category in _restricted)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _RestrictedRow(id: category.id),
+                      child: _RestrictedRow(
+                        item: category,
+                        onChanged: () => _toggleRestricted(category.id),
+                      ),
                     ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             ActorSectionCard(
-              title: 'Auto-Flag Preview',
+              title: 'Offer Flagging Rules',
               icon: Icons.flag_outlined,
-              child: Builder(
-                builder: (context) {
-                  final blocked = store.restricted
-                      .where((item) => item.blocked)
-                      .map((item) => item.label)
-                      .toList();
-                  final previewText = blocked.isEmpty
-                      ? 'No categories are currently blocked, so no campaigns will be auto-flagged.'
-                      : 'A campaign tagged ${blocked.join(", ")} would be stopped before reaching the opportunity inbox.';
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        previewText,
-                        style: AppTextStyles.body.copyWith(
-                          color: context.appColors.textSecondary,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      CoreSecondaryButton(
-                        icon: Icons.save_outlined,
-                        label: 'Save live restrictions',
-                        compact: true,
-                        onTap: () async {
-                          final specialist = SpecialistScope.maybeOf(context);
-                          if (specialist == null) return;
-                          try {
-                            await specialist.updateModelRestrictedCategories(
-                              store.restricted
-                                  .map(
-                                    (item) => {
-                                      'category': item.label,
-                                      'blocked': item.blocked,
-                                      'reason': item.blocked
-                                          ? 'Model preference'
-                                          : null,
-                                    },
-                                  )
-                                  .toList(),
-                            );
-                            if (!context.mounted) return;
-                            setState(() => _restrictedFuture = specialist
-                                .modelRestrictedCategories(force: true));
-                            actorSnack(context, 'Live restrictions saved');
-                          } catch (error) {
-                            if (context.mounted) {
-                              actorSnack(
-                                  context, 'Live restrictions skipped: $error');
-                            }
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      CorePrimaryButton(
-                        icon: Icons.report_gmailerrorred_outlined,
-                        label: 'Simulate flagged offer',
-                        compact: true,
-                        onTap: () => actorSnack(
-                          context,
-                          blocked.isEmpty
-                              ? 'No restricted categories active — nothing to flag'
-                              : 'Offer tagged "${blocked.first}" auto-flagged and hidden from inbox',
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    blocked.isEmpty
+                        ? 'No categories are currently blocked, so offers are not pre-filtered by model brand-safety preference.'
+                        : 'Offers tagged ${blocked.map((item) => item.label).join(", ")} should be reviewed before reaching the opportunity inbox.',
+                    style: AppTextStyles.body.copyWith(
+                      color: context.appColors.textSecondary,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CorePrimaryButton(
+                    icon: Icons.save_outlined,
+                    label: _saving ? 'Saving...' : 'Save live restrictions',
+                    compact: true,
+                    onTap: _saving ? null : _saveRestrictions,
+                  ),
+                ],
               ),
             ),
           ],
@@ -233,27 +179,79 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
     );
   }
 
+  List<_RestrictionDraft> _draftsFor(
+    List<ModelRestrictedCategoryDto> restricted,
+  ) {
+    final existing = {
+      for (final item in restricted) _normalize(item.category): item,
+    };
+    return _restrictionConfigs.map((config) {
+      final live = existing[_normalize(config.label)];
+      return _RestrictionDraft(
+        id: config.id,
+        label: config.label,
+        blocked: live?.blocked ?? false,
+      );
+    }).toList();
+  }
+
+  void _toggleRestricted(String id) {
+    setState(() {
+      _restricted = _restricted.map((item) {
+        if (item.id != id) return item;
+        return item.copyWith(blocked: !item.blocked);
+      }).toList();
+    });
+  }
+
+  Future<void> _saveRestrictions() async {
+    final specialist = _specialist;
+    if (specialist == null) {
+      actorSnack(context, 'Sign in to save brand safety restrictions');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await specialist.updateModelRestrictedCategories(
+        _restricted
+            .map(
+              (item) => {
+                'category': item.label,
+                'blocked': item.blocked,
+                'reason': item.blocked ? 'Model preference' : null,
+              },
+            )
+            .toList(),
+      );
+      if (!mounted) return;
+      actorSnack(context, 'Live restrictions saved');
+      _reload();
+    } catch (error) {
+      if (mounted) actorSnack(context, 'Could not save restrictions: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _updateVisibility(bool value) async {
-    final specialist = SpecialistScope.maybeOf(context);
+    final specialist = _specialist;
     if (specialist == null) return;
     try {
       await specialist.upsertModelProfile({'public_visibility': value});
       if (!mounted) return;
-      setState(
-        () => _profileFuture = specialist.modelProfile(force: true),
-      );
       actorSnack(
         context,
         value ? 'Model discovery enabled' : 'Model discovery hidden',
       );
+      _reload();
     } catch (error) {
       if (mounted) actorSnack(context, 'Could not update visibility: $error');
     }
   }
 
-  void _showNotes(ModelProfileDto profile) {
+  void _showNotes(ModelProfileDto? profile) {
     final pageContext = context;
-    final notes = TextEditingController(text: profile.brandSafetyNotes ?? '');
+    final notes = TextEditingController(text: profile?.brandSafetyNotes ?? '');
     showActorSheet(
       context,
       title: 'Private brand safety notes',
@@ -271,7 +269,7 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
             icon: Icons.save_outlined,
             label: 'Save notes',
             onTap: () async {
-              final specialist = SpecialistScope.maybeOf(context);
+              final specialist = _specialist;
               if (specialist == null) return;
               try {
                 await specialist.upsertModelProfile({
@@ -279,10 +277,8 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
                 });
                 if (!mounted || !context.mounted) return;
                 Navigator.pop(context);
-                setState(
-                  () => _profileFuture = specialist.modelProfile(force: true),
-                );
                 actorSnack(pageContext, 'Brand safety notes saved');
+                _reload();
               } catch (error) {
                 if (context.mounted) {
                   actorSnack(context, 'Could not save notes: $error');
@@ -293,6 +289,15 @@ class _MD05BrandSafetyScreenState extends State<MD05BrandSafetyScreen> {
         ],
       ),
     ).whenComplete(notes.dispose);
+  }
+
+  void _reload() {
+    final specialist = _specialist;
+    if (specialist == null) return;
+    setState(() {
+      _restricted = const [];
+      _future = _load(specialist);
+    });
   }
 }
 
@@ -352,14 +357,16 @@ class _ModelSafetySwitch extends StatelessWidget {
 }
 
 class _RestrictedRow extends StatelessWidget {
-  final String id;
+  final _RestrictionDraft item;
+  final VoidCallback onChanged;
 
-  const _RestrictedRow({required this.id});
+  const _RestrictedRow({
+    required this.item,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final store = ModelExtensionDemoStore.instance;
-    final item = store.restricted.firstWhere((entry) => entry.id == id);
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -387,15 +394,55 @@ class _RestrictedRow extends StatelessWidget {
               ),
             ),
           ),
-          Switch(
-            value: item.blocked,
-            onChanged: (_) {
-              store.toggleRestricted(item.id);
-              actorSnack(context, '${item.label} preference updated');
-            },
-          ),
+          Switch(value: item.blocked, onChanged: (_) => onChanged()),
         ],
       ),
     );
   }
 }
+
+class _SafetyData {
+  final ModelProfileDto? profile;
+  final List<ModelRestrictedCategoryDto> restricted;
+
+  const _SafetyData({
+    required this.profile,
+    required this.restricted,
+  });
+}
+
+class _RestrictionDraft {
+  final String id;
+  final String label;
+  final bool blocked;
+
+  const _RestrictionDraft({
+    required this.id,
+    required this.label,
+    required this.blocked,
+  });
+
+  _RestrictionDraft copyWith({bool? blocked}) {
+    return _RestrictionDraft(
+      id: id,
+      label: label,
+      blocked: blocked ?? this.blocked,
+    );
+  }
+}
+
+typedef _RestrictionConfig = ({String id, String label});
+
+const _restrictionConfigs = <_RestrictionConfig>[
+  (id: 'tobacco', label: 'Tobacco'),
+  (id: 'political', label: 'Political'),
+  (id: 'adult', label: 'Adult content'),
+  (id: 'gambling', label: 'Gambling'),
+  (id: 'crypto', label: 'Crypto ads'),
+  (id: 'skin_lightening', label: 'Skin-lightening products'),
+  (id: 'weapons', label: 'Weapons'),
+  (id: 'alcohol', label: 'Alcohol'),
+];
+
+String _normalize(String value) =>
+    value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');

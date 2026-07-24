@@ -59,7 +59,7 @@ Status meanings:
 | Brand Sponsor | LIVE/CLEANED | `brand_sponsor_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `BrandSponsorDemoData`, `BrandSponsorDemoStore`, `brand_sponsor_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Specialist, Payments, Auth | Continue live walkthrough and verify seeded brand applications/deliverables/payments cover each screen. |
 | Location Owner | LIVE/CLEANED | `location_owner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `LocationOwnerDemoData`, `LocationOwnerDemoStore`, `location_owner_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Operations, Bookings, Payments, Auth | Continue live walkthrough and verify seeded property/bookings/inspection/payment records cover each screen. |
 | Actor/Talent | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth, Bookings, Contracts, Payments, TrustSafety | Many existing APIs; rate-card/profile/reputation gaps need careful handling. |
-| Model Extension | PARTIAL | `ModelExtensionDemoData`, `ModelExtensionDemoStore` | Specialist, Auth | Model APIs exist; remove local profile/rates/restrictions fallbacks. |
+| Model Extension | LIVE/CLEANED | `model_extension_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `ModelExtensionDemoData`, `ModelExtensionDemoStore`, `model_extension_demo_data`, preview-mode, or `_Preview*` runtime matches remain | Specialist, Auth | Continue live walkthrough and verify seeded model categories/rights/rates/restrictions/media cover each screen. |
 | Casting Agency | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist only on first screens | Specialist APIs exist but most screens still local. |
 | Crew Services | DEMO/GAP | `CrewServicesDemoData`, `CrewServicesDemoStore` | Bookings only on availability | Requires crew-specific backend decision. |
 | Legal Partner | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts | Contract/legal review APIs exist; billing/template review may need backend additions. |
@@ -128,16 +128,19 @@ Replacement path:
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| MD-01 Campaign Categories | PARTIAL | `ModelExtensionDemoData`, `ModelExtensionDemoStore` | Specialist |
-| MD-02 Usage Rights | PARTIAL | `ModelExtensionDemoData`, `ModelExtensionDemoStore` | Specialist |
-| MD-03 Portfolio Categories | PARTIAL | `ModelExtensionDemoData`, `ModelExtensionDemoStore` | Auth |
-| MD-04 Rate by Usage | PARTIAL | `ModelExtensionDemoStore` | Specialist |
-| MD-05 Brand Safety | PARTIAL | `ModelExtensionDemoStore` | Specialist |
+| MD-01 Campaign Categories | CLEANED | none | Specialist |
+| MD-02 Usage Rights | CLEANED | none | Specialist |
+| MD-03 Portfolio Categories | CLEANED | none | Auth |
+| MD-04 Rate by Usage | CLEANED | none | Specialist |
+| MD-05 Brand Safety | CLEANED | none | Specialist |
 
-Replacement path:
+Cleanup result:
 
-- Use `/model/profile`, `/model/campaign-categories`, `/model/usage-rights`, `/model/usage-rates`, `/model/restricted-categories`, `/portfolio`.
-- Remove static hero/profile images and replace with backend media/file URLs.
+- MD-01 through MD-05 now render backend data or explicit sign-in/empty/error states.
+- Offline preview/demo branches were removed from campaign categories, usage rights, portfolio categories, usage rates, and brand safety.
+- Category and restriction options remain configuration-only UI choices; selected/live values are loaded from backend model profile records.
+- Shared status/platform labels now live in `model_extension_components.dart` instead of demo data.
+- Verified with `flutter analyze` and `flutter test test/model_extension_portal_test.dart`.
 
 ### 4.6 Location Owner
 

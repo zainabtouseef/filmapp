@@ -12,7 +12,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
-import '../data/model_extension_demo_data.dart';
 
 class MD03PortfolioCategoriesScreen extends StatefulWidget {
   const MD03PortfolioCategoriesScreen({super.key});
@@ -53,9 +52,9 @@ class _MD03PortfolioCategoriesScreenState
           selected: true,
           child: ActorTwoColumn(
             left: const ActorMediaFrame(
-              imageUrl: ModelExtensionDemoData.heroImage,
+              imageUrl: '',
               title: 'Director-facing model profile',
-              badge: 'Protected preview',
+              badge: 'Backend media',
               fallbackIcon: Icons.style_outlined,
               aspectRatio: 16 / 10,
             ),
@@ -74,7 +73,7 @@ class _MD03PortfolioCategoriesScreenState
                 ActorInfoRow(
                   icon: Icons.category_outlined,
                   label: 'Director use',
-                  value: 'Casting filters and shortlist preview',
+                  value: 'Casting filters and shortlist media',
                 ),
               ],
             ),
@@ -87,7 +86,12 @@ class _MD03PortfolioCategoriesScreenState
           actionText: _uploading ? 'Uploading...' : 'Upload',
           onActionTap: _uploading ? null : _uploadMedia,
           child: _itemsFuture == null
-              ? _PreviewPortfolio(filter: _filter, onFilter: _setFilter)
+              ? const CoreEmptyState(
+                  icon: Icons.cloud_sync_outlined,
+                  title: 'Sign in to load model portfolio',
+                  message:
+                      'Portfolio media is fetched from backend model portfolio records.',
+                )
               : FutureBuilder<List<MarketplacePortfolioItem>>(
                   future: _itemsFuture,
                   builder: (context, snapshot) {
@@ -98,19 +102,12 @@ class _MD03PortfolioCategoriesScreenState
                       );
                     }
                     if (snapshot.hasError) {
-                      return Column(
-                        children: [
-                          const InlineNotice(
-                            message:
-                                'Live portfolio is unavailable. Preview assets are shown.',
-                            icon: Icons.cloud_off_outlined,
-                          ),
-                          const SizedBox(height: 10),
-                          _PreviewPortfolio(
-                            filter: _filter,
-                            onFilter: _setFilter,
-                          ),
-                        ],
+                      return CoreEmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Portfolio unavailable',
+                        message: 'Could not load live model portfolio media.',
+                        actionLabel: 'Try again',
+                        onAction: () => setState(_reload),
                       );
                     }
                     final all = snapshot.data ?? const [];
@@ -389,58 +386,6 @@ class _LivePortfolioCard extends StatelessWidget {
                 onTap: busy || item.isCover ? null : onCover,
               ),
             ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _PreviewPortfolio extends StatelessWidget {
-  final String filter;
-  final ValueChanged<String> onFilter;
-
-  const _PreviewPortfolio({
-    required this.filter,
-    required this.onFilter,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final store = ModelExtensionDemoStore.instance;
-    final categories = <String>{
-      'All',
-      ...store.portfolio.map((item) => item.category),
-    }.toList();
-    final items = store.portfolio
-        .where((item) => filter == 'All' || item.category == filter)
-        .toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const InlineNotice(
-          message: 'Preview mode. Sign in to manage live model media.',
-          icon: Icons.visibility_outlined,
-        ),
-        const SizedBox(height: 10),
-        _CategoryFilters(
-          categories: categories,
-          selected: filter,
-          onSelected: onFilter,
-        ),
-        const SizedBox(height: 12),
-        ActorResponsiveGrid(
-          minWidth: 230,
-          children: [
-            for (final item in items)
-              ActorMediaFrame(
-                imageUrl: item.imageUrl,
-                title: item.title,
-                badge: item.category,
-                fallbackIcon: Icons.photo_library_outlined,
-                aspectRatio: 4 / 5,
-                compact: true,
-              ),
           ],
         ),
       ],

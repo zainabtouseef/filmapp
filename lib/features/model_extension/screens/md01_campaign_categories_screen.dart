@@ -7,11 +7,8 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
-import '../data/model_extension_demo_data.dart';
-import '../models/model_extension_models.dart';
 import '../routes/model_extension_routes.dart';
 
-/// MD-01 Campaign Categories Setup
 class MD01CampaignCategoriesScreen extends StatefulWidget {
   const MD01CampaignCategoriesScreen({super.key});
 
@@ -22,64 +19,87 @@ class MD01CampaignCategoriesScreen extends StatefulWidget {
 
 class _MD01CampaignCategoriesScreenState
     extends State<MD01CampaignCategoriesScreen> {
+  SpecialistController? _specialist;
   Future<ModelProfileDto?>? _profileFuture;
+  List<_CategoryDraft> _categories = const [];
+  bool _saving = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
-    _profileFuture ??= specialist?.modelProfile(force: true);
+    if (specialist == null || identical(specialist, _specialist)) return;
+    _specialist = specialist;
+    _profileFuture = specialist.modelProfile(force: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ModelExtensionDemoStore.instance,
-      builder: (context, _) {
-        final store = ModelExtensionDemoStore.instance;
+    final future = _profileFuture;
+    if (future == null) {
+      return const CoreEmptyState(
+        icon: Icons.cloud_sync_outlined,
+        title: 'Sign in to load model categories',
+        message:
+            'Campaign fit, public visibility and model category rules are fetched from the backend.',
+      );
+    }
+    return FutureBuilder<ModelProfileDto?>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return CoreEmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Model categories unavailable',
+            message: 'Could not load live model profile categories.',
+            actionLabel: 'Try again',
+            onAction: _reload,
+          );
+        }
+        final profile = snapshot.data;
+        if (_categories.isEmpty) {
+          _categories = _draftsFor(profile);
+        }
+        final selectedCount = _categories.where((item) => item.selected).length;
+        final publicCount = _categories
+            .where((item) => item.selected && item.publicVisible)
+            .length;
         return Column(
           children: [
             ActorSectionCard(
               title: 'Model Profile Extension',
               icon: Icons.category_outlined,
-              selected: store.selectedCategoryCount < 6,
+              selected: selectedCount < 6,
               child: ActorTwoColumn(
                 left: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const StepWizardIndicator(currentStep: 1, totalSteps: 3),
                     const SizedBox(height: 14),
-                    if (_profileFuture != null)
-                      FutureBuilder<ModelProfileDto?>(
-                        future: _profileFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Padding(
-                              padding: EdgeInsets.only(bottom: 10),
-                              child: InlineNotice(
-                                message: 'Loading live model profile...',
-                                icon: Icons.hourglass_top_rounded,
-                              ),
-                            );
-                          }
-                          final live = snapshot.data;
-                          if (live == null) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: InlineNotice(
-                              message:
-                                  'Live model extension: ${live.campaignCategories.length} category rule(s), ${live.usageRights.length} rights.',
-                              icon: Icons.cloud_done_outlined,
-                              tone: CoreStatusTone.success,
-                            ),
-                          );
-                        },
-                      ),
+                    InlineNotice(
+                      message: profile == null
+                          ? 'No model extension profile exists yet. Saving categories will create live backend rules.'
+                          : 'Live model extension: ${profile.campaignCategories.length} category rule(s), ${profile.usageRights.length} rights.',
+                      icon: profile == null
+                          ? Icons.info_outline_rounded
+                          : Icons.cloud_done_outlined,
+                      tone: profile == null
+                          ? CoreStatusTone.info
+                          : CoreStatusTone.success,
+                    ),
+                    const SizedBox(height: 12),
                     const ActorMediaFrame(
-                      imageUrl: ModelExtensionDemoData.heroImage,
-                      title: 'Campaign fit preview',
-                      badge: 'Model',
+                      imageUrl: '',
+                      title: 'Campaign fit',
+                      badge: 'Backend profile',
                       fallbackIcon: Icons.style_outlined,
                       aspectRatio: 16 / 10,
                     ),
@@ -89,27 +109,25 @@ class _MD01CampaignCategoriesScreenState
                       runSpacing: 8,
                       children: [
                         StatusChip(
-                          label: '${store.selectedCategoryCount} selected',
+                          label: '$selectedCount selected',
                           color: context.appColors.goldMid,
                         ),
                         StatusChip(
-                          label: '${store.publicCategoryCount} visible',
+                          label: '$publicCount visible',
                           color: context.appColors.infoBlue,
                         ),
                         StatusChip(
-                          label: store.savedToContractRules
-                              ? 'Saved'
-                              : 'Draft state',
-                          color: store.savedToContractRules
-                              ? context.appColors.success
-                              : context.appColors.goldMid,
+                          label: profile == null ? 'Not saved' : 'Live rules',
+                          color: profile == null
+                              ? context.appColors.goldMid
+                              : context.appColors.success,
                         ),
                       ],
                     ),
                   ],
                 ),
-                right: Column(
-                  children: const [
+                right: const Column(
+                  children: [
                     ActorInfoRow(
                       icon: Icons.visibility_outlined,
                       label: 'Public view',
@@ -118,12 +136,12 @@ class _MD01CampaignCategoriesScreenState
                     ActorInfoRow(
                       icon: Icons.verified_user_outlined,
                       label: 'Review',
-                      value: 'Saved changes update demo entity',
+                      value: 'Saved changes update backend rules',
                     ),
                     ActorInfoRow(
                       icon: Icons.link_outlined,
                       label: 'Connected to',
-                      value: 'DP-06, DP-10, SC-12',
+                      value: 'Offers, rights and model releases',
                     ),
                   ],
                 ),
@@ -133,46 +151,19 @@ class _MD01CampaignCategoriesScreenState
             ActorSectionCard(
               title: 'Campaign Categories',
               icon: Icons.tune_outlined,
-              actionText: 'Save',
-              onActionTap: () async {
-                store.saveCategories();
-                final specialist = SpecialistScope.maybeOf(context);
-                if (specialist != null) {
-                  try {
-                    await specialist.updateModelCampaignCategories(
-                      store.categories
-                          .map(
-                            (category) => {
-                              'category': category.label,
-                              'selected': category.selected,
-                              'public_visible': category.publicVisible,
-                            },
-                          )
-                          .toList(),
-                    );
-                    if (context.mounted) {
-                      setState(() => _profileFuture =
-                          specialist.modelProfile(force: true));
-                    }
-                  } catch (error) {
-                    if (context.mounted) {
-                      actorSnack(context, 'Live category save skipped: $error');
-                    }
-                  }
-                }
-                if (!context.mounted) return;
-                actorSnack(context, 'Campaign categories saved');
-                await Future.delayed(const Duration(milliseconds: 600));
-                if (context.mounted) {
-                  Navigator.pushNamed(
-                      context, ModelExtensionRoutes.usageRights);
-                }
-              },
+              actionText: _saving ? 'Saving...' : 'Save',
+              onActionTap: _saving ? null : _saveCategories,
               child: ActorResponsiveGrid(
                 minWidth: 150,
                 children: [
-                  for (final category in store.categories)
-                    _CategoryCard(category: category),
+                  for (final category in _categories)
+                    _CategoryCard(
+                      category: category,
+                      onToggleSelected: () => _toggleCategory(category.id),
+                      onToggleVisible: category.selected
+                          ? () => _toggleVisibility(category.id)
+                          : null,
+                    ),
                 ],
               ),
             ),
@@ -181,16 +172,106 @@ class _MD01CampaignCategoriesScreenState
       },
     );
   }
+
+  List<_CategoryDraft> _draftsFor(ModelProfileDto? profile) {
+    final existing = {
+      for (final item
+          in profile?.campaignCategories ?? const <ModelCampaignCategoryDto>[])
+        _normalize(item.category): item,
+    };
+    return _categoryConfigs.map((config) {
+      final live = existing[_normalize(config.label)];
+      return _CategoryDraft(
+        id: config.id,
+        label: config.label,
+        icon: config.icon,
+        selected: live?.selected ?? false,
+        publicVisible: live?.publicVisible ?? true,
+      );
+    }).toList();
+  }
+
+  void _toggleCategory(String id) {
+    setState(() {
+      _categories = _categories.map((item) {
+        if (item.id != id) return item;
+        final selected = !item.selected;
+        return item.copyWith(
+          selected: selected,
+          publicVisible: selected ? item.publicVisible : false,
+        );
+      }).toList();
+    });
+  }
+
+  void _toggleVisibility(String id) {
+    setState(() {
+      _categories = _categories.map((item) {
+        if (item.id != id) return item;
+        return item.copyWith(publicVisible: !item.publicVisible);
+      }).toList();
+    });
+  }
+
+  Future<void> _saveCategories() async {
+    final specialist = _specialist;
+    if (specialist == null) {
+      actorSnack(context, 'Sign in to save model categories');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await specialist.updateModelCampaignCategories(
+        _categories
+            .map(
+              (category) => {
+                'category': category.label,
+                'selected': category.selected,
+                'public_visible': category.publicVisible,
+              },
+            )
+            .toList(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _profileFuture = specialist.modelProfile(force: true);
+        _categories = const [];
+      });
+      actorSnack(context, 'Campaign categories saved');
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (mounted) {
+        Navigator.pushNamed(context, ModelExtensionRoutes.usageRights);
+      }
+    } catch (error) {
+      if (mounted) actorSnack(context, 'Could not save categories: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _reload() {
+    final specialist = _specialist;
+    if (specialist == null) return;
+    setState(() {
+      _categories = const [];
+      _profileFuture = specialist.modelProfile(force: true);
+    });
+  }
 }
 
 class _CategoryCard extends StatelessWidget {
-  final ModelCampaignCategory category;
+  final _CategoryDraft category;
+  final VoidCallback onToggleSelected;
+  final VoidCallback? onToggleVisible;
 
-  const _CategoryCard({required this.category});
+  const _CategoryCard({
+    required this.category,
+    required this.onToggleSelected,
+    required this.onToggleVisible,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final store = ModelExtensionDemoStore.instance;
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -208,7 +289,7 @@ class _CategoryCard extends StatelessWidget {
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => store.toggleCategory(category.id),
+            onTap: onToggleSelected,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -258,9 +339,8 @@ class _CategoryCard extends StatelessWidget {
               ),
               Switch(
                 value: category.publicVisible,
-                onChanged: category.selected
-                    ? (_) => store.toggleCategoryVisibility(category.id)
-                    : null,
+                onChanged:
+                    onToggleVisible == null ? null : (_) => onToggleVisible!(),
               ),
             ],
           ),
@@ -269,3 +349,49 @@ class _CategoryCard extends StatelessWidget {
     );
   }
 }
+
+class _CategoryDraft {
+  final String id;
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final bool publicVisible;
+
+  const _CategoryDraft({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.publicVisible,
+  });
+
+  _CategoryDraft copyWith({bool? selected, bool? publicVisible}) {
+    return _CategoryDraft(
+      id: id,
+      label: label,
+      icon: icon,
+      selected: selected ?? this.selected,
+      publicVisible: publicVisible ?? this.publicVisible,
+    );
+  }
+}
+
+typedef _CategoryConfig = ({String id, String label, IconData icon});
+
+const _categoryConfigs = <_CategoryConfig>[
+  (id: 'fashion', label: 'Fashion', icon: Icons.checkroom_outlined),
+  (id: 'beauty', label: 'Beauty', icon: Icons.face_retouching_natural),
+  (id: 'jewellery', label: 'Jewellery', icon: Icons.diamond_outlined),
+  (id: 'lifestyle', label: 'Lifestyle', icon: Icons.local_florist_outlined),
+  (id: 'sports', label: 'Sportswear', icon: Icons.sports_soccer_outlined),
+  (id: 'luxury', label: 'Luxury', icon: Icons.workspace_premium_outlined),
+  (id: 'commercial', label: 'Commercial', icon: Icons.campaign_outlined),
+  (id: 'editorial', label: 'Editorial', icon: Icons.auto_stories_outlined),
+  (id: 'bridal', label: 'Bridal', icon: Icons.favorite_border_rounded),
+  (id: 'fitness', label: 'Fitness', icon: Icons.fitness_center_outlined),
+  (id: 'runway', label: 'Runway', icon: Icons.directions_walk_outlined),
+  (id: 'ecommerce', label: 'E-commerce', icon: Icons.shopping_bag_outlined),
+];
+
+String _normalize(String value) =>
+    value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');

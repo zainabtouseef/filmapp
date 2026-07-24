@@ -7,8 +7,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
-import '../data/model_extension_demo_data.dart';
-import '../models/model_extension_models.dart';
 import '../widgets/model_extension_components.dart';
 
 class MD04RateByUsageScreen extends StatefulWidget {
@@ -71,7 +69,12 @@ class _MD04RateByUsageScreenState extends State<MD04RateByUsageScreen> {
           actionText: 'Add rate',
           onActionTap: _showAddRate,
           child: _ratesFuture == null
-              ? const _PreviewRates()
+              ? const CoreEmptyState(
+                  icon: Icons.cloud_sync_outlined,
+                  title: 'Sign in to load usage rates',
+                  message:
+                      'Commercial model rates are fetched from backend usage-rate records.',
+                )
               : FutureBuilder<List<ModelUsageRateDto>>(
                   future: _ratesFuture,
                   builder: (context, snapshot) {
@@ -82,16 +85,12 @@ class _MD04RateByUsageScreenState extends State<MD04RateByUsageScreen> {
                       );
                     }
                     if (snapshot.hasError) {
-                      return const Column(
-                        children: [
-                          InlineNotice(
-                            message:
-                                'Live rates are unavailable. Preview values are shown.',
-                            icon: Icons.cloud_off_outlined,
-                          ),
-                          SizedBox(height: 10),
-                          _PreviewRates(),
-                        ],
+                      return CoreEmptyState(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Usage rates unavailable',
+                        message: 'Could not load live usage rates.',
+                        actionLabel: 'Try again',
+                        onAction: () => setState(_reload),
                       );
                     }
                     final rows = snapshot.data ?? const [];
@@ -209,8 +208,7 @@ class _MD04RateByUsageScreenState extends State<MD04RateByUsageScreen> {
                   }
                   final specialist = SpecialistScope.maybeOf(context);
                   if (specialist == null) {
-                    Navigator.pop(context);
-                    actorSnack(this.context, 'Preview mode only');
+                    actorSnack(context, 'Sign in to create usage rates');
                     return;
                   }
                   try {
@@ -353,86 +351,6 @@ class _LiveUsageRateRow extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewRates extends StatelessWidget {
-  const _PreviewRates();
-
-  @override
-  Widget build(BuildContext context) {
-    final store = ModelExtensionDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        return Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: InlineNotice(
-                message: 'Preview mode. Sign in to manage live rates.',
-                icon: Icons.visibility_outlined,
-              ),
-            ),
-            for (final rate in store.rates)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _PreviewRateRow(rate: rate),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _PreviewRateRow extends StatelessWidget {
-  final ModelUsageRate rate;
-
-  const _PreviewRateRow({required this.rate});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: colors.inactiveChipGradient,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rate.label,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  rate.scope,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            modelMoney(rate.amount),
-            style: AppTextStyles.smallMetricNumber.copyWith(
-              color: colors.textPrimary,
-            ),
           ),
         ],
       ),
