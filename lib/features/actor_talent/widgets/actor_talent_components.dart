@@ -7,7 +7,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
 
 Color actorToneColor(BuildContext context, ActorTone tone) {
@@ -35,6 +34,20 @@ Color actorStatusColor(BuildContext context, ActorBookingStatus status) {
       colors.goldMid,
     ActorBookingStatus.disputed => colors.danger,
     _ => colors.infoBlue,
+  };
+}
+
+String actorStatusLabel(ActorBookingStatus status) {
+  return switch (status) {
+    ActorBookingStatus.sent => 'Sent',
+    ActorBookingStatus.underNegotiation => 'Negotiating',
+    ActorBookingStatus.termsApproved => 'Terms approved',
+    ActorBookingStatus.contractPending => 'Contract pending',
+    ActorBookingStatus.paymentPending => 'Payment pending',
+    ActorBookingStatus.underVerification => 'Under verification',
+    ActorBookingStatus.secured => 'Secured',
+    ActorBookingStatus.closed => 'Closed',
+    ActorBookingStatus.disputed => 'Disputed',
   };
 }
 
@@ -595,7 +608,7 @@ class ActorOpportunityCard extends StatelessWidget {
                 ),
               ),
               StatusChip(
-                label: ActorTalentDemoData.statusLabel(status),
+                label: actorStatusLabel(status),
                 color: actorStatusColor(context, status),
               ),
             ],
@@ -845,7 +858,7 @@ class ActorTimeline extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        ActorTalentDemoData.statusLabel(item.$2),
+                        actorStatusLabel(item.$2),
                         style: AppTextStyles.smallMeta.copyWith(
                           color: actorStatusColor(context, item.$2),
                         ),

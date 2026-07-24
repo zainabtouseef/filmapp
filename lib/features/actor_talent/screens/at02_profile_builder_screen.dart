@@ -6,7 +6,6 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/actor_talent_demo_data.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
 
@@ -47,23 +46,22 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   @override
   void initState() {
     super.initState();
-    final store = ActorTalentDemoStore.instance;
-    stageName = TextEditingController(text: store.profileStageName);
-    realName = TextEditingController(text: store.profileRealName);
-    city = TextEditingController(text: store.profileCity);
-    languages = TextEditingController(text: store.profileLanguages);
-    skills = TextEditingController(text: store.profileSkills);
-    credits = TextEditingController(text: store.profileCredits);
-    instagram = TextEditingController(text: store.profileInstagram);
-    followers = TextEditingController(text: store.profileFollowers);
+    stageName = TextEditingController();
+    realName = TextEditingController();
+    city = TextEditingController();
+    languages = TextEditingController();
+    skills = TextEditingController();
+    credits = TextEditingController();
+    instagram = TextEditingController();
+    followers = TextEditingController();
     website = TextEditingController();
-    workHistory = TextEditingController(text: store.profileWorkHistory);
-    ageRange = TextEditingController(text: store.profileAgeRange);
-    height = TextEditingController(text: store.profileHeight);
+    workHistory = TextEditingController();
+    ageRange = TextEditingController();
+    height = TextEditingController();
     genderIdentity = TextEditingController();
     experienceYears = TextEditingController();
     unionNote = TextEditingController();
-    agency = TextEditingController(text: store.agency);
+    agency = TextEditingController();
   }
 
   @override
@@ -98,246 +96,225 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ActorTalentDemoStore.instance,
-      builder: (context, _) {
-        return ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Profile Form',
-            icon: Icons.badge_outlined,
-            child: Column(
+    return ActorTwoColumn(
+      left: ActorSectionCard(
+        title: 'Profile Form',
+        icon: Icons.badge_outlined,
+        child: Column(
+          children: [
+            Text(
+              'Build the public casting profile directors use for search, shortlisting and booking decisions.',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: context.appColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+            if (loadingRemote) ...[
+              const SizedBox(height: 12),
+              const LinearProgressIndicator(minHeight: 2),
+            ],
+            const SizedBox(height: 14),
+            CoreTextField(
+              controller: stageName,
+              label: 'Stage name',
+              icon: Icons.theater_comedy_outlined,
+              errorText: _fieldError(stageName),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: realName,
+              label: 'Account name',
+              icon: Icons.person_outline_rounded,
+              enabled: AuthScope.maybeOf(context)?.isAuthenticated != true,
+              errorText: _fieldError(realName),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: website,
+              label: 'Portfolio website',
+              icon: Icons.language_outlined,
+              keyboardType: TextInputType.url,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: city,
+              label: 'City',
+              icon: Icons.location_on_outlined,
+              errorText: _fieldError(city),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: languages,
+              label: 'Languages',
+              icon: Icons.translate_rounded,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: skills,
+              label: 'Skills tags',
+              icon: Icons.local_offer_outlined,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: credits,
+              label: 'Training / credits',
+              icon: Icons.workspace_premium_outlined,
+              maxLines: 3,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: workHistory,
+              label: 'Work history',
+              icon: Icons.history_edu_outlined,
+              maxLines: 3,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            Row(
               children: [
-                Text(
-                  'Build the public casting profile directors use for search, shortlisting and booking decisions.',
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: context.appColors.textSecondary,
-                    height: 1.35,
+                Expanded(
+                  child: CoreTextField(
+                    controller: genderIdentity,
+                    label: 'Gender identity',
+                    icon: Icons.diversity_1_outlined,
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
-                if (loadingRemote) ...[
-                  const SizedBox(height: 12),
-                  const LinearProgressIndicator(minHeight: 2),
-                ],
-                const SizedBox(height: 14),
-                CoreTextField(
-                  controller: stageName,
-                  label: 'Stage name',
-                  icon: Icons.theater_comedy_outlined,
-                  errorText: _fieldError(stageName),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: realName,
-                  label: 'Account name',
-                  icon: Icons.person_outline_rounded,
-                  enabled: AuthScope.maybeOf(context)?.isAuthenticated != true,
-                  errorText: _fieldError(realName),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: website,
-                  label: 'Portfolio website',
-                  icon: Icons.language_outlined,
-                  keyboardType: TextInputType.url,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: city,
-                  label: 'City',
-                  icon: Icons.location_on_outlined,
-                  errorText: _fieldError(city),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: languages,
-                  label: 'Languages',
-                  icon: Icons.translate_rounded,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: skills,
-                  label: 'Skills tags',
-                  icon: Icons.local_offer_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: credits,
-                  label: 'Training / credits',
-                  icon: Icons.workspace_premium_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: workHistory,
-                  label: 'Work history',
-                  icon: Icons.history_edu_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: genderIdentity,
-                        label: 'Gender identity',
-                        icon: Icons.diversity_1_outlined,
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: experienceYears,
-                        label: 'Experience (years)',
-                        icon: Icons.work_history_outlined,
-                        keyboardType: TextInputType.number,
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: unionNote,
-                  label: 'Union / professional membership',
-                  icon: Icons.verified_user_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: ageRange,
-                        label: 'Playable age',
-                        icon: Icons.face_retouching_natural_outlined,
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: height,
-                        label: 'Height',
-                        icon: Icons.height_outlined,
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: instagram,
-                        label: 'Instagram',
-                        icon: Icons.alternate_email_rounded,
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: followers,
-                        label: 'Followers',
-                        icon: Icons.people_alt_outlined,
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: agency,
-                  label: 'Agency affiliation',
-                  icon: Icons.apartment_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      error!,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: context.appColors.danger,
-                      ),
-                    ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CoreTextField(
+                    controller: experienceYears,
+                    label: 'Experience (years)',
+                    icon: Icons.work_history_outlined,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
                   ),
-                ],
-                if (remoteStatus != null) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      remoteStatus!,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: context.appColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreSecondaryButton(
-                        icon: Icons.save_outlined,
-                        label: 'Save draft',
-                        compact: true,
-                        onTap: savingRemote ? null : _saveDraft,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CorePrimaryButton(
-                        icon: Icons.verified_outlined,
-                        label: 'Save profile',
-                        compact: true,
-                        loading: savingRemote,
-                        onTap: savingRemote ? null : _submit,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                CoreSecondaryButton(
-                  icon: Icons.travel_explore_outlined,
-                  label: publishingListing
-                      ? 'Publishing listing…'
-                      : 'Publish marketplace listing',
-                  compact: true,
-                  onTap: savingRemote || publishingListing
-                      ? null
-                      : _publishMarketplaceListing,
                 ),
               ],
             ),
-          ),
-          right: _ProfilePreview(
-            stageName: stageName.text,
-            city: city.text,
-            languages: languages.text,
-            instagram: instagram.text,
-            followers: followers.text,
-            workHistory: workHistory.text,
-            ageRange: ageRange.text,
-            height: height.text,
-            agency: agency.text,
-            completeness: _formCompleteness(),
-            sampleImage: AuthScope.maybeOf(context)?.isAuthenticated != true,
-          ),
-        );
-      },
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: unionNote,
+              label: 'Union / professional membership',
+              icon: Icons.verified_user_outlined,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: CoreTextField(
+                    controller: ageRange,
+                    label: 'Playable age',
+                    icon: Icons.face_retouching_natural_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CoreTextField(
+                    controller: height,
+                    label: 'Height',
+                    icon: Icons.height_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: CoreTextField(
+                    controller: instagram,
+                    label: 'Instagram',
+                    icon: Icons.alternate_email_rounded,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CoreTextField(
+                    controller: followers,
+                    label: 'Followers',
+                    icon: Icons.people_alt_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            CoreTextField(
+              controller: agency,
+              label: 'Agency affiliation',
+              icon: Icons.apartment_outlined,
+              onChanged: (_) => setState(() {}),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  error!,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.danger,
+                  ),
+                ),
+              ),
+            ],
+            if (remoteStatus != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  remoteStatus!,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            CorePrimaryButton(
+              icon: Icons.verified_outlined,
+              label: 'Save profile',
+              compact: true,
+              loading: savingRemote,
+              onTap: savingRemote ? null : _submit,
+            ),
+            const SizedBox(height: 8),
+            CoreSecondaryButton(
+              icon: Icons.travel_explore_outlined,
+              label: publishingListing
+                  ? 'Publishing listing…'
+                  : 'Publish marketplace listing',
+              compact: true,
+              onTap: savingRemote || publishingListing
+                  ? null
+                  : _publishMarketplaceListing,
+            ),
+          ],
+        ),
+      ),
+      right: _ProfileSummary(
+        stageName: stageName.text,
+        city: city.text,
+        languages: languages.text,
+        instagram: instagram.text,
+        followers: followers.text,
+        workHistory: workHistory.text,
+        ageRange: ageRange.text,
+        height: height.text,
+        agency: agency.text,
+        completeness: _formCompleteness(),
+      ),
     );
   }
 
@@ -349,7 +326,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   Future<void> _loadRemoteProfile() async {
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) return;
-    _clearPreviewValues(auth);
+    _clearFormValues(auth);
     setState(() {
       loadingRemote = true;
       remoteStatus = 'Loading saved CineConnect profile…';
@@ -407,36 +384,18 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     } on ApiException catch (exception) {
       if (!mounted) return;
       setState(() {
-        remoteStatus = 'Using local draft: ${exception.message}';
+        remoteStatus = 'Backend profile unavailable: ${exception.message}';
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        remoteStatus = 'Using local draft until backend is reachable';
+        remoteStatus = 'Backend profile is currently unreachable';
       });
     } finally {
       if (mounted) {
         setState(() => loadingRemote = false);
       }
     }
-  }
-
-  void _saveDraft() {
-    ActorTalentDemoStore.instance.saveProfileDraft(
-      stageName: stageName.text.trim(),
-      realName: realName.text.trim(),
-      city: city.text.trim(),
-      languages: languages.text.trim(),
-      skills: skills.text.trim(),
-      credits: credits.text.trim(),
-      instagram: instagram.text.trim(),
-      followers: followers.text.trim(),
-      workHistory: workHistory.text.trim(),
-      ageRange: ageRange.text.trim(),
-      height: height.text.trim(),
-      agencyName: agency.text.trim(),
-    );
-    actorSnack(context, 'Profile draft saved');
   }
 
   Future<void> _submit() async {
@@ -455,26 +414,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       });
       return;
     }
-    ActorTalentDemoStore.instance.updateProfile(
-      stageName: stageName.text.trim(),
-      realName: realName.text.trim(),
-      city: city.text.trim(),
-      languages: languages.text.trim(),
-      skills: skills.text.trim(),
-      credits: credits.text.trim(),
-      instagram: instagram.text.trim(),
-      followers: followers.text.trim(),
-      workHistory: workHistory.text.trim(),
-      ageRange: ageRange.text.trim(),
-      height: height.text.trim(),
-      agencyName:
-          agency.text.trim().isEmpty ? 'Independent' : agency.text.trim(),
-    );
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) {
-      setState(() => error = null);
-      actorSnack(context, 'Profile sent to moderation');
-      Navigator.pushNamed(context, ActorTalentRoutes.portfolio);
+      setState(() => error = 'Sign in required');
+      actorSnack(context, 'Sign in to save your profile');
       return;
     }
     setState(() {
@@ -512,7 +455,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       if (!mounted) return;
       setState(() {
         error = 'Could not reach backend';
-        remoteStatus = 'Your local draft is saved. Try again when online.';
+        remoteStatus = 'Profile was not saved. Try again when online.';
       });
     } finally {
       if (mounted) {
@@ -610,7 +553,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         .toList();
   }
 
-  void _clearPreviewValues(AuthController auth) {
+  void _clearFormValues(AuthController auth) {
     stageName.clear();
     realName.text = auth.user?.displayName ?? '';
     city.clear();
@@ -713,7 +656,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   }
 }
 
-class _ProfilePreview extends StatelessWidget {
+class _ProfileSummary extends StatelessWidget {
   final String stageName;
   final String city;
   final String languages;
@@ -724,9 +667,7 @@ class _ProfilePreview extends StatelessWidget {
   final String height;
   final String agency;
   final int completeness;
-  final bool sampleImage;
-
-  const _ProfilePreview({
+  const _ProfileSummary({
     required this.stageName,
     required this.city,
     required this.languages,
@@ -737,16 +678,15 @@ class _ProfilePreview extends StatelessWidget {
     required this.height,
     required this.agency,
     required this.completeness,
-    required this.sampleImage,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return ActorSectionCard(
-      title: 'Director Preview',
+      title: 'Director-facing Profile',
       icon: Icons.visibility_outlined,
-      actionText: 'Open preview',
+      actionText: 'Open view',
       onActionTap: () => showDialog<void>(
         context: context,
         builder: (dialogContext) => Dialog(
@@ -764,10 +704,9 @@ class _ProfilePreview extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ActorMediaFrame(
-                        imageUrl:
-                            sampleImage ? ActorTalentDemoData.profileImage : '',
+                        imageUrl: '',
                         title: stageName.isEmpty ? 'Stage name' : stageName,
-                        badge: 'Preview',
+                        badge: 'Draft',
                         fallbackIcon: Icons.person_outline_rounded,
                         aspectRatio: 4 / 5,
                       ),
@@ -828,9 +767,9 @@ class _ProfilePreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ActorMediaFrame(
-            imageUrl: sampleImage ? ActorTalentDemoData.profileImage : '',
+            imageUrl: '',
             title: 'Public headshot',
-            badge: 'Preview',
+            badge: 'Draft',
             fallbackIcon: Icons.person_outline_rounded,
             aspectRatio: 4 / 5,
           ),

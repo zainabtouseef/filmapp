@@ -4,7 +4,7 @@
 
 - Current master-report version: 1.0
 - Current phase: Other portals database-only perfection
-- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 Super Admin, Media/Equipment, Brand Sponsor, Location Owner, and Model Extension static-data cleanup complete; next is Actor/Talent static-store removal
+- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 Super Admin, Media/Equipment, Brand Sponsor, Location Owner, Model Extension, and Actor/Talent static-data cleanup complete; next is Casting Agency/Crew/Legal/Insurance/Distribution static-store removal
 - Overall status: Phases 0, 1, 2, and 3 complete locally; Phase 4 profile/marketplace/portfolio/saved-search/shortlist foundation complete locally; Phase 5 projects/requirements/skills and project-room files/decisions foundation complete locally; Phase 6 booking/offer/counter/accept, booking inbox, manual availability blocks, availability lock, and conversation foundation complete locally; Phase 7 contract generation, signatures, legal review queue/decision, and addendum foundation complete locally; Phase 8 sandbox payment schedules, proof review, ledger, receipts, and payout-account foundation complete locally; Phase 9 location/equipment inspections, damage claims, safety checks/incidents/check-ins, **and insurance partner/policy/claim/evidence** backend now fully complete locally and in production (the insurance tables were missed in the original 2026-07-17 Phase 9 pass and closed out 2026-07-18); Phase 10 casting agency roster/audition/self-tape/notes/commission, brand opportunity/application/terms/deliverable/metrics, model rights/rates/restrictions, and distribution contact/release/handover/report foundation complete locally; Phase 11 reviews/dimensions/requests, reports/blocks, moderation cases/events, disputes/evidence/events, support tickets/messages, and announcements/notifications foundation complete locally; Phase 12 personal/admin dashboards, admin analytics, synchronous CSV export jobs, Sentry wiring, production DB backups, and a dependency security patch complete locally and deployed to production
 - Last updated: 2026-07-24
 - Updated by: Codex
@@ -314,8 +314,8 @@
 | Admin KYC detail | `/admin/verifications/:id` | `AuthController.adminKycSubmission/adminKycDecision` | yes | analyze/widget suite + HTTP smoke |
 | Director marketplace discovery | `/director/marketplace` | `AuthController.marketplaceListings/createSavedSearch/addToDefaultShortlist` | yes, demo fallback | analyze/widget suite + HTTP smoke |
 | Director shortlist board | `/director/shortlist` | `AuthController.shortlistBundle/deleteSavedSearch/updateShortlistItem/deleteShortlistItem` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent profile builder | `/talent/profile` | `AuthController.cities/myProfile/talentProfile/updateMyProfile/updateTalentProfile/publishMarketplaceListing` | yes, local fallback | analyze/widget suite |
-| Actor/talent portfolio & showreel | `/talent/portfolio` | `AuthController.portfolioItems/createPortfolioItem/updatePortfolioItem/deletePortfolioItem` plus `UploadRepository` via `AuthController.uploadFile` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
+| Actor/talent profile builder | `/talent/profile` | `AuthController.cities/myProfile/talentProfile/updateMyProfile/updateTalentProfile/publishMarketplaceListing` | no static demo fallback; sign-in/live empty states only | analyze/widget suite |
+| Actor/talent portfolio & showreel | `/talent/portfolio` | `AuthController.portfolioItems/createPortfolioItem/updatePortfolioItem/deletePortfolioItem` plus `UploadRepository` via `AuthController.uploadFile` | no static demo fallback; sign-in/live empty states only | analyze/widget suite + production HTTP smoke |
 | Director projects list | `/director/projects` | `ProjectsScope.projects` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Director create project wizard | `/director/projects/create` | `ProjectsScope.createProject` | partial | analyze/widget suite + production HTTP smoke |
 | Director project detail | `/director/projects/:id` | `ProjectsScope.project` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
@@ -324,13 +324,13 @@
 | Director booking request | `/director/booking-request` | `ProjectsScope.projects`, `AuthController.marketplaceListings`, `BookingsScope.createAndSendBooking` | partial, demo fallback | analyze/widget suite + production HTTP smoke |
 | Director bargaining center | `/director/bargaining` | `BookingsScope.negotiations` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Director negotiation thread | `/director/negotiation` | `BookingsScope.negotiation/createCounterOffer/acceptOffer` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent availability calendar | `/talent/availability` | `BookingsScope.availability/createAvailability` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent opportunity inbox | `/talent/opportunities` | `BookingsScope.opportunities/acceptOffer` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent offer detail | `/talent/offers/:id` | `BookingsScope.booking/acceptOffer/rejectBooking` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent counteroffer composer | `/talent/counteroffer` | `BookingsScope.createCounterOffer` for live `BKG-*` ids | partial, demo fallback | analyze/widget suite + production HTTP smoke |
+| Actor/talent availability calendar | `/talent/availability` | `BookingsScope.availability/createAvailability` | no static demo fallback; sign-in/live empty states only | analyze/widget suite + production HTTP smoke |
+| Actor/talent opportunity inbox | `/talent/opportunities` | `BookingsScope.opportunities/acceptOffer` | no static demo fallback; sign-in/live empty states only | analyze/widget suite + production HTTP smoke |
+| Actor/talent offer detail | `/talent/offers/:id` | `BookingsScope.booking/acceptOffer/rejectBooking` | no static demo fallback; sign-in/live empty states only | analyze/widget suite + production HTTP smoke |
+| Actor/talent counteroffer composer | `/talent/counteroffer` | `BookingsScope.createCounterOffer` for live `BKG-*` ids | no static demo fallback; requires live booking id | analyze/widget suite + production HTTP smoke |
 | Booking chat | `/booking/chat` | `BookingsScope.conversation/sendMessage/pinMessage` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Director contract center | `/director/contracts` | `ContractsScope.contracts/generateForBooking/requestLegalReview`, `BookingsScope.bookings` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent contract signing | `/talent/contracts` | `ContractsScope.contracts` and shared contract viewer for signature/correction | yes, demo fallback | analyze/widget suite + production HTTP smoke |
+| Actor/talent contract signing | `/talent/contracts` | `ContractsScope.contracts` and shared contract viewer for signature/correction | no static demo fallback; sign-in/live empty states only | analyze/widget suite + production HTTP smoke |
 | Shared contract viewer | `/contract` | `ContractsScope.contract/sign/createAddendum` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Legal dashboard | `/legal` | `ContractsScope.legalReviews` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Legal review detail | `/legal/contract-review` | `ContractsScope.legalReview/decideLegalReview` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
@@ -340,7 +340,7 @@
 | Shared payment proof upload | `/payments/proof` | `PaymentsScope.schedules/submitProof` plus `UploadRepository` for `payment_proof` files | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Shared receipts ledger | `/payments/ledger` | `PaymentsScope.ledger` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Director payment center | `/director/payments` | `PaymentsScope.dashboard` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Actor/talent earnings security | `/talent/earnings` | `PaymentsScope.dashboard/payoutAccounts/createSandboxPayoutAccount` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
+| Actor/talent earnings security | `/talent/earnings` | `PaymentsScope.dashboard/payoutAccounts/createSandboxPayoutAccount` | no static demo fallback; sign-in/live empty states only | analyze/widget suite + production HTTP smoke |
 | Super Admin payments hub | `/admin/payments` | `PaymentsScope.adminProofs/ledger` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Super Admin payment queue | `/admin/payment-queue` | `PaymentsScope.adminProofs` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Super Admin payment review | `/admin/payment-review/:id` | `PaymentsScope.adminProof/decideProof` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
@@ -1220,8 +1220,19 @@
   - `flutter analyze` passed.
   - `flutter test test/model_extension_portal_test.dart` passed.
   - Flutter web was rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and deployed to `https://cine.nalexustechnologies.com`; HTTPS root returned HTTP 200 after sync.
+- Actor/Talent static-data cleanup:
+  - Removed `ActorTalentDemoData`/`ActorTalentDemoStore` usage from AT-01 dashboard, AT-02 profile builder, AT-03 portfolio/showreel, AT-04 availability, AT-05 rate card, AT-06 opportunity inbox, AT-07 offer detail, AT-08 counteroffer composer, AT-09 contract signing, AT-10 earnings/security, AT-11 reviews, AT-12 safety controls, shell, and shared components.
+  - Replaced unauthenticated/demo fallback branches with explicit sign-in/live-backend empty or error states.
+  - Kept live create/update flows connected to Auth, Bookings, Contracts, Payments, TrustSafety, Uploads, and Analytics controllers.
+  - Moved actor booking status label mapping into `actor_talent_components.dart`.
+  - Simplified AT-05 Rate Card to the live published day-rate field available on the talent profile API; the old fake private quote-guide rows were removed until a dedicated rate-card API exists.
+  - Deleted `lib/features/actor_talent/data/actor_talent_demo_data.dart`.
+  - Feature static search is clean: no `ActorTalentDemoData`, `ActorTalentDemoStore`, or `actor_talent_demo_data` matches under `lib/features/actor_talent`.
+  - `flutter analyze` passed.
+  - `flutter test test/actor_talent_portal_test.dart` passed.
+  - Flutter web was rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and deployed to `https://cine.nalexustechnologies.com`; HTTPS root returned HTTP 200 after sync.
 - Next:
-  - Deploy the latest Flutter web build, then continue with Actor/Talent static-store removal.
+  - Deploy the latest Flutter web build, then continue with Casting Agency/Crew/Legal/Insurance/Distribution static-store removal.
 
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 

@@ -5,8 +5,6 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/actor_talent_demo_data.dart';
-import '../models/actor_talent_models.dart';
 import '../widgets/actor_talent_components.dart';
 
 /// AT-05 Rate Card
@@ -22,6 +20,13 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
   bool _loading = false;
   int? _publishedDayRateMinor;
   String? _loadError;
+  final _dayRate = TextEditingController();
+
+  @override
+  void dispose() {
+    _dayRate.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -43,12 +48,7 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
       final profile = await auth.talentProfile();
       if (!mounted) return;
       final dayRate = profile.dayRateMinor;
-      if (dayRate != null) {
-        ActorTalentDemoStore.instance.updateRate(
-          'per-day',
-          amount: dayRate ~/ 100,
-        );
-      }
+      if (dayRate != null) _dayRate.text = (dayRate ~/ 100).toString();
       setState(() => _publishedDayRateMinor = dayRate);
     } catch (_) {
       if (!mounted) return;
@@ -62,110 +62,86 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ActorTalentDemoStore.instance,
-      builder: (context, _) {
-        final store = ActorTalentDemoStore.instance;
-        final categories = store.rates.map((rate) => rate.category).toSet();
-        return Column(
-          children: [
-            ActorSectionCard(
-              title: 'Rate Settings',
-              icon: Icons.price_change_outlined,
-              actionText: 'Reset guide',
-              onActionTap: () => _confirmReset(context),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatusChip(
-                    label: _publishedDayRateMinor == null
-                        ? 'No published day rate'
-                        : 'Published ${_moneyMinor(_publishedDayRateMinor!)}',
-                    color: _publishedDayRateMinor == null
-                        ? context.appColors.infoBlue
-                        : context.appColors.success,
-                  ),
-                  StatusChip(
-                      label: 'Quote guide stays private',
-                      color: context.appColors.goldMid),
-                  StatusChip(
-                      label: 'Every offer remains negotiable',
-                      color: context.appColors.success),
-                  if (_loading)
-                    StatusChip(
-                      label: 'Loading published rate',
-                      color: context.appColors.infoPurple,
-                    ),
-                ],
+    final auth = AuthScope.maybeOf(context);
+    final signedIn = auth?.isAuthenticated == true;
+    return Column(
+      children: [
+        ActorSectionCard(
+          title: 'Rate Settings',
+          icon: Icons.price_change_outlined,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusChip(
+                label: _publishedDayRateMinor == null
+                    ? 'No published day rate'
+                    : 'Published ${_moneyMinor(_publishedDayRateMinor!)}',
+                color: _publishedDayRateMinor == null
+                    ? context.appColors.infoBlue
+                    : context.appColors.success,
               ),
-            ),
-            if (_loadError != null) ...[
-              const SizedBox(height: 12),
-              InlineNotice(
-                message: _loadError!,
-                icon: Icons.cloud_off_outlined,
-                tone: CoreStatusTone.warning,
+              StatusChip(
+                label: 'Offers remain negotiable',
+                color: context.appColors.success,
               ),
+              if (_loading)
+                StatusChip(
+                  label: 'Loading published rate',
+                  color: context.appColors.infoPurple,
+                ),
             ],
-            const SizedBox(height: 12),
-            for (final category in categories) ...[
-              _categoryCard(context, store, category),
-              const SizedBox(height: 12),
-            ],
-            CorePrimaryButton(
-              icon: Icons.publish_outlined,
-              label: 'Publish standard day rate',
-              compact: true,
-              onTap: () => _publishRates(context),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _categoryCard(
-      BuildContext context, ActorTalentDemoStore store, String category) {
-    final rates = store.rates.where((r) => r.category == category).toList();
-    return ActorSectionCard(
-      title: category,
-      icon: Icons.tune_rounded,
-      child: Column(
-        children: [
-          for (var i = 0; i < rates.length; i++)
-            _RateRow(rate: rates[i], showDivider: i != rates.length - 1),
-        ],
-      ),
-    );
-  }
-
-  void _confirmReset(BuildContext context) {
-    showActorSheet(
-      context,
-      title: 'Reset rates',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Restore the private quote guide to its starting values. This does not change your published day rate.',
-            style: AppTextStyles.body.copyWith(
-              color: context.appColors.textSecondary,
-            ),
           ),
+        ),
+        if (_loadError != null) ...[
           const SizedBox(height: 12),
-          CorePrimaryButton(
-            icon: Icons.restore_rounded,
-            label: 'Reset defaults',
-            compact: true,
-            onTap: () {
-              ActorTalentDemoStore.instance.resetRates();
-              Navigator.pop(context);
-              actorSnack(context, 'Rate card reset');
-            },
+          InlineNotice(
+            message: _loadError!,
+            icon: Icons.cloud_off_outlined,
+            tone: CoreStatusTone.warning,
           ),
         ],
-      ),
+        const SizedBox(height: 12),
+        ActorSectionCard(
+          title: 'Published Marketplace Rate',
+          icon: Icons.public_outlined,
+          selected: signedIn,
+          child: signedIn
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This is the only Actor/Talent rate field currently backed by the server profile.',
+                      style: AppTextStyles.body.copyWith(
+                        color: context.appColors.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    CoreTextField(
+                      controller: _dayRate,
+                      label: 'Standard day rate (PKR)',
+                      icon: Icons.payments_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    CorePrimaryButton(
+                      icon: Icons.publish_outlined,
+                      label: 'Publish standard day rate',
+                      compact: true,
+                      loading: _loading,
+                      onTap: _loading ? null : () => _publishRates(context),
+                    ),
+                  ],
+                )
+              : const CoreEmptyState(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'Sign in to manage rates',
+                  message:
+                      'The published day rate is saved to your live talent profile.',
+                ),
+        ),
+      ],
     );
   }
 
@@ -205,12 +181,15 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
                   );
                   return;
                 }
-                final dayRate = ActorTalentDemoStore.instance.rates
-                    .firstWhere(
-                      (rate) => rate.id == 'per-day',
-                      orElse: () => ActorTalentDemoStore.instance.rates.first,
-                    )
-                    .amount;
+                final dayRate = int.tryParse(
+                  _dayRate.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                );
+                if (dayRate == null || dayRate <= 0) {
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  actorSnack(context, 'Enter a valid day rate');
+                  return;
+                }
                 await auth.updateTalentProfile(
                   screenName: profile.screenName!.trim(),
                   languages: profile.languages,
@@ -226,10 +205,10 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
               }
               if (!context.mounted) return;
               setState(() {
-                _publishedDayRateMinor = ActorTalentDemoStore.instance.rates
-                        .firstWhere((rate) => rate.id == 'per-day')
-                        .amount *
-                    100;
+                final dayRate = int.parse(
+                  _dayRate.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                );
+                _publishedDayRateMinor = dayRate * 100;
                 _loadError = null;
               });
               Navigator.pop(context);
@@ -244,95 +223,6 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
   String _moneyMinor(int amountMinor) {
     final amount = amountMinor ~/ 100;
     if (amount >= 100000) return 'PKR ${(amount / 1000).round()}k';
-    return 'PKR $amount';
-  }
-}
-
-class _RateRow extends StatelessWidget {
-  final ActorRateItem rate;
-  final bool showDivider;
-
-  const _RateRow({required this.rate, this.showDivider = true});
-
-  @override
-  Widget build(BuildContext context) {
-    final store = ActorTalentDemoStore.instance;
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(bottom: BorderSide(color: colors.borderMuted))
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  rate.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              Text(
-                _money(rate.amount),
-                style: AppTextStyles.smallMetricNumber.copyWith(
-                  color: colors.textPrimary,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Decrease',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => store.updateRate(
-                  rate.id,
-                  amount: (rate.amount - 5000).clamp(5000, 2000000).toInt(),
-                ),
-                icon:
-                    Icon(Icons.remove_circle_outline, color: colors.iconMuted),
-              ),
-              IconButton(
-                tooltip: 'Increase',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => store.updateRate(
-                  rate.id,
-                  amount: rate.amount + 5000,
-                ),
-                icon: Icon(Icons.add_circle_outline, color: colors.goldDark),
-              ),
-              const Spacer(),
-              Text(
-                'Negotiable',
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-              Switch(
-                value: rate.negotiable,
-                onChanged: (value) =>
-                    store.updateRate(rate.id, negotiable: value),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _money(int amount) {
-    if (amount >= 1000) return 'PKR ${(amount / 1000).round()}k';
     return 'PKR $amount';
   }
 }

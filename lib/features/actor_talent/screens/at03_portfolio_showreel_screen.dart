@@ -11,8 +11,6 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/actor_talent_demo_data.dart';
-import '../models/actor_talent_models.dart';
 import '../widgets/actor_talent_components.dart';
 
 /// AT-03 Portfolio & Showreel Manager
@@ -30,7 +28,6 @@ class _AT03PortfolioShowreelScreenState
   String filter = 'All';
   Future<List<MarketplacePortfolioItem>>? _itemsFuture;
   bool _started = false;
-  bool _previewMode = false;
   bool _uploading = false;
   String? _busyItemId;
 
@@ -62,7 +59,6 @@ class _AT03PortfolioShowreelScreenState
   void _reload() {
     final controller = AuthScope.maybeOf(context);
     setState(() {
-      _previewMode = controller == null;
       _itemsFuture = controller == null
           ? Future<List<MarketplacePortfolioItem>>.error(
               const ApiException(
@@ -98,19 +94,9 @@ class _AT03PortfolioShowreelScreenState
                 return const _PortfolioLoadingState();
               }
               if (snapshot.hasError) {
-                if (!_previewMode) {
-                  return _PortfolioError(
-                    message: _friendlyError(snapshot.error),
-                    onRetry: _reload,
-                  );
-                }
-                return AnimatedBuilder(
-                  animation: ActorTalentDemoStore.instance,
-                  builder: (context, _) => _PortfolioFallbackGrid(
-                    query: query,
-                    filter: filter,
-                    warning: _friendlyError(snapshot.error),
-                  ),
+                return _PortfolioError(
+                  message: _friendlyError(snapshot.error),
+                  onRetry: _reload,
                 );
               }
               final items = _filterRemoteItems(snapshot.data ?? const []);
@@ -438,114 +424,6 @@ class _AT03PortfolioShowreelScreenState
   }
 }
 
-class _PortfolioFallbackGrid extends StatelessWidget {
-  final String query;
-  final String filter;
-  final String warning;
-
-  const _PortfolioFallbackGrid({
-    required this.query,
-    required this.filter,
-    required this.warning,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final store = ActorTalentDemoStore.instance;
-    final items = store.portfolioItems.where((item) {
-      final matchQuery = query.trim().isEmpty ||
-          item.title.toLowerCase().contains(query.toLowerCase()) ||
-          item.category.toLowerCase().contains(query.toLowerCase());
-      final matchFilter = filter == 'All' || item.category == filter;
-      return matchQuery && matchFilter;
-    }).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _InlineWarning(message: warning),
-        const SizedBox(height: 12),
-        if (items.isEmpty)
-          const CoreEmptyState(
-            icon: Icons.collections_outlined,
-            title: 'No media found',
-            message: 'Change the filter or upload a new clip.',
-          )
-        else
-          ActorResponsiveGrid(
-            minWidth: 230,
-            children: [
-              for (final item in items)
-                _DemoPortfolioCard(
-                  item: item,
-                  onCover: () {
-                    store.setCover(item.id);
-                    actorSnack(context, '${item.title} is now preview cover');
-                  },
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-}
-
-class _DemoPortfolioCard extends StatelessWidget {
-  final ActorPortfolioItem item;
-  final VoidCallback onCover;
-
-  const _DemoPortfolioCard({
-    required this.item,
-    required this.onCover,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _PortfolioCard(
-      title: item.title,
-      category: item.category,
-      duration: item.duration,
-      status: item.status,
-      imageUrl: item.imageUrl,
-      cover: item.cover,
-      isImage: item.category == 'Headshots',
-      onPreview: () => _showDemoPreview(context, item),
-      onCover: onCover,
-    );
-  }
-
-  void _showDemoPreview(BuildContext context, ActorPortfolioItem item) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ActorMediaFrame(
-                imageUrl: item.imageUrl,
-                title: item.title,
-                badge: item.duration,
-                fallbackIcon: Icons.movie_creation_outlined,
-                aspectRatio: item.category == 'Headshots' ? 4 / 5 : 16 / 10,
-              ),
-              const SizedBox(height: 12),
-              CoreSecondaryButton(
-                icon: Icons.close_rounded,
-                label: 'Close',
-                compact: true,
-                onTap: () => Navigator.pop(dialogContext),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _PortfolioCard extends StatelessWidget {
   final String title;
   final String category;
@@ -739,40 +617,6 @@ class _PortfolioError extends StatelessWidget {
           onTap: onRetry,
         ),
       ],
-    );
-  }
-}
-
-class _InlineWarning extends StatelessWidget {
-  final String message;
-
-  const _InlineWarning({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.goldMid.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.goldMid.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline_rounded, color: colors.goldMid, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

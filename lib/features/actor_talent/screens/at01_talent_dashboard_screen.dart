@@ -9,7 +9,6 @@ import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart';
-import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -61,44 +60,35 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ActorTalentDemoStore.instance,
-      builder: (context, _) {
-        final store = ActorTalentDemoStore.instance;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ActorSectionCard(
-              title: 'Talent Snapshot',
-              icon: Icons.auto_awesome_outlined,
-              actionText: 'Edit profile',
-              onActionTap: () =>
-                  Navigator.pushNamed(context, ActorTalentRoutes.profile),
-              selected: store.profileCompleteness < 80,
-              child: _TalentSnapshotContent(
-                future: _profileFuture,
-                store: store,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const PersonalDashboardKpiStrip(
-              fallbackMessage:
-                  'Live dashboard metrics are temporarily unavailable.',
-            ),
-            const SizedBox(height: 12),
-            ActorTwoColumn(
-              left: _PendingWork(
-                future: _opportunitiesFuture,
-                onRefresh: _refreshOpportunities,
-              ),
-              right: _DashboardSideRail(
-                opportunitiesFuture: _opportunitiesFuture,
-                profileFuture: _profileFuture,
-              ),
-            ),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ActorSectionCard(
+          title: 'Talent Snapshot',
+          icon: Icons.auto_awesome_outlined,
+          actionText: 'Edit profile',
+          onActionTap: () =>
+              Navigator.pushNamed(context, ActorTalentRoutes.profile),
+          selected: _profileFuture == null,
+          child: _TalentSnapshotContent(future: _profileFuture),
+        ),
+        const SizedBox(height: 12),
+        const PersonalDashboardKpiStrip(
+          fallbackMessage:
+              'Live dashboard metrics are temporarily unavailable.',
+        ),
+        const SizedBox(height: 12),
+        ActorTwoColumn(
+          left: _PendingWork(
+            future: _opportunitiesFuture,
+            onRefresh: _refreshOpportunities,
+          ),
+          right: _DashboardSideRail(
+            opportunitiesFuture: _opportunitiesFuture,
+            profileFuture: _profileFuture,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -115,19 +105,17 @@ class _TalentProfileSnapshot {
 
 class _TalentSnapshotContent extends StatelessWidget {
   final Future<_TalentProfileSnapshot>? future;
-  final ActorTalentDemoStore store;
 
-  const _TalentSnapshotContent({
-    required this.future,
-    required this.store,
-  });
+  const _TalentSnapshotContent({required this.future});
 
   @override
   Widget build(BuildContext context) {
     if (future == null) {
-      return ActorTwoColumn(
-        left: _IdentityCard(store: store),
-        right: ActorProgressMeter(value: store.profileCompleteness),
+      return const CoreEmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in to load your talent snapshot',
+        message:
+            'Identity, profile completeness, and reputation are fetched from the server.',
       );
     }
     return FutureBuilder<_TalentProfileSnapshot>(
@@ -148,7 +136,7 @@ class _TalentSnapshotContent extends StatelessWidget {
         }
         final data = snapshot.data!;
         return ActorTwoColumn(
-          left: _IdentityCard(store: store, snapshot: data),
+          left: _IdentityCard(snapshot: data),
           right: ActorProgressMeter(
             value: _profileCompleteness(
               data.talentProfile,
@@ -162,46 +150,31 @@ class _TalentSnapshotContent extends StatelessWidget {
 }
 
 class _IdentityCard extends StatelessWidget {
-  final ActorTalentDemoStore store;
-  final _TalentProfileSnapshot? snapshot;
+  final _TalentProfileSnapshot snapshot;
 
-  const _IdentityCard({
-    required this.store,
-    this.snapshot,
-  });
+  const _IdentityCard({required this.snapshot});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final liveSnapshot = snapshot;
-    final talent = liveSnapshot?.talentProfile;
-    final live = liveSnapshot != null;
-    final stageName = !live
-        ? store.profileStageName
-        : talent?.screenName?.trim().isNotEmpty == true
-            ? talent!.screenName!.trim()
-            : 'Casting profile incomplete';
-    final city = live
-        ? liveSnapshot.userProfile.city?.name ?? 'City not added'
-        : store.profileCity;
-    final languages = !live
-        ? store.profileLanguages
-        : talent!.languages.isEmpty
-            ? 'No languages added'
-            : talent.languages.map((item) => item.language).join(', ');
-    final availability =
-        talent?.availabilityStatus.replaceAll('_', ' ') ?? 'draft profile';
-    final agency = live
-        ? _bioProfileValue(liveSnapshot.userProfile.bio, 'Agency').isEmpty
-            ? 'Independent'
-            : _bioProfileValue(liveSnapshot.userProfile.bio, 'Agency')
-        : store.agency;
+    final talent = snapshot.talentProfile;
+    final stageName = talent.screenName?.trim().isNotEmpty == true
+        ? talent.screenName!.trim()
+        : 'Casting profile incomplete';
+    final city = snapshot.userProfile.city?.name ?? 'City not added';
+    final languages = talent.languages.isEmpty
+        ? 'No languages added'
+        : talent.languages.map((item) => item.language).join(', ');
+    final availability = talent.availabilityStatus.replaceAll('_', ' ');
+    final agency = _bioProfileValue(snapshot.userProfile.bio, 'Agency').isEmpty
+        ? 'Independent'
+        : _bioProfileValue(snapshot.userProfile.bio, 'Agency');
     return Row(
       children: [
         SizedBox(
           width: 82,
           child: ActorMediaFrame(
-            imageUrl: live ? '' : ActorTalentDemoData.profileImage,
+            imageUrl: '',
             title: stageName,
             badge: 'Talent',
             fallbackIcon: Icons.person_outline_rounded,
@@ -242,7 +215,7 @@ class _IdentityCard extends StatelessWidget {
                   ActorStatusLabel(label: agency),
                   ActorStatusLabel(
                     label: availability,
-                    tone: talent == null ? ActorTone.gold : ActorTone.green,
+                    tone: ActorTone.green,
                   ),
                 ],
               ),
@@ -276,7 +249,11 @@ class _PendingWork extends StatelessWidget {
               )
           : onRefresh,
       child: future == null
-          ? _DemoPendingWork(store: ActorTalentDemoStore.instance)
+          ? const CoreEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Sign in to load priority actions',
+              message: 'Live offers and booking actions appear here.',
+            )
           : FutureBuilder<List<Booking>>(
               future: future,
               builder: (context, snapshot) {
@@ -304,19 +281,6 @@ class _PendingWork extends StatelessWidget {
               },
             ),
     );
-  }
-}
-
-class _DemoPendingWork extends StatelessWidget {
-  final ActorTalentDemoStore store;
-
-  const _DemoPendingWork({required this.store});
-
-  @override
-  Widget build(BuildContext context) {
-    return store.activeTasks.isEmpty
-        ? const _NoActivityCard()
-        : ActorTaskRail(tasks: store.activeTasks);
   }
 }
 
@@ -403,7 +367,11 @@ class _DashboardSideRail extends StatelessWidget {
           onActionTap: () =>
               Navigator.pushNamed(context, ActorTalentRoutes.opportunities),
           child: opportunitiesFuture == null
-              ? const _DemoPrimaryMatch()
+              ? const CoreEmptyState(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'Sign in to view next opportunity',
+                  message: 'Producer offers are loaded from live bookings.',
+                )
               : FutureBuilder<List<Booking>>(
                   future: opportunitiesFuture,
                   builder: (context, snapshot) {
@@ -456,7 +424,7 @@ class _DashboardSideRail extends StatelessWidget {
                     icon: Icons.star_outline_rounded,
                     label: 'Public rating',
                     value: profile == null
-                        ? 'Preview'
+                        ? 'No live profile'
                         : profile.reviewCount == 0
                             ? 'No reviews yet'
                             : '${profile.ratingAverage.toStringAsFixed(1)} / 5 · ${profile.reviewCount} reviews',
@@ -516,37 +484,6 @@ class _LivePrimaryMatch extends StatelessWidget {
             ActorTalentRoutes.offerDetail,
             arguments: booking.publicId,
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DemoPrimaryMatch extends StatelessWidget {
-  const _DemoPrimaryMatch();
-
-  @override
-  Widget build(BuildContext context) {
-    final first = ActorTalentDemoData.opportunities.first;
-    final status = ActorTalentDemoStore.instance.opportunityStatus(first);
-    return Column(
-      children: [
-        ActorMediaFrame(
-          imageUrl: first.imageUrl,
-          title: first.projectTitle,
-          badge: first.expiry,
-          fallbackIcon: Icons.movie_filter_outlined,
-        ),
-        const SizedBox(height: 10),
-        ActorInfoRow(
-          icon: Icons.badge_outlined,
-          label: first.role,
-          value: first.fee,
-        ),
-        ActorInfoRow(
-          icon: Icons.verified_outlined,
-          label: 'Status',
-          value: ActorTalentDemoData.statusLabel(status),
         ),
       ],
     );

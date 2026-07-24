@@ -8,7 +8,6 @@ import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -51,7 +50,19 @@ class _AT11ReputationReviewsScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_reviewsFuture == null) return const _PreviewReputation();
+    if (_reviewsFuture == null) {
+      return const ActorSectionCard(
+        title: 'Public Reputation',
+        icon: Icons.stars_outlined,
+        tone: ActorTone.blue,
+        child: CoreEmptyState(
+          icon: Icons.lock_outline_rounded,
+          title: 'Sign in to view live reviews',
+          message:
+              'Reputation data is loaded from completed CineConnect bookings.',
+        ),
+      );
+    }
     return FutureBuilder<UserReviewsDto>(
       future: _reviewsFuture,
       builder: (context, snapshot) {
@@ -323,109 +334,6 @@ class _ReviewsLoadError extends StatelessWidget {
             label: 'Try again',
             compact: true,
             onTap: onRetry,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewReputation extends StatelessWidget {
-  const _PreviewReputation();
-
-  @override
-  Widget build(BuildContext context) {
-    final reviews = ActorTalentDemoData.reviews;
-    final average = reviews.isEmpty
-        ? 0.0
-        : reviews.fold<double>(
-              0,
-              (sum, review) => sum + review.rating,
-            ) /
-            reviews.length;
-    return Column(
-      children: [
-        ActorSectionCard(
-          title: 'Public Reputation',
-          icon: Icons.stars_outlined,
-          child: _RatingSummary(
-            rating: average,
-            reviewCount: reviews.length,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Published Reviews',
-            icon: Icons.rate_review_outlined,
-            child: Column(
-              children: [
-                for (final review in reviews)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _PreviewReviewCard(review: review),
-                  ),
-              ],
-            ),
-          ),
-          right: const _ReputationGuidance(),
-        ),
-      ],
-    );
-  }
-}
-
-class _PreviewReviewCard extends StatelessWidget {
-  final ActorReview review;
-
-  const _PreviewReviewCard({required this.review});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.softSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  review.reviewer,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              StatusChip(
-                label: '${review.rating} / 5',
-                icon: Icons.star_rounded,
-                color: colors.goldMid,
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${review.project} - ${review.date}',
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            review.text,
-            style: AppTextStyles.body.copyWith(
-              color: colors.textSecondary,
-              height: 1.3,
-            ),
           ),
         ],
       ),

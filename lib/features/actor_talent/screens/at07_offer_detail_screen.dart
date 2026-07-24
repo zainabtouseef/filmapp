@@ -9,7 +9,6 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/actor_talent_demo_data.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -65,7 +64,7 @@ class _AT07OfferDetailScreenState extends State<AT07OfferDetailScreen> {
           );
         }
         if (snapshot.hasError) {
-          return _DemoOfferDetail(offerId: widget.offerId);
+          return _OfferLoadError(onRetry: _refresh);
         }
         return _LiveOfferDetail(
           booking: snapshot.data!,
@@ -75,6 +74,10 @@ class _AT07OfferDetailScreenState extends State<AT07OfferDetailScreen> {
         );
       },
     );
+  }
+
+  void _refresh() {
+    setState(() => _future = _load());
   }
 
   Future<void> _accept(Booking booking) async {
@@ -194,7 +197,7 @@ class _LiveOfferDetail extends StatelessWidget {
               runSpacing: 8,
               children: [
                 StatusChip(
-                  label: ActorTalentDemoData.statusLabel(status),
+                  label: actorStatusLabel(status),
                   color: actorStatusColor(context, status),
                 ),
                 StatusChip(
@@ -296,66 +299,33 @@ class _LiveOfferDetail extends StatelessWidget {
   }
 }
 
-class _DemoOfferDetail extends StatelessWidget {
-  final String? offerId;
+class _OfferLoadError extends StatelessWidget {
+  final VoidCallback onRetry;
 
-  const _DemoOfferDetail({this.offerId});
+  const _OfferLoadError({required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    final store = ActorTalentDemoStore.instance;
-    final opportunities = ActorTalentDemoData.opportunities;
-    final offer = opportunities.firstWhere(
-      (item) => item.id == offerId,
-      orElse: () => opportunities.first,
-    );
-    final status = store.opportunityStatus(offer);
-    return ActorTwoColumn(
-      left: ActorSectionCard(
-        title: '${offer.id} Structured Offer',
-        icon: Icons.description_outlined,
-        selected: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ActorMediaFrame(
-              imageUrl: offer.imageUrl,
-              title: offer.projectTitle,
-              badge: offer.expiry,
-              fallbackIcon: Icons.movie_filter_outlined,
-            ),
-            const SizedBox(height: 9),
-            StatusChip(
-              label: ActorTalentDemoData.statusLabel(status),
-              color: actorStatusColor(context, status),
-            ),
-            const SizedBox(height: 9),
-            ActorInfoRow(
-              icon: Icons.badge_outlined,
-              label: 'Role',
-              value: offer.role,
-            ),
-            ActorInfoRow(
-              icon: Icons.apartment_outlined,
-              label: 'Producer',
-              value: offer.producer,
-            ),
-          ],
-        ),
-      ),
-      right: ActorSectionCard(
-        title: 'Response Rail',
-        icon: Icons.route_outlined,
-        child: CoreSecondaryButton(
-          icon: Icons.edit_note_outlined,
-          label: 'Preview Counteroffer',
-          compact: true,
-          onTap: () => Navigator.pushNamed(
-            context,
-            ActorTalentRoutes.counteroffer,
-            arguments: offer.id,
+    return ActorSectionCard(
+      title: 'Offer unavailable',
+      icon: Icons.cloud_off_outlined,
+      tone: ActorTone.danger,
+      child: Column(
+        children: [
+          const CoreEmptyState(
+            icon: Icons.sync_problem_outlined,
+            title: 'Could not load live offer',
+            message:
+                'No static offer is shown here. Refresh after the producer sends a booking offer.',
           ),
-        ),
+          const SizedBox(height: 10),
+          CoreSecondaryButton(
+            icon: Icons.refresh_rounded,
+            label: 'Try again',
+            compact: true,
+            onTap: onRetry,
+          ),
+        ],
       ),
     );
   }

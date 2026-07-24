@@ -7,7 +7,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/actor_talent_demo_data.dart';
 import '../widgets/actor_talent_components.dart';
 
 /// AT-12 Safety Controls
@@ -38,94 +37,82 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: ActorTalentDemoStore.instance,
-      builder: (context, _) {
-        final store = ActorTalentDemoStore.instance;
-        return Column(
-          children: [
-            ActorSectionCard(
-              title: 'Booking Protections',
-              icon: Icons.health_and_safety_outlined,
-              child: Column(
-                children: [
-                  const ActorInfoRow(
-                    icon: Icons.phone_locked_outlined,
-                    label: 'Contact privacy',
-                    value: 'Use CineConnect chat',
-                  ),
-                  const ActorInfoRow(
-                    icon: Icons.fact_check_outlined,
-                    label: 'Content and usage',
-                    value: 'Review before accepting',
-                  ),
-                  const ActorInfoRow(
-                    icon: Icons.flight_takeoff_outlined,
-                    label: 'Travel consent',
-                    value: 'Confirm in offer terms',
-                  ),
-                  const ActorInfoRow(
-                    icon: Icons.lock_clock_outlined,
-                    label: 'Secured dates',
-                    value: 'Locked by booking',
-                  ),
-                ],
+    return Column(
+      children: [
+        ActorSectionCard(
+          title: 'Booking Protections',
+          icon: Icons.health_and_safety_outlined,
+          child: Column(
+            children: [
+              const ActorInfoRow(
+                icon: Icons.phone_locked_outlined,
+                label: 'Contact privacy',
+                value: 'Use CineConnect chat',
               ),
+              const ActorInfoRow(
+                icon: Icons.fact_check_outlined,
+                label: 'Content and usage',
+                value: 'Review before accepting',
+              ),
+              const ActorInfoRow(
+                icon: Icons.flight_takeoff_outlined,
+                label: 'Travel consent',
+                value: 'Confirm in offer terms',
+              ),
+              const ActorInfoRow(
+                icon: Icons.lock_clock_outlined,
+                label: 'Secured dates',
+                value: 'Locked by booking',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ActorTwoColumn(
+          left: ActorSectionCard(
+            title: 'Blocked Users',
+            icon: Icons.block_rounded,
+            child: _BlockedUsersPanel(
+              future: _blockedUsersFuture,
+              onRefresh: _refreshBlockedUsers,
             ),
-            const SizedBox(height: 12),
-            ActorTwoColumn(
-              left: ActorSectionCard(
-                title: 'Blocked Users',
-                icon: Icons.block_rounded,
-                child: _BlockedUsersPanel(
-                  fallbackNames: store.blockedUsers.toList(),
-                  future: _blockedUsersFuture,
-                  onRefresh: _refreshBlockedUsers,
+          ),
+          right: ActorSectionCard(
+            title: 'Report & Support',
+            icon: Icons.support_agent_outlined,
+            child: Column(
+              children: [
+                CorePrimaryButton(
+                  icon: Icons.report_gmailerrorred_outlined,
+                  label: 'Report suspicious offer',
+                  compact: true,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReportBlockScreen(),
+                    ),
+                  ),
                 ),
-              ),
-              right: ActorSectionCard(
-                title: 'Report & Support',
-                icon: Icons.support_agent_outlined,
-                child: Column(
-                  children: [
-                    CorePrimaryButton(
-                      icon: Icons.report_gmailerrorred_outlined,
-                      label: 'Report suspicious offer',
-                      compact: true,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => ReportBlockScreen(
-                            onBlock: TrustSafetyScope.maybeOf(context) == null
-                                ? () =>
-                                    store.block('Ali Khan (TVC Shoot - Lahore)')
-                                : null,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    CoreSecondaryButton(
-                      icon: Icons.support_agent_outlined,
-                      label: 'Contact safety support',
-                      compact: true,
-                      onTap: () => _openSafetySupport(context),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'For immediate danger, leave the location and contact local emergency services.',
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: context.appColors.textSecondary,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                CoreSecondaryButton(
+                  icon: Icons.support_agent_outlined,
+                  label: 'Contact safety support',
+                  compact: true,
+                  onTap: () => _openSafetySupport(context),
                 ),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  'For immediate danger, leave the location and contact local emergency services.',
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 
@@ -146,12 +133,10 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
 }
 
 class _BlockedUsersPanel extends StatelessWidget {
-  final List<String> fallbackNames;
   final Future<List<BlockedUserDto>>? future;
   final VoidCallback onRefresh;
 
   const _BlockedUsersPanel({
-    required this.fallbackNames,
     required this.future,
     required this.onRefresh,
   });
@@ -159,7 +144,11 @@ class _BlockedUsersPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (future == null) {
-      return _DemoBlockedUsersList(names: fallbackNames);
+      return const CoreEmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in to view blocked users',
+        message: 'Blocked accounts are loaded from Trust & Safety.',
+      );
     }
     return FutureBuilder<List<BlockedUserDto>>(
       future: future,
@@ -322,75 +311,6 @@ class _SafetySupportDialogState extends State<_SafetySupportDialog> {
           label: Text(_submitting ? 'Sending' : 'Create ticket'),
         ),
       ],
-    );
-  }
-}
-
-class _DemoBlockedUsersList extends StatelessWidget {
-  final List<String> names;
-
-  const _DemoBlockedUsersList({required this.names});
-
-  @override
-  Widget build(BuildContext context) {
-    if (names.isEmpty) {
-      return StatusChip(
-        label: 'No blocked users',
-        color: context.appColors.success,
-      );
-    }
-    return Column(
-      children: [
-        for (var i = 0; i < names.length; i++)
-          _DemoBlockedUserRow(
-            name: names[i],
-            showDivider: i != names.length - 1,
-          ),
-      ],
-    );
-  }
-}
-
-class _DemoBlockedUserRow extends StatelessWidget {
-  final String name;
-  final bool showDivider;
-
-  const _DemoBlockedUserRow({required this.name, this.showDivider = true});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(bottom: BorderSide(color: colors.borderMuted))
-            : null,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.person_off_outlined, color: colors.danger, size: 19),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.cardLabel.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              ActorTalentDemoStore.instance.unblock(name);
-              actorSnack(context, '$name unblocked');
-            },
-            child: const Text('Unblock'),
-          ),
-        ],
-      ),
     );
   }
 }

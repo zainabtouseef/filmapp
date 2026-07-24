@@ -58,7 +58,7 @@ Status meanings:
 | Media/Equipment | LIVE/CLEANED | `media_equipment_demo_data.dart` deleted on 2026-07-24; no feature-level `DemoData`, `DemoStore`, `mock_data`, or static-demo runtime matches remain | Operations, Bookings, Payments, TrustSafety | Continue live walkthrough and database seeding checks. |
 | Brand Sponsor | LIVE/CLEANED | `brand_sponsor_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `BrandSponsorDemoData`, `BrandSponsorDemoStore`, `brand_sponsor_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Specialist, Payments, Auth | Continue live walkthrough and verify seeded brand applications/deliverables/payments cover each screen. |
 | Location Owner | LIVE/CLEANED | `location_owner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `LocationOwnerDemoData`, `LocationOwnerDemoStore`, `location_owner_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Operations, Bookings, Payments, Auth | Continue live walkthrough and verify seeded property/bookings/inspection/payment records cover each screen. |
-| Actor/Talent | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth, Bookings, Contracts, Payments, TrustSafety | Many existing APIs; rate-card/profile/reputation gaps need careful handling. |
+| Actor/Talent | LIVE/CLEANED | `actor_talent_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `ActorTalentDemoData`, `ActorTalentDemoStore`, or `actor_talent_demo_data` runtime matches remain | Auth, Bookings, Contracts, Payments, TrustSafety | Continue authenticated walkthrough and verify seeded profile/portfolio/opportunity/contract/payment/review rows cover each screen. |
 | Model Extension | LIVE/CLEANED | `model_extension_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `ModelExtensionDemoData`, `ModelExtensionDemoStore`, `model_extension_demo_data`, preview-mode, or `_Preview*` runtime matches remain | Specialist, Auth | Continue live walkthrough and verify seeded model categories/rights/rates/restrictions/media cover each screen. |
 | Casting Agency | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist only on first screens | Specialist APIs exist but most screens still local. |
 | Crew Services | DEMO/GAP | `CrewServicesDemoData`, `CrewServicesDemoStore` | Bookings only on availability | Requires crew-specific backend decision. |
@@ -106,23 +106,27 @@ Cleanup result:
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| AT-01 Dashboard | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth, Bookings |
-| AT-02 Profile Builder | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth |
-| AT-03 Portfolio Showreel | PARTIAL | `ActorTalentDemoStore` | Auth, FutureBuilder |
-| AT-04 Availability | PARTIAL | `ActorTalentDemoStore` | Bookings |
-| AT-05 Rate Card | DEMO/PARTIAL | `ActorTalentDemoStore` | Auth |
-| AT-06 Opportunity Inbox | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Bookings |
-| AT-07 Offer Detail | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Auth |
-| AT-08 Counteroffer | DEMO/PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Bookings |
-| AT-09 Contract Signing | PARTIAL | `ActorTalentDemoStore` | Contracts |
-| AT-10 Earnings/Security | PARTIAL | `ActorTalentDemoData`, `ActorTalentDemoStore` | Payments |
-| AT-11 Reviews | PARTIAL | `ActorTalentDemoData` | Auth, TrustSafety |
-| AT-12 Safety | PARTIAL | `ActorTalentDemoStore` | TrustSafety |
+| AT-01 Dashboard | CLEANED | none | Auth, Bookings, Analytics |
+| AT-02 Profile Builder | CLEANED | none | Auth |
+| AT-03 Portfolio Showreel | CLEANED | none | Auth, Uploads |
+| AT-04 Availability | CLEANED | none | Bookings |
+| AT-05 Rate Card | CLEANED | none | Auth |
+| AT-06 Opportunity Inbox | CLEANED | none | Bookings |
+| AT-07 Offer Detail | CLEANED | none | Auth, Bookings |
+| AT-08 Counteroffer | CLEANED | none | Bookings |
+| AT-09 Contract Signing | CLEANED | none | Contracts |
+| AT-10 Earnings/Security | CLEANED | none | Payments |
+| AT-11 Reviews | CLEANED | none | Auth, TrustSafety |
+| AT-12 Safety | CLEANED | none | TrustSafety |
 
-Replacement path:
+Cleanup result:
 
-- Use profile, talent profile, portfolio, availability, talent opportunities, bookings/offers, negotiations, contracts/signatures, payments/ledger/payouts, reviews, reports, blocked users.
-- Decide rate-card persistence: marketplace listing rate fields may be enough; if not, add dedicated talent rate-card API.
+- AT-01 through AT-12 now render backend data or explicit sign-in/live-backend empty/error states.
+- Offline demo/store branches were removed from dashboard, profile builder, portfolio/showreel, availability, rate card, opportunity inbox, offer detail, counteroffer composer, contract signing, earnings/security, reviews, and safety controls.
+- `ActorTalentDemoData` and `ActorTalentDemoStore` were removed from all screens/components, and `lib/features/actor_talent/data/actor_talent_demo_data.dart` was deleted.
+- Shared booking status labels now live in `actor_talent_components.dart` instead of demo data.
+- Rate Card now edits only the live published day-rate field available on the talent profile API; the old fake private quote-guide table was removed until a dedicated backend rate-card API exists.
+- Verified with `flutter analyze` and `flutter test test/actor_talent_portal_test.dart`.
 
 ### 4.5 Model Extension
 

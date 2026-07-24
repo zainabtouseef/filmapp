@@ -6,7 +6,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/actor_talent_demo_data.dart';
+import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
 
@@ -36,22 +36,12 @@ class _AT08CounterofferComposerScreenState
   @override
   void initState() {
     super.initState();
-    final opportunities = ActorTalentDemoData.opportunities;
-    final offer = opportunities.firstWhere(
-      (item) => item.id == widget.offerId,
-      orElse: () => opportunities.first,
-    );
-    offerId = widget.offerId ?? offer.id;
-    final draft = ActorTalentDemoStore.instance.draftFor(offerId);
-    amount = TextEditingController(text: draft?.amount ?? offer.fee);
-    dates = TextEditingController(text: draft?.dates ?? offer.dates);
-    advance = TextEditingController(text: draft?.advance ?? '40%');
-    conditions = TextEditingController(
-        text: draft?.conditions ?? 'Travel and wardrobe provided');
-    message = TextEditingController(
-      text: draft?.message ??
-          'Thank you for the offer. I can confirm availability with the adjusted dates and advance.',
-    );
+    offerId = widget.offerId ?? '';
+    amount = TextEditingController();
+    dates = TextEditingController();
+    advance = TextEditingController();
+    conditions = TextEditingController();
+    message = TextEditingController();
   }
 
   @override
@@ -75,6 +65,19 @@ class _AT08CounterofferComposerScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (!offerId.startsWith('BKG-')) {
+      return const ActorSectionCard(
+        title: 'Counteroffer',
+        icon: Icons.edit_note_outlined,
+        tone: ActorTone.blue,
+        child: CoreEmptyState(
+          icon: Icons.lock_outline_rounded,
+          title: 'Open a live offer first',
+          message:
+              'Counteroffers require a server booking ID. No local draft or fake offer is shown.',
+        ),
+      );
+    }
     return ActorTwoColumn(
       left: ActorSectionCard(
         title: 'Editable Terms',
@@ -127,32 +130,17 @@ class _AT08CounterofferComposerScreenState
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CoreSecondaryButton(
-                    icon: Icons.save_outlined,
-                    label: 'Save draft',
-                    compact: true,
-                    onTap: _saveDraft,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CorePrimaryButton(
-                    icon: Icons.send_outlined,
-                    label: 'Send counteroffer',
-                    compact: true,
-                    loading: sending,
-                    onTap: sending ? null : _submit,
-                  ),
-                ),
-              ],
+            CorePrimaryButton(
+              icon: Icons.send_outlined,
+              label: 'Send counteroffer',
+              compact: true,
+              loading: sending,
+              onTap: sending ? null : _submit,
             ),
           ],
         ),
       ),
-      right: _CounterPreview(
+      right: _CounterSummary(
         amount: amount.text,
         dates: dates.text,
         advance: advance.text,
@@ -160,20 +148,6 @@ class _AT08CounterofferComposerScreenState
         message: message.text,
       ),
     );
-  }
-
-  void _saveDraft() {
-    ActorTalentDemoStore.instance.saveDraft(
-      offerId,
-      ActorCounterofferDraft(
-        amount: amount.text,
-        dates: dates.text,
-        advance: advance.text,
-        conditions: conditions.text,
-        message: message.text,
-      ),
-    );
-    actorSnack(context, 'Counteroffer draft saved');
   }
 
   Future<void> _loadLiveTerms() async {
@@ -202,20 +176,7 @@ class _AT08CounterofferComposerScreenState
       setState(() => error = 'Required');
       return;
     }
-    if (offerId.startsWith('BKG-')) {
-      _submitLive();
-      return;
-    }
-    ActorTalentDemoStore.instance.sendCounteroffer(offerId);
-    ActorTalentDemoStore.instance.clearDraft(offerId);
-    setState(() => error = null);
-    actorSnack(context, 'Counteroffer sent to producer');
-    Navigator.popUntil(
-      context,
-      (route) =>
-          route.settings.name == ActorTalentRoutes.opportunities ||
-          route.isFirst,
-    );
+    _submitLive();
   }
 
   Future<void> _submitLive() async {
@@ -270,14 +231,14 @@ class _AT08CounterofferComposerScreenState
   }
 }
 
-class _CounterPreview extends StatelessWidget {
+class _CounterSummary extends StatelessWidget {
   final String amount;
   final String dates;
   final String advance;
   final String conditions;
   final String message;
 
-  const _CounterPreview({
+  const _CounterSummary({
     required this.amount,
     required this.dates,
     required this.advance,
@@ -289,7 +250,7 @@ class _CounterPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return ActorSectionCard(
       title: 'Live Summary',
-      icon: Icons.preview_outlined,
+      icon: Icons.summarize_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -18,8 +18,9 @@ One true Flutter wiring gap was found and patched:
   users only from `ActorTalentDemoStore`. `TrustSafetyRepository`/`TrustSafetyController`
   now expose the existing deployed `GET /blocked-users` and
   `DELETE /blocked-users/{user_id}` endpoints, and AT-12 renders/unblocks the live block
-  list when an authenticated `TrustSafetyScope` is present. It keeps the previous demo
-  list only as an offline/preview fallback.
+  list when an authenticated `TrustSafetyScope` is present. The earlier offline/demo
+  blocked-user fallback was fully removed during the 2026-07-24 Actor/Talent static-data
+  cleanup.
 
 Rows reviewed in this pass mostly fell into these safe categories:
 

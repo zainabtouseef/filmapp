@@ -465,7 +465,7 @@ class _ActorRouteHeading extends StatelessWidget {
     return switch (route) {
       ActorTalentRoutes.dashboard => 'Talent workspace · overview',
       ActorTalentRoutes.profile => 'Public identity · casting profile',
-      ActorTalentRoutes.portfolio => 'Media library · director preview',
+      ActorTalentRoutes.portfolio => 'Media library · director-facing view',
       ActorTalentRoutes.calendar => 'Availability · booking conflicts',
       ActorTalentRoutes.rates => 'Rate guidance · negotiation baseline',
       ActorTalentRoutes.opportunities => 'Offers · auditions · casting calls',
