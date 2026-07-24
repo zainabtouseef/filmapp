@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
 
 import 'package:http/http.dart' as http;
 
@@ -114,6 +114,10 @@ class ApiClient {
   Uri _uriFor(String pathOrUrl) {
     final uri = Uri.parse(pathOrUrl);
     if (uri.hasScheme) return uri;
+    if (pathOrUrl.startsWith('/api/v1/')) {
+      final base = Uri.parse(baseUrl);
+      return Uri.parse('${base.scheme}://${base.authority}$pathOrUrl');
+    }
     return Uri.parse('$baseUrl$pathOrUrl');
   }
 

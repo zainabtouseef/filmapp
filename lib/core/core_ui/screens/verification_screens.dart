@@ -78,10 +78,13 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         },
         onProgress: (sentBytes, totalBytes) {
           if (!mounted || totalBytes <= 0) return;
+          final progress = sentBytes / totalBytes;
+          final percent = (progress * 100).clamp(0, 100).round();
           setState(() {
-            _uploadProgress[slot] = sentBytes / totalBytes;
-            _uploadStatus[slot] =
-                'Uploading image... ${(sentBytes / totalBytes * 100).clamp(0, 100).round()}%';
+            _uploadProgress[slot] = progress;
+            _uploadStatus[slot] = sentBytes >= totalBytes
+                ? 'Upload sent. Waiting for server confirmation...'
+                : 'Uploading image... $percent%';
           });
         },
       );
