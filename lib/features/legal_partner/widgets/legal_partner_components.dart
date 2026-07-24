@@ -6,7 +6,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/legal_partner_demo_data.dart';
 import '../models/legal_partner_models.dart';
 
 Color legalToneColor(BuildContext context, LegalTone tone) {
@@ -43,6 +42,43 @@ Color legalStatusColor(BuildContext context, LegalStatus status) {
 
 void legalSnack(BuildContext context, String message) {
   showCoreSnack(context, message);
+}
+
+String legalStatusLabel(LegalStatus status) {
+  return switch (status) {
+    LegalStatus.queued => 'Queued',
+    LegalStatus.urgent => 'Urgent',
+    LegalStatus.reviewing => 'Reviewing',
+    LegalStatus.clarification => 'Clarification',
+    LegalStatus.correctionRequested => 'Correction Requested',
+    LegalStatus.approved => 'Approved',
+    LegalStatus.escalated => 'Escalated',
+    LegalStatus.templatePending => 'Template Pending',
+    LegalStatus.addendumPending => 'Addendum Pending',
+    LegalStatus.completed => 'Completed',
+    LegalStatus.billed => 'Billed',
+    LegalStatus.blocked => 'Blocked',
+  };
+}
+
+LegalStatus legalStatusFromString(String value) {
+  return switch (value.trim().toLowerCase().replaceAll('-', '_')) {
+    'queued' || 'requested' || 'pending' => LegalStatus.queued,
+    'urgent' || 'high' => LegalStatus.urgent,
+    'reviewing' || 'in_review' || 'open' => LegalStatus.reviewing,
+    'clarification' || 'needs_clarification' => LegalStatus.clarification,
+    'correction_requested' ||
+    'changes_requested' =>
+      LegalStatus.correctionRequested,
+    'approved' => LegalStatus.approved,
+    'escalated' => LegalStatus.escalated,
+    'template_pending' => LegalStatus.templatePending,
+    'addendum_pending' => LegalStatus.addendumPending,
+    'completed' || 'closed' => LegalStatus.completed,
+    'billed' || 'paid' => LegalStatus.billed,
+    'blocked' || 'rejected' => LegalStatus.blocked,
+    _ => LegalStatus.queued,
+  };
 }
 
 Future<void> showLegalSheet(
@@ -450,7 +486,7 @@ class LegalStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: LegalPartnerDemoData.statusLabel(status),
+      label: legalStatusLabel(status),
       color: legalStatusColor(context, status),
     );
   }

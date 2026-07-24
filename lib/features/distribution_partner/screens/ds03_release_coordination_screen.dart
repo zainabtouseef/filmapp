@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/distribution_partner_demo_data.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/cards/glass_section_card.dart';
 import '../widgets/distribution_partner_components.dart';
 
 class DS03ReleaseCoordinationScreen extends StatefulWidget {
@@ -19,370 +19,276 @@ class DS03ReleaseCoordinationScreen extends StatefulWidget {
 
 class _DS03ReleaseCoordinationScreenState
     extends State<DS03ReleaseCoordinationScreen> {
-  final _notes = TextEditingController(
-    text: 'Pakistan theatrical first, UAE OTT after 45-day holdback.',
-  );
-  String? _error;
-  bool _submitting = false;
-  Future<List<DistributionProjectDto>>? _projectsFuture;
+  final _note = TextEditingController();
+  Future<List<DistributionProjectDto>>? _future;
+  String? _busyProjectId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final specialist = SpecialistScope.maybeOf(context);
-    _projectsFuture ??= specialist?.distributionProjects(force: true);
+    _future ??=
+        SpecialistScope.maybeOf(context)?.distributionProjects(force: true);
   }
 
   @override
   void dispose() {
-    _notes.dispose();
+    _note.dispose();
     super.dispose();
+  }
+
+  void _refresh() {
+    setState(() {
+      _future =
+          SpecialistScope.maybeOf(context)?.distributionProjects(force: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = DistributionPartnerDemoStore.instance;
-    final project = store.primaryProject;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        return DistributionTwoColumn(
-          left: DistributionSectionCard(
-            title: 'Project handover',
-            icon: Icons.rocket_launch_outlined,
-            selected: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_projectsFuture != null)
-                  FutureBuilder<List<DistributionProjectDto>>(
-                    future: _projectsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message: 'Loading live release projects...',
-                            icon: Icons.hourglass_top_rounded,
+    return DistributionTwoColumn(
+      left: DistributionSectionCard(
+        title: 'Release coordination',
+        icon: Icons.rocket_launch_outlined,
+        selected: true,
+        actionText: _future == null ? null : 'Refresh',
+        onActionTap: _refresh,
+        child: _future == null
+            ? const CoreEmptyState(
+                icon: Icons.lock_outline_rounded,
+                title: 'Sign in to coordinate releases',
+                message: 'Release projects are loaded from the server.',
+              )
+            : FutureBuilder<List<DistributionProjectDto>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SkeletonCard(height: 420);
+                  }
+                  if (snapshot.hasError) {
+                    return _LoadError(
+                      message: 'Could not load release projects',
+                      onRetry: _refresh,
+                    );
+                  }
+                  final projects = snapshot.data ?? const [];
+                  if (projects.isEmpty) {
+                    return const CoreEmptyState(
+                      icon: Icons.movie_creation_outlined,
+                      title: 'No live distribution projects',
+                      message: 'Project release coordination will appear here.',
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (final project in projects)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ProjectCard(
+                            project: project,
+                            busy: _busyProjectId == project.publicId,
+                            onSubmit: () => _submit(project),
+                            onNote: () => _showNoteSheet(context, project),
                           ),
-                        );
-                      }
-                      final rows = snapshot.data ?? const [];
-                      if (rows.isEmpty) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: InlineNotice(
-                          message:
-                              'Live release projects connected: ${rows.length} project(s), latest ${rows.first.publicId}.',
-                          icon: Icons.cloud_done_outlined,
-                          tone: CoreStatusTone.success,
                         ),
-                      );
-                    },
-                  ),
-                DistributionMediaFrame(
-                  imageUrl: project.imageUrl,
-                  title: project.title,
-                  badge: project.releaseWindow,
-                  fallbackIcon: Icons.movie_filter_outlined,
-                  aspectRatio: 16 / 8.5,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        project.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.metricNumberCompact.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    DistributionStatusChip(
-                        status: store.projectStatus(project)),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  '${project.producer} - ${project.territories} - ${project.releaseWindow}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DistributionProgressMeter(
-                  label: 'Release handover readiness',
-                  percent: store.handoverProgress,
-                ),
-                const SizedBox(height: 12),
-                for (final item in DistributionPartnerDemoData.handoverItems)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: DistributionChecklistTile(
-                      title: item.label,
-                      subtitle: item.detail,
-                      checked: store.completedHandover.contains(item.id),
-                      mandatory: item.mandatory,
-                      onTap: () => store.toggleHandover(item.id),
-                    ),
-                  ),
-                TextField(
-                  controller: _notes,
-                  maxLines: 3,
-                  style: AppTextStyles.body.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Release coordination note',
-                    hintText: 'Add deadline, approval or territory notes',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _error!,
-                    style: AppTextStyles.statusText.copyWith(
-                      color: colors.infoPurple,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreSecondaryButton(
-                        icon: Icons.save_outlined,
-                        label: 'Save draft',
-                        compact: true,
-                        onTap: () {
-                          setState(() => _error = null);
-                          final specialist = SpecialistScope.maybeOf(context);
-                          final live = _projectsFuture;
-                          if (specialist != null && live != null) {
-                            () async {
-                              try {
-                                final rows = await live;
-                                if (rows.isEmpty) return;
-                                await specialist.updateDistributionProject(
-                                  rows.first.publicId,
-                                  {
-                                    'status_note': _notes.text.trim(),
-                                    'status': 'onboarding',
-                                  },
-                                );
-                                if (!mounted) return;
-                                setState(() => _projectsFuture = specialist
-                                    .distributionProjects(force: true));
-                              } catch (_) {
-                                // Demo state remains the fallback.
-                              }
-                            }();
-                          }
-                          store.saveReleaseDraft();
-                          distributionSnack(context, 'Release draft saved');
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CorePrimaryButton(
-                        icon: Icons.send_outlined,
-                        label: _submitting ? 'Submitting…' : 'Submit',
-                        compact: true,
-                        onTap:
-                            _submitting ? null : () => _submit(context, store),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  );
+                },
+              ),
+      ),
+      right: DistributionSectionCard(
+        title: 'Handover Rules',
+        icon: Icons.rule_folder_outlined,
+        child: Column(
+          children: const [
+            DistributionInfoRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Materials',
+              value: 'Live handover count',
             ),
-          ),
-          right: Column(
-            children: [
-              DistributionSectionCard(
-                title: 'Status context',
-                icon: Icons.fact_check_outlined,
-                child: Column(
-                  children: [
-                    DistributionInfoRow(
-                      icon: Icons.event_available_outlined,
-                      label: 'Release window',
-                      value: project.releaseWindow,
-                    ),
-                    DistributionInfoRow(
-                      icon: Icons.public_outlined,
-                      label: 'Territories',
-                      value: project.territories,
-                    ),
-                    DistributionInfoRow(
-                      icon: Icons.inventory_2_outlined,
-                      label: 'Missing items',
-                      value: project.missingItems,
-                    ),
-                    DistributionInfoRow(
-                      icon: Icons.history_outlined,
-                      label: 'Audit events',
-                      value: '${store.auditEvents}',
-                    ),
-                    const SizedBox(height: 10),
-                    CoreSecondaryButton(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: 'Open release chat',
-                      compact: true,
-                      onTap: () =>
-                          Navigator.pushNamed(context, CoreRoutes.chat),
-                    ),
-                    const SizedBox(height: 8),
-                    CoreSecondaryButton(
-                      icon: Icons.article_outlined,
-                      label: 'Open contract',
-                      compact: true,
-                      onTap: () =>
-                          Navigator.pushNamed(context, CoreRoutes.contract),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              DistributionSectionCard(
-                title: 'Other release windows',
-                icon: Icons.event_note_outlined,
-                child: Column(
-                  children: [
-                    for (final item
-                        in DistributionPartnerDemoData.projects.where(
-                      (item) => item.id != project.id,
-                    ))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _ReleaseMiniRow(
-                          title: item.title,
-                          subtitle: '${item.producer} - ${item.releaseWindow}',
-                          status: store.projectStatus(item),
-                        ),
-                      ),
-                    CoreSecondaryButton(
-                      icon: Icons.analytics_outlined,
-                      label: 'Open reporting',
-                      compact: true,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        '/distribution/reports',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+            DistributionInfoRow(
+              icon: Icons.calendar_month_outlined,
+              label: 'Windows',
+              value: 'Live release windows',
+            ),
+            DistributionInfoRow(
+              icon: Icons.cloud_done_outlined,
+              label: 'Status',
+              value: 'PATCH distribution project',
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Future<void> _submit(
-    BuildContext context,
-    DistributionPartnerDemoStore store,
-  ) async {
-    if (!store.handoverReady || _notes.text.trim().length < 12) {
-      setState(
-        () => _error =
-            'Complete required handover items and add a coordination note.',
-      );
-      return;
-    }
-    setState(() {
-      _error = null;
-      _submitting = true;
-    });
+  Future<void> _submit(DistributionProjectDto project) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    setState(() => _busyProjectId = project.publicId);
     try {
-      final specialist = SpecialistScope.maybeOf(context);
-      final live = _projectsFuture;
-      if (specialist != null && live != null) {
-        final rows = await live;
-        if (rows.isNotEmpty) {
-          await specialist.updateDistributionProject(
-            rows.first.publicId,
-            {
-              'status': 'submitted',
-              'status_note': _notes.text.trim(),
-            },
-          );
-          if (mounted) {
-            setState(() {
-              _projectsFuture = specialist.distributionProjects(force: true);
-            });
-          }
-        }
-      }
-      store.submitReleaseHandover();
-      if (!context.mounted) return;
-      distributionSnack(context, 'Release handover submitted');
+      await specialist.updateDistributionProject(project.publicId, {
+        'status': 'submitted',
+        'status_note': _note.text.trim().isEmpty
+            ? (project.statusNote ?? 'Release coordination submitted')
+            : _note.text.trim(),
+      });
+      if (!mounted) return;
+      distributionSnack(context, 'Release coordination submitted');
+      _refresh();
     } catch (error) {
-      if (!context.mounted) return;
-      store.submitReleaseHandover();
-      distributionSnack(
-        context,
-        'Release handover saved locally; live sync skipped: $error',
-      );
+      if (!mounted) return;
+      distributionSnack(context, 'Could not submit release: $error');
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) setState(() => _busyProjectId = null);
     }
+  }
+
+  void _showNoteSheet(BuildContext context, DistributionProjectDto project) {
+    _note.text = project.statusNote ?? '';
+    showDistributionSheet(
+      context,
+      title: 'Update release note',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _note,
+            minLines: 3,
+            maxLines: 5,
+            decoration: InputDecoration(
+              labelText: 'Status note',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          CorePrimaryButton(
+            icon: Icons.save_outlined,
+            label: 'Save note',
+            onTap: () {
+              Navigator.pop(context);
+              _submit(project);
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _ReleaseMiniRow extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final dynamic status;
+class _ProjectCard extends StatelessWidget {
+  final DistributionProjectDto project;
+  final bool busy;
+  final VoidCallback onSubmit;
+  final VoidCallback onNote;
 
-  const _ReleaseMiniRow({
-    required this.title,
-    required this.subtitle,
-    required this.status,
+  const _ProjectCard({
+    required this.project,
+    required this.busy,
+    required this.onSubmit,
+    required this.onNote,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      children: [
-        Icon(Icons.rocket_launch_outlined, color: colors.goldDark, size: 19),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.cardLabel.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w800,
+    return Opacity(
+      opacity: busy ? 0.62 : 1,
+      child: GlassSectionCard(
+        radius: 18,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    project.projectId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
-              ),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: colors.textSecondary,
+                DistributionStatusChip(
+                  status: distributionStatusFromString(project.status),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DistributionInfoRow(
+              icon: Icons.public_outlined,
+              label: 'Territories',
+              value: project.territories ?? 'Not set',
+            ),
+            DistributionInfoRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Handover items',
+              value: '${project.handoverCount}',
+            ),
+            DistributionInfoRow(
+              icon: Icons.calendar_month_outlined,
+              label: 'Release windows',
+              value: '${project.releaseWindowCount}',
+            ),
+            if ((project.missingItems ?? '').trim().isNotEmpty)
+              DistributionInfoRow(
+                icon: Icons.warning_amber_rounded,
+                label: 'Missing',
+                value: project.missingItems!,
               ),
-            ],
-          ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                CoreSecondaryButton(
+                  icon: Icons.edit_note_outlined,
+                  label: 'Note',
+                  compact: true,
+                  onTap: busy ? null : onNote,
+                ),
+                CorePrimaryButton(
+                  icon: Icons.send_outlined,
+                  label: 'Submit',
+                  compact: true,
+                  onTap: busy ? null : onSubmit,
+                ),
+              ],
+            ),
+          ],
         ),
-        DistributionStatusChip(status: status),
+      ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
       ],
     );
   }

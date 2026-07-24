@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../features/director_producer/routes/director_producer_routes.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/casting_agency_demo_data.dart';
-import '../models/casting_agency_models.dart';
-import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_components.dart';
 
 class CA04CandidateShortlistScreen extends StatefulWidget {
@@ -20,11 +19,17 @@ class CA04CandidateShortlistScreen extends StatefulWidget {
 
 class _CA04CandidateShortlistScreenState
     extends State<CA04CandidateShortlistScreen> {
-  final _note = TextEditingController(
-    text: 'Priority shortlist with availability and tape status attached.',
-  );
-  bool _includeTapes = true;
+  final _note = TextEditingController();
+  Future<List<AuditionDto>>? _future;
+  String? _selectedAuditionId;
+  String? _busyCandidateId;
   String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= SpecialistScope.maybeOf(context)?.auditions(force: true);
+  }
 
   @override
   void dispose() {
@@ -32,231 +37,274 @@ class _CA04CandidateShortlistScreenState
     super.dispose();
   }
 
+  void _refresh() {
+    setState(() {
+      _future = SpecialistScope.maybeOf(context)?.auditions(force: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        return AgencyTwoColumn(
-          left: AgencySectionCard(
-            title: 'Shortlist builder',
-            icon: Icons.view_kanban_outlined,
-            selected: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _AuditionSelector(store: store),
-                const SizedBox(height: 12),
-                Text(
-                  'Select candidates',
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: context.appColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                AgencyResponsiveGrid(
-                  minWidth: 230,
-                  children: [
-                    for (final talent in CastingAgencyDemoData.roster)
-                      _CandidatePickCard(
-                        talent: talent,
-                        selected: store.selectedTalentIds.contains(talent.id),
-                        onTap: () => store.toggleTalent(talent.id),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _note,
-                  minLines: 3,
-                  maxLines: 5,
-                  style: AppTextStyles.body.copyWith(
-                    color: context.appColors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Agency notes for director',
-                    errorText: _error,
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SwitchListTile.adaptive(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  value: _includeTapes,
-                  activeThumbColor: context.appColors.goldMid,
-                  onChanged: (value) => setState(() => _includeTapes = value),
-                  title: Text(
-                    'Attach ready self-tapes',
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: context.appColors.textPrimary,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Ready tapes and candidate metadata travel with this shortlist.',
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: context.appColors.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreSecondaryButton(
-                        icon: Icons.save_outlined,
-                        label: 'Save draft',
-                        compact: true,
-                        onTap: () =>
-                            agencySnack(context, 'Shortlist draft saved'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CorePrimaryButton(
-                        icon: Icons.send_outlined,
-                        label: 'Submit',
-                        compact: true,
-                        onTap: () => _submit(context, store),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+    return AgencyTwoColumn(
+      left: AgencySectionCard(
+        title: 'Shortlist builder',
+        icon: Icons.view_kanban_outlined,
+        selected: true,
+        actionText: _future == null ? null : 'Refresh',
+        onActionTap: _refresh,
+        child: _future == null
+            ? const CoreEmptyState(
+                icon: Icons.lock_outline_rounded,
+                title: 'Sign in to build shortlists',
+                message: 'Audition candidates are loaded from the server.',
+              )
+            : FutureBuilder<List<AuditionDto>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const SkeletonCard(height: 420);
+                  }
+                  if (snapshot.hasError) {
+                    return _LoadError(
+                      message: 'Could not load audition candidates',
+                      onRetry: _refresh,
+                    );
+                  }
+                  final auditions = snapshot.data ?? const [];
+                  if (auditions.isEmpty) {
+                    return const CoreEmptyState(
+                      icon: Icons.inbox_outlined,
+                      title: 'No live auditions',
+                      message: 'Shortlists appear after auditions are created.',
+                    );
+                  }
+                  final selected = auditions.firstWhere(
+                    (item) => item.publicId == _selectedAuditionId,
+                    orElse: () => auditions.first,
+                  );
+                  _selectedAuditionId ??= selected.publicId;
+                  return _BuilderBody(
+                    auditions: auditions,
+                    selected: selected,
+                    note: _note,
+                    error: _error,
+                    busyCandidateId: _busyCandidateId,
+                    onSelectedAudition: (id) =>
+                        setState(() => _selectedAuditionId = id),
+                    onToggleCandidate: _toggleCandidate,
+                    onSubmitNote: _submitNote,
+                  );
+                },
+              ),
+      ),
+      right: AgencySectionCard(
+        title: 'Submission Rules',
+        icon: Icons.rule_folder_outlined,
+        child: Column(
+          children: const [
+            AgencyInfoRow(
+              icon: Icons.cloud_done_outlined,
+              label: 'Source',
+              value: 'Live audition candidates',
             ),
-          ),
-          right: Column(
-            children: [
-              AgencySectionCard(
-                title: 'Live preview',
-                icon: Icons.preview_outlined,
-                child: _ShortlistPreview(
-                    store: store, includeTapes: _includeTapes),
-              ),
-              const SizedBox(height: 12),
-              AgencySectionCard(
-                title: 'Progress',
-                icon: Icons.auto_graph_outlined,
-                child: Column(
-                  children: [
-                    _ProgressRow(
-                      label: 'Request selected',
-                      value: store.selectedAudition.project,
-                      complete: true,
-                    ),
-                    _ProgressRow(
-                      label: 'Candidates',
-                      value: '${store.selectedTalentIds.length} selected',
-                      complete: store.selectedTalentIds.isNotEmpty,
-                    ),
-                    _ProgressRow(
-                      label: 'Notes',
-                      value: _note.text.trim().isEmpty ? 'Needed' : 'Ready',
-                      complete: _note.text.trim().isNotEmpty,
-                    ),
-                    _ProgressRow(
-                      label: 'Director board',
-                      value: 'DP shortlist route',
-                      complete: false,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+            AgencyInfoRow(
+              icon: Icons.check_circle_outline,
+              label: 'Selection',
+              value: 'PATCH candidate status',
+            ),
+            AgencyInfoRow(
+              icon: Icons.notes_outlined,
+              label: 'Notes',
+              value: 'Saved to candidate notes',
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  void _submit(BuildContext context, CastingAgencyDemoStore store) {
-    if (store.selectedTalentIds.isEmpty) {
-      setState(() => _error = 'Select at least one candidate.');
+  Future<void> _toggleCandidate(AuditionCandidateDto candidate) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    final nextStatus =
+        candidate.status == 'shortlisted' ? 'submitted' : 'shortlisted';
+    setState(() {
+      _busyCandidateId = candidate.publicId;
+      _error = null;
+    });
+    try {
+      await specialist.updateAuditionCandidate(candidate.publicId, {
+        'status': nextStatus,
+      });
+      if (!mounted) return;
+      agencySnack(context, '${candidate.screenName} marked $nextStatus');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not update candidate: $error');
+    } finally {
+      if (mounted) setState(() => _busyCandidateId = null);
+    }
+  }
+
+  Future<void> _submitNote(AuditionCandidateDto candidate) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    final body = _note.text.trim();
+    if (body.length < 8) {
+      setState(() => _error = 'Add a useful note before saving.');
       return;
     }
-    if (_note.text.trim().length < 8) {
-      setState(() => _error = 'Add a useful note before submitting.');
-      return;
+    setState(() {
+      _busyCandidateId = candidate.publicId;
+      _error = null;
+    });
+    try {
+      await specialist.addSelectionNote(candidate.publicId, {
+        'note': body,
+        'score': 8,
+        'visibility': 'director',
+      });
+      if (!mounted) return;
+      _note.clear();
+      agencySnack(context, 'Selection note saved');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not save note: $error');
+    } finally {
+      if (mounted) setState(() => _busyCandidateId = null);
     }
-    setState(() => _error = null);
-    store.submitShortlist();
-    agencySnack(context, 'Shortlist sent to director board');
-    Navigator.pushNamed(context, DirectorProducerRoutes.shortlist);
   }
 }
 
-class _AuditionSelector extends StatelessWidget {
-  final CastingAgencyDemoStore store;
+class _BuilderBody extends StatelessWidget {
+  final List<AuditionDto> auditions;
+  final AuditionDto selected;
+  final TextEditingController note;
+  final String? error;
+  final String? busyCandidateId;
+  final ValueChanged<String> onSelectedAudition;
+  final ValueChanged<AuditionCandidateDto> onToggleCandidate;
+  final ValueChanged<AuditionCandidateDto> onSubmitNote;
 
-  const _AuditionSelector({required this.store});
+  const _BuilderBody({
+    required this.auditions,
+    required this.selected,
+    required this.note,
+    required this.error,
+    required this.busyCandidateId,
+    required this.onSelectedAudition,
+    required this.onToggleCandidate,
+    required this.onSubmitNote,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final audition in CastingAgencyDemoData.auditions)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CoreChip(
-                label: audition.project,
-                selected: store.selectedAuditionId == audition.id,
-                icon: Icons.local_activity_outlined,
-                onTap: () => store.selectAudition(audition.id),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final audition in auditions)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: CoreChip(
+                    label: audition.roleTitle,
+                    selected: selected.publicId == audition.publicId,
+                    icon: Icons.local_activity_outlined,
+                    onTap: () => onSelectedAudition(audition.publicId),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        AgencyInfoRow(
+          icon: Icons.movie_filter_outlined,
+          label: 'Project',
+          value: selected.projectId,
+        ),
+        AgencyInfoRow(
+          icon: Icons.group_outlined,
+          label: 'Candidates',
+          value: '${selected.candidates.length}',
+        ),
+        const SizedBox(height: 12),
+        if (selected.candidates.isEmpty)
+          const CoreEmptyState(
+            icon: Icons.people_outline_rounded,
+            title: 'No live candidates yet',
+            message: 'Candidate records will appear after roster submissions.',
+          )
+        else
+          AgencyResponsiveGrid(
+            minWidth: 250,
+            children: [
+              for (final candidate in selected.candidates)
+                _CandidatePickCard(
+                  candidate: candidate,
+                  busy: busyCandidateId == candidate.publicId,
+                  onToggle: () => onToggleCandidate(candidate),
+                  onNote: () => onSubmitNote(candidate),
+                ),
+            ],
+          ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: note,
+          minLines: 3,
+          maxLines: 5,
+          style: AppTextStyles.body.copyWith(
+            color: context.appColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            labelText: 'Selection note for director',
+            errorText: error,
+            alignLabelWithHint: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _CandidatePickCard extends StatelessWidget {
-  final AgencyTalent talent;
-  final bool selected;
-  final VoidCallback onTap;
+  final AuditionCandidateDto candidate;
+  final bool busy;
+  final VoidCallback onToggle;
+  final VoidCallback onNote;
 
   const _CandidatePickCard({
-    required this.talent,
-    required this.selected,
-    required this.onTap,
+    required this.candidate,
+    required this.busy,
+    required this.onToggle,
+    required this.onNote,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
+    final shortlisted = candidate.status == 'shortlisted';
+    return Opacity(
+      opacity: busy ? 0.62 : 1,
       child: GlassSectionCard(
         radius: 18,
         padding: const EdgeInsets.all(11),
-        selected: selected,
-        child: Row(
+        selected: shortlisted,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 52,
-              child: AgencyMediaFrame(
-                imageUrl: talent.imageUrl,
-                title: talent.name,
-                badge: talent.city,
-                fallbackIcon: Icons.person_outline_rounded,
-                aspectRatio: 1,
-                compact: true,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    talent.name,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    candidate.screenName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.cardLabel.copyWith(
@@ -264,22 +312,43 @@ class _CandidatePickCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${talent.category} - ${talent.availability}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                AgencyStatusChip(
+                  status: agencyStatusFromString(candidate.status),
+                ),
+              ],
             ),
-            Icon(
-              selected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: selected ? colors.success : colors.iconMuted,
-              size: 20,
+            const SizedBox(height: 8),
+            AgencyInfoRow(
+              icon: Icons.video_collection_outlined,
+              label: 'Self-tapes',
+              value: '${candidate.selfTapeCount}',
+            ),
+            AgencyInfoRow(
+              icon: Icons.notes_outlined,
+              label: 'Notes',
+              value: '${candidate.selectionNoteCount}',
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                CoreSecondaryButton(
+                  icon: shortlisted
+                      ? Icons.remove_circle_outline
+                      : Icons.check_circle_outline,
+                  label: shortlisted ? 'Remove' : 'Shortlist',
+                  compact: true,
+                  onTap: busy ? null : onToggle,
+                ),
+                CorePrimaryButton(
+                  icon: Icons.notes_outlined,
+                  label: 'Save note',
+                  compact: true,
+                  onTap: busy ? null : onNote,
+                ),
+              ],
             ),
           ],
         ),
@@ -288,105 +357,29 @@ class _CandidatePickCard extends StatelessWidget {
   }
 }
 
-class _ShortlistPreview extends StatelessWidget {
-  final CastingAgencyDemoStore store;
-  final bool includeTapes;
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
 
-  const _ShortlistPreview({required this.store, required this.includeTapes});
+  const _LoadError({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    final selected = CastingAgencyDemoData.roster
-        .where((talent) => store.selectedTalentIds.contains(talent.id))
-        .toList();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AgencyInfoRow(
-          icon: Icons.local_activity_outlined,
-          label: 'Request',
-          value: store.selectedAudition.project,
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
         ),
-        AgencyInfoRow(
-          icon: Icons.people_alt_outlined,
-          label: 'Candidates',
-          value: '${selected.length}',
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
         ),
-        AgencyInfoRow(
-          icon: Icons.video_collection_outlined,
-          label: 'Self-tapes',
-          value: includeTapes ? 'Attached' : 'Not attached',
-        ),
-        const SizedBox(height: 8),
-        for (final talent in selected.take(4))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 7),
-            child: AgencyStatusChip(status: talent.status),
-          ),
-        if (selected.isEmpty)
-          CoreEmptyState(
-            icon: Icons.playlist_add_outlined,
-            title: 'No candidates yet',
-            message: 'Choose roster talent to build the preview.',
-            actionLabel: 'Open roster',
-            onAction: () => Navigator.pushNamed(
-              context,
-              CastingAgencyRoutes.roster,
-            ),
-          ),
       ],
-    );
-  }
-}
-
-class _ProgressRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool complete;
-
-  const _ProgressRow({
-    required this.label,
-    required this.value,
-    required this.complete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(
-            complete
-                ? Icons.check_circle_outline
-                : Icons.radio_button_unchecked,
-            color: complete ? colors.success : colors.iconMuted,
-            size: 20,
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              label,
-              style: AppTextStyles.cardLabel.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

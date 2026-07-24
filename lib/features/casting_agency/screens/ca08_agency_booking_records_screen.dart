@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/casting_agency_demo_data.dart';
-import '../models/casting_agency_models.dart';
 import '../widgets/casting_agency_components.dart';
 
 class CA08AgencyBookingRecordsScreen extends StatefulWidget {
@@ -21,212 +22,180 @@ class _CA08AgencyBookingRecordsScreenState
     extends State<CA08AgencyBookingRecordsScreen> {
   String _query = '';
   String _filter = 'All';
+  Future<List<AgencyCommissionDto>>? _future;
 
   @override
-  Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final records = _records(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgencySectionCard(
-              title: 'Records command',
-              icon: Icons.receipt_long_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  AgencySearchField(
-                    hintText: 'Search bookings, talent, projects...',
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'Booked',
-                          'Closed',
-                          'Payment Due',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: _filter == filter,
-                              onTap: () {
-                                setState(() => _filter = filter);
-                                agencySnack(context, '$filter records shown');
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            AgencyTwoColumn(
-              left: AgencySectionCard(
-                title: 'Booking records',
-                icon: Icons.table_rows_outlined,
-                child: records.isEmpty
-                    ? CoreEmptyState(
-                        icon: Icons.search_off_rounded,
-                        title: 'No booking records',
-                        message: 'Clear filters or search another project.',
-                        actionLabel: 'Clear',
-                        onAction: () => setState(() {
-                          _query = '';
-                          _filter = 'All';
-                        }),
-                      )
-                    : Column(
-                        children: [
-                          for (final record in records)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _RecordRow(
-                                record: record,
-                                status: store.recordStatus(record),
-                                onDetail: () => _showRecord(context, record),
-                                onClose: () {
-                                  store.closeRecord(record.id);
-                                  agencySnack(context, 'Booking closed');
-                                },
-                              ),
-                            ),
-                        ],
-                      ),
-              ),
-              right: AgencySectionCard(
-                title: 'Record health',
-                icon: Icons.analytics_outlined,
-                child: Column(
-                  children: [
-                    AgencyInfoRow(
-                      icon: Icons.business_center_outlined,
-                      label: 'Agency bookings',
-                      value: '${CastingAgencyDemoData.records.length}',
-                    ),
-                    AgencyInfoRow(
-                      icon: Icons.percent_outlined,
-                      label: 'Commission owed',
-                      value: 'PKR 322K',
-                    ),
-                    AgencyInfoRow(
-                      icon: Icons.verified_outlined,
-                      label: 'Verified records',
-                      value: '2 closed',
-                    ),
-                    const SizedBox(height: 10),
-                    AgencyMiniBarChart(
-                      values: const [4, 6, 7, 5, 9, 8],
-                      colors: [
-                        context.appColors.goldMid,
-                        context.appColors.infoBlue,
-                        context.appColors.success,
-                      ],
-                      height: 86,
-                    ),
-                    const SizedBox(height: 12),
-                    CoreSecondaryButton(
-                      icon: Icons.download_outlined,
-                      label: 'Export records',
-                      compact: true,
-                      onTap: () => agencySnack(
-                        context,
-                        'Agency records export prepared',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??=
+        SpecialistScope.maybeOf(context)?.agencyCommissions(force: true);
   }
 
-  Iterable<AgencyBookingRecord> _records(CastingAgencyDemoStore store) {
-    final lower = _query.trim().toLowerCase();
-    return CastingAgencyDemoData.records.where((record) {
-      final status = store.recordStatus(record);
-      final matchesFilter = switch (_filter) {
-        'Booked' => status == AgencyStatus.booked,
-        'Closed' => status == AgencyStatus.closed,
-        'Payment Due' => status == AgencyStatus.paymentPending,
-        _ => true,
-      };
-      final haystack =
-          '${record.talentName} ${record.project} ${record.value} ${record.commission}'
-              .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
+  void _refresh() {
+    setState(() {
+      _future =
+          SpecialistScope.maybeOf(context)?.agencyCommissions(force: true);
     });
   }
 
-  void _showRecord(BuildContext context, AgencyBookingRecord record) {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AgencySectionCard(
+          title: 'Records command',
+          icon: Icons.receipt_long_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: Column(
+            children: [
+              AgencySearchField(
+                hintText: 'Search live booking IDs...',
+                onChanged: (value) => setState(() => _query = value),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final filter in ['All', 'pending', 'paid'])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CoreChip(
+                          label:
+                              filter == 'All' ? filter : filter.toUpperCase(),
+                          selected: _filter == filter,
+                          onTap: () => setState(() => _filter = filter),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view agency records',
+            message:
+                'Agency booking records are represented by live commission rows.',
+          )
+        else
+          FutureBuilder<List<AgencyCommissionDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 360);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                  message: 'Could not load agency records',
+                  onRetry: _refresh,
+                );
+              }
+              final records = _records(snapshot.data ?? const []);
+              return AgencyTwoColumn(
+                left: AgencySectionCard(
+                  title: 'Booking records',
+                  icon: Icons.table_rows_outlined,
+                  child: records.isEmpty
+                      ? CoreEmptyState(
+                          icon: Icons.search_off_rounded,
+                          title: 'No live booking records',
+                          message: 'Clear filters or wait for commissions.',
+                          actionLabel: 'Clear',
+                          onAction: () => setState(() {
+                            _query = '';
+                            _filter = 'All';
+                          }),
+                        )
+                      : Column(
+                          children: [
+                            for (final record in records)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _RecordRow(
+                                  record: record,
+                                  onDetail: () => _showRecord(context, record),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+                right: AgencySectionCard(
+                  title: 'Record health',
+                  icon: Icons.analytics_outlined,
+                  child: Column(
+                    children: [
+                      AgencyInfoRow(
+                        icon: Icons.business_center_outlined,
+                        label: 'Agency bookings',
+                        value: '${records.length}',
+                      ),
+                      AgencyInfoRow(
+                        icon: Icons.percent_outlined,
+                        label: 'Commission owed',
+                        value: _money(
+                          records.fold<int>(
+                            0,
+                            (sum, item) => sum + item.commissionMinor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      CoreSecondaryButton(
+                        icon: Icons.receipt_long_outlined,
+                        label: 'Open receipts',
+                        compact: true,
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          CoreRoutes.ledger,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  List<AgencyCommissionDto> _records(List<AgencyCommissionDto> rows) {
+    final lower = _query.trim().toLowerCase();
+    return rows.where((record) {
+      final matchesFilter = _filter == 'All' || record.status == _filter;
+      final haystack = '${record.bookingId} ${record.status}'.toLowerCase();
+      return matchesFilter && (lower.isEmpty || haystack.contains(lower));
+    }).toList();
+  }
+
+  void _showRecord(BuildContext context, AgencyCommissionDto record) {
     showAgencySheet(
       context,
-      title: record.project,
+      title: record.bookingId,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AgencyInfoRow(
-            icon: Icons.person_outline_rounded,
-            label: 'Talent',
-            value: record.talentName,
-          ),
-          AgencyInfoRow(
-            icon: Icons.payments_outlined,
-            label: 'Value',
-            value: record.value,
+            icon: Icons.confirmation_number_outlined,
+            label: 'Booking',
+            value: record.bookingId,
           ),
           AgencyInfoRow(
             icon: Icons.percent_outlined,
             label: 'Commission',
-            value: record.commission,
+            value: _money(record.commissionMinor),
           ),
           AgencyInfoRow(
-            icon: Icons.calendar_today_outlined,
-            label: 'Date',
-            value: record.date,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.receipt_long_outlined,
-                  label: 'Receipt',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, CoreRoutes.ledger);
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.report_problem_outlined,
-                  label: 'Issue',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(
-                      context,
-                      CoreRoutes.report,
-                      arguments: 'Agency booking record issue',
-                    );
-                  },
-                ),
-              ),
-            ],
+            icon: Icons.verified_outlined,
+            label: 'Status',
+            value: record.status,
           ),
         ],
       ),
@@ -235,17 +204,10 @@ class _CA08AgencyBookingRecordsScreenState
 }
 
 class _RecordRow extends StatelessWidget {
-  final AgencyBookingRecord record;
-  final AgencyStatus status;
+  final AgencyCommissionDto record;
   final VoidCallback onDetail;
-  final VoidCallback onClose;
 
-  const _RecordRow({
-    required this.record,
-    required this.status,
-    required this.onDetail,
-    required this.onClose,
-  });
+  const _RecordRow({required this.record, required this.onDetail});
 
   @override
   Widget build(BuildContext context) {
@@ -253,13 +215,17 @@ class _RecordRow extends StatelessWidget {
     return GlassSectionCard(
       radius: 16,
       padding: const EdgeInsets.all(11),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  record.project,
+          Icon(Icons.business_center_outlined,
+              color: colors.goldDark, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record.bookingId,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -267,57 +233,54 @@ class _RecordRow extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
-              AgencyStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${record.talentName} - ${record.value} - ${record.commission}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 4),
+                Text(
+                  _money(record.commissionMinor),
                   style: AppTextStyles.smallMeta.copyWith(
                     color: colors.textSecondary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-              ),
-              Text(
-                record.date,
-                style: AppTextStyles.micro.copyWith(
-                  color: colors.textSecondary,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.info_outline_rounded,
-                  label: 'Detail',
-                  compact: true,
-                  onTap: onDetail,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.check_circle_outline,
-                  label: 'Close',
-                  compact: true,
-                  onTap: onClose,
-                ),
-              ),
-            ],
-          ),
+          AgencyStatusChip(status: agencyStatusFromString(record.status)),
+          const SizedBox(width: 8),
+          TextButton(onPressed: onDetail, child: const Text('Details')),
         ],
       ),
     );
   }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
+    );
+  }
+}
+
+String _money(int minor) {
+  final whole = minor ~/ 100;
+  if (whole >= 100000) return 'PKR ${(whole / 1000).round()}k';
+  return 'PKR $whole';
 }

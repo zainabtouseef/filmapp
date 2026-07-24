@@ -60,12 +60,12 @@ Status meanings:
 | Location Owner | LIVE/CLEANED | `location_owner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `LocationOwnerDemoData`, `LocationOwnerDemoStore`, `location_owner_demo_data`, preview-mode, or `_buildPreview` runtime matches remain | Operations, Bookings, Payments, Auth | Continue live walkthrough and verify seeded property/bookings/inspection/payment records cover each screen. |
 | Actor/Talent | LIVE/CLEANED | `actor_talent_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `ActorTalentDemoData`, `ActorTalentDemoStore`, or `actor_talent_demo_data` runtime matches remain | Auth, Bookings, Contracts, Payments, TrustSafety | Continue authenticated walkthrough and verify seeded profile/portfolio/opportunity/contract/payment/review rows cover each screen. |
 | Model Extension | LIVE/CLEANED | `model_extension_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `ModelExtensionDemoData`, `ModelExtensionDemoStore`, `model_extension_demo_data`, preview-mode, or `_Preview*` runtime matches remain | Specialist, Auth | Continue live walkthrough and verify seeded model categories/rights/rates/restrictions/media cover each screen. |
-| Casting Agency | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist only on first screens | Specialist APIs exist but most screens still local. |
-| Crew Services | DEMO/GAP | `CrewServicesDemoData`, `CrewServicesDemoStore` | Bookings only on availability | Requires crew-specific backend decision. |
-| Legal Partner | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts | Contract/legal review APIs exist; billing/template review may need backend additions. |
-| Insurance Partner | PARTIAL | `InsurancePartnerDemoData`, `InsurancePartnerDemoStore` | Insurance on first screens | Insurance APIs exist; safety/incident screens need operations linkage. |
-| Distribution Partner | PARTIAL | `DistributionPartnerDemoData`, `DistributionPartnerDemoStore` | Specialist | Distribution APIs exist; dashboard/reporting/handover need full live replacement. |
-| Role Portals generic | DEMO | `RolePortalDemoData`, `RolePortalDemoStore` | none | Treat as legacy/generic demo portal; remove from runtime if replaced by real role portals. |
+| Casting Agency | LIVE/CLEANED | `casting_agency_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `CastingAgencyDemoData`, `CastingAgencyDemoStore`, or `casting_agency_demo_data` runtime matches remain | Specialist | Continue authenticated walkthrough and verify seeded agency roster/audition/candidate/commission rows cover each screen. |
+| Crew Services | GAP/CLEANED | `crew_services_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `CrewServicesDemoData`, `CrewServicesDemoStore`, or `crew_services_demo_data` runtime matches remain | none dedicated | Screens now show explicit backend-gap states. Requires crew-specific profile, portfolio, availability, request, contract/payment, and review APIs before live rows can appear. |
+| Legal Partner | LIVE/CLEANED + GAP NOTES | `legal_partner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `LegalPartnerDemoData`, `LegalPartnerDemoStore`, or `legal_partner_demo_data` runtime matches remain | Contracts | Dashboard, review queue, templates, addendums, and history use Contracts APIs. Template decision/change-log and legal billing invoice rollups remain explicit backend gaps. |
+| Insurance Partner | LIVE/CLEANED + GAP NOTES | `insurance_partner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `InsurancePartnerDemoData`, `InsurancePartnerDemoStore`, or `insurance_partner_demo_data` runtime matches remain | Insurance for dashboard/policies/claims; Operations create-only for safety/incidents | Dashboard, policy records, and claims are live-backed. Safety/incident pages now show explicit backend-gap notices until list/detail/update APIs exist. |
+| Distribution Partner | LIVE/CLEANED | `distribution_partner_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `DistributionPartnerDemoData`, `DistributionPartnerDemoStore`, or `distribution_partner_demo_data` runtime matches remain | Specialist | Continue authenticated walkthrough and verify seeded distribution profile/project/contact/report rows cover each screen. Statement export remains an explicit backend-gap notice until a real export endpoint exists. |
+| Role Portals generic | GAP/CLEANED | `role_portal_demo_data.dart` removed and deleted on 2026-07-24; no feature-level `RolePortalDemoData`, `RolePortalDemoStore`, or `role_portal_demo_data` runtime matches remain | none | Legacy generic shell now renders a clean disabled/backend-gap placeholder instead of fake records, metrics, media, or workflow actions. |
 
 ## 4. Screen-by-screen static data audit
 
@@ -195,104 +195,106 @@ Cleanup result:
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| CR-01 Dashboard | DEMO | `CrewServicesDemoData`, `CrewServicesDemoStore` | none |
-| CR-02 Service Profile | DEMO | `CrewServicesDemoData`, `CrewServicesDemoStore` | none |
-| CR-03 Credits | DEMO | `CrewServicesDemoStore` | none |
-| CR-04 Availability | PARTIAL | `CrewServicesDemoStore` | Bookings |
-| CR-05 Requests | DEMO | `CrewServicesDemoData`, `CrewServicesDemoStore` | none |
-| CR-06 Contracts/Payments | DEMO | `CrewServicesDemoData`, `CrewServicesDemoStore` | none |
-| CR-07 Ratings | DEMO | `CrewServicesDemoData` | none |
+| CR-01 Dashboard | GAP/CLEANED | none | none dedicated |
+| CR-02 Service Profile | GAP/CLEANED | none | none dedicated |
+| CR-03 Credits | GAP/CLEANED | none | none dedicated |
+| CR-04 Availability | GAP/CLEANED | none | none dedicated |
+| CR-05 Requests | GAP/CLEANED | none | none dedicated |
+| CR-06 Contracts/Payments | GAP/CLEANED | none | none dedicated |
+| CR-07 Ratings | GAP/CLEANED | none | none dedicated |
 
 Replacement path:
 
-- Crew requires a backend decision before serious UI wiring.
-- Recommended: add crew profile, credits, service categories, rate-card, and marketplace listing linkage; reuse availability/bookings/contracts/payments/reviews.
+- Crew requires backend APIs before serious UI wiring.
+- Recommended: add crew profile, credits, service categories, rate-card, marketplace listing linkage, crew availability, crew requests/offers, crew contract/payment linkage, and crew reviews/work history.
 
 ### 4.9 Casting Agency
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| CA-01 Dashboard | PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist |
-| CA-02 Roster | PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist |
-| CA-03 Audition Inbox | PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | Specialist |
-| CA-04 Shortlist | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | none |
-| CA-05 Self-tapes | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | none |
-| CA-06 Notes | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | none |
-| CA-07 Commissions | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | none |
-| CA-08 Bookings | DEMO/PARTIAL | `CastingAgencyDemoData`, `CastingAgencyDemoStore` | none |
+| CA-01 Dashboard | CLEANED | none | Specialist, Analytics |
+| CA-02 Roster | CLEANED | none | Specialist |
+| CA-03 Audition Inbox | CLEANED | none | Specialist |
+| CA-04 Shortlist | CLEANED | none | Specialist |
+| CA-05 Self-tapes | CLEANED | none | Specialist |
+| CA-06 Notes | CLEANED | none | Specialist |
+| CA-07 Commissions | CLEANED | none | Specialist |
+| CA-08 Bookings | CLEANED | none | Specialist |
 
-Replacement path:
+Cleanup result:
 
-- Use agency profile/invitations/talent, auditions, candidates, self-tapes, notes, commissions, bookings.
-- Add missing controller/repository exposure where specialist backend endpoints exist but UI has no scope usage.
+- CA-01 through CA-08 now render backend data or explicit sign-in/live-backend empty/error states.
+- Offline demo/store branches were removed from dashboard, roster, audition inbox, shortlist builder, self-tape collection, selection notes, commission records, and booking records.
+- `CastingAgencyDemoData` and `CastingAgencyDemoStore` were removed from all screens/components, and `lib/features/casting_agency/data/casting_agency_demo_data.dart` was deleted.
+- Shared status labels now live in `casting_agency_components.dart` instead of demo data.
+- Added thin `SpecialistController` wrappers for existing backend candidate update, selection-note create, and commission create repository methods.
+- Verified with `flutter analyze` and `flutter test test/casting_agency_portal_test.dart`.
 
 ### 4.10 Legal Partner
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| LG-01 Dashboard | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts |
-| LG-02 Contract Review | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts |
-| LG-03 Template Review | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts |
-| LG-04 Addendum Review | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts |
-| LG-05 History/Billing | PARTIAL | `LegalPartnerDemoData`, `LegalPartnerDemoStore` | Contracts |
+| LG-01 Dashboard | CLEANED | none | Contracts |
+| LG-02 Contract Review | CLEANED | none | Contracts |
+| LG-03 Template Review | GAP/CLEANED | none | Contracts templates |
+| LG-04 Addendum Review | CLEANED | none | Contracts |
+| LG-05 History/Billing | GAP/CLEANED | none | Contracts |
 
 Replacement path:
 
-- Use contracts, legal reviews, decisions, contract templates.
-- Billing may need a legal-review payment/ledger join or dedicated backend rollup.
+- Uses contracts, legal reviews, decisions, contract templates, and contract addendums.
+- Add template review decision/change-log APIs and legal billing invoice/ledger rollup APIs before enabling those workflow actions.
 
 ### 4.11 Insurance Partner
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| IN-01 Dashboard | PARTIAL | `InsurancePartnerDemoData`, `InsurancePartnerDemoStore` | Insurance |
-| IN-02 Records | PARTIAL | `InsurancePartnerDemoData`, `InsurancePartnerDemoStore` | Insurance |
-| IN-03 Claims | PARTIAL | `InsurancePartnerDemoData`, `InsurancePartnerDemoStore` | Insurance |
-| IN-04 Safety/Permits | DEMO/PARTIAL | `InsurancePartnerDemoData`, `InsurancePartnerDemoStore` | none |
-| IN-05 Incidents | DEMO/PARTIAL | `InsurancePartnerDemoData`, `InsurancePartnerDemoStore` | none |
+| IN-01 Dashboard | CLEANED | none | Insurance |
+| IN-02 Records | CLEANED | none | Insurance |
+| IN-03 Claims | CLEANED | none | Insurance |
+| IN-04 Safety/Permits | GAP/CLEANED | none | Operations create endpoints only |
+| IN-05 Incidents | GAP/CLEANED | none | Operations create endpoints only |
 
 Replacement path:
 
-- Use insurance profile/dashboard/policies/claims plus operations safety checks and incidents.
-- Add controller/repository methods for safety/incident read APIs if not exposed.
+- Uses insurance dashboard/policies/claims.
+- Add operations safety-check and incident list/detail/update APIs before showing live safety and incident rows.
 
 ### 4.12 Distribution Partner
 
 | Screen | Status | Static source | Existing scopes |
 | --- | --- | --- | --- |
-| DS-01 Dashboard | PARTIAL | `DistributionPartnerDemoData`, `DistributionPartnerDemoStore` | Specialist |
-| DS-02 Contacts | PARTIAL | `DistributionPartnerDemoData`, `DistributionPartnerDemoStore` | Specialist |
-| DS-03 Release Coordination | PARTIAL | `DistributionPartnerDemoData`, `DistributionPartnerDemoStore` | Specialist |
-| DS-04 Reporting | PARTIAL | `DistributionPartnerDemoData`, `DistributionPartnerDemoStore` | Specialist |
+| DS-01 Dashboard | CLEANED | none | Specialist |
+| DS-02 Contacts | CLEANED | none | Specialist |
+| DS-03 Release Coordination | CLEANED | none | Specialist |
+| DS-04 Reporting | CLEANED | none | Specialist |
 
 Replacement path:
 
-- Use distribution profile/projects/release windows/handover items/contacts/reports.
-- Add dashboard aggregation if needed.
+- Uses distribution profile/projects/contacts/reports through `SpecialistScope`.
+- Statement export is intentionally not faked; add a backend export endpoint before enabling that action.
 
 ### 4.13 Role Portals generic screens
 
 | Screen | Status | Static source | Decision |
 | --- | --- | --- | --- |
-| `lib/features/role_portals/screens/role_portal_screen.dart` | DEMO | `RolePortalDemoData`, `RolePortalDemoStore` | Treat as legacy visual/demo shell. Remove from production navigation if real portals replace it, or rewire completely to live APIs. |
+| `lib/features/role_portals/screens/role_portal_screen.dart` | GAP/CLEANED | none | Legacy generic visual shell retained for route compatibility; it no longer shows fake records and requires live DTOs before re-enabling data views. |
 
 ## 5. Priority implementation recommendation
 
 Based on current code shape and backend coverage:
 
-1. Deploy latest pulled backend first if server does not already have `admin_control.py`, expanded `operations.py`, expanded `specialist.py`, and migration `c4d5e6f7a8b9`.
-2. Super Admin next, because it validates admin/control APIs and reveals cross-portal records.
-3. Media/Equipment next, because it has the least remaining screen-level static data and strong operations APIs.
-4. Brand Sponsor, Location Owner, Actor/Talent, Model Extension.
-5. Casting Agency, Distribution, Insurance, Legal.
-6. Crew Services last among the user-facing portals because it likely needs the most new backend shape.
+1. Deploy the latest Flutter web build after this clean pass.
+2. Seed MySQL rows for each live-backed portal so manual demo screens are visibly populated from `https://cine.nalexustechnologies.com/api/v1`.
+3. Add missing backend APIs for explicit gap screens: Crew Services, Insurance safety/incident read/update feeds, Legal template decision/change-log, Legal billing rollup, and Distribution statement export.
+4. Keep generic Role Portals disabled unless they receive live DTOs or are removed from route exposure.
 
 ## 6. Static data removal acceptance command
 
 Before calling any portal complete, run:
 
 ```sh
-rg -n "DemoData|DemoStore|admin_mock_data|mock_data|shared_mock_data|sample|static demo" lib/features lib/core -g '*.dart'
+rg -n "DemoData|DemoStore|_demo_data|mock_data|MockData" lib/features -g '*.dart'
 ```
 
 Allowed matches:
@@ -300,6 +302,7 @@ Allowed matches:
 - tests only
 - seed scripts/docs only
 - neutral image/icon fallback names that do not render business records
+- explicit backend-gap copy
 
 Not allowed:
 

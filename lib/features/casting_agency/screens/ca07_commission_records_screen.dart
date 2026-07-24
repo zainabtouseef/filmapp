@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/casting_agency_demo_data.dart';
 import '../models/casting_agency_models.dart';
 import '../widgets/casting_agency_components.dart';
 
@@ -21,267 +22,170 @@ class CA07CommissionRecordsScreen extends StatefulWidget {
 class _CA07CommissionRecordsScreenState
     extends State<CA07CommissionRecordsScreen> {
   String _filter = 'All';
+  Future<List<AgencyCommissionDto>>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??=
+        SpecialistScope.maybeOf(context)?.agencyCommissions(force: true);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future =
+          SpecialistScope.maybeOf(context)?.agencyCommissions(force: true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    final rows = _rows(store).toList();
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MetricActionRail(
-              items: [
-                MetricActionItem(
-                  value: 'PKR 3.4M',
-                  icon: Icons.verified_outlined,
-                  title: 'Verified',
-                  subtitle: 'Current',
-                  accentColor: agencyToneColor(context, AgencyTone.green),
-                ),
-                MetricActionItem(
-                  value: 'PKR 241K',
-                  icon: Icons.pending_actions_outlined,
-                  title: 'Pending',
-                  subtitle: 'Current',
-                  accentColor: agencyToneColor(context, AgencyTone.gold),
-                ),
-                MetricActionItem(
-                  value: '${store.commissionPercent}%',
-                  icon: Icons.percent_outlined,
-                  title: 'Commission',
-                  subtitle: 'Current',
-                  accentColor: agencyToneColor(context, AgencyTone.blue),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            AgencyTwoColumn(
-              left: AgencySectionCard(
-                title: 'Commission ledger',
-                icon: Icons.table_rows_outlined,
-                selected: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view commissions',
+            message: 'Agency commission records are loaded from the server.',
+          )
+        else
+          FutureBuilder<List<AgencyCommissionDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 420);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                  message: 'Could not load commission records',
+                  onRetry: _refresh,
+                );
+              }
+              final rows = snapshot.data ?? const [];
+              final visible = _rows(rows);
+              final paidMinor = rows
+                  .where((item) => item.status == 'paid')
+                  .fold<int>(0, (sum, item) => sum + item.commissionMinor);
+              final pendingMinor = rows
+                  .where((item) => item.status != 'paid')
+                  .fold<int>(0, (sum, item) => sum + item.commissionMinor);
+              return Column(
+                children: [
+                  MetricActionRail(
+                    items: [
+                      MetricActionItem(
+                        value: _money(paidMinor),
+                        icon: Icons.verified_outlined,
+                        title: 'Verified',
+                        subtitle: 'Live commission',
+                        accentColor: agencyToneColor(context, AgencyTone.green),
+                      ),
+                      MetricActionItem(
+                        value: _money(pendingMinor),
+                        icon: Icons.pending_actions_outlined,
+                        title: 'Pending',
+                        subtitle: 'Live commission',
+                        accentColor: agencyToneColor(context, AgencyTone.gold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  AgencyTwoColumn(
+                    left: AgencySectionCard(
+                      title: 'Commission ledger',
+                      icon: Icons.table_rows_outlined,
+                      selected: true,
+                      actionText: 'Refresh',
+                      onActionTap: _refresh,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final filter in [
-                            'All',
-                            'Pending',
-                            'Paid',
-                            'Issue',
-                          ])
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: CoreChip(
-                                label: filter,
-                                selected: _filter == filter,
-                                onTap: () {
-                                  setState(() => _filter = filter);
-                                  agencySnack(
-                                    context,
-                                    '$filter commission filter applied',
-                                  );
-                                },
-                              ),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                for (final filter in ['All', 'pending', 'paid'])
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: CoreChip(
+                                      label: filter == 'All'
+                                          ? filter
+                                          : filter.toUpperCase(),
+                                      selected: _filter == filter,
+                                      onTap: () =>
+                                          setState(() => _filter = filter),
+                                    ),
+                                  ),
+                              ],
                             ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (visible.isEmpty)
+                            CoreEmptyState(
+                              icon: Icons.receipt_long_outlined,
+                              title: 'No live commission records',
+                              message: 'Try another status filter.',
+                              actionLabel: 'Clear',
+                              onAction: () => setState(() => _filter = 'All'),
+                            )
+                          else
+                            for (final row in visible)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _CommissionRow(item: row),
+                              ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    if (rows.isEmpty)
-                      CoreEmptyState(
-                        icon: Icons.receipt_long_outlined,
-                        title: 'No commission records',
-                        message: 'Try another payment status.',
-                        actionLabel: 'Clear',
-                        onAction: () => setState(() => _filter = 'All'),
-                      )
-                    else
-                      for (final row in rows)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _CommissionRow(
-                            item: row,
-                            status: store.commissionStatus(row),
-                            onVerify: () {
-                              store.verifyCommission(row.id);
-                              agencySnack(context, 'Commission verified');
-                            },
-                            onIssue: () => _confirmIssue(context, store, row),
-                            onReceipt: () => Navigator.pushNamed(
+                    right: AgencySectionCard(
+                      title: 'Payment actions',
+                      icon: Icons.account_tree_outlined,
+                      child: Column(
+                        children: [
+                          const AgencyInfoRow(
+                            icon: Icons.cloud_done_outlined,
+                            label: 'Source',
+                            value: 'Live agency commissions',
+                          ),
+                          AgencyInfoRow(
+                            icon: Icons.receipt_long_outlined,
+                            label: 'Records',
+                            value: '${rows.length}',
+                          ),
+                          const SizedBox(height: 8),
+                          CoreSecondaryButton(
+                            icon: Icons.receipt_long_outlined,
+                            label: 'Open receipts',
+                            compact: true,
+                            onTap: () => Navigator.pushNamed(
                               context,
                               CoreRoutes.ledger,
                             ),
                           ),
-                        ),
-                  ],
-                ),
-              ),
-              right: Column(
-                children: [
-                  AgencySectionCard(
-                    title: 'Commission settings',
-                    icon: Icons.tune_outlined,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AgencyInfoRow(
-                          icon: Icons.business_center_outlined,
-                          label: 'Default split',
-                          value: '${store.commissionPercent}%',
-                        ),
-                        Slider(
-                          value: store.commissionPercent.toDouble(),
-                          min: 5,
-                          max: 25,
-                          divisions: 20,
-                          activeColor: context.appColors.goldMid,
-                          onChanged: (value) =>
-                              store.updateCommissionPercent(value.round()),
-                        ),
-                        CorePrimaryButton(
-                          icon: Icons.save_outlined,
-                          label: 'Save split',
-                          compact: true,
-                          onTap: () => agencySnack(
-                            context,
-                            'Commission split saved',
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        CoreSecondaryButton(
-                          icon: Icons.receipt_long_outlined,
-                          label: 'Open receipts',
-                          compact: true,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            CoreRoutes.ledger,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  AgencySectionCard(
-                    title: 'Payment timeline',
-                    icon: Icons.account_tree_outlined,
-                    child: Column(
-                      children: const [
-                        _TimelineRow(
-                          label: 'Booking secured',
-                          value: 'Record',
-                          status: AgencyStatus.booked,
-                        ),
-                        _TimelineRow(
-                          label: 'Agency invoice',
-                          value: 'Generated',
-                          status: AgencyStatus.paymentPending,
-                        ),
-                        _TimelineRow(
-                          label: 'Payment verification',
-                          value: 'Admin queue',
-                          status: AgencyStatus.reviewing,
-                        ),
-                        _TimelineRow(
-                          label: 'Receipt issued',
-                          value: 'Paid',
-                          status: AgencyStatus.paid,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+      ],
     );
   }
 
-  Iterable<AgencyCommissionItem> _rows(CastingAgencyDemoStore store) {
-    return CastingAgencyDemoData.commission.where((item) {
-      final status = store.commissionStatus(item);
-      return switch (_filter) {
-        'Pending' => status == AgencyStatus.paymentPending,
-        'Paid' => status == AgencyStatus.paid,
-        'Issue' => status == AgencyStatus.disputed,
-        _ => true,
-      };
-    });
-  }
-
-  void _confirmIssue(
-    BuildContext context,
-    CastingAgencyDemoStore store,
-    AgencyCommissionItem item,
-  ) {
-    showAgencySheet(
-      context,
-      title: 'Flag commission',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Flag ${item.project} for admin payment review?',
-            style: AppTextStyles.body.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.close_rounded,
-                  label: 'Cancel',
-                  onTap: () => Navigator.pop(context),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.report_problem_outlined,
-                  label: 'Flag',
-                  onTap: () {
-                    store.flagCommission(item.id);
-                    Navigator.pop(context);
-                    Navigator.pushNamed(
-                      context,
-                      CoreRoutes.report,
-                      arguments: 'Agency commission issue',
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  List<AgencyCommissionDto> _rows(List<AgencyCommissionDto> rows) {
+    return rows.where((item) {
+      return _filter == 'All' || item.status == _filter;
+    }).toList();
   }
 }
 
 class _CommissionRow extends StatelessWidget {
-  final AgencyCommissionItem item;
-  final AgencyStatus status;
-  final VoidCallback onVerify;
-  final VoidCallback onIssue;
-  final VoidCallback onReceipt;
+  final AgencyCommissionDto item;
 
-  const _CommissionRow({
-    required this.item,
-    required this.status,
-    required this.onVerify,
-    required this.onIssue,
-    required this.onReceipt,
-  });
+  const _CommissionRow({required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -296,97 +200,60 @@ class _CommissionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.project,
+                  item.bookingId,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
                     color: colors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${item.talentName} - ${item.gross} - ${item.commission}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  _money(item.commissionMinor),
                   style: AppTextStyles.smallMeta.copyWith(
                     color: colors.textSecondary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          AgencyStatusChip(status: status),
-          CardMenu<String>(
-            items: const [
-              CardMenuItem(
-                value: 'verify',
-                label: 'Verify',
-                icon: Icons.verified_outlined,
-              ),
-              CardMenuItem(
-                value: 'receipt',
-                label: 'Receipt',
-                icon: Icons.receipt_long_outlined,
-              ),
-              CardMenuItem(
-                value: 'issue',
-                label: 'Report issue',
-                icon: Icons.report_problem_outlined,
-              ),
-            ],
-            onSelected: (value) {
-              if (value == 'verify') onVerify();
-              if (value == 'receipt') onReceipt();
-              if (value == 'issue') onIssue();
-            },
-          ),
+          AgencyStatusChip(status: agencyStatusFromString(item.status)),
         ],
       ),
     );
   }
 }
 
-class _TimelineRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final AgencyStatus status;
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
 
-  const _TimelineRow({
-    required this.label,
-    required this.value,
-    required this.status,
-  });
+  const _LoadError({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final color = agencyStatusColor(context, status);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle_outline, color: color, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.cardLabel.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: AppTextStyles.smallMeta.copyWith(color: color),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
+}
+
+String _money(int minor) {
+  final whole = minor ~/ 100;
+  if (whole >= 100000) return 'PKR ${(whole / 1000).round()}k';
+  return 'PKR $whole';
 }

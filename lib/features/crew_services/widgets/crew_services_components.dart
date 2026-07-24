@@ -8,7 +8,6 @@ import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/crew_services_demo_data.dart';
 import '../models/crew_services_models.dart';
 
 Color crewToneColor(BuildContext context, CrewTone tone) {
@@ -68,6 +67,38 @@ String crewAvailabilityLabel(CrewAvailabilityStatus status) {
     CrewAvailabilityStatus.unavailable => 'Unavailable',
     CrewAvailabilityStatus.tentative => 'Tentative',
     CrewAvailabilityStatus.booked => 'Booked',
+  };
+}
+
+String crewBookingStatusLabel(CrewBookingStatus status) {
+  return switch (status) {
+    CrewBookingStatus.requestReceived => 'Request Received',
+    CrewBookingStatus.underNegotiation => 'Under Negotiation',
+    CrewBookingStatus.contractPending => 'Contract Pending',
+    CrewBookingStatus.paymentPending => 'Payment Pending',
+    CrewBookingStatus.secured => 'Secured',
+    CrewBookingStatus.inProgress => 'In Progress',
+    CrewBookingStatus.closed => 'Closed',
+    CrewBookingStatus.rejected => 'Rejected',
+    CrewBookingStatus.disputed => 'Disputed',
+  };
+}
+
+CrewBookingStatus crewBookingStatusFromString(String value) {
+  return switch (value.trim().toLowerCase().replaceAll('-', '_')) {
+    'request_received' ||
+    'requested' ||
+    'pending' =>
+      CrewBookingStatus.requestReceived,
+    'under_negotiation' || 'negotiating' => CrewBookingStatus.underNegotiation,
+    'contract_pending' => CrewBookingStatus.contractPending,
+    'payment_pending' => CrewBookingStatus.paymentPending,
+    'secured' || 'accepted' || 'confirmed' => CrewBookingStatus.secured,
+    'in_progress' => CrewBookingStatus.inProgress,
+    'closed' || 'completed' => CrewBookingStatus.closed,
+    'rejected' || 'declined' => CrewBookingStatus.rejected,
+    'disputed' => CrewBookingStatus.disputed,
+    _ => CrewBookingStatus.requestReceived,
   };
 }
 
@@ -496,7 +527,7 @@ class CrewStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: CrewServicesDemoData.statusLabel(status),
+      label: crewBookingStatusLabel(status),
       color: crewStatusColor(context, status),
     );
   }

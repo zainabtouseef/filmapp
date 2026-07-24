@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/insurance/insurance_controller.dart';
 import '../../../core/insurance/insurance_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../data/insurance_partner_demo_data.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/cards/glass_section_card.dart';
 import '../widgets/insurance_partner_components.dart';
 
 class IN03ClaimSupportScreen extends StatefulWidget {
@@ -17,348 +17,277 @@ class IN03ClaimSupportScreen extends StatefulWidget {
 }
 
 class _IN03ClaimSupportScreenState extends State<IN03ClaimSupportScreen> {
-  final _notes = TextEditingController(
-    text: 'Impact mark visible on front element; awaiting serial confirmation.',
-  );
-  String? _error;
-  Future<List<InsuranceClaimDto>>? _claimsFuture;
+  String _query = '';
+  String _status = 'All';
+  Future<List<InsuranceClaimDto>>? _future;
+  String? _busyClaimId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final insurance = InsuranceScope.maybeOf(context);
-    _claimsFuture ??= insurance?.claims(force: true);
+    _future ??= InsuranceScope.maybeOf(context)?.claims(force: true);
   }
 
-  @override
-  void dispose() {
-    _notes.dispose();
-    super.dispose();
+  void _refresh() {
+    setState(() {
+      _future = InsuranceScope.maybeOf(context)?.claims(force: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = InsurancePartnerDemoStore.instance;
-    final claim = store.primaryClaim;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        return InsuranceTwoColumn(
-          left: InsuranceSectionCard(
-            title: 'Claim inspection',
-            icon: Icons.assignment_late_outlined,
-            selected: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_claimsFuture != null)
-                  FutureBuilder<List<InsuranceClaimDto>>(
-                    future: _claimsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message: 'Loading live insurance claims...',
-                            icon: Icons.hourglass_top_rounded,
-                          ),
-                        );
-                      }
-                      final rows = snapshot.data ?? const [];
-                      if (rows.isEmpty) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: InlineNotice(
-                          message:
-                              'Live claims connected: ${rows.length} claim(s), latest ${rows.first.publicId} is ${rows.first.status}.',
-                          icon: Icons.cloud_done_outlined,
-                          tone: CoreStatusTone.success,
-                        ),
-                      );
-                    },
-                  ),
-                Row(
+    return InsuranceSectionCard(
+      title: 'Claim support',
+      icon: Icons.assignment_late_outlined,
+      selected: true,
+      actionText: _future == null ? null : 'Refresh',
+      onActionTap: _refresh,
+      child: _future == null
+          ? const CoreEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Sign in to review claims',
+              message: 'Claim records are loaded from the server.',
+            )
+          : FutureBuilder<List<InsuranceClaimDto>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SkeletonCard(height: 500);
+                }
+                if (snapshot.hasError) {
+                  return _LoadError(
+                    message: 'Could not load claims',
+                    onRetry: _refresh,
+                  );
+                }
+                final allRows = snapshot.data ?? const [];
+                final rows = _rows(allRows).toList();
+                return Column(
                   children: [
-                    Expanded(
-                      child: Text(
-                        claim.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.metricNumberCompact.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    InsuranceStatusChip(status: store.claimStatus(claim)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${claim.source} - ${claim.itemOrRoom} - estimate ${claim.estimate}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InsuranceProgressMeter(
-                  label: 'Evidence completion',
-                  percent: store.claimProgress,
-                ),
-                const SizedBox(height: 12),
-                InsuranceResponsiveGrid(
-                  minWidth: 210,
-                  children: [
-                    InsuranceMediaFrame(
-                      imageUrl: claim.beforeImageUrl,
-                      title: 'Before evidence',
-                      badge: 'Handover',
-                      fallbackIcon: Icons.photo_outlined,
-                      compact: true,
-                    ),
-                    InsuranceMediaFrame(
-                      imageUrl: claim.afterImageUrl,
-                      title: 'After evidence',
-                      badge: 'Return',
-                      fallbackIcon: Icons.photo_camera_outlined,
-                      compact: true,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                for (final item in InsurancePartnerDemoData.claimEvidence)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: InsuranceChecklistTile(
-                      title: item.label,
-                      subtitle: item.detail,
-                      checked: store.completedEvidence.contains(item.id),
-                      mandatory: item.mandatory,
-                      onTap: () => store.toggleEvidence(item.id),
-                    ),
-                  ),
-                TextField(
-                  controller: _notes,
-                  maxLines: 3,
-                  style: AppTextStyles.body.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Adjuster notes',
-                    hintText: 'Add evidence notes and decision context',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _error!,
-                    style: AppTextStyles.statusText.copyWith(
-                      color: colors.infoPurple,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreSecondaryButton(
-                        icon: Icons.save_outlined,
-                        label: 'Save draft',
-                        compact: true,
-                        onTap: () {
-                          setState(() => _error = null);
-                          store.saveClaimDraft();
-                          insuranceSnack(context, 'Claim draft saved');
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CorePrimaryButton(
-                        icon: Icons.fact_check_outlined,
-                        label: 'Finalize',
-                        compact: true,
-                        onTap: () => _finalize(context, store),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          right: Column(
-            children: [
-              InsuranceSectionCard(
-                title: 'Policy checks',
-                icon: Icons.shield_outlined,
-                child: Column(
-                  children: [
-                    InsuranceInfoRow(
-                      icon: Icons.policy_outlined,
-                      label: 'Policy',
-                      value: claim.policyId.toUpperCase(),
-                    ),
-                    InsuranceInfoRow(
-                      icon: Icons.person_outline_rounded,
-                      label: 'Adjuster',
-                      value: claim.adjuster,
-                    ),
-                    InsuranceInfoRow(
-                      icon: Icons.timer_outlined,
-                      label: 'Due',
-                      value: claim.due,
-                    ),
-                    InsuranceInfoRow(
-                      icon: Icons.notes_outlined,
-                      label: 'Notes',
-                      value: '${store.claimNotes}',
+                    InsuranceSearchField(
+                      hintText: 'Search title, policy, booking...',
+                      onChanged: (value) => setState(() => _query = value),
                     ),
                     const SizedBox(height: 10),
-                    CoreSecondaryButton(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: 'Open claim chat',
-                      compact: true,
-                      onTap: () =>
-                          Navigator.pushNamed(context, CoreRoutes.chat),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final status in _statuses(allRows))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: CoreChip(
+                                label: status,
+                                selected: _status == status,
+                                onTap: () => setState(() => _status = status),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    CoreSecondaryButton(
-                      icon: Icons.report_problem_outlined,
-                      label: 'Escalate to dispute',
-                      compact: true,
-                      onTap: () {
-                        store.escalateClaim(claim.id);
-                        Navigator.pushNamed(
-                          context,
-                          CoreRoutes.report,
-                          arguments: 'Insurance claim escalation',
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              InsuranceSectionCard(
-                title: 'Other open claims',
-                icon: Icons.assignment_outlined,
-                child: Column(
-                  children: [
-                    for (final item in InsurancePartnerDemoData.claims.where(
-                      (item) => item.id != claim.id,
-                    ))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _ClaimMiniRow(
-                          title: item.title,
-                          estimate: item.estimate,
-                          status: store.claimStatus(item),
-                          onResolve: () {
-                            store.resolveClaim(item.id);
-                            insuranceSnack(context, 'Claim marked resolved');
-                          },
-                        ),
+                    const SizedBox(height: 12),
+                    if (rows.isEmpty)
+                      CoreEmptyState(
+                        icon: Icons.assignment_late_outlined,
+                        title: allRows.isEmpty
+                            ? 'No live claims'
+                            : 'No claims match filters',
+                        message: allRows.isEmpty
+                            ? 'Seed insurance claims in MySQL to make this screen visible for demo.'
+                            : 'Clear filters or search another claim.',
+                        actionLabel: allRows.isEmpty ? null : 'Clear',
+                        onAction: allRows.isEmpty
+                            ? null
+                            : () => setState(() {
+                                  _query = '';
+                                  _status = 'All';
+                                }),
+                      )
+                    else
+                      InsuranceResponsiveGrid(
+                        minWidth: 310,
+                        children: [
+                          for (final row in rows)
+                            _ClaimCard(
+                              claim: row,
+                              busy: _busyClaimId == row.publicId,
+                              onApprove: () => _decide(row, 'approved'),
+                              onEscalate: () => _decide(row, 'escalated'),
+                            ),
+                        ],
                       ),
                   ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+                );
+              },
+            ),
     );
   }
 
-  void _finalize(BuildContext context, InsurancePartnerDemoStore store) {
-    if (!store.claimReady || _notes.text.trim().length < 12) {
-      setState(
-        () => _error =
-            'Complete required evidence and add adjuster notes before final review.',
-      );
-      return;
-    }
-    setState(() => _error = null);
+  Iterable<InsuranceClaimDto> _rows(List<InsuranceClaimDto> rows) {
+    final lower = _query.trim().toLowerCase();
+    return rows.where((row) {
+      final matchesStatus = _status == 'All' || row.status == _status;
+      final haystack =
+          '${row.publicId} ${row.policyId} ${row.bookingId ?? ''} ${row.title} ${row.status}'
+              .toLowerCase();
+      return matchesStatus && haystack.contains(lower);
+    });
+  }
+
+  List<String> _statuses(List<InsuranceClaimDto> rows) {
+    final statuses = rows
+        .map((row) => row.status.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...statuses];
+  }
+
+  Future<void> _decide(InsuranceClaimDto claim, String status) async {
     final insurance = InsuranceScope.maybeOf(context);
-    final liveClaims = _claimsFuture;
-    if (insurance != null && liveClaims != null) {
-      () async {
-        try {
-          final claims = await liveClaims;
-          if (claims.isEmpty) return;
-          await insurance.decideClaim(
-            claimId: claims.first.publicId,
-            status: 'approved',
-            estimateMinor: 8500000,
-          );
-          if (!mounted) return;
-          setState(() => _claimsFuture = insurance.claims(force: true));
-        } catch (error) {
-          if (!context.mounted) return;
-          insuranceSnack(context, 'Live claim decision skipped: $error');
-        }
-      }();
+    if (insurance == null) return;
+    setState(() => _busyClaimId = claim.publicId);
+    try {
+      await insurance.decideClaim(
+        claimId: claim.publicId,
+        status: status,
+        estimateMinor: claim.estimateMinor,
+      );
+      if (!mounted) return;
+      insuranceSnack(context, 'Claim marked $status');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      insuranceSnack(context, 'Could not update claim: $error');
+    } finally {
+      if (mounted) setState(() => _busyClaimId = null);
     }
-    store.finalizeClaim();
-    insuranceSnack(context, 'Claim evidence finalized');
   }
 }
 
-class _ClaimMiniRow extends StatelessWidget {
-  final String title;
-  final String estimate;
-  final dynamic status;
-  final VoidCallback onResolve;
+class _ClaimCard extends StatelessWidget {
+  final InsuranceClaimDto claim;
+  final bool busy;
+  final VoidCallback onApprove;
+  final VoidCallback onEscalate;
 
-  const _ClaimMiniRow({
-    required this.title,
-    required this.estimate,
-    required this.status,
-    required this.onResolve,
+  const _ClaimCard({
+    required this.claim,
+    required this.busy,
+    required this.onApprove,
+    required this.onEscalate,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.cardLabel.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w800,
+    return Opacity(
+      opacity: busy ? 0.62 : 1,
+      child: GlassSectionCard(
+        radius: 18,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    claim.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
-              ),
-              Text(
-                estimate,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: colors.textSecondary,
+                InsuranceStatusChip(
+                  status: insuranceStatusFromString(claim.status),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            InsuranceInfoRow(
+              icon: Icons.policy_outlined,
+              label: 'Policy',
+              value: claim.policyId,
+            ),
+            InsuranceInfoRow(
+              icon: Icons.book_online_outlined,
+              label: 'Booking',
+              value: claim.bookingId ?? 'Not linked',
+            ),
+            InsuranceInfoRow(
+              icon: Icons.attach_money_outlined,
+              label: 'Estimate',
+              value: _money(claim),
+            ),
+            InsuranceInfoRow(
+              icon: Icons.attachment_outlined,
+              label: 'Evidence',
+              value: '${claim.evidence.length}',
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: CoreSecondaryButton(
+                    icon: Icons.report_problem_outlined,
+                    label: 'Escalate',
+                    compact: true,
+                    onTap: busy ? null : onEscalate,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: CorePrimaryButton(
+                    icon: Icons.check_circle_outline,
+                    label: 'Approve',
+                    compact: true,
+                    onTap: busy ? null : onApprove,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        InsuranceStatusChip(status: status),
-        IconButton(
-          tooltip: 'Resolve',
-          visualDensity: VisualDensity.compact,
-          onPressed: onResolve,
-          icon: Icon(Icons.check_circle_outline, color: colors.success),
+      ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
         ),
       ],
     );
   }
+}
+
+String _money(InsuranceClaimDto claim) {
+  final currency = claim.currency.isEmpty ? 'PKR' : claim.currency;
+  final minor = claim.estimateMinor;
+  if (minor == null) return '$currency pending';
+  return '$currency ${(minor / 100).toStringAsFixed(0)}';
 }

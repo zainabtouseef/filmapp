@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/insurance/insurance_controller.dart';
 import '../../../core/insurance/insurance_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/insurance_partner_demo_data.dart';
-import '../models/insurance_partner_models.dart';
 import '../widgets/insurance_partner_components.dart';
 
 class IN02ShootInsuranceRecordsScreen extends StatefulWidget {
@@ -22,295 +20,145 @@ class IN02ShootInsuranceRecordsScreen extends StatefulWidget {
 class _IN02ShootInsuranceRecordsScreenState
     extends State<IN02ShootInsuranceRecordsScreen> {
   String _query = '';
-  String _sort = 'Risk';
-  Future<List<InsurancePolicyDto>>? _policiesFuture;
+  String _status = 'All';
+  Future<List<InsurancePolicyDto>>? _future;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final insurance = InsuranceScope.maybeOf(context);
-    _policiesFuture ??= insurance?.policies(force: true);
+    _future ??= InsuranceScope.maybeOf(context)?.policies(force: true);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = InsuranceScope.maybeOf(context)?.policies(force: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = InsurancePartnerDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final rows = _rows(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InsuranceSectionCard(
-              title: 'Policy command',
-              icon: Icons.policy_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  if (_policiesFuture != null)
-                    FutureBuilder<List<InsurancePolicyDto>>(
-                      future: _policiesFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: InlineNotice(
-                              message: 'Loading live insurance policies...',
-                              icon: Icons.hourglass_top_rounded,
-                            ),
-                          );
-                        }
-                        final rows = snapshot.data ?? const [];
-                        if (rows.isEmpty) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message:
-                                'Live policy records connected: ${rows.length} policy/policies, latest ${rows.first.publicId}.',
-                            icon: Icons.cloud_done_outlined,
-                            tone: CoreStatusTone.success,
-                          ),
-                        );
-                      },
+    return InsuranceSectionCard(
+      title: 'Policy command',
+      icon: Icons.policy_outlined,
+      selected: true,
+      actionText: _future == null ? null : 'Refresh',
+      onActionTap: _refresh,
+      child: _future == null
+          ? const CoreEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Sign in to view policies',
+              message: 'Insurance records are loaded from the server.',
+            )
+          : FutureBuilder<List<InsurancePolicyDto>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SkeletonCard(height: 480);
+                }
+                if (snapshot.hasError) {
+                  return _LoadError(
+                    message: 'Could not load policies',
+                    onRetry: _refresh,
+                  );
+                }
+                final allRows = snapshot.data ?? const [];
+                final rows = _rows(allRows).toList();
+                return Column(
+                  children: [
+                    InsuranceSearchField(
+                      hintText: 'Search insured, coverage, risk...',
+                      onChanged: (value) => setState(() => _query = value),
                     ),
-                  InsuranceSearchField(
-                    hintText: 'Search project, booking, insured party...',
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'Active',
-                          'Pending',
-                          'Verified',
-                          'High Risk',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: store.policyFilter == filter,
-                              onTap: () => store.setPolicyFilter(filter),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        for (final sort in ['Risk', 'Validity'])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: sort,
-                              selected: _sort == sort,
-                              icon: Icons.sort_rounded,
-                              onTap: () {
-                                setState(() => _sort = sort);
-                                insuranceSnack(
-                                    context, '$sort sorting applied');
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            InsuranceTwoColumn(
-              left: InsuranceSectionCard(
-                title: 'Shoot insurance records',
-                icon: Icons.table_rows_outlined,
-                child: rows.isEmpty
-                    ? CoreEmptyState(
-                        icon: Icons.search_off_rounded,
-                        title: 'No policy records',
-                        message: 'Clear filters or search another booking.',
-                        actionLabel: 'Clear',
-                        onAction: () {
-                          setState(() => _query = '');
-                          store.setPolicyFilter('All');
-                        },
-                      )
-                    : Column(
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         children: [
-                          for (final row in rows)
+                          for (final status in _statuses(allRows))
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _PolicyRow(
-                                policy: row,
-                                status: store.policyStatus(row),
-                                onDetail: () => _showPolicy(context, row),
-                                onVerify: () {
-                                  store.verifyPolicy(row.id);
-                                  insuranceSnack(context, 'Policy verified');
-                                },
+                              padding: const EdgeInsets.only(right: 8),
+                              child: CoreChip(
+                                label: status,
+                                selected: _status == status,
+                                onTap: () => setState(() => _status = status),
                               ),
                             ),
                         ],
                       ),
-              ),
-              right: InsuranceSectionCard(
-                title: 'Coverage summary',
-                icon: Icons.shield_outlined,
-                child: Column(
-                  children: [
-                    InsuranceInfoRow(
-                      icon: Icons.policy_outlined,
-                      label: 'Active coverage',
-                      value: 'PKR 43M',
                     ),
-                    InsuranceInfoRow(
-                      icon: Icons.people_alt_outlined,
-                      label: 'Insured parties',
-                      value: '18 parties',
-                    ),
-                    InsuranceInfoRow(
-                      icon: Icons.description_outlined,
-                      label: 'Documents',
-                      value: '31 files',
-                    ),
-                    InsuranceInfoRow(
-                      icon: Icons.warning_amber_outlined,
-                      label: 'Risk flags',
-                      value: '3 high',
-                    ),
-                    const SizedBox(height: 10),
-                    CoreSecondaryButton(
-                      icon: Icons.download_outlined,
-                      label: 'Export policy list',
-                      compact: true,
-                      onTap: () => insuranceSnack(
-                        context,
-                        'Policy export prepared',
+                    const SizedBox(height: 12),
+                    if (rows.isEmpty)
+                      CoreEmptyState(
+                        icon: Icons.policy_outlined,
+                        title: allRows.isEmpty
+                            ? 'No live policies'
+                            : 'No policies match filters',
+                        message: allRows.isEmpty
+                            ? 'Seed insurance policies in MySQL to make this screen visible for demo.'
+                            : 'Clear filters or search another insured party.',
+                        actionLabel: allRows.isEmpty ? null : 'Clear',
+                        onAction: allRows.isEmpty
+                            ? null
+                            : () => setState(() {
+                                  _query = '';
+                                  _status = 'All';
+                                }),
+                      )
+                    else
+                      InsuranceResponsiveGrid(
+                        minWidth: 300,
+                        children: [
+                          for (final row in rows) _PolicyCard(policy: row),
+                        ],
                       ),
-                    ),
                   ],
-                ),
-              ),
+                );
+              },
             ),
-          ],
-        );
-      },
     );
   }
 
-  Iterable<InsurancePolicy> _rows(InsurancePartnerDemoStore store) {
+  Iterable<InsurancePolicyDto> _rows(List<InsurancePolicyDto> rows) {
     final lower = _query.trim().toLowerCase();
-    var result = InsurancePartnerDemoData.policies.where((row) {
-      final status = store.policyStatus(row);
-      final matchesFilter = switch (store.policyFilter) {
-        'Active' => status == InsuranceStatus.active,
-        'Pending' => status == InsuranceStatus.pending,
-        'Verified' => status == InsuranceStatus.verified,
-        'High Risk' => status == InsuranceStatus.highRisk,
-        _ => true,
-      };
+    return rows.where((row) {
+      final matchesStatus = _status == 'All' || row.status == _status;
       final haystack =
-          '${row.project} ${row.booking} ${row.insuredParty} ${row.coverage} ${row.document}'
+          '${row.publicId} ${row.insuredUserName} ${row.coverageSummary} ${row.riskLevel} ${row.status}'
               .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
-    }).toList();
-    if (_sort == 'Validity') result = result.reversed.toList();
-    return result;
+      return matchesStatus && haystack.contains(lower);
+    });
   }
 
-  void _showPolicy(BuildContext context, InsurancePolicy policy) {
-    final store = InsurancePartnerDemoStore.instance;
-    showInsuranceSheet(
-      context,
-      title: policy.project,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          InsuranceInfoRow(
-            icon: Icons.confirmation_number_outlined,
-            label: 'Booking',
-            value: policy.booking,
-          ),
-          InsuranceInfoRow(
-            icon: Icons.business_outlined,
-            label: 'Insured party',
-            value: policy.insuredParty,
-          ),
-          InsuranceInfoRow(
-            icon: Icons.shield_outlined,
-            label: 'Coverage',
-            value: policy.coverage,
-          ),
-          InsuranceInfoRow(
-            icon: Icons.calendar_month_outlined,
-            label: 'Validity',
-            value: policy.validity,
-          ),
-          InsuranceInfoRow(
-            icon: Icons.description_outlined,
-            label: 'Document',
-            value: policy.document,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.report_problem_outlined,
-                  label: 'Flag risk',
-                  onTap: () {
-                    store.flagPolicy(policy.id);
-                    Navigator.pop(context);
-                    insuranceSnack(context, 'Policy risk flagged');
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.article_outlined,
-                  label: 'Contract',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, CoreRoutes.contract);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  List<String> _statuses(List<InsurancePolicyDto> rows) {
+    final statuses = rows
+        .map((row) => row.status.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return ['All', ...statuses];
   }
 }
 
-class _PolicyRow extends StatelessWidget {
-  final InsurancePolicy policy;
-  final InsuranceStatus status;
-  final VoidCallback onDetail;
-  final VoidCallback onVerify;
+class _PolicyCard extends StatelessWidget {
+  final InsurancePolicyDto policy;
 
-  const _PolicyRow({
-    required this.policy,
-    required this.status,
-    required this.onDetail,
-    required this.onVerify,
-  });
+  const _PolicyCard({required this.policy});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return GlassSectionCard(
-      radius: 16,
-      padding: const EdgeInsets.all(11),
+      radius: 18,
+      padding: const EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Expanded(
                 child: Text(
-                  policy.project,
+                  policy.insuredUserName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -319,49 +167,63 @@ class _PolicyRow extends StatelessWidget {
                   ),
                 ),
               ),
-              InsuranceStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${policy.booking} - ${policy.insuredParty} - ${policy.validity}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
+              InsuranceStatusChip(
+                status: insuranceStatusFromString(policy.status),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.info_outline_rounded,
-                  label: 'Detail',
-                  compact: true,
-                  onTap: onDetail,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.verified_outlined,
-                  label: 'Verify',
-                  compact: true,
-                  onTap: onVerify,
-                ),
-              ),
-            ],
+          const SizedBox(height: 8),
+          InsuranceInfoRow(
+            icon: Icons.shield_outlined,
+            label: 'Coverage',
+            value: policy.coverageSummary.isEmpty
+                ? 'Coverage not set'
+                : policy.coverageSummary,
+          ),
+          InsuranceInfoRow(
+            icon: Icons.warning_amber_outlined,
+            label: 'Risk',
+            value: policy.riskLevel,
+          ),
+          InsuranceInfoRow(
+            icon: Icons.movie_creation_outlined,
+            label: 'Project',
+            value: policy.projectId ?? 'Not linked',
+          ),
+          InsuranceInfoRow(
+            icon: Icons.book_online_outlined,
+            label: 'Booking',
+            value: policy.bookingId ?? 'Not linked',
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

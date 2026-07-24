@@ -5,9 +5,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/insurance/insurance_controller.dart';
 import '../../../core/insurance/insurance_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/insurance_partner_demo_data.dart';
 import '../routes/insurance_partner_routes.dart';
 import '../widgets/insurance_partner_components.dart';
 
@@ -21,209 +19,235 @@ class IN01InsuranceDashboardScreen extends StatefulWidget {
 
 class _IN01InsuranceDashboardScreenState
     extends State<IN01InsuranceDashboardScreen> {
-  Future<InsuranceDashboardDto>? _dashboardFuture;
+  Future<_InsuranceDashboardBundle>? _future;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final insurance = InsuranceScope.maybeOf(context);
-    _dashboardFuture ??= insurance?.dashboard(force: true);
+    _future ??= _load();
   }
+
+  Future<_InsuranceDashboardBundle>? _load() {
+    final insurance = InsuranceScope.maybeOf(context);
+    if (insurance == null) return null;
+    return Future.wait([
+      insurance.dashboard(force: true),
+      insurance.policies(force: true),
+      insurance.claims(force: true),
+    ]).then(
+      (values) => _InsuranceDashboardBundle(
+        dashboard: values[0] as InsuranceDashboardDto,
+        policies: values[1] as List<InsurancePolicyDto>,
+        claims: values[2] as List<InsuranceClaimDto>,
+      ),
+    );
+  }
+
+  void _refresh() => setState(() => _future = _load());
 
   @override
   Widget build(BuildContext context) {
-    final store = InsurancePartnerDemoStore.instance;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final policy = store.primaryPolicy;
-        final safety = store.primarySafety;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const PersonalDashboardKpiStrip(),
-            const SizedBox(height: 12),
-            if (_dashboardFuture != null)
-              FutureBuilder<InsuranceDashboardDto>(
-                future: _dashboardFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: InlineNotice(
-                        message: 'Loading live insurance dashboard...',
-                        icon: Icons.hourglass_top_rounded,
-                      ),
-                    );
-                  }
-                  final live = snapshot.data;
-                  if (live == null) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: InlineNotice(
-                      message:
-                          'Live insurance: ${live.activePolicyCount}/${live.policyCount} active policies, ${live.openClaims} open claim(s).',
-                      icon: Icons.cloud_done_outlined,
-                      tone: CoreStatusTone.success,
-                    ),
-                  );
-                },
-              ),
-            InsuranceKpiRail(metrics: InsurancePartnerDemoData.metrics),
-            const SizedBox(height: 12),
-            InsuranceTwoColumn(
-              left: InsuranceSectionCard(
-                title: 'High-risk booking',
-                icon: Icons.health_and_safety_outlined,
-                selected: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    InsuranceMediaFrame(
-                      imageUrl: policy.imageUrl,
-                      title: policy.project,
-                      badge: policy.booking,
-                      fallbackIcon: Icons.policy_outlined,
-                      aspectRatio: 16 / 8.5,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const PersonalDashboardKpiStrip(),
+        const SizedBox(height: 12),
+        InsuranceSectionCard(
+          title: 'Insurance dashboard',
+          icon: Icons.health_and_safety_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: _future == null
+              ? const CoreEmptyState(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'Sign in to view insurance operations',
+                  message: 'Policies and claims are loaded from the server.',
+                )
+              : FutureBuilder<_InsuranceDashboardBundle>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SkeletonCard(height: 420);
+                    }
+                    if (snapshot.hasError) {
+                      return _LoadError(
+                        message: 'Could not load insurance dashboard',
+                        onRetry: _refresh,
+                      );
+                    }
+                    final data = snapshot.data!;
+                    final highRisk = data.policies
+                        .where((policy) =>
+                            policy.riskLevel.toLowerCase().contains('high'))
+                        .length;
+                    final latestPolicy =
+                        data.policies.isEmpty ? null : data.policies.first;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            policy.project,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.metricNumberCompact.copyWith(
-                              color: colors.textPrimary,
+                        MetricActionRail(
+                          items: [
+                            MetricActionItem(
+                              icon: Icons.policy_outlined,
+                              value: '${data.dashboard.activePolicyCount}',
+                              title: 'Active policies',
+                              subtitle: '${data.dashboard.policyCount} total',
+                              accentColor: context.appColors.success,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                InsurancePartnerRoutes.records,
+                              ),
                             ),
-                          ),
+                            MetricActionItem(
+                              icon: Icons.assignment_late_outlined,
+                              value: '${data.dashboard.openClaims}',
+                              title: 'Open claims',
+                              subtitle: '${data.claims.length} total',
+                              accentColor: context.appColors.danger,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                InsurancePartnerRoutes.claims,
+                              ),
+                            ),
+                            MetricActionItem(
+                              icon: Icons.warning_amber_outlined,
+                              value: '$highRisk',
+                              title: 'High risk',
+                              subtitle: 'Live policies',
+                              accentColor: context.appColors.goldDark,
+                            ),
+                          ],
                         ),
-                        InsuranceStatusChip(
-                          status: store.policyStatus(policy),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '${policy.insuredParty} - ${policy.coverage} - ${policy.risk}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    MetricActionRail(
-                      items: [
-                        MetricActionItem(
-                          icon: Icons.calendar_month_outlined,
-                          value: policy.validity,
-                          title: 'Validity',
-                          subtitle: 'Current',
-                          accentColor: colors.goldDark,
-                        ),
-                        MetricActionItem(
-                          icon: Icons.fact_check_outlined,
-                          value: safety.dueDate,
-                          title: 'Safety due',
-                          subtitle: 'Current',
-                          accentColor: colors.goldDark,
-                        ),
-                        MetricActionItem(
-                          icon: Icons.history_outlined,
-                          value: '${store.auditEvents}',
-                          title: 'Audit events',
-                          subtitle: 'Current',
-                          accentColor: colors.goldDark,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CoreSecondaryButton(
+                        const SizedBox(height: 12),
+                        InsuranceTwoColumn(
+                          left: InsuranceSectionCard(
+                            title: 'Latest policy',
                             icon: Icons.policy_outlined,
-                            label: 'Policies',
-                            compact: true,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              InsurancePartnerRoutes.records,
-                            ),
+                            child: latestPolicy == null
+                                ? const CoreEmptyState(
+                                    icon: Icons.policy_outlined,
+                                    title: 'No live policies',
+                                    message:
+                                        'Seed or create insurance policies in the backend to fill this dashboard.',
+                                  )
+                                : _PolicySummary(policy: latestPolicy),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: CorePrimaryButton(
-                            icon: Icons.fact_check_outlined,
-                            label: 'Open safety',
-                            compact: true,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              InsurancePartnerRoutes.safety,
+                          right: InsuranceSectionCard(
+                            title: 'Operational links',
+                            icon: Icons.route_outlined,
+                            child: Column(
+                              children: [
+                                CoreSecondaryButton(
+                                  icon: Icons.policy_outlined,
+                                  label: 'Open records',
+                                  compact: true,
+                                  onTap: () => Navigator.pushNamed(
+                                    context,
+                                    InsurancePartnerRoutes.records,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                CorePrimaryButton(
+                                  icon: Icons.assignment_late_outlined,
+                                  label: 'Open claims',
+                                  compact: true,
+                                  onTap: () => Navigator.pushNamed(
+                                    context,
+                                    InsurancePartnerRoutes.claims,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const InlineNotice(
+                                  message:
+                                      'Safety checks and incidents need read/list APIs before dashboards can show live rows.',
+                                  icon: Icons.info_outline_rounded,
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-              right: Column(
-                children: [
-                  InsuranceSectionCard(
-                    title: 'Action required',
-                    icon: Icons.notifications_active_outlined,
-                    child: store.activeTasks.isEmpty
-                        ? CoreEmptyState(
-                            icon: Icons.check_circle_outline,
-                            title: 'Safety queue clear',
-                            message: 'No urgent policy or incident action.',
-                            actionLabel: 'Open incidents',
-                            onAction: () => Navigator.pushNamed(
-                              context,
-                              InsurancePartnerRoutes.incidents,
-                            ),
-                          )
-                        : InsuranceTaskRail(tasks: store.activeTasks),
-                  ),
-                  const SizedBox(height: 12),
-                  InsuranceSectionCard(
-                    title: 'Operational health',
-                    icon: Icons.analytics_outlined,
-                    child: Column(
-                      children: [
-                        InsuranceInfoRow(
-                          icon: Icons.policy_outlined,
-                          label: 'Active policies',
-                          value: '24 records',
-                        ),
-                        InsuranceInfoRow(
-                          icon: Icons.assignment_late_outlined,
-                          label: 'Open claims',
-                          value: '6 claims',
-                        ),
-                        InsuranceInfoRow(
-                          icon: Icons.warning_amber_outlined,
-                          label: 'High-risk bookings',
-                          value: '3 flagged',
-                        ),
-                        InsuranceInfoRow(
-                          icon: Icons.fact_check_outlined,
-                          label: 'Checks due',
-                          value: '9 pending',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+        ),
+      ],
+    );
+  }
+}
+
+class _PolicySummary extends StatelessWidget {
+  final InsurancePolicyDto policy;
+
+  const _PolicySummary({required this.policy});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InsuranceInfoRow(
+          icon: Icons.person_outline,
+          label: 'Insured',
+          value: policy.insuredUserName,
+        ),
+        InsuranceInfoRow(
+          icon: Icons.shield_outlined,
+          label: 'Coverage',
+          value: policy.coverageSummary.isEmpty
+              ? 'Coverage not set'
+              : policy.coverageSummary,
+        ),
+        InsuranceInfoRow(
+          icon: Icons.warning_amber_outlined,
+          label: 'Risk',
+          value: policy.riskLevel,
+        ),
+        InsuranceInfoRow(
+          icon: Icons.flag_outlined,
+          label: 'Status',
+          value: insuranceStatusLabel(insuranceStatusFromString(policy.status)),
+        ),
+      ],
+    );
+  }
+}
+
+class _InsuranceDashboardBundle {
+  final InsuranceDashboardDto dashboard;
+  final List<InsurancePolicyDto> policies;
+  final List<InsuranceClaimDto> claims;
+
+  const _InsuranceDashboardBundle({
+    required this.dashboard,
+    required this.policies,
+    required this.claims,
+  });
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

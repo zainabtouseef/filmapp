@@ -5,9 +5,8 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/casting_agency_demo_data.dart';
-import '../models/casting_agency_models.dart';
 import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_components.dart';
 
@@ -22,232 +21,174 @@ class CA03AuditionRequestInboxScreen extends StatefulWidget {
 class _CA03AuditionRequestInboxScreenState
     extends State<CA03AuditionRequestInboxScreen> {
   String _query = '';
+  String _filter = 'All';
   String _sort = 'Newest';
-  Future<List<AuditionDto>>? _auditionsFuture;
+  Future<List<AuditionDto>>? _future;
+  String? _busyId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final specialist = SpecialistScope.maybeOf(context);
-    _auditionsFuture ??= specialist?.auditions(force: true);
+    _future ??= SpecialistScope.maybeOf(context)?.auditions(force: true);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = SpecialistScope.maybeOf(context)?.auditions(force: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final requests = _filteredRequests(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgencySectionCard(
-              title: 'Audition inbox',
-              icon: Icons.inbox_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  if (_auditionsFuture != null)
-                    FutureBuilder<List<AuditionDto>>(
-                      future: _auditionsFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: InlineNotice(
-                              message: 'Loading live audition requests...',
-                              icon: Icons.hourglass_top_rounded,
-                            ),
-                          );
-                        }
-                        final rows = snapshot.data ?? const [];
-                        if (rows.isEmpty) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message:
-                                'Live auditions connected: ${rows.length} request(s), latest ${rows.first.publicId} is ${rows.first.status}.',
-                            icon: Icons.cloud_done_outlined,
-                            tone: CoreStatusTone.success,
-                          ),
-                        );
-                      },
-                    ),
-                  AgencySearchField(
-                    hintText: 'Search project, director, role...',
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'New',
-                          'Reviewing',
-                          'Shortlisted',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: store.auditionFilter == filter,
-                              onTap: () => store.setAuditionFilter(filter),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        for (final sort in ['Newest', 'Budget'])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: sort,
-                              selected: _sort == sort,
-                              icon: Icons.sort_rounded,
-                              onTap: () {
-                                setState(() => _sort = sort);
-                                agencySnack(context, '$sort sorting applied');
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AgencySectionCard(
+          title: 'Audition inbox',
+          icon: Icons.inbox_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: Column(
+            children: [
+              AgencySearchField(
+                hintText: 'Search project, role, status...',
+                onChanged: (value) => setState(() => _query = value),
               ),
-            ),
-            const SizedBox(height: 12),
-            if (requests.isEmpty)
-              CoreEmptyState(
-                icon: Icons.search_off_rounded,
-                title: 'No audition requests',
-                message: 'Try another saved filter.',
-                actionLabel: 'Clear filters',
-                onAction: () {
-                  setState(() => _query = '');
-                  store.setAuditionFilter('All');
-                },
-              )
-            else
-              AgencyResponsiveGrid(
+              const SizedBox(height: 10),
+              _FilterRow(
+                selected: _filter,
+                sort: _sort,
+                onFilter: (value) => setState(() => _filter = value),
+                onSort: (value) => setState(() => _sort = value),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view audition requests',
+            message: 'Director audition requests are loaded from the server.',
+          )
+        else
+          FutureBuilder<List<AuditionDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 360);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                    message: 'Could not load auditions', onRetry: _refresh);
+              }
+              final requests = _filtered(snapshot.data ?? const []);
+              if (requests.isEmpty) {
+                return CoreEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'No live audition requests',
+                  message: 'Try another filter or wait for director requests.',
+                  actionLabel: 'Clear filters',
+                  onAction: () => setState(() {
+                    _query = '';
+                    _filter = 'All';
+                  }),
+                );
+              }
+              return AgencyResponsiveGrid(
                 minWidth: 320,
                 children: [
                   for (final audition in requests)
                     _AuditionCard(
                       audition: audition,
-                      status: store.auditionStatus(audition),
+                      busy: _busyId == audition.publicId,
                       onDetails: () => _showDetails(context, audition),
-                      onReview: () {
-                        store.reviewAudition(audition.id);
-                        store.selectAudition(audition.id);
-                        final specialist = SpecialistScope.maybeOf(context);
-                        final live = _auditionsFuture;
-                        if (specialist != null && live != null) {
-                          () async {
-                            try {
-                              final rows = await live;
-                              if (rows.isEmpty) return;
-                              await specialist.updateAuditionStatus(
-                                rows.first.publicId,
-                                'reviewing',
-                              );
-                              if (!mounted) return;
-                              setState(() => _auditionsFuture =
-                                  specialist.auditions(force: true));
-                            } catch (_) {
-                              // Demo state remains the fallback if the live
-                              // audition is not writable by this account.
-                            }
-                          }();
-                        }
-                        agencySnack(context, '${audition.project} in review');
-                      },
-                      onShortlist: () {
-                        store.selectAudition(audition.id);
-                        Navigator.pushNamed(
-                          context,
-                          CastingAgencyRoutes.shortlist,
-                        );
-                      },
-                      onDecline: () =>
-                          _confirmDecline(context, store, audition),
+                      onReview: () => _updateStatus(audition, 'reviewing'),
+                      onShortlist: () => Navigator.pushNamed(
+                        context,
+                        CastingAgencyRoutes.shortlist,
+                        arguments: audition.publicId,
+                      ),
+                      onDecline: () => _confirmDecline(context, audition),
                     ),
                 ],
-              ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+      ],
     );
   }
 
-  Iterable<AgencyAudition> _filteredRequests(CastingAgencyDemoStore store) {
+  List<AuditionDto> _filtered(List<AuditionDto> rows) {
     final lower = _query.trim().toLowerCase();
-    var result = CastingAgencyDemoData.auditions.where((audition) {
-      final status = store.auditionStatus(audition);
-      final matchesFilter = switch (store.auditionFilter) {
-        'New' => status == AgencyStatus.newRequest,
-        'Reviewing' => status == AgencyStatus.reviewing,
-        'Shortlisted' => status == AgencyStatus.shortlisted,
-        _ => true,
-      };
+    final filtered = rows.where((audition) {
+      final matchesFilter = _filter == 'All' ||
+          audition.status.toLowerCase() == _filter.toLowerCase();
       final haystack =
-          '${audition.project} ${audition.director} ${audition.role} ${audition.city}'
+          '${audition.publicId} ${audition.projectId} ${audition.roleTitle} ${audition.status}'
               .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
+      return matchesFilter && (lower.isEmpty || haystack.contains(lower));
     }).toList();
-    if (_sort == 'Budget') result = result.reversed.toList();
-    return result;
+    if (_sort == 'Budget') {
+      filtered
+          .sort((a, b) => (b.budgetMinor ?? 0).compareTo(a.budgetMinor ?? 0));
+    }
+    return filtered;
   }
 
-  void _showDetails(BuildContext context, AgencyAudition audition) {
+  Future<void> _updateStatus(AuditionDto audition, String status) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    setState(() => _busyId = audition.publicId);
+    try {
+      await specialist.updateAuditionStatus(audition.publicId, status);
+      if (!mounted) return;
+      agencySnack(context, '${audition.roleTitle} marked $status');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      agencySnack(context, 'Could not update audition: $error');
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  void _showDetails(BuildContext context, AuditionDto audition) {
     showAgencySheet(
       context,
-      title: audition.project,
+      title: audition.roleTitle,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AgencyInfoRow(
-            icon: Icons.business_outlined,
-            label: 'Director',
-            value: audition.director,
+            icon: Icons.confirmation_number_outlined,
+            label: 'Audition',
+            value: audition.publicId,
           ),
           AgencyInfoRow(
-            icon: Icons.theater_comedy_outlined,
-            label: 'Role',
-            value: audition.role,
-          ),
-          AgencyInfoRow(
-            icon: Icons.schedule_outlined,
-            label: 'Due',
-            value: audition.dueDate,
+            icon: Icons.movie_filter_outlined,
+            label: 'Project',
+            value: audition.projectId,
           ),
           AgencyInfoRow(
             icon: Icons.payments_outlined,
             label: 'Budget',
-            value: audition.budget,
+            value: audition.budgetMinor == null
+                ? 'Budget TBD'
+                : _money(audition.budgetMinor!),
           ),
-          const SizedBox(height: 8),
-          CorePrimaryButton(
-            icon: Icons.view_kanban_outlined,
-            label: 'Build shortlist',
-            onTap: () {
-              CastingAgencyDemoStore.instance.selectAudition(audition.id);
-              Navigator.pop(context);
-              Navigator.pushNamed(context, CastingAgencyRoutes.shortlist);
-            },
+          AgencyInfoRow(
+            icon: Icons.group_outlined,
+            label: 'Candidates',
+            value: '${audition.candidates.length}',
           ),
         ],
       ),
     );
   }
 
-  void _confirmDecline(
-    BuildContext context,
-    CastingAgencyDemoStore store,
-    AgencyAudition audition,
-  ) {
+  void _confirmDecline(BuildContext context, AuditionDto audition) {
     showAgencySheet(
       context,
       title: 'Decline request',
@@ -255,7 +196,7 @@ class _CA03AuditionRequestInboxScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Decline ${audition.project}? The director action center updates in the demo state.',
+            'Decline ${audition.roleTitle}? This updates the live audition status.',
             style: AppTextStyles.body.copyWith(
               color: context.appColors.textSecondary,
             ),
@@ -276,9 +217,8 @@ class _CA03AuditionRequestInboxScreenState
                   icon: Icons.block_rounded,
                   label: 'Decline',
                   onTap: () {
-                    store.declineAudition(audition.id);
                     Navigator.pop(context);
-                    agencySnack(context, 'Audition declined');
+                    _updateStatus(audition, 'rejected');
                   },
                 ),
               ),
@@ -290,9 +230,54 @@ class _CA03AuditionRequestInboxScreenState
   }
 }
 
+class _FilterRow extends StatelessWidget {
+  final String selected;
+  final String sort;
+  final ValueChanged<String> onFilter;
+  final ValueChanged<String> onSort;
+
+  const _FilterRow({
+    required this.selected,
+    required this.sort,
+    required this.onFilter,
+    required this.onSort,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final filter in ['All', 'requested', 'reviewing', 'rejected'])
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: CoreChip(
+                label: filter == 'All' ? filter : filter.toUpperCase(),
+                selected: selected == filter,
+                onTap: () => onFilter(filter),
+              ),
+            ),
+          const SizedBox(width: 8),
+          for (final sort in ['Newest', 'Budget'])
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: CoreChip(
+                label: sort,
+                selected: this.sort == sort,
+                icon: Icons.sort_rounded,
+                onTap: () => onSort(sort),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AuditionCard extends StatelessWidget {
-  final AgencyAudition audition;
-  final AgencyStatus status;
+  final AuditionDto audition;
+  final bool busy;
   final VoidCallback onDetails;
   final VoidCallback onReview;
   final VoidCallback onShortlist;
@@ -300,7 +285,7 @@ class _AuditionCard extends StatelessWidget {
 
   const _AuditionCard({
     required this.audition,
-    required this.status,
+    required this.busy,
     required this.onDetails,
     required this.onReview,
     required this.onShortlist,
@@ -310,99 +295,116 @@ class _AuditionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GlassSectionCard(
-      radius: 20,
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AgencyMediaFrame(
-            imageUrl: audition.imageUrl,
-            title: audition.project,
-            badge: audition.city,
-            fallbackIcon: Icons.movie_creation_outlined,
-            aspectRatio: 16 / 9,
-            compact: true,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  audition.project,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w900,
+    return Opacity(
+      opacity: busy ? 0.62 : 1,
+      child: GlassSectionCard(
+        radius: 20,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    audition.roleTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-              AgencyStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${audition.director} - ${audition.dueDate} - ${audition.budget}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            audition.role,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 11),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
+                AgencyStatusChip(
+                    status: agencyStatusFromString(audition.status)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            AgencyInfoRow(
+              icon: Icons.movie_filter_outlined,
+              label: 'Project',
+              value: audition.projectId,
+            ),
+            AgencyInfoRow(
+              icon: Icons.payments_outlined,
+              label: 'Budget',
+              value: audition.budgetMinor == null
+                  ? 'Budget TBD'
+                  : _money(audition.budgetMinor!),
+            ),
+            AgencyInfoRow(
+              icon: Icons.group_outlined,
+              label: 'Candidates',
+              value: '${audition.candidates.length}',
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                CoreSecondaryButton(
                   icon: Icons.info_outline_rounded,
                   label: 'Details',
                   compact: true,
-                  onTap: onDetails,
+                  onTap: busy ? null : onDetails,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CoreSecondaryButton(
+                CoreSecondaryButton(
                   icon: Icons.rate_review_outlined,
                   label: 'Review',
                   compact: true,
-                  onTap: onReview,
+                  onTap: busy ? null : onReview,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.block_rounded,
-                  label: 'Decline',
-                  compact: true,
-                  onTap: onDecline,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
+                CorePrimaryButton(
                   icon: Icons.view_kanban_outlined,
                   label: 'Shortlist',
                   compact: true,
-                  onTap: onShortlist,
+                  onTap: busy ? null : onShortlist,
                 ),
-              ),
-            ],
-          ),
-        ],
+                CoreSecondaryButton(
+                  icon: Icons.block_rounded,
+                  label: 'Decline',
+                  compact: true,
+                  onTap: busy ? null : onDecline,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
+    );
+  }
+}
+
+String _money(int minor) {
+  final whole = minor ~/ 100;
+  if (whole >= 100000) return 'PKR ${(whole / 1000).round()}k';
+  return 'PKR $whole';
 }

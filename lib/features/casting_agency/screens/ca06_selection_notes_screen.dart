@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/casting_agency_demo_data.dart';
-import '../models/casting_agency_models.dart';
 import '../widgets/casting_agency_components.dart';
 
 class CA06SelectionNotesScreen extends StatefulWidget {
@@ -20,204 +20,192 @@ class CA06SelectionNotesScreen extends StatefulWidget {
 class _CA06SelectionNotesScreenState extends State<CA06SelectionNotesScreen> {
   String _query = '';
   String _filter = 'All';
+  Future<List<AuditionDto>>? _future;
+  String? _busyCandidateId;
 
   @override
-  Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final notes = _notes(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgencySectionCard(
-              title: 'Selection workspace',
-              icon: Icons.edit_note_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  AgencySearchField(
-                    hintText: 'Search candidates, projects, feedback...',
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'Selected',
-                          'Reviewing',
-                          'Rejected',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: _filter == filter,
-                              onTap: () {
-                                setState(() => _filter = filter);
-                                agencySnack(context, '$filter notes shown');
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            AgencyTwoColumn(
-              left: AgencySectionCard(
-                title: 'Candidate notes',
-                icon: Icons.rate_review_outlined,
-                child: notes.isEmpty
-                    ? CoreEmptyState(
-                        icon: Icons.search_off_rounded,
-                        title: 'No notes found',
-                        message: 'Clear filters or search another candidate.',
-                        actionLabel: 'Clear',
-                        onAction: () => setState(() {
-                          _query = '';
-                          _filter = 'All';
-                        }),
-                      )
-                    : Column(
-                        children: [
-                          for (final note in notes)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _NoteCard(
-                                note: note,
-                                status: store.noteStatus(note),
-                                onSelect: () {
-                                  store.updateNoteStatus(
-                                    note.id,
-                                    AgencyStatus.selected,
-                                  );
-                                  agencySnack(context, 'Candidate selected');
-                                },
-                                onReject: () {
-                                  store.updateNoteStatus(
-                                    note.id,
-                                    AgencyStatus.rejected,
-                                  );
-                                  agencySnack(context, 'Candidate rejected');
-                                },
-                                onDetail: () => _showNote(context, note),
-                              ),
-                            ),
-                        ],
-                      ),
-              ),
-              right: AgencySectionCard(
-                title: 'Feedback summary',
-                icon: Icons.stars_outlined,
-                child: Column(
-                  children: [
-                    AgencyInfoRow(
-                      icon: Icons.check_circle_outline,
-                      label: 'Selected',
-                      value: '${_count(store, AgencyStatus.selected)}',
-                    ),
-                    AgencyInfoRow(
-                      icon: Icons.hourglass_top_outlined,
-                      label: 'Reviewing',
-                      value: '${_count(store, AgencyStatus.reviewing)}',
-                    ),
-                    AgencyInfoRow(
-                      icon: Icons.block_outlined,
-                      label: 'Rejected',
-                      value: '${_count(store, AgencyStatus.rejected)}',
-                    ),
-                    const SizedBox(height: 10),
-                    CorePrimaryButton(
-                      icon: Icons.add_comment_outlined,
-                      label: 'Add note',
-                      compact: true,
-                      onTap: () => _showAddNote(context),
-                    ),
-                    const SizedBox(height: 8),
-                    CoreSecondaryButton(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: 'Open director chat',
-                      compact: true,
-                      onTap: () =>
-                          Navigator.pushNamed(context, CoreRoutes.chat),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= SpecialistScope.maybeOf(context)?.auditions(force: true);
   }
 
-  Iterable<AgencySelectionNote> _notes(CastingAgencyDemoStore store) {
-    final lower = _query.trim().toLowerCase();
-    return CastingAgencyDemoData.notes.where((note) {
-      final status = store.noteStatus(note);
-      final matchesFilter = switch (_filter) {
-        'Selected' => status == AgencyStatus.selected,
-        'Reviewing' => status == AgencyStatus.reviewing,
-        'Rejected' => status == AgencyStatus.rejected,
-        _ => true,
-      };
-      final haystack =
-          '${note.talentName} ${note.project} ${note.note} ${note.directorFeedback}'
-              .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
+  void _refresh() {
+    setState(() {
+      _future = SpecialistScope.maybeOf(context)?.auditions(force: true);
     });
   }
 
-  int _count(CastingAgencyDemoStore store, AgencyStatus status) {
-    return CastingAgencyDemoData.notes
-        .where((note) => store.noteStatus(note) == status)
-        .length;
-  }
-
-  void _showNote(BuildContext context, AgencySelectionNote note) {
-    showAgencySheet(
-      context,
-      title: note.talentName,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AgencyInfoRow(
-            icon: Icons.movie_outlined,
-            label: 'Project',
-            value: note.project,
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AgencySectionCard(
+          title: 'Selection workspace',
+          icon: Icons.edit_note_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: Column(
+            children: [
+              AgencySearchField(
+                hintText: 'Search candidates and statuses...',
+                onChanged: (value) => setState(() => _query = value),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final filter in [
+                      'All',
+                      'shortlisted',
+                      'selected',
+                      'rejected'
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CoreChip(
+                          label:
+                              filter == 'All' ? filter : filter.toUpperCase(),
+                          selected: _filter == filter,
+                          onTap: () => setState(() => _filter = filter),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          AgencyInfoRow(
-            icon: Icons.score_outlined,
-            label: 'Score',
-            value: '${note.score}',
+        ),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view selection notes',
+            message: 'Candidate notes are linked to live audition candidates.',
+          )
+        else
+          FutureBuilder<List<AuditionDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 360);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                    message: 'Could not load notes', onRetry: _refresh);
+              }
+              final candidates = _candidates(snapshot.data ?? const []);
+              final visible = _filtered(candidates);
+              return AgencyTwoColumn(
+                left: AgencySectionCard(
+                  title: 'Candidate notes',
+                  icon: Icons.rate_review_outlined,
+                  child: visible.isEmpty
+                      ? CoreEmptyState(
+                          icon: Icons.search_off_rounded,
+                          title: 'No live candidate notes',
+                          message:
+                              'Clear filters or add a note to a candidate.',
+                          actionLabel: 'Clear',
+                          onAction: () => setState(() {
+                            _query = '';
+                            _filter = 'All';
+                          }),
+                        )
+                      : Column(
+                          children: [
+                            for (final candidate in visible)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _NoteCard(
+                                  candidate: candidate,
+                                  busy: _busyCandidateId == candidate.publicId,
+                                  onAddNote: () =>
+                                      _showAddNote(context, candidate),
+                                  onSelect: () =>
+                                      _updateCandidate(candidate, 'selected'),
+                                  onReject: () =>
+                                      _updateCandidate(candidate, 'rejected'),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+                right: AgencySectionCard(
+                  title: 'Feedback summary',
+                  icon: Icons.stars_outlined,
+                  child: Column(
+                    children: [
+                      AgencyInfoRow(
+                        icon: Icons.notes_outlined,
+                        label: 'Total notes',
+                        value:
+                            '${candidates.fold<int>(0, (sum, item) => sum + item.selectionNoteCount)}',
+                      ),
+                      AgencyInfoRow(
+                        icon: Icons.check_circle_outline,
+                        label: 'Selected',
+                        value:
+                            '${candidates.where((item) => item.status == 'selected').length}',
+                      ),
+                      AgencyInfoRow(
+                        icon: Icons.block_outlined,
+                        label: 'Rejected',
+                        value:
+                            '${candidates.where((item) => item.status == 'rejected').length}',
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
-          AgencyInfoRow(
-            icon: Icons.notes_outlined,
-            label: 'Agency note',
-            value: note.note,
-          ),
-          AgencyInfoRow(
-            icon: Icons.comment_outlined,
-            label: 'Director',
-            value: note.directorFeedback,
-          ),
-        ],
-      ),
+      ],
     );
   }
 
-  void _showAddNote(BuildContext context) {
+  List<AuditionCandidateDto> _candidates(List<AuditionDto> auditions) {
+    return [
+      for (final audition in auditions) ...audition.candidates,
+    ];
+  }
+
+  List<AuditionCandidateDto> _filtered(List<AuditionCandidateDto> candidates) {
+    final lower = _query.trim().toLowerCase();
+    return candidates.where((candidate) {
+      final matchesFilter = _filter == 'All' || candidate.status == _filter;
+      final haystack =
+          '${candidate.screenName} ${candidate.status}'.toLowerCase();
+      return matchesFilter && (lower.isEmpty || haystack.contains(lower));
+    }).toList();
+  }
+
+  Future<void> _updateCandidate(
+      AuditionCandidateDto candidate, String status) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    setState(() => _busyCandidateId = candidate.publicId);
+    try {
+      await specialist
+          .updateAuditionCandidate(candidate.publicId, {'status': status});
+      if (!mounted) return;
+      agencySnack(context, '${candidate.screenName} marked $status');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      agencySnack(context, 'Could not update candidate: $error');
+    } finally {
+      if (mounted) setState(() => _busyCandidateId = null);
+    }
+  }
+
+  void _showAddNote(BuildContext context, AuditionCandidateDto candidate) {
     final controller = TextEditingController();
     showAgencySheet(
       context,
-      title: 'Add note',
+      title: 'Add note for ${candidate.screenName}',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -236,105 +224,150 @@ class _CA06SelectionNotesScreenState extends State<CA06SelectionNotesScreen> {
           CorePrimaryButton(
             icon: Icons.save_outlined,
             label: 'Save note',
-            onTap: () {
+            onTap: () async {
+              final body = controller.text.trim();
+              if (body.length < 8) {
+                agencySnack(context, 'Add a useful note before saving');
+                return;
+              }
               Navigator.pop(context);
-              agencySnack(context, 'Demo note saved');
+              await _saveNote(candidate, body);
             },
           ),
         ],
       ),
     );
   }
+
+  Future<void> _saveNote(AuditionCandidateDto candidate, String body) async {
+    final specialist = SpecialistScope.maybeOf(context);
+    if (specialist == null) return;
+    setState(() => _busyCandidateId = candidate.publicId);
+    try {
+      await specialist.addSelectionNote(candidate.publicId, {
+        'note': body,
+        'score': 8,
+        'visibility': 'agency',
+      });
+      if (!mounted) return;
+      agencySnack(context, 'Selection note saved');
+      _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      agencySnack(context, 'Could not save note: $error');
+    } finally {
+      if (mounted) setState(() => _busyCandidateId = null);
+    }
+  }
 }
 
 class _NoteCard extends StatelessWidget {
-  final AgencySelectionNote note;
-  final AgencyStatus status;
+  final AuditionCandidateDto candidate;
+  final bool busy;
   final VoidCallback onSelect;
   final VoidCallback onReject;
-  final VoidCallback onDetail;
+  final VoidCallback onAddNote;
 
   const _NoteCard({
-    required this.note,
-    required this.status,
+    required this.candidate,
+    required this.busy,
     required this.onSelect,
     required this.onReject,
-    required this.onDetail,
+    required this.onAddNote,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GlassSectionCard(
-      radius: 16,
-      padding: const EdgeInsets.all(11),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  note.talentName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w900,
+    return Opacity(
+      opacity: busy ? 0.62 : 1,
+      child: GlassSectionCard(
+        radius: 16,
+        padding: const EdgeInsets.all(11),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    candidate.screenName,
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-              AgencyStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '${note.project} - score ${note.score}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.statusText.copyWith(color: colors.goldDark),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            note.note,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.info_outline_rounded,
-                  label: 'Detail',
+                AgencyStatusChip(
+                    status: agencyStatusFromString(candidate.status)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            AgencyInfoRow(
+              icon: Icons.notes_outlined,
+              label: 'Notes',
+              value: '${candidate.selectionNoteCount}',
+            ),
+            AgencyInfoRow(
+              icon: Icons.video_collection_outlined,
+              label: 'Self-tapes',
+              value: '${candidate.selfTapeCount}',
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                CorePrimaryButton(
+                  icon: Icons.add_comment_outlined,
+                  label: 'Add note',
                   compact: true,
-                  onTap: onDetail,
+                  onTap: busy ? null : onAddNote,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.block_rounded,
-                  label: 'Reject',
-                  compact: true,
-                  onTap: onReject,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
+                CoreSecondaryButton(
                   icon: Icons.check_circle_outline,
                   label: 'Select',
                   compact: true,
-                  onTap: onSelect,
+                  onTap: busy ? null : onSelect,
                 ),
-              ),
-            ],
-          ),
-        ],
+                CoreSecondaryButton(
+                  icon: Icons.block_outlined,
+                  label: 'Reject',
+                  compact: true,
+                  onTap: busy ? null : onReject,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

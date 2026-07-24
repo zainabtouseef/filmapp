@@ -5,10 +5,8 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/distribution_partner_demo_data.dart';
-import '../models/distribution_partner_models.dart';
-import '../routes/distribution_partner_routes.dart';
 import '../widgets/distribution_partner_components.dart';
 
 class DS02DistributorContactsScreen extends StatefulWidget {
@@ -22,203 +20,121 @@ class DS02DistributorContactsScreen extends StatefulWidget {
 class _DS02DistributorContactsScreenState
     extends State<DS02DistributorContactsScreen> {
   String _query = '';
-  String _sort = 'Territory';
-  Future<List<DistributorContactDto>>? _contactsFuture;
+  String _filter = 'All';
+  Future<List<DistributorContactDto>>? _future;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final specialist = SpecialistScope.maybeOf(context);
-    _contactsFuture ??= specialist?.distributorContacts(force: true);
+    _future ??=
+        SpecialistScope.maybeOf(context)?.distributorContacts(force: true);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future =
+          SpecialistScope.maybeOf(context)?.distributorContacts(force: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = DistributionPartnerDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final rows = _rows(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DistributionSectionCard(
-              title: 'Contact command',
-              icon: Icons.contacts_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  if (_contactsFuture != null)
-                    FutureBuilder<List<DistributorContactDto>>(
-                      future: _contactsFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: InlineNotice(
-                              message: 'Loading live distributor contacts...',
-                              icon: Icons.hourglass_top_rounded,
-                            ),
-                          );
-                        }
-                        final rows = snapshot.data ?? const [];
-                        if (rows.isEmpty) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message:
-                                'Live contacts connected: ${rows.length} contact(s), latest ${rows.first.name}.',
-                            icon: Icons.cloud_done_outlined,
-                            tone: CoreStatusTone.success,
-                          ),
-                        );
-                      },
-                    ),
-                  DistributionSearchField(
-                    hintText: 'Search partner, territory, role...',
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'Cinema',
-                          'OTT',
-                          'Television',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: store.contactFilter == filter,
-                              onTap: () => store.setContactFilter(filter),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
-                        for (final sort in ['Territory', 'Channel'])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: sort,
-                              selected: _sort == sort,
-                              icon: Icons.sort_rounded,
-                              onTap: () {
-                                setState(() => _sort = sort);
-                                distributionSnack(
-                                  context,
-                                  '$sort sorting applied',
-                                );
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DistributionSectionCard(
+          title: 'Distributor contacts',
+          icon: Icons.contacts_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: Column(
+            children: [
+              DistributionSearchField(
+                hintText: 'Search distributors, channels, territories...',
+                onChanged: (value) => setState(() => _query = value),
               ),
-            ),
-            const SizedBox(height: 12),
-            DistributionTwoColumn(
-              left: DistributionSectionCard(
-                title: 'Distributor records',
-                icon: Icons.table_rows_outlined,
-                child: rows.isEmpty
-                    ? CoreEmptyState(
-                        icon: Icons.search_off_rounded,
-                        title: 'No distributor records',
-                        message: 'Clear filters or search another partner.',
-                        actionLabel: 'Clear',
-                        onAction: () {
-                          setState(() => _query = '');
-                          store.setContactFilter('All');
-                        },
-                      )
-                    : Column(
-                        children: [
-                          for (final row in rows)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _ContactRow(
-                                contact: row,
-                                status: store.contactStatus(row),
-                                onDetail: () => _showContact(context, row),
-                                onApprove: () {
-                                  store.approveContact(row.id);
-                                  distributionSnack(
-                                    context,
-                                    'Partner record approved',
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
-                      ),
-              ),
-              right: DistributionSectionCard(
-                title: 'Partner summary',
-                icon: Icons.public_outlined,
-                child: Column(
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
                   children: [
-                    DistributionInfoRow(
-                      icon: Icons.contacts_outlined,
-                      label: 'Total contacts',
-                      value: '42 partners',
-                    ),
-                    DistributionInfoRow(
-                      icon: Icons.movie_outlined,
-                      label: 'Cinema',
-                      value: '18 records',
-                    ),
-                    DistributionInfoRow(
-                      icon: Icons.live_tv_outlined,
-                      label: 'OTT / TV',
-                      value: '16 records',
-                    ),
-                    DistributionInfoRow(
-                      icon: Icons.public_outlined,
-                      label: 'Territories',
-                      value: '9 active',
-                    ),
-                    const SizedBox(height: 10),
-                    CoreSecondaryButton(
-                      icon: Icons.download_outlined,
-                      label: 'Export contacts',
-                      compact: true,
-                      onTap: () => distributionSnack(
-                        context,
-                        'Distributor contact export prepared',
+                    for (final filter in ['All', 'cinema', 'ott', 'tv'])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CoreChip(
+                          label:
+                              filter == 'All' ? filter : filter.toUpperCase(),
+                          selected: _filter == filter,
+                          onTap: () => setState(() => _filter = filter),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view distributor contacts',
+            message: 'Contacts are loaded from the server.',
+          )
+        else
+          FutureBuilder<List<DistributorContactDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 360);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                    message: 'Could not load contacts', onRetry: _refresh);
+              }
+              final contacts = _rows(snapshot.data ?? const []);
+              if (contacts.isEmpty) {
+                return CoreEmptyState(
+                  icon: Icons.contacts_outlined,
+                  title: 'No live distributor contacts',
+                  message:
+                      'Clear filters or create contacts from backend data.',
+                  actionLabel: 'Clear',
+                  onAction: () => setState(() {
+                    _query = '';
+                    _filter = 'All';
+                  }),
+                );
+              }
+              return DistributionResponsiveGrid(
+                minWidth: 300,
+                children: [
+                  for (final contact in contacts)
+                    _ContactCard(
+                      contact: contact,
+                      onDetails: () => _showContact(context, contact),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
     );
   }
 
-  Iterable<DistributorContact> _rows(DistributionPartnerDemoStore store) {
+  List<DistributorContactDto> _rows(List<DistributorContactDto> rows) {
     final lower = _query.trim().toLowerCase();
-    var result = DistributionPartnerDemoData.contacts.where((row) {
-      final matchesFilter =
-          store.contactFilter == 'All' || row.channel == store.contactFilter;
+    return rows.where((row) {
+      final matchesFilter = _filter == 'All' || row.channel == _filter;
       final haystack =
-          '${row.name} ${row.channel} ${row.territory} ${row.contactRole} ${row.notes}'
+          '${row.name} ${row.channel} ${row.territory ?? ''} ${row.contactRole ?? ''}'
               .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
+      return matchesFilter && (lower.isEmpty || haystack.contains(lower));
     }).toList();
-    if (_sort == 'Channel') result = result.reversed.toList();
-    return result;
   }
 
-  void _showContact(BuildContext context, DistributorContact contact) {
-    final store = DistributionPartnerDemoStore.instance;
+  void _showContact(BuildContext context, DistributorContactDto contact) {
     showDistributionSheet(
       context,
       title: contact.name,
@@ -226,59 +142,24 @@ class _DS02DistributorContactsScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           DistributionInfoRow(
-            icon: Icons.public_outlined,
-            label: 'Territory',
-            value: contact.territory,
-          ),
-          DistributionInfoRow(
-            icon: Icons.live_tv_outlined,
+            icon: Icons.hub_outlined,
             label: 'Channel',
             value: contact.channel,
           ),
           DistributionInfoRow(
-            icon: Icons.person_outline_rounded,
-            label: 'Role',
-            value: contact.contactRole,
+            icon: Icons.public_outlined,
+            label: 'Territory',
+            value: contact.territory ?? 'Not set',
           ),
           DistributionInfoRow(
-            icon: Icons.movie_creation_outlined,
-            label: 'Prior project',
-            value: contact.priorProject,
+            icon: Icons.badge_outlined,
+            label: 'Role',
+            value: contact.contactRole ?? 'Not set',
           ),
           DistributionInfoRow(
             icon: Icons.notes_outlined,
             label: 'Notes',
-            value: contact.notes,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.rocket_launch_outlined,
-                  label: 'Release',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(
-                      context,
-                      DistributionPartnerRoutes.release,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.event_available_outlined,
-                  label: 'Activate',
-                  onTap: () {
-                    store.activateContact(contact.id);
-                    Navigator.pop(context);
-                    distributionSnack(context, 'Release window activated');
-                  },
-                ),
-              ),
-            ],
+            value: contact.notes ?? 'No notes',
           ),
         ],
       ),
@@ -286,26 +167,20 @@ class _DS02DistributorContactsScreenState
   }
 }
 
-class _ContactRow extends StatelessWidget {
-  final DistributorContact contact;
-  final DistributionStatus status;
-  final VoidCallback onDetail;
-  final VoidCallback onApprove;
+class _ContactCard extends StatelessWidget {
+  final DistributorContactDto contact;
+  final VoidCallback onDetails;
 
-  const _ContactRow({
-    required this.contact,
-    required this.status,
-    required this.onDetail,
-    required this.onApprove,
-  });
+  const _ContactCard({required this.contact, required this.onDetails});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return GlassSectionCard(
-      radius: 16,
-      padding: const EdgeInsets.all(11),
+      radius: 20,
+      padding: const EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -320,43 +195,58 @@ class _ContactRow extends StatelessWidget {
                   ),
                 ),
               ),
-              DistributionStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(
-            '${contact.channel} - ${contact.territory} - ${contact.contactRole}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.info_outline_rounded,
-                  label: 'Detail',
-                  compact: true,
-                  onTap: onDetail,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.verified_outlined,
-                  label: 'Approve',
-                  compact: true,
-                  onTap: onApprove,
-                ),
+              DistributionStatusChip(
+                status: distributionStatusFromString(contact.status),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          DistributionInfoRow(
+            icon: Icons.hub_outlined,
+            label: 'Channel',
+            value: contact.channel,
+          ),
+          DistributionInfoRow(
+            icon: Icons.public_outlined,
+            label: 'Territory',
+            value: contact.territory ?? 'Not set',
+          ),
+          const SizedBox(height: 8),
+          CoreSecondaryButton(
+            icon: Icons.info_outline_rounded,
+            label: 'Details',
+            compact: true,
+            onTap: onDetails,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

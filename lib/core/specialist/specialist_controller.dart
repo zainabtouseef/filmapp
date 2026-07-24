@@ -99,6 +99,33 @@ class SpecialistController extends ChangeNotifier {
     return audition;
   }
 
+  Future<AuditionCandidateDto> updateAuditionCandidate(
+    String candidateId,
+    Map<String, dynamic> body,
+  ) async {
+    final candidate =
+        await _repository.updateAuditionCandidate(candidateId, body);
+    await auditions(force: true);
+    return candidate;
+  }
+
+  Future<AuditionCandidateDto> addSelectionNote(
+    String candidateId,
+    Map<String, dynamic> body,
+  ) async {
+    final candidate = await _repository.addSelectionNote(candidateId, body);
+    await auditions(force: true);
+    return candidate;
+  }
+
+  Future<AgencyCommissionDto> createAgencyCommission(
+    Map<String, dynamic> body,
+  ) async {
+    final commission = await _repository.createAgencyCommission(body);
+    await agencyCommissions(force: true);
+    return commission;
+  }
+
   Future<List<AgencyCommissionDto>> agencyCommissions({
     String? agencyId,
     bool force = false,

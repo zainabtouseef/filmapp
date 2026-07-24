@@ -7,7 +7,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/casting_agency_demo_data.dart';
 import '../models/casting_agency_models.dart';
 
 Color agencyToneColor(BuildContext context, AgencyTone tone) {
@@ -43,6 +42,47 @@ Color agencyStatusColor(BuildContext context, AgencyStatus status) {
 
 void agencySnack(BuildContext context, String message) {
   showCoreSnack(context, message);
+}
+
+String agencyStatusLabel(AgencyStatus status) {
+  return switch (status) {
+    AgencyStatus.active => 'Active',
+    AgencyStatus.pending => 'Pending',
+    AgencyStatus.newRequest => 'New request',
+    AgencyStatus.reviewing => 'Reviewing',
+    AgencyStatus.shortlisted => 'Shortlisted',
+    AgencyStatus.selfTapePending => 'Tape pending',
+    AgencyStatus.selfTapeReceived => 'Tape received',
+    AgencyStatus.selected => 'Selected',
+    AgencyStatus.rejected => 'Rejected',
+    AgencyStatus.booked => 'Booked',
+    AgencyStatus.closed => 'Closed',
+    AgencyStatus.paymentPending => 'Payment pending',
+    AgencyStatus.paid => 'Paid',
+    AgencyStatus.disputed => 'Disputed',
+  };
+}
+
+AgencyStatus agencyStatusFromString(String value) {
+  return switch (value.trim().toLowerCase().replaceAll('-', '_')) {
+    'active' => AgencyStatus.active,
+    'new' || 'requested' || 'new_request' => AgencyStatus.newRequest,
+    'reviewing' || 'in_review' => AgencyStatus.reviewing,
+    'shortlisted' => AgencyStatus.shortlisted,
+    'self_tape_pending' || 'tape_pending' => AgencyStatus.selfTapePending,
+    'self_tape_received' ||
+    'tape_received' ||
+    'submitted' =>
+      AgencyStatus.selfTapeReceived,
+    'selected' => AgencyStatus.selected,
+    'rejected' || 'declined' => AgencyStatus.rejected,
+    'booked' || 'secured' => AgencyStatus.booked,
+    'closed' || 'completed' => AgencyStatus.closed,
+    'payment_pending' => AgencyStatus.paymentPending,
+    'paid' => AgencyStatus.paid,
+    'disputed' => AgencyStatus.disputed,
+    _ => AgencyStatus.pending,
+  };
 }
 
 Future<void> showAgencySheet(
@@ -469,7 +509,7 @@ class AgencyStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: CastingAgencyDemoData.statusLabel(status),
+      label: agencyStatusLabel(status),
       color: agencyStatusColor(context, status),
     );
   }

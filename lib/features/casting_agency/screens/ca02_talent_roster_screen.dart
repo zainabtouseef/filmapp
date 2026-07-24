@@ -5,10 +5,8 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
-import '../data/casting_agency_demo_data.dart';
-import '../models/casting_agency_models.dart';
-import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_components.dart';
 
 class CA02TalentRosterScreen extends StatefulWidget {
@@ -20,178 +18,141 @@ class CA02TalentRosterScreen extends StatefulWidget {
 
 class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
   String _query = '';
-  String _sort = 'Availability';
-  Future<List<AgencyTalentDto>>? _rosterFuture;
+  String _filter = 'All';
+  String _sort = 'Name';
+  Future<List<AgencyTalentDto>>? _future;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final specialist = SpecialistScope.maybeOf(context);
-    _rosterFuture ??= specialist?.agencyRoster(force: true);
+    _future ??= SpecialistScope.maybeOf(context)?.agencyRoster(force: true);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = SpecialistScope.maybeOf(context)?.agencyRoster(force: true);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final roster = _filteredRoster(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgencySectionCard(
-              title: 'Roster command',
-              icon: Icons.manage_search_outlined,
-              selected: true,
-              child: Column(
-                children: [
-                  if (_rosterFuture != null)
-                    FutureBuilder<List<AgencyTalentDto>>(
-                      future: _rosterFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: InlineNotice(
-                              message: 'Loading live agency roster...',
-                              icon: Icons.hourglass_top_rounded,
-                            ),
-                          );
-                        }
-                        final rows = snapshot.data ?? const [];
-                        if (rows.isEmpty) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: InlineNotice(
-                            message:
-                                'Live roster connected: ${rows.length} represented talent record(s), latest ${rows.first.screenName}.',
-                            icon: Icons.cloud_done_outlined,
-                            tone: CoreStatusTone.success,
-                          ),
-                        );
-                      },
-                    ),
-                  AgencySearchField(
-                    hintText: 'Search talent, category, city...',
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 10),
-                  _FilterRow(
-                    selected: store.rosterFilter,
-                    sort: _sort,
-                    onFilter: store.setRosterFilter,
-                    onSort: (value) {
-                      setState(() => _sort = value);
-                      agencySnack(context, '$value sorting applied');
-                    },
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AgencySectionCard(
+          title: 'Roster command',
+          icon: Icons.manage_search_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: Column(
+            children: [
+              AgencySearchField(
+                hintText: 'Search represented talent...',
+                onChanged: (value) => setState(() => _query = value),
               ),
-            ),
-            const SizedBox(height: 12),
-            if (roster.isEmpty)
-              CoreEmptyState(
-                icon: Icons.person_search_outlined,
-                title: 'No roster matches',
-                message: 'Clear filters or search another talent category.',
-                actionLabel: 'Clear',
-                onAction: () {
-                  setState(() => _query = '');
-                  store.setRosterFilter('All');
-                },
-              )
-            else
-              AgencyResponsiveGrid(
+              const SizedBox(height: 10),
+              _FilterRow(
+                selected: _filter,
+                sort: _sort,
+                onFilter: (value) => setState(() => _filter = value),
+                onSort: (value) => setState(() => _sort = value),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view agency roster',
+            message: 'Represented talent records are loaded from the server.',
+          )
+        else
+          FutureBuilder<List<AgencyTalentDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 360);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                    message: 'Could not load roster', onRetry: _refresh);
+              }
+              final roster = _filtered(snapshot.data ?? const []);
+              if (roster.isEmpty) {
+                return CoreEmptyState(
+                  icon: Icons.person_search_outlined,
+                  title: 'No live roster matches',
+                  message:
+                      'Clear filters or wait for represented talent records.',
+                  actionLabel: 'Clear',
+                  onAction: () => setState(() {
+                    _query = '';
+                    _filter = 'All';
+                  }),
+                );
+              }
+              return AgencyResponsiveGrid(
                 minWidth: 300,
                 children: [
                   for (final talent in roster)
                     _TalentCard(
                       talent: talent,
-                      selected: store.selectedTalentIds.contains(talent.id),
-                      onToggle: () {
-                        store.toggleTalent(talent.id);
-                        agencySnack(context, 'Shortlist selection updated');
-                      },
                       onDetails: () => _showTalent(context, talent),
-                      onTape: () => Navigator.pushNamed(
-                        context,
-                        CastingAgencyRoutes.selfTapes,
-                      ),
                     ),
                 ],
-              ),
-          ],
-        );
-      },
+              );
+            },
+          ),
+      ],
     );
   }
 
-  Iterable<AgencyTalent> _filteredRoster(CastingAgencyDemoStore store) {
+  List<AgencyTalentDto> _filtered(List<AgencyTalentDto> rows) {
     final lower = _query.trim().toLowerCase();
-    var result = CastingAgencyDemoData.roster.where((talent) {
-      final matchesFilter = switch (store.rosterFilter) {
-        'Linked' => talent.linkedAccount,
-        'Available' => talent.availability.toLowerCase().contains('available'),
-        'Shortlisted' => talent.status == AgencyStatus.shortlisted ||
-            store.selectedTalentIds.contains(talent.id),
-        _ => true,
-      };
+    final filtered = rows.where((talent) {
+      final matchesFilter = _filter == 'All' ||
+          talent.status.toLowerCase() == _filter.toLowerCase();
       final haystack =
-          '${talent.name} ${talent.category} ${talent.city} ${talent.ageRange}'
+          '${talent.screenName} ${talent.representationType} ${talent.status}'
               .toLowerCase();
-      return matchesFilter && haystack.contains(lower);
+      return matchesFilter && (lower.isEmpty || haystack.contains(lower));
     }).toList();
-    if (_sort == 'Name') {
-      result.sort((a, b) => a.name.compareTo(b.name));
+    if (_sort == 'Commission') {
+      filtered.sort((a, b) => b.commissionBps.compareTo(a.commissionBps));
     } else {
-      result.sort((a, b) {
-        final aAvailable = a.availability.toLowerCase().contains('available');
-        final bAvailable = b.availability.toLowerCase().contains('available');
-        if (aAvailable != bAvailable) return aAvailable ? -1 : 1;
-        return a.availability.compareTo(b.availability);
-      });
+      filtered.sort((a, b) => a.screenName.compareTo(b.screenName));
     }
-    return result;
+    return filtered;
   }
 
-  void _showTalent(BuildContext context, AgencyTalent talent) {
+  void _showTalent(BuildContext context, AgencyTalentDto talent) {
     showAgencySheet(
       context,
-      title: talent.name,
+      title: talent.screenName,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AgencyInfoRow(
             icon: Icons.badge_outlined,
-            label: 'Category',
-            value: talent.category,
+            label: 'Talent profile',
+            value: talent.talentProfileId,
           ),
           AgencyInfoRow(
-            icon: Icons.location_on_outlined,
-            label: 'City',
-            value: talent.city,
+            icon: Icons.handshake_outlined,
+            label: 'Representation',
+            value: talent.representationType.replaceAll('_', ' '),
           ),
           AgencyInfoRow(
-            icon: Icons.calendar_today_outlined,
-            label: 'Availability',
-            value: talent.availability,
+            icon: Icons.percent_rounded,
+            label: 'Commission',
+            value: '${(talent.commissionBps / 100).toStringAsFixed(1)}%',
           ),
           AgencyInfoRow(
-            icon: Icons.link_outlined,
-            label: 'Account',
-            value: talent.linkedAccount ? 'Linked' : 'Agency managed',
-          ),
-          const SizedBox(height: 8),
-          CorePrimaryButton(
-            icon: Icons.view_kanban_outlined,
-            label: 'Add to shortlist',
-            onTap: () {
-              CastingAgencyDemoStore.instance.toggleTalent(talent.id);
-              Navigator.pop(context);
-              agencySnack(context, 'Candidate selection updated');
-            },
+            icon: Icons.verified_outlined,
+            label: 'Status',
+            value: talent.status,
           ),
         ],
       ),
@@ -218,17 +179,17 @@ class _FilterRow extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final filter in ['All', 'Linked', 'Available', 'Shortlisted'])
+          for (final filter in ['All', 'active', 'pending'])
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: CoreChip(
-                label: filter,
+                label: filter == 'All' ? filter : filter.toUpperCase(),
                 selected: selected == filter,
                 onTap: () => onFilter(filter),
               ),
             ),
           const SizedBox(width: 8),
-          for (final option in ['Availability', 'Name'])
+          for (final option in ['Name', 'Commission'])
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: CoreChip(
@@ -245,19 +206,10 @@ class _FilterRow extends StatelessWidget {
 }
 
 class _TalentCard extends StatelessWidget {
-  final AgencyTalent talent;
-  final bool selected;
-  final VoidCallback onToggle;
+  final AgencyTalentDto talent;
   final VoidCallback onDetails;
-  final VoidCallback onTape;
 
-  const _TalentCard({
-    required this.talent,
-    required this.selected,
-    required this.onToggle,
-    required this.onDetails,
-    required this.onTape,
-  });
+  const _TalentCard({required this.talent, required this.onDetails});
 
   @override
   Widget build(BuildContext context) {
@@ -265,24 +217,20 @@ class _TalentCard extends StatelessWidget {
     return GlassSectionCard(
       radius: 20,
       padding: const EdgeInsets.all(12),
-      selected: selected,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AgencyMediaFrame(
-            imageUrl: talent.imageUrl,
-            title: talent.name,
-            badge: talent.city,
-            fallbackIcon: Icons.person_outline_rounded,
-            aspectRatio: 4 / 3,
-            compact: true,
-          ),
-          const SizedBox(height: 10),
           Row(
             children: [
+              CircleAvatar(
+                backgroundColor: colors.goldMid.withValues(alpha: 0.16),
+                child:
+                    Icon(Icons.person_outline_rounded, color: colors.goldDark),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  talent.name,
+                  talent.screenName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -291,57 +239,56 @@ class _TalentCard extends StatelessWidget {
                   ),
                 ),
               ),
-              AgencyStatusChip(status: talent.status),
+              AgencyStatusChip(status: agencyStatusFromString(talent.status)),
             ],
           ),
-          const SizedBox(height: 5),
-          Text(
-            '${talent.category} - ${talent.ageRange} - ${talent.bookings}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+          const SizedBox(height: 10),
+          AgencyInfoRow(
+            icon: Icons.handshake_outlined,
+            label: 'Representation',
+            value: talent.representationType.replaceAll('_', ' '),
           ),
-          const SizedBox(height: 5),
-          Text(
-            talent.availability,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.statusText.copyWith(color: colors.goldDark),
-          ),
-          const SizedBox(height: 11),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.info_outline_rounded,
-                  label: 'Details',
-                  compact: true,
-                  onTap: onDetails,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.video_call_outlined,
-                  label: 'Tape',
-                  compact: true,
-                  onTap: onTape,
-                ),
-              ),
-            ],
+          AgencyInfoRow(
+            icon: Icons.percent_rounded,
+            label: 'Commission',
+            value: '${(talent.commissionBps / 100).toStringAsFixed(1)}%',
           ),
           const SizedBox(height: 8),
-          CorePrimaryButton(
-            icon: selected
-                ? Icons.playlist_remove_outlined
-                : Icons.playlist_add_check_outlined,
-            label: selected ? 'Remove from shortlist' : 'Add to shortlist',
+          CoreSecondaryButton(
+            icon: Icons.info_outline_rounded,
+            label: 'Details',
             compact: true,
-            onTap: onToggle,
+            onTap: onDetails,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

@@ -6,7 +6,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/insurance_partner_demo_data.dart';
 import '../models/insurance_partner_models.dart';
 
 Color insuranceToneColor(BuildContext context, InsuranceTone tone) {
@@ -30,6 +29,7 @@ Color insuranceStatusColor(BuildContext context, InsuranceStatus status) {
     InsuranceStatus.completed ||
     InsuranceStatus.resolved =>
       colors.success,
+    InsuranceStatus.expiring ||
     InsuranceStatus.highRisk ||
     InsuranceStatus.safetyDue ||
     InsuranceStatus.evidenceNeeded =>
@@ -45,6 +45,46 @@ Color insuranceStatusColor(BuildContext context, InsuranceStatus status) {
 
 void insuranceSnack(BuildContext context, String message) {
   showCoreSnack(context, message);
+}
+
+String insuranceStatusLabel(InsuranceStatus status) {
+  return switch (status) {
+    InsuranceStatus.active => 'Active',
+    InsuranceStatus.expiring => 'Expiring',
+    InsuranceStatus.highRisk => 'High Risk',
+    InsuranceStatus.openClaim => 'Open Claim',
+    InsuranceStatus.investigating => 'Investigating',
+    InsuranceStatus.evidenceNeeded => 'Evidence Needed',
+    InsuranceStatus.verified => 'Verified',
+    InsuranceStatus.approved => 'Approved',
+    InsuranceStatus.rejected => 'Rejected',
+    InsuranceStatus.escalated => 'Escalated',
+    InsuranceStatus.safetyDue => 'Safety Due',
+    InsuranceStatus.completed => 'Completed',
+    InsuranceStatus.resolved => 'Resolved',
+    InsuranceStatus.draft => 'Draft',
+    InsuranceStatus.pending => 'Pending',
+  };
+}
+
+InsuranceStatus insuranceStatusFromString(String value) {
+  return switch (value.trim().toLowerCase().replaceAll('-', '_')) {
+    'active' => InsuranceStatus.active,
+    'expiring' => InsuranceStatus.expiring,
+    'high_risk' || 'high' => InsuranceStatus.highRisk,
+    'open_claim' || 'open' => InsuranceStatus.openClaim,
+    'investigating' || 'in_review' => InsuranceStatus.investigating,
+    'evidence_needed' || 'needs_evidence' => InsuranceStatus.evidenceNeeded,
+    'verified' => InsuranceStatus.verified,
+    'approved' => InsuranceStatus.approved,
+    'rejected' || 'declined' => InsuranceStatus.rejected,
+    'escalated' => InsuranceStatus.escalated,
+    'safety_due' => InsuranceStatus.safetyDue,
+    'completed' => InsuranceStatus.completed,
+    'resolved' || 'closed' => InsuranceStatus.resolved,
+    'draft' => InsuranceStatus.draft,
+    _ => InsuranceStatus.pending,
+  };
 }
 
 Future<void> showInsuranceSheet(
@@ -460,7 +500,7 @@ class InsuranceStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: InsurancePartnerDemoData.statusLabel(status),
+      label: insuranceStatusLabel(status),
       color: insuranceStatusColor(context, status),
     );
   }

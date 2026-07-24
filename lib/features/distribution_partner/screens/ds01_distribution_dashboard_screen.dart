@@ -5,9 +5,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/distribution_partner_demo_data.dart';
 import '../routes/distribution_partner_routes.dart';
 import '../widgets/distribution_partner_components.dart';
 
@@ -21,223 +19,291 @@ class DS01DistributionDashboardScreen extends StatefulWidget {
 
 class _DS01DistributionDashboardScreenState
     extends State<DS01DistributionDashboardScreen> {
-  Future<DistributionProfileDto?>? _profileFuture;
-  Future<List<DistributionProjectDto>>? _projectsFuture;
+  Future<_DistributionDashboardData>? _future;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<_DistributionDashboardData>? _load() {
     final specialist = SpecialistScope.maybeOf(context);
-    _profileFuture ??= specialist?.distributionProfile(force: true);
-    _projectsFuture ??= specialist?.distributionProjects(force: true);
+    if (specialist == null) return null;
+    return _DistributionDashboardData.load(specialist);
+  }
+
+  void _refresh() {
+    setState(() => _future = _load());
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = DistributionPartnerDemoStore.instance;
-    final colors = context.appColors;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final project = store.primaryProject;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const PersonalDashboardKpiStrip(),
-            const SizedBox(height: 12),
-            if (_profileFuture != null || _projectsFuture != null)
-              FutureBuilder<List<Object?>>(
-                future: Future.wait<Object?>([
-                  if (_profileFuture != null) _profileFuture!,
-                  if (_projectsFuture != null) _projectsFuture!,
-                ]),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: InlineNotice(
-                        message: 'Loading live distribution workspace...',
-                        icon: Icons.hourglass_top_rounded,
-                      ),
-                    );
-                  }
-                  final values = snapshot.data ?? const [];
-                  DistributionProfileDto? profile;
-                  List<DistributionProjectDto> projects = const [];
-                  for (final value in values) {
-                    if (value is DistributionProfileDto) profile = value;
-                    if (value is List<DistributionProjectDto>) {
-                      projects = value;
-                    }
-                  }
-                  if (profile == null && projects.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: InlineNotice(
-                      message:
-                          'Live distribution connected: ${profile?.name ?? 'profile pending'}, ${projects.length} release project(s).',
-                      icon: Icons.cloud_done_outlined,
-                      tone: CoreStatusTone.success,
-                    ),
-                  );
-                },
-              ),
-            DistributionKpiRail(metrics: DistributionPartnerDemoData.metrics),
-            const SizedBox(height: 12),
-            DistributionTwoColumn(
-              left: DistributionSectionCard(
-                title: 'Release workload',
-                icon: Icons.rocket_launch_outlined,
-                selected: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DistributionMediaFrame(
-                      imageUrl: project.imageUrl,
-                      title: project.title,
-                      badge: project.releaseWindow,
-                      fallbackIcon: Icons.movie_filter_outlined,
-                      aspectRatio: 16 / 8.5,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            project.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.metricNumberCompact.copyWith(
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        DistributionStatusChip(
-                          status: store.projectStatus(project),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '${project.producer} - ${project.territories} - ${project.statusNote}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    MetricActionRail(
-                      items: [
-                        MetricActionItem(
-                          icon: Icons.event_available_outlined,
-                          value: project.releaseWindow,
-                          title: 'Window',
-                          subtitle: 'Current',
-                          accentColor: colors.goldDark,
-                        ),
-                        MetricActionItem(
-                          icon: Icons.inventory_2_outlined,
-                          value: '3 items',
-                          title: 'Missing',
-                          subtitle: 'Current',
-                          accentColor: colors.goldDark,
-                        ),
-                        MetricActionItem(
-                          icon: Icons.history_outlined,
-                          value: '${store.auditEvents}',
-                          title: 'Audit',
-                          subtitle: 'Current',
-                          accentColor: colors.goldDark,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CoreSecondaryButton(
-                            icon: Icons.contacts_outlined,
-                            label: 'Contacts',
-                            compact: true,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              DistributionPartnerRoutes.contacts,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: CorePrimaryButton(
-                            icon: Icons.rocket_launch_outlined,
-                            label: 'Coordinate',
-                            compact: true,
-                            onTap: () => Navigator.pushNamed(
-                              context,
-                              DistributionPartnerRoutes.release,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              right: Column(
-                children: [
-                  DistributionSectionCard(
-                    title: 'Action required',
-                    icon: Icons.notifications_active_outlined,
-                    child: store.activeTasks.isEmpty
-                        ? CoreEmptyState(
-                            icon: Icons.check_circle_outline,
-                            title: 'Release queue clear',
-                            message: 'No active distribution task is pending.',
-                            actionLabel: 'Open reports',
-                            onAction: () => Navigator.pushNamed(
-                              context,
-                              DistributionPartnerRoutes.reports,
-                            ),
-                          )
-                        : DistributionTaskRail(tasks: store.activeTasks),
-                  ),
-                  const SizedBox(height: 12),
-                  DistributionSectionCard(
-                    title: 'Release health',
-                    icon: Icons.analytics_outlined,
-                    child: Column(
-                      children: [
-                        DistributionInfoRow(
-                          icon: Icons.rocket_launch_outlined,
-                          label: 'Near completion',
-                          value: '7 projects',
-                        ),
-                        DistributionInfoRow(
-                          icon: Icons.inventory_2_outlined,
-                          label: 'Missing handover',
-                          value: '3 projects',
-                        ),
-                        DistributionInfoRow(
-                          icon: Icons.contacts_outlined,
-                          label: 'Active partners',
-                          value: '12 contacts',
-                        ),
-                        DistributionInfoRow(
-                          icon: Icons.analytics_outlined,
-                          label: 'Pending reports',
-                          value: '4 records',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const PersonalDashboardKpiStrip(),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const DistributionSectionCard(
+            title: 'Distribution Workspace',
+            icon: Icons.lock_outline_rounded,
+            child: CoreEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Sign in to load distribution data',
+              message:
+                  'Distribution profile, release projects, contacts, and reports are loaded from the server.',
             ),
-          ],
-        );
-      },
+          )
+        else
+          FutureBuilder<_DistributionDashboardData>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 420);
+              }
+              if (snapshot.hasError || snapshot.data == null) {
+                return DistributionSectionCard(
+                  title: 'Distribution workspace unavailable',
+                  icon: Icons.cloud_off_outlined,
+                  child: Column(
+                    children: [
+                      const CoreEmptyState(
+                        icon: Icons.sync_problem_outlined,
+                        title: 'Could not load distribution workspace',
+                        message: 'Check your connection and try again.',
+                      ),
+                      const SizedBox(height: 10),
+                      CoreSecondaryButton(
+                        icon: Icons.refresh_rounded,
+                        label: 'Try again',
+                        compact: true,
+                        onTap: _refresh,
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return _LiveDistributionDashboard(
+                data: snapshot.data!,
+                onRefresh: _refresh,
+              );
+            },
+          ),
+      ],
     );
   }
+}
+
+class _DistributionDashboardData {
+  final DistributionProfileDto? profile;
+  final List<DistributionProjectDto> projects;
+  final List<DistributorContactDto> contacts;
+  final List<DistributionReportDto> reports;
+
+  const _DistributionDashboardData({
+    required this.profile,
+    required this.projects,
+    required this.contacts,
+    required this.reports,
+  });
+
+  static Future<_DistributionDashboardData> load(
+    SpecialistController specialist,
+  ) async {
+    final profile = await specialist.distributionProfile(force: true);
+    final results = await Future.wait<Object>([
+      specialist.distributionProjects(force: true),
+      specialist.distributorContacts(force: true),
+      specialist.distributionReports(force: true),
+    ]);
+    return _DistributionDashboardData(
+      profile: profile,
+      projects: results[0] as List<DistributionProjectDto>,
+      contacts: results[1] as List<DistributorContactDto>,
+      reports: results[2] as List<DistributionReportDto>,
+    );
+  }
+}
+
+class _LiveDistributionDashboard extends StatelessWidget {
+  final _DistributionDashboardData data;
+  final VoidCallback onRefresh;
+
+  const _LiveDistributionDashboard({
+    required this.data,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final activeProjects = data.projects
+        .where((item) => item.status != 'closed' && item.status != 'completed')
+        .length;
+    final audience =
+        data.reports.fold<int>(0, (sum, item) => sum + item.audienceCount);
+    final revenue =
+        data.reports.fold<int>(0, (sum, item) => sum + item.revenueMinor);
+    final primary = data.projects.isEmpty ? null : data.projects.first;
+    return Column(
+      children: [
+        DistributionResponsiveGrid(
+          minWidth: 220,
+          children: [
+            _MetricTile(
+              icon: Icons.hub_outlined,
+              label: 'Partner',
+              value: data.profile?.name ?? 'Profile pending',
+              color: colors.goldMid,
+            ),
+            _MetricTile(
+              icon: Icons.movie_filter_outlined,
+              label: 'Active projects',
+              value: '$activeProjects',
+              color: colors.infoBlue,
+            ),
+            _MetricTile(
+              icon: Icons.people_alt_outlined,
+              label: 'Audience',
+              value: '$audience',
+              color: colors.success,
+            ),
+            _MetricTile(
+              icon: Icons.payments_outlined,
+              label: 'Revenue',
+              value: _money(revenue),
+              color: colors.infoPurple,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        DistributionTwoColumn(
+          left: DistributionSectionCard(
+            title: 'Primary release',
+            icon: Icons.rocket_launch_outlined,
+            selected: primary != null,
+            actionText: 'Refresh',
+            onActionTap: onRefresh,
+            child: primary == null
+                ? const CoreEmptyState(
+                    icon: Icons.movie_creation_outlined,
+                    title: 'No live distribution projects',
+                    message: 'Release projects will appear here.',
+                  )
+                : Column(
+                    children: [
+                      DistributionInfoRow(
+                        icon: Icons.movie_filter_outlined,
+                        label: 'Project',
+                        value: primary.projectId,
+                      ),
+                      DistributionInfoRow(
+                        icon: Icons.public_outlined,
+                        label: 'Territories',
+                        value: primary.territories ?? 'Not set',
+                      ),
+                      DistributionInfoRow(
+                        icon: Icons.inventory_2_outlined,
+                        label: 'Handover items',
+                        value: '${primary.handoverCount}',
+                      ),
+                      DistributionInfoRow(
+                        icon: Icons.calendar_month_outlined,
+                        label: 'Release windows',
+                        value: '${primary.releaseWindowCount}',
+                      ),
+                    ],
+                  ),
+          ),
+          right: DistributionSectionCard(
+            title: 'Next actions',
+            icon: Icons.route_outlined,
+            child: Column(
+              children: [
+                _ActionRow(
+                  icon: Icons.contacts_outlined,
+                  label: 'Contacts',
+                  value: '${data.contacts.length}',
+                  route: DistributionPartnerRoutes.contacts,
+                ),
+                _ActionRow(
+                  icon: Icons.handshake_outlined,
+                  label: 'Coordination',
+                  value: '${data.projects.length} projects',
+                  route: DistributionPartnerRoutes.release,
+                ),
+                _ActionRow(
+                  icon: Icons.analytics_outlined,
+                  label: 'Reports',
+                  value: '${data.reports.length}',
+                  route: DistributionPartnerRoutes.reports,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MetricTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MetricActionCard(
+      item: MetricActionItem(
+        icon: icon,
+        value: value,
+        title: label,
+        subtitle: 'Live database',
+        accentColor: color,
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final String route;
+
+  const _ActionRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.route,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CoreSecondaryButton(
+        icon: icon,
+        label: '$label · $value',
+        compact: true,
+        onTap: () => Navigator.pushNamed(context, route),
+      ),
+    );
+  }
+}
+
+String _money(int minor) {
+  final whole = minor ~/ 100;
+  if (whole >= 100000) return 'PKR ${(whole / 1000).round()}k';
+  return 'PKR $whole';
 }

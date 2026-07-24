@@ -10,7 +10,6 @@ class DistributionPartnerRoutes {
     home,
     contacts,
     release,
-    release,
     reports,
   ];
 

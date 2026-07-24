@@ -6,7 +6,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../data/distribution_partner_demo_data.dart';
 import '../models/distribution_partner_models.dart';
 
 Color distributionToneColor(BuildContext context, DistributionTone tone) {
@@ -42,6 +41,38 @@ Color distributionStatusColor(BuildContext context, DistributionStatus status) {
 
 void distributionSnack(BuildContext context, String message) {
   showCoreSnack(context, message);
+}
+
+String distributionStatusLabel(DistributionStatus status) {
+  return switch (status) {
+    DistributionStatus.ready => 'Ready',
+    DistributionStatus.missingItems => 'Missing items',
+    DistributionStatus.pending => 'Pending',
+    DistributionStatus.approved => 'Approved',
+    DistributionStatus.activeWindow => 'Active window',
+    DistributionStatus.submitted => 'Submitted',
+    DistributionStatus.completed => 'Completed',
+    DistributionStatus.delayed => 'Delayed',
+    DistributionStatus.escalated => 'Escalated',
+    DistributionStatus.closed => 'Closed',
+    DistributionStatus.draft => 'Draft',
+  };
+}
+
+DistributionStatus distributionStatusFromString(String value) {
+  return switch (value.trim().toLowerCase().replaceAll('-', '_')) {
+    'ready' => DistributionStatus.ready,
+    'missing_items' || 'missing' => DistributionStatus.missingItems,
+    'pending' || 'onboarding' => DistributionStatus.pending,
+    'approved' => DistributionStatus.approved,
+    'active_window' || 'active' => DistributionStatus.activeWindow,
+    'submitted' => DistributionStatus.submitted,
+    'completed' => DistributionStatus.completed,
+    'delayed' => DistributionStatus.delayed,
+    'escalated' => DistributionStatus.escalated,
+    'closed' => DistributionStatus.closed,
+    _ => DistributionStatus.draft,
+  };
 }
 
 Future<void> showDistributionSheet(
@@ -460,7 +491,7 @@ class DistributionStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StatusChip(
-      label: DistributionPartnerDemoData.statusLabel(status),
+      label: distributionStatusLabel(status),
       color: distributionStatusColor(context, status),
     );
   }

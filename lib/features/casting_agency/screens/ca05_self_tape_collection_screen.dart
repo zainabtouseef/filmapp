@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/specialist/specialist_controller.dart';
+import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../data/casting_agency_demo_data.dart';
 import '../models/casting_agency_models.dart';
 import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_components.dart';
@@ -22,196 +22,160 @@ class CA05SelfTapeCollectionScreen extends StatefulWidget {
 class _CA05SelfTapeCollectionScreenState
     extends State<CA05SelfTapeCollectionScreen> {
   String _tab = 'All';
+  Future<List<AuditionDto>>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= SpecialistScope.maybeOf(context)?.auditions(force: true);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = SpecialistScope.maybeOf(context)?.auditions(force: true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final store = CastingAgencyDemoStore.instance;
-    return AnimatedBuilder(
-      animation: store,
-      builder: (context, _) {
-        final tapes = _tapes(store).toList();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgencySectionCard(
-              title: 'Submission command',
-              icon: Icons.video_collection_outlined,
-              selected: true,
-              child: Column(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AgencySectionCard(
+          title: 'Submission command',
+          icon: Icons.video_collection_outlined,
+          selected: true,
+          actionText: _future == null ? null : 'Refresh',
+          onActionTap: _refresh,
+          child: Column(
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final tab in ['All', 'Received', 'Missing'])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CoreChip(
+                          label: tab,
+                          selected: _tab == tab,
+                          onTap: () => setState(() => _tab = tab),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_future == null)
+          const CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view self-tape status',
+            message:
+                'Self-tape counts are loaded from live audition candidates.',
+          )
+        else
+          FutureBuilder<List<AuditionDto>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SkeletonCard(height: 360);
+              }
+              if (snapshot.hasError) {
+                return _LoadError(
+                  message: 'Could not load self-tape status',
+                  onRetry: _refresh,
+                );
+              }
+              final candidates = _candidates(snapshot.data ?? const []);
+              final ready = candidates
+                  .where((candidate) => candidate.selfTapeCount > 0)
+                  .length;
+              final missing = candidates.length - ready;
+              final visible = candidates.where((candidate) {
+                return switch (_tab) {
+                  'Received' => candidate.selfTapeCount > 0,
+                  'Missing' => candidate.selfTapeCount == 0,
+                  _ => true,
+                };
+              }).toList();
+              return Column(
                 children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final tab in ['All', 'Ready', 'Due', 'Forwarded'])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: tab,
-                              selected: _tab == tab,
-                              onTap: () {
-                                setState(() => _tab = tab);
-                                agencySnack(context, '$tab tapes shown');
-                              },
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   MetricActionRail(
                     items: [
                       MetricActionItem(
                         icon: Icons.play_circle_outline_rounded,
-                        value: '3',
-                        title: 'Ready',
-                        subtitle: 'Self-tapes',
-                        accentColor: context.appColors.goldDark,
+                        value: '$ready',
+                        title: 'Received',
+                        subtitle: 'Live candidates',
+                        accentColor: context.appColors.success,
                       ),
                       MetricActionItem(
-                        icon: Icons.play_circle_outline_rounded,
-                        value: '2',
-                        title: 'Due today',
-                        subtitle: 'Self-tapes',
-                        accentColor: context.appColors.goldDark,
-                      ),
-                      MetricActionItem(
-                        icon: Icons.play_circle_outline_rounded,
-                        value: '5',
-                        title: 'Forwarded',
-                        subtitle: 'Self-tapes',
+                        icon: Icons.pending_actions_outlined,
+                        value: '$missing',
+                        title: 'Missing',
+                        subtitle: 'Live candidates',
                         accentColor: context.appColors.goldDark,
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (tapes.isEmpty)
-              CoreEmptyState(
-                icon: Icons.video_collection_outlined,
-                title: 'No self-tapes here',
-                message: 'Switch tabs or request new tapes from the roster.',
-                actionLabel: 'Request tapes',
-                onAction: () => Navigator.pushNamed(
-                  context,
-                  CastingAgencyRoutes.roster,
-                ),
-              )
-            else
-              AgencyResponsiveGrid(
-                minWidth: 320,
-                children: [
-                  for (final tape in tapes)
-                    _TapeCard(
-                      tape: tape,
-                      status: store.tapeStatus(tape),
-                      onRequest: () {
-                        store.requestTape(tape.id);
-                        agencySnack(context, 'Self-tape request sent');
-                      },
-                      onForward: () {
-                        store.forwardTape(tape.id);
-                        agencySnack(context, 'Tape forwarded with shortlist');
-                      },
-                      onPreview: () => _showTape(context, tape),
+                  const SizedBox(height: 12),
+                  if (visible.isEmpty)
+                    CoreEmptyState(
+                      icon: Icons.video_collection_outlined,
+                      title: 'No self-tape candidates here',
+                      message: 'Switch tabs or open auditions.',
+                      actionLabel: 'Open auditions',
+                      onAction: () => Navigator.pushNamed(
+                        context,
+                        CastingAgencyRoutes.auditions,
+                      ),
+                    )
+                  else
+                    AgencyResponsiveGrid(
+                      minWidth: 300,
+                      children: [
+                        for (final candidate in visible)
+                          _TapeStatusCard(candidate: candidate),
+                      ],
                     ),
                 ],
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Iterable<AgencyTape> _tapes(CastingAgencyDemoStore store) {
-    return CastingAgencyDemoData.tapes.where((tape) {
-      final status = store.tapeStatus(tape);
-      return switch (_tab) {
-        'Ready' => status == AgencyStatus.selfTapeReceived,
-        'Due' => status == AgencyStatus.selfTapePending,
-        'Forwarded' => status == AgencyStatus.shortlisted,
-        _ => true,
-      };
-    });
-  }
-
-  void _showTape(BuildContext context, AgencyTape tape) {
-    showAgencySheet(
-      context,
-      title: tape.talentName,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AgencyInfoRow(
-            icon: Icons.movie_outlined,
-            label: 'Project',
-            value: tape.project,
-          ),
-          AgencyInfoRow(
-            icon: Icons.timer_outlined,
-            label: 'Duration',
-            value: tape.duration,
-          ),
-          AgencyInfoRow(
-            icon: Icons.notes_outlined,
-            label: 'Transcript',
-            value: tape.transcript,
-          ),
-          const SizedBox(height: 8),
-          CorePrimaryButton(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: 'Ask talent',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, CoreRoutes.chat);
+              );
             },
           ),
-        ],
-      ),
+      ],
     );
+  }
+
+  List<AuditionCandidateDto> _candidates(List<AuditionDto> auditions) {
+    return [
+      for (final audition in auditions) ...audition.candidates,
+    ];
   }
 }
 
-class _TapeCard extends StatelessWidget {
-  final AgencyTape tape;
-  final AgencyStatus status;
-  final VoidCallback onRequest;
-  final VoidCallback onForward;
-  final VoidCallback onPreview;
+class _TapeStatusCard extends StatelessWidget {
+  final AuditionCandidateDto candidate;
 
-  const _TapeCard({
-    required this.tape,
-    required this.status,
-    required this.onRequest,
-    required this.onForward,
-    required this.onPreview,
-  });
+  const _TapeStatusCard({required this.candidate});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final hasTape = candidate.selfTapeCount > 0;
     return GlassSectionCard(
       radius: 20,
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AgencyMediaFrame(
-            imageUrl: tape.imageUrl,
-            title: tape.talentName,
-            badge: tape.duration,
-            fallbackIcon: Icons.video_collection_outlined,
-            aspectRatio: 16 / 9,
-            compact: true,
-          ),
-          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  tape.talentName,
+                  candidate.screenName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.cardLabel.copyWith(
@@ -220,56 +184,63 @@ class _TapeCard extends StatelessWidget {
                   ),
                 ),
               ),
-              AgencyStatusChip(status: status),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${tape.project} - ${tape.dueDate}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            tape.transcript,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
-          ),
-          const SizedBox(height: 11),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.play_arrow_outlined,
-                  label: 'Preview',
-                  compact: true,
-                  onTap: onPreview,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.video_call_outlined,
-                  label: 'Request',
-                  compact: true,
-                  onTap: onRequest,
-                ),
+              AgencyStatusChip(
+                status: hasTape
+                    ? AgencyStatus.selfTapeReceived
+                    : AgencyStatus.selfTapePending,
               ),
             ],
           ),
           const SizedBox(height: 8),
-          CorePrimaryButton(
-            icon: Icons.forward_to_inbox_outlined,
-            label: 'Forward selected tape',
-            compact: true,
-            onTap: onForward,
+          AgencyInfoRow(
+            icon: Icons.video_collection_outlined,
+            label: 'Self-tapes',
+            value: '${candidate.selfTapeCount}',
+          ),
+          AgencyInfoRow(
+            icon: Icons.notes_outlined,
+            label: 'Selection notes',
+            value: '${candidate.selectionNoteCount}',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasTape
+                ? 'Tape files are attached to the live audition candidate record.'
+                : 'No submitted tape is attached to this live candidate yet.',
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
+              height: 1.3,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _LoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CoreEmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: message,
+          message: 'Check your connection and try again.',
+        ),
+        const SizedBox(height: 10),
+        CoreSecondaryButton(
+          icon: Icons.refresh_rounded,
+          label: 'Try again',
+          compact: true,
+          onTap: onRetry,
+        ),
+      ],
     );
   }
 }

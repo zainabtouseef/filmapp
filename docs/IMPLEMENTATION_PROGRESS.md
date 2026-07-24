@@ -4,7 +4,7 @@
 
 - Current master-report version: 1.0
 - Current phase: Other portals database-only perfection
-- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 Super Admin, Media/Equipment, Brand Sponsor, Location Owner, Model Extension, and Actor/Talent static-data cleanup complete; next is Casting Agency/Crew/Legal/Insurance/Distribution static-store removal
+- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; P3 feature-level static-data cleanup complete across Super Admin, Media/Equipment, Brand Sponsor, Location Owner, Model Extension, Actor/Talent, Casting Agency, Distribution Partner, Insurance Partner, Legal Partner, Crew Services, Director/Producer unused data, and generic Role Portals
 - Overall status: Phases 0, 1, 2, and 3 complete locally; Phase 4 profile/marketplace/portfolio/saved-search/shortlist foundation complete locally; Phase 5 projects/requirements/skills and project-room files/decisions foundation complete locally; Phase 6 booking/offer/counter/accept, booking inbox, manual availability blocks, availability lock, and conversation foundation complete locally; Phase 7 contract generation, signatures, legal review queue/decision, and addendum foundation complete locally; Phase 8 sandbox payment schedules, proof review, ledger, receipts, and payout-account foundation complete locally; Phase 9 location/equipment inspections, damage claims, safety checks/incidents/check-ins, **and insurance partner/policy/claim/evidence** backend now fully complete locally and in production (the insurance tables were missed in the original 2026-07-17 Phase 9 pass and closed out 2026-07-18); Phase 10 casting agency roster/audition/self-tape/notes/commission, brand opportunity/application/terms/deliverable/metrics, model rights/rates/restrictions, and distribution contact/release/handover/report foundation complete locally; Phase 11 reviews/dimensions/requests, reports/blocks, moderation cases/events, disputes/evidence/events, support tickets/messages, and announcements/notifications foundation complete locally; Phase 12 personal/admin dashboards, admin analytics, synchronous CSV export jobs, Sentry wiring, production DB backups, and a dependency security patch complete locally and deployed to production
 - Last updated: 2026-07-24
 - Updated by: Codex
@@ -361,10 +361,10 @@
 | Model usage rights | `/model/usage-rights` | `SpecialistScope.modelUsageRights/createModelUsageRight` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Model usage rates | `/model/rate-by-usage` | `SpecialistScope.modelUsageRates/createModelUsageRate` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Model brand safety | `/model/brand-safety` | `SpecialistScope.modelRestrictedCategories/updateModelRestrictedCategories` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Distribution dashboard | `/distribution` | `SpecialistScope.distributionProfile/distributionProjects` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Distribution contacts | `/distribution/contacts` | `SpecialistScope.distributorContacts` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Distribution release coordination | `/distribution/release` | `SpecialistScope.distributionProjects/updateDistributionProject` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
-| Distribution reporting | `/distribution/reports` | `SpecialistScope.distributionReports` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
+| Distribution dashboard | `/distribution` | `SpecialistScope.distributionProfile/distributionProjects` | no feature demo fallback | analyze/widget suite + production HTTP smoke |
+| Distribution contacts | `/distribution/contacts` | `SpecialistScope.distributorContacts` | no feature demo fallback | analyze/widget suite + production HTTP smoke |
+| Distribution release coordination | `/distribution/release` | `SpecialistScope.distributionProjects/updateDistributionProject` | no feature demo fallback | analyze/widget suite + production HTTP smoke |
+| Distribution reporting | `/distribution/reports` | `SpecialistScope.distributionReports` | no feature demo fallback | analyze/widget suite + production HTTP smoke |
 | Shared notification center | `/notifications` | `TrustSafetyScope.notifications/markNotificationRead/markAllNotificationsRead` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Shared ratings & review | `/review` | `TrustSafetyScope.createReview/createReport` for live booking ids | yes, demo fallback | analyze/widget suite + production HTTP smoke |
 | Shared report & block | `/report` | `TrustSafetyScope.reportReasons/createReport/blockUser` | yes, demo fallback | analyze/widget suite + production HTTP smoke |
@@ -1159,8 +1159,8 @@
   - Backend unit tests: 15 passed; 1 local test failed because local MySQL on `127.0.0.1` was not running for `/api/v1/roles`. Production readiness later confirmed database/Redis OK.
 - Static data audit:
   - Director/Producer screens are mostly clean/no runtime `DemoData` in main screens.
-  - Super Admin, Brand Sponsor, Actor/Talent, Model Extension, Location Owner, Casting Agency, Crew Services, Legal Partner, Insurance Partner, Distribution Partner, and generic Role Portals still have runtime static data dependencies to remove.
-  - Media/Equipment is currently the closest non-Director portal to live-only data, with remaining static fallback concentrated around inventory/shared widgets.
+  - Historical note: this pass originally identified Super Admin, Brand Sponsor, Actor/Talent, Model Extension, Location Owner, Casting Agency, Crew Services, Legal Partner, Insurance Partner, Distribution Partner, and generic Role Portals as having runtime static data dependencies.
+  - Current 2026-07-24 result: feature-level static search is clean; remaining non-live areas now show explicit backend-gap states instead of fake business rows.
 - Production backend deployment:
   - Confirmed production was missing `c4d5e6f7a8b9_brand_application_conversations.py`.
   - Synced latest `backend/` to `/var/www/cineconnect/release/backend`.
@@ -1231,8 +1231,65 @@
   - `flutter analyze` passed.
   - `flutter test test/actor_talent_portal_test.dart` passed.
   - Flutter web was rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and deployed to `https://cine.nalexustechnologies.com`; HTTPS root returned HTTP 200 after sync.
+- Casting Agency static-data cleanup:
+  - Removed `CastingAgencyDemoData`/`CastingAgencyDemoStore` usage from CA-01 dashboard, CA-02 roster, CA-03 audition inbox, CA-04 shortlist builder, CA-05 self-tape collection, CA-06 selection notes, CA-07 commission records, CA-08 booking records, and shared components.
+  - Replaced unauthenticated/demo fallback branches with explicit sign-in/live-backend empty or error states.
+  - Kept live read/update flows connected to Specialist controller methods for agency profile, roster, auditions, audition candidates, selection notes, and agency commissions.
+  - Added thin `SpecialistController.updateAuditionCandidate`, `SpecialistController.addSelectionNote`, and `SpecialistController.createAgencyCommission` wrappers over existing repository/API methods.
+  - Moved agency status label mapping into `casting_agency_components.dart`.
+  - Deleted `lib/features/casting_agency/data/casting_agency_demo_data.dart`.
+  - Feature static search is clean: no `CastingAgencyDemoData`, `CastingAgencyDemoStore`, or `casting_agency_demo_data` matches under `lib/features/casting_agency`.
+  - `flutter analyze` passed.
+  - `flutter test test/casting_agency_portal_test.dart` passed.
+- Distribution Partner static-data cleanup:
+  - Removed `DistributionPartnerDemoData`/`DistributionPartnerDemoStore` usage from DS-01 dashboard, DS-02 contacts, DS-03 release coordination, DS-04 reporting, routes, and shared components.
+  - Replaced unauthenticated/demo fallback branches with explicit sign-in/live-backend empty or error states.
+  - Kept live read/update flows connected to Specialist controller methods for distribution profile, projects, project status updates, distributor contacts, and reports.
+  - Removed duplicate Release navigation item from the Distribution Partner primary nav.
+  - Deleted `lib/features/distribution_partner/data/distribution_partner_demo_data.dart`.
+  - Feature static search is clean: no `DistributionPartnerDemoData`, `DistributionPartnerDemoStore`, or `distribution_partner_demo_data` matches under `lib/features/distribution_partner`.
+  - `flutter analyze` passed.
+  - `flutter test test/distribution_partner_portal_test.dart` passed.
+- Insurance Partner static-data cleanup:
+  - Removed `InsurancePartnerDemoData`/`InsurancePartnerDemoStore` usage from IN-01 dashboard, IN-02 policy records, IN-03 claim support, IN-04 safety checks/permits, IN-05 incident reports, and shared components.
+  - Replaced unauthenticated/demo fallback branches with explicit sign-in/live-backend empty or error states.
+  - Dashboard, policy records, and claim support now use `InsuranceScope.dashboard/policies/claims/decideClaim`.
+  - Safety checks and incident reports no longer show fake rows; they show explicit backend-gap notices because the available Operations client exposes create endpoints but not list/detail/update feeds for this portal.
+  - Deleted `lib/features/insurance_partner/data/insurance_partner_demo_data.dart`.
+  - Feature static search is clean: no `InsurancePartnerDemoData`, `InsurancePartnerDemoStore`, or `insurance_partner_demo_data` matches under `lib/features/insurance_partner`.
+  - `flutter analyze` passed.
+  - `flutter test test/insurance_partner_portal_test.dart` passed.
+- Legal Partner static-data cleanup:
+  - Removed `LegalPartnerDemoData`/`LegalPartnerDemoStore` usage from LG-01 dashboard, LG-02 contract review queue/detail, LG-03 template review, LG-04 addendum review, LG-05 review history/billing, and shared components.
+  - Replaced unauthenticated/demo fallback branches with explicit sign-in/live-backend empty or error states.
+  - Dashboard/review/history now use `ContractsScope.legalReviews/contracts`; LG-02 approve/request-changes actions use `ContractsScope.decideLegalReview`.
+  - Template review reads real contract templates; addendum review reads live contract addendums.
+  - Template decision/change-log and legal billing invoice rollups no longer show fake records; those areas show explicit backend-gap notices.
+  - Deleted `lib/features/legal_partner/data/legal_partner_demo_data.dart`.
+  - Feature static search is clean: no `LegalPartnerDemoData`, `LegalPartnerDemoStore`, or `legal_partner_demo_data` matches under `lib/features/legal_partner`.
+  - `flutter analyze` passed.
+  - `flutter test test/legal_partner_portal_test.dart` passed.
+- Crew Services static-data cleanup:
+  - Removed `CrewServicesDemoData`/`CrewServicesDemoStore` usage from CR-01 dashboard, CR-02 service profile, CR-03 portfolio/credits, CR-04 availability, CR-05 requests/negotiation, CR-06 contracts/payments, CR-07 ratings/work history, and shared components.
+  - Deleted `lib/features/crew_services/data/crew_services_demo_data.dart`.
+  - Because no dedicated crew backend read DTOs are currently exposed, all Crew screens now show explicit backend-gap states instead of fake profile, request, credit, calendar, ledger, or rating rows.
+  - Required backend next: crew profile, portfolio/credits, availability, request/offers, booking/contract/payment linkage, and crew review/work-history endpoints.
+  - Feature static search is clean: no `CrewServicesDemoData`, `CrewServicesDemoStore`, or `crew_services_demo_data` matches under `lib/features/crew_services`.
+  - `flutter analyze` passed.
+  - `flutter test test/crew_services_portal_test.dart` passed.
+- Generic Role Portal static-data cleanup:
+  - Replaced `RolePortalScreen` with a legacy-clean placeholder that keeps route compatibility but no longer renders fake metrics, records, media, workflow state, or local action state.
+  - Deleted `lib/features/role_portals/data/role_portal_demo_data.dart`.
+  - Deleted unused `lib/features/director_producer/data/director_producer_demo_data.dart`; no active Director/Producer code referenced it.
+  - Feature static search is clean: `rg -n "DemoData|DemoStore|_demo_data|mock_data|MockData" lib/features -g '*.dart'` returns no matches.
+  - `flutter analyze` passed.
+  - `flutter test test/role_portals_test.dart` passed.
+- Production deployment:
+  - Built Flutter web with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1`.
+  - Synced `build/web/` to `/var/www/cineconnect/web/` on the production server.
+  - HTTPS smoke check for `https://cine.nalexustechnologies.com/` returned HTTP 200.
 - Next:
-  - Deploy the latest Flutter web build, then continue with Casting Agency/Crew/Legal/Insurance/Distribution static-store removal.
+  - Seed/verify live MySQL data and add backend APIs for explicit gap screens.
 
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 
