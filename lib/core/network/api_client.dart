@@ -48,9 +48,16 @@ class ApiClient {
     if (_accessToken != null) {
       request.headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
     }
-    request.sink.add(bytes);
+    const chunkSize = 64 * 1024;
+    var sentBytes = 0;
+    while (sentBytes < bytes.length) {
+      final next = (sentBytes + chunkSize).clamp(0, bytes.length);
+      request.sink.add(bytes.sublist(sentBytes, next));
+      sentBytes = next;
+      onProgress?.call(sentBytes, bytes.length);
+      await Future<void>.delayed(Duration.zero);
+    }
     await request.sink.close();
-    onProgress?.call(bytes.length, bytes.length);
 
     late final http.StreamedResponse streamed;
     try {

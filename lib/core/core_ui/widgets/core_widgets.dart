@@ -594,6 +594,7 @@ class UploadCard extends StatelessWidget {
   final String subtitle;
   final bool uploaded;
   final bool loading;
+  final double? progress;
   final VoidCallback? onTap;
 
   const UploadCard({
@@ -602,6 +603,7 @@ class UploadCard extends StatelessWidget {
     required this.subtitle,
     required this.uploaded,
     this.loading = false,
+    this.progress,
     required this.onTap,
   });
 
@@ -613,61 +615,80 @@ class UploadCard extends StatelessWidget {
       child: CoreGlassCard(
         selected: uploaded,
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: (uploaded ? colors.success : colors.goldMid)
-                    .withValues(alpha: 0.12),
-              ),
-              child: Icon(
-                loading
-                    ? Icons.hourglass_top_rounded
-                    : uploaded
-                        ? Icons.check_circle_outline
-                        : Icons.cloud_upload_outlined,
-                color: uploaded ? colors.success : colors.goldMid,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
-                      fontSize: 14.5,
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: (uploaded ? colors.success : colors.goldMid)
+                        .withValues(alpha: 0.12),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.caption.copyWith(
-                      color: uploaded ? colors.success : colors.textSecondary,
-                    ),
+                  child: Icon(
+                    loading
+                        ? Icons.hourglass_top_rounded
+                        : uploaded
+                            ? Icons.check_circle_outline
+                            : Icons.cloud_upload_outlined,
+                    color: uploaded ? colors.success : colors.goldMid,
                   ),
-                ],
-              ),
-            ),
-            if (loading)
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: colors.goldMid,
                 ),
-              )
-            else
-              Icon(
-                uploaded ? Icons.edit_outlined : Icons.chevron_right_rounded,
-                color: uploaded ? colors.success : colors.iconMuted,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTextStyles.label.copyWith(
+                          color: colors.textPrimary,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        subtitle,
+                        style: AppTextStyles.caption.copyWith(
+                          color:
+                              uploaded ? colors.success : colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (loading)
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: colors.goldMid,
+                    ),
+                  )
+                else
+                  Icon(
+                    uploaded
+                        ? Icons.edit_outlined
+                        : Icons.chevron_right_rounded,
+                    color: uploaded ? colors.success : colors.iconMuted,
+                  ),
+              ],
+            ),
+            if (loading && progress != null) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 6,
+                  value: progress!.clamp(0.02, 1),
+                  backgroundColor: colors.border,
+                  valueColor: AlwaysStoppedAnimation<Color>(colors.goldMid),
+                ),
               ),
+            ],
           ],
         ),
       ),

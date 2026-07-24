@@ -33,6 +33,8 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   bool _submitting = false;
   String? _loadingUpload;
   String? _formError;
+  final Map<String, double> _uploadProgress = {};
+  final Map<String, String> _uploadStatus = {};
   UploadedFile? _frontFile;
   UploadedFile? _backFile;
   UploadedFile? _selfieFile;
@@ -62,14 +64,26 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     setState(() {
       _loadingUpload = slot;
       _formError = null;
+      _uploadProgress[slot] = 0;
+      _uploadStatus[slot] = 'Preparing upload...';
     });
     try {
       final uploadedFile = await AuthScope.of(context).uploadFile(
         purpose: 'kyc_document',
         file: file,
+        onProgress: (sentBytes, totalBytes) {
+          if (!mounted || totalBytes <= 0) return;
+          setState(() {
+            _uploadProgress[slot] = sentBytes / totalBytes;
+            _uploadStatus[slot] =
+                'Uploading image... ${(sentBytes / totalBytes * 100).clamp(0, 100).round()}%';
+          });
+        },
       );
       if (!mounted) return;
       setState(() {
+        _uploadProgress.remove(slot);
+        _uploadStatus[slot] = 'Upload saved for admin review.';
         switch (slot) {
           case 'front':
             _frontFile = uploadedFile;
@@ -87,7 +101,11 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
       });
     } on ApiException catch (error) {
       if (!mounted) return;
-      setState(() => _formError = error.message);
+      setState(() {
+        _uploadProgress.remove(slot);
+        _uploadStatus[slot] = 'Upload failed.';
+        _formError = error.message;
+      });
     } finally {
       if (mounted) setState(() => _loadingUpload = null);
     }
@@ -305,11 +323,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
           const SizedBox(height: 14),
           UploadCard(
             title: 'CNIC/passport front',
-            subtitle: _frontFile == null
-                ? 'Upload a clear front-side image'
-                : 'Saved: ${_frontFile!.originalName} · ${_frontFile!.scanStatus}',
+            subtitle: _uploadSubtitle(
+              slot: 'front',
+              idle: 'Upload a clear front-side image',
+              file: _frontFile,
+            ),
             uploaded: _frontUploaded,
             loading: _loadingUpload == 'front',
+            progress: _uploadProgress['front'],
             onTap: _loadingUpload == null
                 ? () => _pickDocumentForSlot('front')
                 : null,
@@ -317,11 +338,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
           const SizedBox(height: 12),
           UploadCard(
             title: 'CNIC/passport back',
-            subtitle: _backFile == null
-                ? 'Upload a clear back-side image'
-                : 'Saved: ${_backFile!.originalName} · ${_backFile!.scanStatus}',
+            subtitle: _uploadSubtitle(
+              slot: 'back',
+              idle: 'Upload a clear back-side image',
+              file: _backFile,
+            ),
             uploaded: _backUploaded,
             loading: _loadingUpload == 'back',
+            progress: _uploadProgress['back'],
             onTap: _loadingUpload == null
                 ? () => _pickDocumentForSlot('back')
                 : null,
@@ -418,11 +442,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: UploadCard(
                 title: doc,
-                subtitle: _roleDocFile == null
-                    ? 'Attach PDF, image or portfolio link proof'
-                    : 'Saved: ${_roleDocFile!.originalName} · ${_roleDocFile!.scanStatus}',
+                subtitle: _uploadSubtitle(
+                  slot: 'role',
+                  idle: 'Attach PDF, image or portfolio link proof',
+                  file: _roleDocFile,
+                ),
                 uploaded: _roleDocUploaded,
                 loading: _loadingUpload == 'role',
+                progress: _uploadProgress['role'],
                 onTap: _loadingUpload == null
                     ? () => _pickDocumentForSlot('role')
                     : null,
@@ -432,6 +459,18 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         ],
       ),
     );
+  }
+
+  String _uploadSubtitle({
+    required String slot,
+    required String idle,
+    required UploadedFile? file,
+  }) {
+    if (_loadingUpload == slot) {
+      return _uploadStatus[slot] ?? 'Uploading image...';
+    }
+    if (file == null) return idle;
+    return 'Saved: ${file.originalName} · ${file.scanStatus}';
   }
 
   Widget _bankStep(BuildContext context) {

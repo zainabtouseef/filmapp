@@ -1296,6 +1296,7 @@
 - Fixed the signup/KYC identity upload step after manual report that uploading one CNIC image gave no clear feedback and continuing still produced the required-upload error.
 - `UploadCard` now supports a loading state and shows a saved/edit state instead of a static chevron.
 - KYC front/back identity upload cards now show per-slot loading, saved filename, and scan status.
+- Uploads now emit chunk-level byte progress through `ApiClient.putBytes`, and KYC cards show `Uploading image... N%` plus a progress bar while the selected image is being sent.
 - CNIC/passport front/back picker now focuses on image extensions (`jpg`, `jpeg`, `png`, `webp`); role proof upload still allows PDF/image.
 - Step validation now names the exact missing item: front image, back image, and/or document number.
 - Verification: `flutter analyze` passed; `flutter test test/widget_test.dart` passed.
