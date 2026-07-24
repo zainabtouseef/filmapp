@@ -65,12 +65,17 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
       _loadingUpload = slot;
       _formError = null;
       _uploadProgress[slot] = 0;
-      _uploadStatus[slot] = 'Preparing upload...';
+      _uploadStatus[slot] =
+          'Preparing ${_friendlyFileSize(file.sizeBytes)} image upload...';
     });
     try {
       final uploadedFile = await AuthScope.of(context).uploadFile(
         purpose: 'kyc_document',
         file: file,
+        onStatus: (status) {
+          if (!mounted) return;
+          setState(() => _uploadStatus[slot] = status);
+        },
         onProgress: (sentBytes, totalBytes) {
           if (!mounted || totalBytes <= 0) return;
           setState(() {
@@ -105,6 +110,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
         _uploadProgress.remove(slot);
         _uploadStatus[slot] = 'Upload failed.';
         _formError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _uploadProgress.remove(slot);
+        _uploadStatus[slot] = 'Upload failed.';
+        _formError =
+            'Could not upload this image. Please retry with a smaller clear image.';
       });
     } finally {
       if (mounted) setState(() => _loadingUpload = null);
@@ -471,6 +484,14 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     }
     if (file == null) return idle;
     return 'Saved: ${file.originalName} · ${file.scanStatus}';
+  }
+
+  String _friendlyFileSize(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    if (bytes >= 1024) return '${(bytes / 1024).round()} KB';
+    return '$bytes bytes';
   }
 
   Widget _bankStep(BuildContext context) {

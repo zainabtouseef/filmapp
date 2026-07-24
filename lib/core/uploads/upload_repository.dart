@@ -26,7 +26,9 @@ class UploadRepository {
     required String purpose,
     required PickedFileData file,
     void Function(int sentBytes, int totalBytes)? onProgress,
+    void Function(String status)? onStatus,
   }) async {
+    onStatus?.call('Preparing secure upload...');
     final presign = await _client.post(
       '/uploads/presign',
       body: {
@@ -38,13 +40,16 @@ class UploadRepository {
     );
     final ticket =
         UploadTicket.fromJson(presign['data'] as Map<String, dynamic>);
+    onStatus?.call('Uploading image to server...');
     await _client.putBytes(
       ticket.uploadUrl,
       bytes: file.bytes,
       contentType: file.mimeType,
       onProgress: onProgress,
     );
+    onStatus?.call('Finalizing upload...');
     final complete = await _client.post('/uploads/${ticket.id}/complete');
+    onStatus?.call('Upload saved for admin review.');
     final data = complete['data'] as Map<String, dynamic>;
     return UploadedFile.fromJson(data['file'] as Map<String, dynamic>);
   }

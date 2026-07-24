@@ -130,11 +130,13 @@ class AuthController extends ChangeNotifier {
     required String purpose,
     required PickedFileData file,
     void Function(int sentBytes, int totalBytes)? onProgress,
+    void Function(String status)? onStatus,
   }) {
     return UploadRepository(_client).uploadFile(
       purpose: purpose,
       file: file,
       onProgress: onProgress,
+      onStatus: onStatus,
     );
   }
 

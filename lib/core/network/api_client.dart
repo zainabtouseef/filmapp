@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 
 import 'package:http/http.dart' as http;
 
@@ -48,24 +49,30 @@ class ApiClient {
     if (_accessToken != null) {
       request.headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
     }
-    const chunkSize = 64 * 1024;
-    var sentBytes = 0;
-    while (sentBytes < bytes.length) {
-      final next = (sentBytes + chunkSize).clamp(0, bytes.length);
-      request.sink.add(bytes.sublist(sentBytes, next));
-      sentBytes = next;
-      onProgress?.call(sentBytes, bytes.length);
-      await Future<void>.delayed(Duration.zero);
-    }
-    await request.sink.close();
-
     late final http.StreamedResponse streamed;
     try {
-      streamed = await _http.send(request).timeout(const Duration(seconds: 60));
+      final responseFuture =
+          _http.send(request).timeout(const Duration(seconds: 60));
+      const chunkSize = 64 * 1024;
+      var sentBytes = 0;
+      while (sentBytes < bytes.length) {
+        final next = (sentBytes + chunkSize).clamp(0, bytes.length);
+        request.sink.add(bytes.sublist(sentBytes, next));
+        sentBytes = next;
+        onProgress?.call(sentBytes, bytes.length);
+        await Future<void>.delayed(Duration.zero);
+      }
+      await request.sink.close();
+      streamed = await responseFuture;
     } on SocketException {
       throw const ApiException(
         code: 'network.offline',
         message: 'Cannot reach CineConnect right now.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        code: 'network.timeout',
+        message: 'Upload timed out. Please try a smaller image or retry.',
       );
     }
     return _decodeResponse(streamed);
@@ -93,6 +100,11 @@ class ApiClient {
       throw const ApiException(
         code: 'network.offline',
         message: 'Cannot reach CineConnect right now.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        code: 'network.timeout',
+        message: 'CineConnect took too long to respond. Please retry.',
       );
     }
 
