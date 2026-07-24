@@ -3,10 +3,10 @@
 ## Current status
 
 - Current master-report version: 1.0
-- Current phase: Director portal database-only perfection
-- Current vertical slice: Director portal database-only cleanup through live schedule/risk/call-sheet wiring and project-scoped shortlist grouping; next is richer provider-specific Director discovery DTOs
+- Current phase: Other portals database-only perfection
+- Current vertical slice: P0/P1 audit complete; P2 latest pulled backend APIs and brand conversation migration deployed to production; next is P3 Super Admin static-data removal/API completion
 - Overall status: Phases 0, 1, 2, and 3 complete locally; Phase 4 profile/marketplace/portfolio/saved-search/shortlist foundation complete locally; Phase 5 projects/requirements/skills and project-room files/decisions foundation complete locally; Phase 6 booking/offer/counter/accept, booking inbox, manual availability blocks, availability lock, and conversation foundation complete locally; Phase 7 contract generation, signatures, legal review queue/decision, and addendum foundation complete locally; Phase 8 sandbox payment schedules, proof review, ledger, receipts, and payout-account foundation complete locally; Phase 9 location/equipment inspections, damage claims, safety checks/incidents/check-ins, **and insurance partner/policy/claim/evidence** backend now fully complete locally and in production (the insurance tables were missed in the original 2026-07-17 Phase 9 pass and closed out 2026-07-18); Phase 10 casting agency roster/audition/self-tape/notes/commission, brand opportunity/application/terms/deliverable/metrics, model rights/rates/restrictions, and distribution contact/release/handover/report foundation complete locally; Phase 11 reviews/dimensions/requests, reports/blocks, moderation cases/events, disputes/evidence/events, support tickets/messages, and announcements/notifications foundation complete locally; Phase 12 personal/admin dashboards, admin analytics, synchronous CSV export jobs, Sentry wiring, production DB backups, and a dependency security patch complete locally and deployed to production
-- Last updated: 2026-07-22
+- Last updated: 2026-07-24
 - Updated by: Codex
 
 ## Environment status
@@ -59,6 +59,7 @@
 | `0f25fa31c34f` | Insurance partner profiles, policies, claims, and claim evidence (Phase 9 gap closed) | yes | no | yes |
 | `a7b8c9d0e1f2` | Local-disk binary upload receipt metadata (`binary_received_at`, server-computed size/checksum) | yes | no | yes |
 | `b8c9d0e1f2a3` | Director project cover file reference (`projects.cover_file_id`) | yes | no | yes |
+| `c4d5e6f7a8b9` | Brand application conversations, rejection reasons, and campaign deliverable revision notes | yes | no | yes |
 
 ## Completed endpoints
 
@@ -1143,6 +1144,45 @@
 - Verification: TLS certificate matches `cine.nalexustechnologies.com` and renews automatically
 - Incomplete work: Phase 2 identity/authentication and Flutter integration
 - Exact next task: add identity/access migrations, Argon2id/JWT rotation services, RBAC policies, auth endpoints, and Flutter API/token layers
+
+### 2026-07-24 — Other portals perfection P0/P1/P2 baseline, audit, and backend deploy
+
+- Goal: start the non-Director portal perfection plan, enforce database-only visible portal data, and deploy the latest pulled backend APIs before frontend portal rewiring depends on them.
+- New docs:
+  - `docs/CINECONNECT_OTHER_PORTALS_PERFECTION_PLAN.md`
+  - `docs/CINECONNECT_PORTAL_API_AUDIT.md`
+- Baseline checks:
+  - `cd backend && python3 -m compileall app tests` passed.
+  - `cd backend && python3 -m ruff check app tests` passed.
+  - `flutter analyze` passed.
+  - Portal widget tests passed for Super Admin, Brand Sponsor, Location Owner, Media/Equipment, Actor/Talent, and Model Extension route suites.
+  - Backend unit tests: 15 passed; 1 local test failed because local MySQL on `127.0.0.1` was not running for `/api/v1/roles`. Production readiness later confirmed database/Redis OK.
+- Static data audit:
+  - Director/Producer screens are mostly clean/no runtime `DemoData` in main screens.
+  - Super Admin, Brand Sponsor, Actor/Talent, Model Extension, Location Owner, Casting Agency, Crew Services, Legal Partner, Insurance Partner, Distribution Partner, and generic Role Portals still have runtime static data dependencies to remove.
+  - Media/Equipment is currently the closest non-Director portal to live-only data, with remaining static fallback concentrated around inventory/shared widgets.
+- Production backend deployment:
+  - Confirmed production was missing `c4d5e6f7a8b9_brand_application_conversations.py`.
+  - Synced latest `backend/` to `/var/www/cineconnect/release/backend`.
+  - Rebuilt `cineconnect-prod-api:latest`.
+  - Ran production migration `b8c9d0e1f2a3 -> c4d5e6f7a8b9`.
+  - Restarted `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler`.
+- Production smoke:
+  - `/api/v1/health/live` returns `ok`.
+  - `/api/v1/health/ready` returns database and Redis `ok`.
+  - `/api/v1/openapi.yaml` returns HTTP 200.
+  - Alembic current revision is `c4d5e6f7a8b9 (head)`.
+  - Newly deployed route groups are registered: protected endpoints return `auth.missing_token` instead of 404, and `/api/v1/brand-opportunities` returns database rows.
+- P3 Super Admin cleanup started:
+  - Removed runtime import of `lib/features/super_admin/mock_data/admin_mock_data.dart`.
+  - Moved Super Admin navigation configuration into `admin_widgets.dart` as real UI navigation constants.
+  - Replaced mock admin-name fallback with neutral `Super Admin`.
+  - Deleted the unused `admin_mock_data.dart` file.
+  - `rg -n "DemoData|DemoStore|admin_mock_data|mock_data|shared_mock_data|sample|static demo" lib/features/super_admin lib/core -g '*.dart'` now shows no matches under `lib/features/super_admin`; remaining matches are shared core screens to handle separately.
+  - `flutter analyze` passed.
+  - `flutter test test/super_admin_portal_test.dart` passed.
+- Next:
+  - Deploy the updated Flutter web bundle, push the P0/P1/P2/P3 docs/code, then continue with shared core mock cleanup or Media/Equipment static fallback removal.
 
 ### 2026-07-22 — Director provider-specific discovery/detail DTOs
 

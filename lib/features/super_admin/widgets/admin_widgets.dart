@@ -22,9 +22,91 @@ import '../../../shared/widgets/status_chip.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../mock_data/admin_mock_data.dart';
 import '../models/admin_models.dart';
 import '../routes/super_admin_routes.dart';
+
+const adminNavItems = [
+  AdminNavItem(
+    label: 'Dashboard',
+    icon: Icons.grid_view_rounded,
+    route: SuperAdminRoutes.dashboard,
+  ),
+  AdminNavItem(
+    label: 'Review Hub',
+    icon: Icons.verified_user_rounded,
+    route: SuperAdminRoutes.reviewHub,
+  ),
+  AdminNavItem(
+    label: 'Verifications',
+    icon: Icons.badge_outlined,
+    route: SuperAdminRoutes.verifications,
+  ),
+  AdminNavItem(
+    label: 'Listings',
+    icon: Icons.storefront_outlined,
+    route: SuperAdminRoutes.listingsModeration,
+  ),
+  AdminNavItem(
+    label: 'Moderation',
+    icon: Icons.policy_outlined,
+    route: SuperAdminRoutes.contentModeration,
+  ),
+  AdminNavItem(
+    label: 'Payments',
+    icon: Icons.payments_outlined,
+    route: SuperAdminRoutes.payments,
+  ),
+  AdminNavItem(
+    label: 'Disputes',
+    icon: Icons.gpp_maybe_outlined,
+    route: SuperAdminRoutes.disputes,
+  ),
+  AdminNavItem(
+    label: 'Bookings',
+    icon: Icons.work_outline_rounded,
+    route: SuperAdminRoutes.bookingsMonitor,
+  ),
+  AdminNavItem(
+    label: 'Contracts',
+    icon: Icons.article_outlined,
+    route: SuperAdminRoutes.contractTemplates,
+  ),
+  AdminNavItem(
+    label: 'Fees',
+    icon: Icons.percent_rounded,
+    route: SuperAdminRoutes.fees,
+  ),
+  AdminNavItem(
+    label: 'Users & Access',
+    icon: Icons.groups_2_outlined,
+    route: SuperAdminRoutes.users,
+  ),
+  AdminNavItem(
+    label: 'Admin Management',
+    icon: Icons.admin_panel_settings_outlined,
+    route: SuperAdminRoutes.adminRoles,
+  ),
+  AdminNavItem(
+    label: 'Support',
+    icon: Icons.support_agent_outlined,
+    route: SuperAdminRoutes.support,
+  ),
+  AdminNavItem(
+    label: 'Communications',
+    icon: Icons.campaign_outlined,
+    route: SuperAdminRoutes.broadcasts,
+  ),
+  AdminNavItem(
+    label: 'Activity Log',
+    icon: Icons.assignment_outlined,
+    route: SuperAdminRoutes.auditLogs,
+  ),
+  AdminNavItem(
+    label: 'Analytics',
+    icon: Icons.bar_chart_rounded,
+    route: SuperAdminRoutes.analytics,
+  ),
+];
 
 class AdminShell extends StatefulWidget {
   final String currentRoute;
@@ -86,7 +168,7 @@ class _AdminShellState extends State<AdminShell> {
         open: open,
         currentRoute: currentRoute,
         items: [
-          for (final item in AdminMockData.navItems)
+          for (final item in adminNavItems)
             FloatingPortalMenuItem(
               route: item.route,
               label: item.label,
@@ -244,7 +326,7 @@ class _AdminIdentityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final user = AuthScope.maybeOf(context)?.user;
-    final name = user?.displayName ?? AdminMockData.adminName;
+    final name = user?.displayName ?? 'Super Admin';
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -346,10 +428,10 @@ class AdminSidebar extends StatelessWidget {
             const SizedBox(height: 10),
             Expanded(
               child: ListView.separated(
-                itemCount: AdminMockData.navItems.length,
+                itemCount: adminNavItems.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 6),
                 itemBuilder: (context, index) {
-                  final item = AdminMockData.navItems[index];
+                  final item = adminNavItems[index];
                   final active = _isRouteActive(currentRoute, item.route);
                   return InkWell(
                     onTap: () => onRouteTap(item.route),
@@ -451,8 +533,8 @@ class AdminTopBar extends StatelessWidget {
     final narrow = compact && viewportWidth < 520;
     final hideAvatar = compact && viewportWidth < 390;
     final canGoBack = wide || Navigator.canPop(context);
-    final adminName = AuthScope.maybeOf(context)?.user?.displayName ??
-        AdminMockData.adminName;
+    final adminName =
+        AuthScope.maybeOf(context)?.user?.displayName ?? 'Super Admin';
     return AdminTopBarFrame(
       compact: compact,
       child: Row(
@@ -829,7 +911,7 @@ class _AdminFloatingMenuPanel extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: AdminMockData.navItems.asMap().entries.map(
+                      children: adminNavItems.asMap().entries.map(
                         (entry) {
                           final index = entry.key;
                           final item = entry.value;
@@ -837,9 +919,7 @@ class _AdminFloatingMenuPanel extends StatelessWidget {
                               _isRouteActive(currentRoute, item.route);
                           return Padding(
                             padding: EdgeInsets.only(
-                              bottom: index == AdminMockData.navItems.length - 1
-                                  ? 0
-                                  : 8,
+                              bottom: index == adminNavItems.length - 1 ? 0 : 8,
                             ),
                             child: SizedBox(
                               width: contentWidth,
@@ -2209,7 +2289,7 @@ void showAdminCommandSheet(BuildContext context) {
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: AdminMockData.navItems
+          children: adminNavItems
               .take(10)
               .map(
                 (item) => AdminNavPill(
