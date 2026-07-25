@@ -349,6 +349,22 @@ def _owned_ready_file(public_id: str | None, user_id: object, field: str) -> Fil
     return file
 
 
+def _owned_profile_file(public_id: str | None, user_id: object, field: str) -> FileAsset:
+    if not public_id:
+        raise _field_error(field, "File id is required.")
+    file = db.session.execute(
+        select(FileAsset).where(
+            FileAsset.public_id == public_id,
+            FileAsset.owner_user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if file is None:
+        raise _field_error(field, "Select a file owned by the current user.")
+    if file.scan_status not in {"pending", "clean"}:
+        raise _field_error(field, "File failed safety review. Upload another file.")
+    return file
+
+
 def _portfolio_item_for_user(public_id: str, user_id: object) -> PortfolioItem:
     item = db.session.execute(
         select(PortfolioItem).where(
@@ -489,14 +505,14 @@ def update_my_profile() -> Response:
     if "avatar_file_id" in payload:
         raw_avatar_id = str(payload.get("avatar_file_id") or "").strip()
         profile.avatar_file_id = (
-            _owned_ready_file(raw_avatar_id, user.id, "avatar_file_id").id
+            _owned_profile_file(raw_avatar_id, user.id, "avatar_file_id").id
             if raw_avatar_id
             else None
         )
     if "cover_file_id" in payload:
         raw_cover_id = str(payload.get("cover_file_id") or "").strip()
         profile.cover_file_id = (
-            _owned_ready_file(raw_cover_id, user.id, "cover_file_id").id
+            _owned_profile_file(raw_cover_id, user.id, "cover_file_id").id
             if raw_cover_id
             else None
         )
@@ -563,7 +579,7 @@ def update_talent_profile() -> ResponseReturnValue:
     if "resume_file_id" in payload:
         raw_resume_id = str(payload.get("resume_file_id") or "").strip()
         profile.resume_file_id = (
-            _owned_ready_file(raw_resume_id, user.id, "resume_file_id").id
+            _owned_profile_file(raw_resume_id, user.id, "resume_file_id").id
             if raw_resume_id
             else None
         )

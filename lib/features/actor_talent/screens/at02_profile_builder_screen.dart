@@ -611,7 +611,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       actorSnack(context, 'Profile photo updated');
     } on ApiException catch (exception) {
       if (!mounted) return;
-      setState(() => avatarError = exception.message);
+      setState(() => avatarError = _apiErrorMessage(exception));
     } catch (_) {
       if (!mounted) return;
       setState(() => avatarError = 'Could not upload the photo. Try again.');
@@ -669,7 +669,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       actorSnack(context, 'CV / resume updated');
     } on ApiException catch (exception) {
       if (!mounted) return;
-      setState(() => resumeError = exception.message);
+      setState(() => resumeError = _apiErrorMessage(exception));
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -677,6 +677,16 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     } finally {
       if (mounted) setState(() => uploadingResume = false);
     }
+  }
+
+  String _apiErrorMessage(ApiException exception) {
+    final fieldMessages = exception.fields.values
+        .expand((messages) => messages)
+        .map((message) => message.trim())
+        .where((message) => message.isNotEmpty)
+        .toList();
+    if (fieldMessages.isNotEmpty) return fieldMessages.join(' ');
+    return exception.message;
   }
 
   Future<void> _submit() async {
