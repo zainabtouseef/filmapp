@@ -11,6 +11,7 @@ class MarketplaceListing {
   final String currency;
   final String verificationStatus;
   final String ownerName;
+  final String? ownerAvatarUrl;
   final List<MarketplaceListingMedia> media;
 
   const MarketplaceListing({
@@ -23,6 +24,7 @@ class MarketplaceListing {
     required this.currency,
     required this.verificationStatus,
     required this.ownerName,
+    this.ownerAvatarUrl,
     required this.media,
   });
 
@@ -40,6 +42,7 @@ class MarketplaceListing {
       currency: json['currency'] as String? ?? 'PKR',
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       ownerName: owner['display_name'] as String? ?? 'CineConnect member',
+      ownerAvatarUrl: owner['avatar_url'] as String?,
       media: rawMedia
           .map((item) =>
               MarketplaceListingMedia.fromJson(item as Map<String, dynamic>))
@@ -82,11 +85,11 @@ class MarketplaceListing {
   }
 
   String? get coverImageUrl {
-    if (media.isEmpty) return null;
+    if (media.isEmpty) return ownerAvatarUrl;
     for (final item in media) {
-      if (item.isCover) return item.file?.publicUrl;
+      if (item.isCover) return item.file?.publicUrl ?? ownerAvatarUrl;
     }
-    return media.first.file?.publicUrl;
+    return media.first.file?.publicUrl ?? ownerAvatarUrl;
   }
 
   String _priceLabel() {

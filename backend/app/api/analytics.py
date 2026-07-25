@@ -16,10 +16,12 @@ from app.extensions import db
 from app.models.analytics import ExportJob
 from app.models.base import utc_now
 from app.models.bookings import Booking, BookingStatusEvent
+from app.models.contracts import Contract
 from app.models.identity import User
 from app.models.kyc import KycSubmission, VerificationEvent
 from app.models.marketplace import UserProfile
 from app.models.payments import BookingFeeSnapshot, PaymentProof
+from app.models.projects import Project, ProjectRoomItem
 from app.models.trust_safety import (
     Dispute,
     ModerationCase,
@@ -231,7 +233,15 @@ def admin_analytics() -> Response:
     )
 
 
-EXPORT_TYPES = {"ledger", "bookings", "admin_disputes", "admin_audit_events"}
+EXPORT_TYPES = {
+    "ledger",
+    "bookings",
+    "contracts",
+    "schedule",
+    "room_files",
+    "admin_disputes",
+    "admin_audit_events",
+}
 EXPORT_ROW_LIMIT = 2000
 
 
@@ -330,6 +340,104 @@ def _run_bookings_export(user: User) -> tuple[str, int]:
                 row.currency,
                 row.start_at.isoformat(),
                 row.end_at.isoformat(),
+            ]
+            for row in rows
+        ],
+    )
+    return csv_text, len(rows)
+
+
+def _run_contracts_export(user: User) -> tuple[str, int]:
+    rows = (
+        db.session.execute(
+            select(Contract)
+            .join(Project, Contract.project_id == Project.id)
+            .where(Project.owner_user_id == user.id)
+            .order_by(Contract.created_at.desc())
+            .limit(EXPORT_ROW_LIMIT)
+        )
+        .scalars()
+        .all()
+    )
+    csv_text = _write_csv(
+        ["public_id", "title", "status", "version_number", "booking_id"],
+        [
+            [
+                row.public_id,
+                row.title,
+                row.status,
+                row.version_number,
+                row.booking.public_id,
+            ]
+            for row in rows
+        ],
+    )
+    return csv_text, len(rows)
+
+
+def _run_schedule_export(user: User) -> tuple[str, int]:
+    rows = (
+        db.session.execute(
+            select(Booking)
+            .join(Project, Booking.project_id == Project.id)
+            .where(
+                or_(
+                    Booking.requester_user_id == user.id,
+                    Booking.provider_user_id == user.id,
+                    Project.owner_user_id == user.id,
+                )
+            )
+            .order_by(Booking.start_at.asc())
+            .limit(EXPORT_ROW_LIMIT)
+        )
+        .scalars()
+        .all()
+    )
+    csv_text = _write_csv(
+        [
+            "public_id",
+            "project_id",
+            "category",
+            "status",
+            "start_at",
+            "end_at",
+        ],
+        [
+            [
+                row.public_id,
+                row.project.public_id,
+                row.category,
+                row.status,
+                row.start_at.isoformat(),
+                row.end_at.isoformat(),
+            ]
+            for row in rows
+        ],
+    )
+    return csv_text, len(rows)
+
+
+def _run_room_files_export(user: User) -> tuple[str, int]:
+    rows = (
+        db.session.execute(
+            select(ProjectRoomItem)
+            .join(Project, ProjectRoomItem.project_id == Project.id)
+            .where(Project.owner_user_id == user.id)
+            .order_by(ProjectRoomItem.created_at.desc())
+            .limit(EXPORT_ROW_LIMIT)
+        )
+        .scalars()
+        .all()
+    )
+    csv_text = _write_csv(
+        ["public_id", "project_id", "item_type", "title", "created_at"],
+        [
+            [
+                row.public_id,
+                row.project.public_id,
+                row.item_type,
+                row.title,
+                row.created_at.isoformat(),
             ]
             for row in rows
         ],
@@ -518,6 +626,12 @@ def create_export() -> ResponseReturnValue:
             csv_text, row_count = _run_ledger_export(user)
         elif export_type == "bookings":
             csv_text, row_count = _run_bookings_export(user)
+        elif export_type == "contracts":
+            csv_text, row_count = _run_contracts_export(user)
+        elif export_type == "schedule":
+            csv_text, row_count = _run_schedule_export(user)
+        elif export_type == "room_files":
+            csv_text, row_count = _run_room_files_export(user)
         elif export_type == "admin_disputes":
             csv_text, row_count = _run_admin_disputes_export(user)
         else:

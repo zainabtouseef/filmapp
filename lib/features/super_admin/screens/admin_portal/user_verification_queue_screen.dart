@@ -49,11 +49,12 @@ class _UserVerificationQueueScreenState
     }).toList();
   }
 
-  void _open(verification.KycSubmission submission) {
-    Navigator.pushNamed(
+  Future<void> _open(verification.KycSubmission submission) async {
+    final decided = await Navigator.pushNamed(
       context,
       SuperAdminRoutes.verificationPath(submission.publicId),
     );
+    if (decided == true) _refresh();
   }
 
   @override

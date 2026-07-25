@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/analytics/analytics_controller.dart';
 import '../../../core/analytics/analytics_models.dart';
 import '../../../core/analytics/analytics_widgets.dart';
+import '../../../core/analytics/csv_download.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -104,11 +105,31 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
             spacing: 8,
             runSpacing: 8,
             children: const [
-              DPStatusChip(label: 'Bookings', tone: DpTone.info),
-              DPStatusChip(label: 'Contracts', tone: DpTone.info),
-              DPStatusChip(label: 'Payments', tone: DpTone.warning),
-              DPStatusChip(label: 'Schedule', tone: DpTone.success),
-              DPStatusChip(label: 'Room files', tone: DpTone.neutral),
+              _BuilderExportChip(
+                exportType: 'bookings',
+                label: 'Bookings',
+                tone: DpTone.info,
+              ),
+              _BuilderExportChip(
+                exportType: 'contracts',
+                label: 'Contracts',
+                tone: DpTone.info,
+              ),
+              _BuilderExportChip(
+                exportType: 'ledger',
+                label: 'Payments',
+                tone: DpTone.warning,
+              ),
+              _BuilderExportChip(
+                exportType: 'schedule',
+                label: 'Schedule',
+                tone: DpTone.success,
+              ),
+              _BuilderExportChip(
+                exportType: 'room_files',
+                label: 'Room files',
+                tone: DpTone.neutral,
+              ),
             ],
           ),
         ),
@@ -126,8 +147,16 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
     try {
       final job = await analytics.createExport('bookings');
       if (!mounted) return;
+      final content = job.csvContent;
+      final downloaded = content != null &&
+          content.isNotEmpty &&
+          downloadCsv('${job.exportType}_${job.publicId}.csv', content);
       dpSnack(
-          context, 'Export ${job.publicId} ready with ${job.rowCount} rows');
+        context,
+        downloaded
+            ? 'Export ${job.publicId} downloaded (${job.rowCount} rows)'
+            : 'Export ${job.publicId} ready with ${job.rowCount} rows',
+      );
       setState(() => _future = analytics.exports(force: true));
     } catch (error) {
       if (!mounted) return;
@@ -222,6 +251,37 @@ class _ReportCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BuilderExportChip extends StatelessWidget {
+  final String exportType;
+  final String label;
+  final DpTone tone;
+
+  const _BuilderExportChip({
+    required this.exportType,
+    required this.label,
+    required this.tone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ExportActionButton(
+      exportType: exportType,
+      label: label,
+      builder: (context, onTap, chipLabel) => GestureDetector(
+        onTap: onTap,
+        child: Opacity(
+          opacity: onTap == null ? 0.6 : 1,
+          child: DPStatusChip(
+            label: chipLabel,
+            tone: tone,
+            icon: Icons.download_outlined,
+          ),
+        ),
       ),
     );
   }

@@ -282,12 +282,32 @@ class _LiveFeeRuleRow extends StatelessWidget {
   }
 }
 
+// Matches the marketplace listing categories used elsewhere (marketplace.py
+// `supported_listing_types`), plus `general` for a platform-wide default
+// rule and `crew` for crew/service bookings — a fixed list so fee rules
+// stay consistent instead of accumulating typo'd/duplicate category names.
+const _feeCategories = [
+  'general',
+  'talent',
+  'model',
+  'location',
+  'equipment',
+  'crew',
+  'agency',
+  'distribution',
+];
+
 Future<(String, String, int, int)?> _feeRuleDialog(
   BuildContext context, {
   AdminFeeRuleDto? existing,
 }) async {
   final name = TextEditingController(text: existing?.name);
-  final category = TextEditingController(text: existing?.category ?? 'general');
+  var category = existing?.category ?? 'general';
+  final categoryOptions = [
+    ..._feeCategories,
+    if (existing != null && !_feeCategories.contains(existing.category))
+      existing.category,
+  ];
   final percentage = TextEditingController(
     text: existing == null
         ? '5.00'
@@ -299,73 +319,81 @@ Future<(String, String, int, int)?> _feeRuleDialog(
   );
   final result = await showDialog<(String, String, int, int)>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(existing == null ? 'New fee rule' : 'Edit fee rule'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Rule name'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: category,
-              decoration: const InputDecoration(labelText: 'Category'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: percentage,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Commission %'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: fixed,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Fixed charge (PKR)'),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final percent = double.tryParse(percentage.text.trim());
-            final fixedValue = int.tryParse(fixed.text.trim());
-            if (name.text.trim().isEmpty ||
-                category.text.trim().isEmpty ||
-                percent == null ||
-                percent < 0 ||
-                fixedValue == null ||
-                fixedValue < 0) {
-              return;
-            }
-            Navigator.pop(
-              context,
-              (
-                name.text.trim(),
-                category.text.trim(),
-                (percent * 100).round(),
-                fixedValue * 100,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(existing == null ? 'New fee rule' : 'Edit fee rule'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Rule name'),
               ),
-            );
-          },
-          child: const Text('Save'),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: [
+                  for (final option in categoryOptions)
+                    DropdownMenuItem(value: option, child: Text(option)),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setDialogState(() => category = value);
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: percentage,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Commission %'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: fixed,
+                keyboardType: TextInputType.number,
+                decoration:
+                    const InputDecoration(labelText: 'Fixed charge (PKR)'),
+              ),
+            ],
+          ),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final percent = double.tryParse(percentage.text.trim());
+              final fixedValue = int.tryParse(fixed.text.trim());
+              if (name.text.trim().isEmpty ||
+                  percent == null ||
+                  percent < 0 ||
+                  fixedValue == null ||
+                  fixedValue < 0) {
+                return;
+              }
+              Navigator.pop(
+                context,
+                (
+                  name.text.trim(),
+                  category,
+                  (percent * 100).round(),
+                  fixedValue * 100,
+                ),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     ),
   );
   name.dispose();
-  category.dispose();
   percentage.dispose();
   fixed.dispose();
   return result;

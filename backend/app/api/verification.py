@@ -16,10 +16,12 @@ from app.models.base import utc_now
 from app.models.files import FileAsset, UploadSession
 from app.models.identity import Role, UserRole
 from app.models.kyc import KycDocument, KycSubmission, VerificationEvent
-from app.policies import require_permission
+from app.models.payments import PaymentProof
+from app.policies import has_permission, require_permission
 from app.responses import success
 from app.security import as_utc
 from app.services.local_storage import public_url_for, resolve_path, save_stream
+from app.services.notifications import notify_user
 
 verification_blueprint = Blueprint("verification", __name__)
 
@@ -56,6 +58,12 @@ def _enqueue_file_scan(file_public_id: str) -> None:
             "file_scan_enqueue_failed",
             extra={"file_public_id": file_public_id},
         )
+
+
+def _has_role_code(user: Any, codes: set[str]) -> bool:
+    return any(
+        item.status == "active" and item.role.code in codes for item in user.roles
+    )
 
 
 def _field_error(field: str, message: str) -> APIError:
@@ -309,12 +317,43 @@ def complete_upload(public_id: str) -> ResponseReturnValue:
 def download_file(public_id: str) -> ResponseReturnValue:
     user = _current_user()
     file = db.session.execute(
-        select(FileAsset).where(
-            FileAsset.public_id == public_id,
-            FileAsset.owner_user_id == user.id,
-        )
+        select(FileAsset).where(FileAsset.public_id == public_id)
     ).scalar_one_or_none()
     if file is None:
+        raise APIError("files.not_found", "File was not found.", status=404)
+    is_owner = file.owner_user_id == user.id
+    # A kyc.review admin may download a file they don't own only if it's
+    # actually attached to some KYC submission — reviewing evidence, not a
+    # blanket bypass of file ownership.
+    is_kyc_evidence_reviewer = (
+        not is_owner
+        and has_permission(user, "kyc.review")
+        and (
+            db.session.execute(
+                select(KycDocument.id).where(KycDocument.file_id == file.id)
+            ).scalar_one_or_none()
+            is not None
+        )
+    )
+    # Same idea for a finance reviewer looking at a payment proof they
+    # don't own — matches the role check `_require_finance` already uses
+    # to gate the payment-proof review endpoints themselves.
+    is_payment_evidence_reviewer = (
+        not is_owner
+        and not is_kyc_evidence_reviewer
+        and _has_role_code(user, {"finance_admin", "super_admin", "reviewer"})
+        and (
+            db.session.execute(
+                select(PaymentProof.id).where(PaymentProof.file_id == file.id)
+            ).scalar_one_or_none()
+            is not None
+        )
+    )
+    if (
+        not is_owner
+        and not is_kyc_evidence_reviewer
+        and not is_payment_evidence_reviewer
+    ):
         raise APIError("files.not_found", "File was not found.", status=404)
     path = resolve_path(file)
     if not path.exists() or not path.is_file():
@@ -511,6 +550,28 @@ def admin_kyc_decision(public_id: str) -> Response:
         from_status=previous,
         to_status=decision,
         reason=reason or None,
+    )
+    notification_title, notification_body = {
+        "approved": (
+            "Verification approved",
+            "You're verified — bookings, contracts, and payments are now unlocked.",
+        ),
+        "rejected": (
+            "Verification rejected",
+            reason or "Your submission was rejected. Review the reason and resubmit.",
+        ),
+        "needs_resubmission": (
+            "Resubmission needed",
+            reason
+            or "Some documents need to be resubmitted before you can be verified.",
+        ),
+    }[decision]
+    notify_user(
+        submission.user_id,
+        category="kyc",
+        title=notification_title,
+        body=notification_body,
+        route_name="/verification/status",
     )
     db.session.commit()
     return jsonify(success({"submission": _serialize_submission(submission)}))

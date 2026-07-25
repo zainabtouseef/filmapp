@@ -184,10 +184,13 @@ class _PaymentVerificationQueueScreenState
               padding: const EdgeInsets.only(bottom: 10),
               child: _PaymentProofRow(
                 proof: proof,
-                onReview: () => Navigator.pushNamed(
-                  context,
-                  SuperAdminRoutes.paymentReviewPath(proof.proofId!),
-                ),
+                onReview: () async {
+                  final decided = await Navigator.pushNamed(
+                    context,
+                    SuperAdminRoutes.paymentReviewPath(proof.proofId!),
+                  );
+                  if (decided == true) _refresh();
+                },
               ),
             ),
           ),

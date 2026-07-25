@@ -4,6 +4,7 @@ import '../../core/theme/app_breakpoints.dart';
 import '../../core/theme/app_spacing.dart';
 import '../widgets/cinematic_backdrop.dart';
 import 'admin_section_header.dart';
+import 'kyc_status_banner.dart';
 
 typedef AdminTopBarBuilder = Widget Function(
   BuildContext context,
@@ -124,6 +125,7 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                 wide,
                                 _openMenu,
                               ),
+                              const KycStatusBanner(),
                               if (widget.showHeading)
                                 Padding(
                                   padding: EdgeInsets.fromLTRB(

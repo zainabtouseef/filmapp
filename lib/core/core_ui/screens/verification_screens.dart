@@ -13,6 +13,7 @@ import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
 import '../widgets/core_widgets.dart';
+import 'live_selfie_capture_screen.dart';
 
 class KycVerificationScreen extends StatefulWidget {
   final String selectedRole;
@@ -163,12 +164,16 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
 
   Future<void> _captureSelfie() async {
     try {
-      final image = await ImagePicker().pickImage(
-        source: ImageSource.camera,
-        imageQuality: 92,
-        maxWidth: 1600,
+      // A dedicated live camera view (no gallery/file picker affordance)
+      // rather than `image_picker`'s ImageSource.camera — on desktop web
+      // that falls back to a plain file picker, which would defeat the
+      // point of a liveness selfie.
+      final image = await Navigator.push<XFile>(
+        context,
+        MaterialPageRoute(builder: (_) => const LiveSelfieCaptureScreen()),
       );
       if (image == null) return;
+      if (!mounted) return;
       final bytes = await image.readAsBytes();
       if (bytes.isEmpty) {
         setState(() => _formError = 'Could not read the captured selfie.');
@@ -263,17 +268,33 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     }
   }
 
+  // The account already exists at this point (registration creates the
+  // session before KYC starts) — skipping just defers verification rather
+  // than blocking account creation on it. `KycStatusBanner` keeps nudging
+  // the user afterward, and actions that require a verified account (like
+  // sending a booking request) are gated separately at the point of use.
+  void _skipForNow() {
+    final auth = AuthScope.of(context);
+    Navigator.pushReplacementNamed(context, auth.initialAuthenticatedRoute);
+  }
+
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CoreAppHeader(
+          CoreAppHeader(
             title: 'Complete Verification',
             subtitle:
                 'CineConnect verifies users to keep bookings, contracts and payments safe.',
             icon: Icons.verified_user_outlined,
+            actions: [
+              TextButton(
+                onPressed: _skipForNow,
+                child: const Text('Skip for now'),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           StepWizardIndicator(currentStep: _step, totalSteps: 4),
@@ -577,14 +598,16 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_loaded) {
-      _submissionsFuture = AuthScope.of(context).myKycSubmissions();
+      _submissionsFuture =
+          AuthScope.of(context).myKycSubmissionsAndRefreshStatus();
       _loaded = true;
     }
   }
 
   void _refresh() {
     setState(() {
-      _submissionsFuture = AuthScope.of(context).myKycSubmissions();
+      _submissionsFuture =
+          AuthScope.of(context).myKycSubmissionsAndRefreshStatus();
     });
   }
 
@@ -743,10 +766,17 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
           ],
           const SizedBox(height: 22),
           if (status == VerificationStatus.pending) ...[
+            // Opens the user's real portal, not a generic marketplace
+            // preview — the KycStatusBanner + ensureKycApproved() guard
+            // keep booking/contract actions locked until this is approved,
+            // so it's safe to let them look around their own account.
             CorePrimaryButton(
-              icon: Icons.storefront_outlined,
-              label: 'Browse Preview Marketplace',
-              onTap: () => Navigator.pushNamed(context, CoreRoutes.dashboard),
+              icon: Icons.dashboard_outlined,
+              label: 'Open My Account',
+              onTap: () => Navigator.pushNamed(
+                context,
+                AuthScope.of(context).initialAuthenticatedRoute,
+              ),
             ),
             const SizedBox(height: 12),
             CoreSecondaryButton(
@@ -762,9 +792,12 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
             )
           else
             CorePrimaryButton(
-              icon: Icons.person_outline_rounded,
-              label: 'Continue to Profile Setup',
-              onTap: () => Navigator.pushNamed(context, CoreRoutes.dashboard),
+              icon: Icons.dashboard_outlined,
+              label: 'Go to My Dashboard',
+              onTap: () => Navigator.pushNamed(
+                context,
+                AuthScope.of(context).initialAuthenticatedRoute,
+              ),
             ),
         ],
       ),

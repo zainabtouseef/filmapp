@@ -14,6 +14,7 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
+import '../../../shared/layout/kyc_status_banner.dart';
 
 const _categoryKeys = [
   'All',
@@ -244,7 +245,12 @@ class _DPMarketplaceDiscoveryScreenState
                           ),
                           onRequest: candidate.marketplaceListingId == null
                               ? () => _showProviderActionPending(candidate)
-                              : () => Navigator.pushNamed(
+                              : () async {
+                                  if (!await ensureKycApproved(context)) {
+                                    return;
+                                  }
+                                  if (!context.mounted) return;
+                                  Navigator.pushNamed(
                                     context,
                                     DirectorProducerRoutes.bookingRequest,
                                     arguments: {
@@ -253,7 +259,8 @@ class _DPMarketplaceDiscoveryScreenState
                                       'projectId': _projectId,
                                       'category': candidate.category,
                                     },
-                                  ),
+                                  );
+                                },
                           onShortlist: candidate.marketplaceListingId == null
                               ? () async {
                                   _showProviderActionPending(candidate);

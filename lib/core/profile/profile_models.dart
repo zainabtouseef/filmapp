@@ -1,3 +1,5 @@
+import '../verification/verification_models.dart';
+
 class ProfileCity {
   final String publicId;
   final String name;
@@ -28,6 +30,8 @@ class UserProfile {
   final String visibility;
   final double ratingAverage;
   final int reviewCount;
+  final UploadedFile? avatarFile;
+  final UploadedFile? coverFile;
 
   const UserProfile({
     required this.bio,
@@ -36,10 +40,14 @@ class UserProfile {
     required this.visibility,
     required this.ratingAverage,
     required this.reviewCount,
+    this.avatarFile,
+    this.coverFile,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     final city = json['city'] as Map<String, dynamic>?;
+    final avatar = json['avatar_file'] as Map<String, dynamic>?;
+    final cover = json['cover_file'] as Map<String, dynamic>?;
     return UserProfile(
       bio: json['bio'] as String?,
       city: city == null ? null : ProfileCity.fromJson(city),
@@ -47,6 +55,8 @@ class UserProfile {
       visibility: json['profile_visibility'] as String? ?? 'private',
       ratingAverage: (json['rating_average'] as num?)?.toDouble() ?? 0,
       reviewCount: json['review_count'] as int? ?? 0,
+      avatarFile: avatar == null ? null : UploadedFile.fromJson(avatar),
+      coverFile: cover == null ? null : UploadedFile.fromJson(cover),
     );
   }
 }
@@ -84,6 +94,7 @@ class TalentProfile {
   final int? dayRateMinor;
   final String currency;
   final List<TalentLanguage> languages;
+  final UploadedFile? resumeFile;
 
   const TalentProfile({
     required this.publicId,
@@ -97,6 +108,7 @@ class TalentProfile {
     required this.dayRateMinor,
     required this.currency,
     required this.languages,
+    this.resumeFile,
   });
 
   factory TalentProfile.fromJson(Map<String, dynamic>? json) {
@@ -115,6 +127,7 @@ class TalentProfile {
         languages: [],
       );
     }
+    final resume = json['resume_file'] as Map<String, dynamic>?;
     return TalentProfile(
       publicId: json['public_id'] as String?,
       screenName: json['screen_name'] as String?,
@@ -129,6 +142,7 @@ class TalentProfile {
       languages: (json['languages'] as List<dynamic>? ?? const [])
           .map((item) => TalentLanguage.fromJson(item as Map<String, dynamic>))
           .toList(),
+      resumeFile: resume == null ? null : UploadedFile.fromJson(resume),
     );
   }
 }

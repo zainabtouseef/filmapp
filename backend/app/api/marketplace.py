@@ -78,6 +78,8 @@ def _profile_payload(profile: UserProfile | None) -> dict[str, Any]:
             "profile_visibility": "private",
             "rating_average": "0.00",
             "review_count": 0,
+            "avatar_file": None,
+            "cover_file": None,
         }
     return {
         "bio": profile.bio,
@@ -86,6 +88,8 @@ def _profile_payload(profile: UserProfile | None) -> dict[str, Any]:
         "profile_visibility": profile.profile_visibility,
         "rating_average": f"{Decimal(profile.rating_average):.2f}",
         "review_count": profile.review_count,
+        "avatar_file": _file_payload(profile.avatar_file),
+        "cover_file": _file_payload(profile.cover_file),
     }
 
 
@@ -103,6 +107,7 @@ def _talent_payload(profile: TalentProfile | None) -> dict[str, Any] | None:
         "availability_status": profile.availability_status,
         "day_rate_minor": profile.day_rate_minor,
         "currency": profile.currency,
+        "resume_file": _file_payload(profile.resume_file),
         "languages": [
             {"language": item.language, "proficiency": item.proficiency}
             for item in profile.languages
@@ -166,6 +171,19 @@ def _saved_search_payload(item: SavedSearch) -> dict[str, Any]:
     }
 
 
+def _owner_avatar_url(owner_user_id: object) -> str | None:
+    # Listings don't always have their own media attached — falling back to
+    # the owner's profile avatar means a candidate card still shows a real
+    # photo instead of just initials as soon as they've set one, without
+    # requiring them to separately pick listing cover media too.
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == owner_user_id)
+    ).scalar_one_or_none()
+    if profile is None or profile.avatar_file is None:
+        return None
+    return public_url_for(profile.avatar_file)
+
+
 def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
     return {
         "public_id": listing.public_id,
@@ -185,6 +203,7 @@ def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
         "owner": {
             "public_id": listing.owner.public_id,
             "display_name": listing.owner.display_name,
+            "avatar_url": _owner_avatar_url(listing.owner_user_id),
         },
         "media": [_listing_media_payload(item) for item in listing.media],
     }
@@ -467,6 +486,20 @@ def update_my_profile() -> Response:
     profile.city_id = city.id if city else None
     profile.website_url = str(payload.get("website_url", "")).strip()[:255] or None
     profile.profile_visibility = visibility
+    if "avatar_file_id" in payload:
+        raw_avatar_id = str(payload.get("avatar_file_id") or "").strip()
+        profile.avatar_file_id = (
+            _owned_ready_file(raw_avatar_id, user.id, "avatar_file_id").id
+            if raw_avatar_id
+            else None
+        )
+    if "cover_file_id" in payload:
+        raw_cover_id = str(payload.get("cover_file_id") or "").strip()
+        profile.cover_file_id = (
+            _owned_ready_file(raw_cover_id, user.id, "cover_file_id").id
+            if raw_cover_id
+            else None
+        )
     db.session.commit()
     return jsonify(success({"profile": _profile_payload(profile)}))
 
@@ -527,6 +560,13 @@ def update_talent_profile() -> ResponseReturnValue:
         profile.day_rate_minor = day_rate_minor
     if currency is not None:
         profile.currency = currency
+    if "resume_file_id" in payload:
+        raw_resume_id = str(payload.get("resume_file_id") or "").strip()
+        profile.resume_file_id = (
+            _owned_ready_file(raw_resume_id, user.id, "resume_file_id").id
+            if raw_resume_id
+            else None
+        )
     db.session.flush()
 
     if "languages" in payload:

@@ -7,7 +7,6 @@ import '../../auth/role_mapper.dart';
 import '../../network/api_exception.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
-import '../../../features/super_admin/routes/super_admin_routes.dart';
 import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
 import '../widgets/core_widgets.dart';
@@ -45,21 +44,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    final fakeUserType =
-        _demoLoginAs == 'User' || _portalRouteFor(_demoLoginAs) != null
-            ? 'user'
-            : 'super_admin';
-    final fakeAdminPermission = _demoPermissionFor(_demoLoginAs);
-
-    if (fakeUserType == 'super_admin') {
-      setState(() => _loading = true);
-      await Future<void>.delayed(const Duration(milliseconds: 650));
-      if (!mounted) return;
-      Navigator.pushNamed(context, _adminRouteFor(fakeAdminPermission));
-      setState(() => _loading = false);
-      return;
-    }
-
+    // The "Demo Login As" picker only previews which portal a role expects
+    // — the actual destination always comes from the real authenticated
+    // account's real role (see RoleMapper.portalRouteForCode), same as for
+    // every business-portal role. Admin/staff roles used to short-circuit
+    // straight to the admin console with no real session at all, which
+    // meant every admin data screen silently had no access token to call
+    // the API with.
     setState(() {
       _identityError =
           _identity.text.trim().isEmpty ? 'Email is required' : null;
@@ -81,28 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  String _demoPermissionFor(String label) {
-    return switch (label) {
-      'Super Admin' => 'super_admin',
-      'Payments Officer' => 'payments_officer',
-      'Verification Agent' => 'verification_agent',
-      'Dispute Officer' => 'dispute_officer',
-      'Content Moderator' => 'content_moderator',
-      _ => 'user',
-    };
-  }
-
-  String _adminRouteFor(String permission) {
-    return switch (permission) {
-      'super_admin' => SuperAdminRoutes.dashboard,
-      'verification_agent' => SuperAdminRoutes.verifications,
-      'payments_officer' => SuperAdminRoutes.paymentQueue,
-      'dispute_officer' => SuperAdminRoutes.disputes,
-      'content_moderator' => SuperAdminRoutes.contentModeration,
-      _ => CoreRoutes.dashboard,
-    };
   }
 
   String? _portalRouteFor(String label) {

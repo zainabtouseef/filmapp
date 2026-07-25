@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../widgets/dp_empty_state.dart';
@@ -95,11 +96,19 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= BookingsScope.maybeOf(context)?.negotiations();
+    // Populates the projects cache (if not already loaded) so negotiation
+    // cards can resolve a real project title instead of a raw project ID.
+    ProjectsScope.maybeOf(context)?.projects();
   }
 
   @override
   Widget build(BuildContext context) {
     final future = _future;
+    final projectTitles = {
+      for (final project
+          in ProjectsScope.maybeOf(context)?.cachedProjects ?? const [])
+        project.publicId: project.title,
+    };
     if (future == null) {
       return const CoreEmptyState(
         icon: Icons.lock_outline_rounded,
@@ -168,7 +177,8 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
                   .map(
                     (negotiation) => _NegotiationCard(
                       title: negotiation.booking.provider.displayName,
-                      project: 'Project ${negotiation.booking.projectId}',
+                      project: projectTitles[negotiation.booking.projectId] ??
+                          'Project ${negotiation.booking.projectId}',
                       subtitle: negotiation.booking.category,
                       rate: negotiation.currentOffer?.feeLabel ?? 'Rate TBD',
                       status: _statusLabel(negotiation.status),

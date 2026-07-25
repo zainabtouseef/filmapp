@@ -10,12 +10,20 @@ import 'api_exception.dart';
 class ApiClient {
   final http.Client _http;
   final String baseUrl;
-  String? _accessToken;
+  String? accessToken;
 
   ApiClient({http.Client? httpClient, this.baseUrl = ApiConfig.baseUrl})
       : _http = httpClient ?? http.Client();
 
-  set accessToken(String? value) => _accessToken = value;
+  /// Resolves a path returned by the API (e.g. a file's `download_url`,
+  /// always path-only like `/api/v1/files/{id}/download`) into an absolute
+  /// URL against this client's origin — for handing to `Image.network` or
+  /// similar, not for `get`/`post` (those already prefix with [baseUrl]).
+  Uri resolve(String pathOrUrl) {
+    final uri = Uri.parse(pathOrUrl);
+    if (uri.hasScheme) return uri;
+    return Uri.parse(baseUrl).resolve(pathOrUrl);
+  }
 
   Future<Map<String, dynamic>> get(String path) {
     return _send('GET', path);
@@ -46,8 +54,8 @@ class ApiClient {
       ..headers[HttpHeaders.acceptHeader] = 'application/json'
       ..headers[HttpHeaders.contentTypeHeader] = contentType
       ..contentLength = bytes.length;
-    if (_accessToken != null) {
-      request.headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
+    if (accessToken != null) {
+      request.headers[HttpHeaders.authorizationHeader] = 'Bearer $accessToken';
     }
     late final http.StreamedResponse streamed;
     try {
@@ -86,8 +94,8 @@ class ApiClient {
     final request = http.Request(method, _uriFor(path))
       ..headers[HttpHeaders.acceptHeader] = 'application/json'
       ..headers[HttpHeaders.contentTypeHeader] = 'application/json';
-    if (_accessToken != null) {
-      request.headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
+    if (accessToken != null) {
+      request.headers[HttpHeaders.authorizationHeader] = 'Bearer $accessToken';
     }
     if (body != null) {
       request.body = jsonEncode(body);

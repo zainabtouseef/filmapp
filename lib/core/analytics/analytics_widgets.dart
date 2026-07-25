@@ -7,6 +7,7 @@ import '../core_ui/widgets/core_widgets.dart';
 import '../theme/app_color_scheme.dart';
 import 'analytics_controller.dart';
 import 'analytics_models.dart';
+import 'csv_download.dart';
 
 class PersonalDashboardKpiStrip extends StatefulWidget {
   final String fallbackMessage;
@@ -122,9 +123,15 @@ class _ExportActionButtonState extends State<ExportActionButton> {
     try {
       final job = await analytics.createExport(widget.exportType);
       if (!mounted) return;
+      final content = job.csvContent;
+      final downloaded = content != null &&
+          content.isNotEmpty &&
+          downloadCsv('${job.exportType}_${job.publicId}.csv', content);
       showCoreSnack(
         context,
-        'Export ${job.publicId} ready with ${job.rowCount} rows.',
+        downloaded
+            ? 'Export ${job.publicId} downloaded (${job.rowCount} rows).'
+            : 'Export ${job.publicId} ready with ${job.rowCount} rows.',
       );
     } catch (_) {
       if (mounted) {

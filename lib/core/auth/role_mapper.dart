@@ -11,6 +11,7 @@ import '../../features/legal_partner/routes/legal_partner_routes.dart';
 import '../../features/location_owner/routes/location_owner_routes.dart';
 import '../../features/media_equipment/routes/media_equipment_routes.dart';
 import '../../features/model_extension/routes/model_extension_routes.dart';
+import '../../features/super_admin/routes/super_admin_routes.dart';
 
 class RoleMapper {
   RoleMapper._();
@@ -45,6 +46,14 @@ class RoleMapper {
       'legal_partner' => LegalPartnerRoutes.home,
       'insurance_partner' => InsurancePartnerRoutes.home,
       'distribution_partner' => DistributionPartnerRoutes.home,
+      // Real backend staff role codes (see backend `ADMIN_ROLE_CODES` /
+      // `SUPER_ADMIN_ROLE_CODES` in admin_control.py) — a genuinely
+      // authenticated staff account lands in the console that matches
+      // its actual permissions, not a route the login screen just guessed.
+      'super_admin' => SuperAdminRoutes.dashboard,
+      'reviewer' => SuperAdminRoutes.verifications,
+      'finance_admin' => SuperAdminRoutes.paymentQueue,
+      'support_agent' => SuperAdminRoutes.disputes,
       _ => null,
     };
   }

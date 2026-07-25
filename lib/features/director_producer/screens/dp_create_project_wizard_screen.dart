@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -149,17 +150,21 @@ class _DPCreateProjectWizardScreenState
     extends State<DPCreateProjectWizardScreen> {
   final _draftStore = const ProjectDraftStore();
   final _title = TextEditingController();
+  final _customType = TextEditingController();
   final _description = TextEditingController();
-  final _cities = TextEditingController();
+  final List<ProfileCity> _selectedCities = [];
+  Future<List<ProfileCity>>? _citiesFuture;
   final _budgetMin = TextEditingController();
   final _budgetMax = TextEditingController();
   final _teamInput = TextEditingController();
 
   String _type = '';
+  bool _customTypeSelected = false;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _tentative = false;
   final List<String> _team = [];
+  _WizardFile? _coverPhoto;
   final List<_WizardFile> _files = [];
   final List<_WizardRequirement> _requirements = [];
 
@@ -178,10 +183,16 @@ class _DPCreateProjectWizardScreenState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _citiesFuture ??= AuthScope.maybeOf(context)?.cities();
+  }
+
+  @override
   void dispose() {
     _title.dispose();
+    _customType.dispose();
     _description.dispose();
-    _cities.dispose();
     _budgetMin.dispose();
     _budgetMax.dispose();
     _teamInput.dispose();
@@ -196,9 +207,25 @@ class _DPCreateProjectWizardScreenState
     }
     setState(() {
       _type = draft['type'] as String? ?? '';
+      _customTypeSelected = _type.isNotEmpty && !_projectTypes.contains(_type);
+      if (_customTypeSelected) _customType.text = _type;
       _title.text = draft['title'] as String? ?? '';
       _description.text = draft['description'] as String? ?? '';
-      _cities.text = draft['cities'] as String? ?? '';
+      _selectedCities
+        ..clear()
+        ..addAll(
+          (draft['cities'] as List<dynamic>? ?? []).map(
+            (item) {
+              final map = Map<String, dynamic>.from(item as Map);
+              return ProfileCity(
+                publicId: map['publicId'] as String,
+                name: map['name'] as String,
+                province: null,
+                timezone: '',
+              );
+            },
+          ),
+        );
       _budgetMin.text = draft['budgetMin'] as String? ?? '';
       _budgetMax.text = draft['budgetMax'] as String? ?? '';
       _tentative = draft['tentative'] as bool? ?? false;
@@ -226,7 +253,9 @@ class _DPCreateProjectWizardScreenState
       'type': _type,
       'title': _title.text,
       'description': _description.text,
-      'cities': _cities.text,
+      'cities': _selectedCities
+          .map((city) => {'publicId': city.publicId, 'name': city.name})
+          .toList(),
       'budgetMin': _budgetMin.text,
       'budgetMax': _budgetMax.text,
       'tentative': _tentative,
@@ -394,20 +423,46 @@ class _DPCreateProjectWizardScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _coverPhotoField(),
+        const SizedBox(height: 14),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             for (final type in _projectTypes)
               GestureDetector(
-                onTap: () => setState(() => _type = type),
+                onTap: () => setState(() {
+                  _type = type;
+                  _customTypeSelected = false;
+                }),
                 child: DPStatusChip(
                   label: type,
-                  tone: _type == type ? DpTone.warning : DpTone.neutral,
+                  tone: !_customTypeSelected && _type == type
+                      ? DpTone.warning
+                      : DpTone.neutral,
                 ),
               ),
+            GestureDetector(
+              onTap: () => setState(() {
+                _customTypeSelected = true;
+                _type = _customType.text.trim();
+              }),
+              child: DPStatusChip(
+                label: 'Custom',
+                tone: _customTypeSelected ? DpTone.warning : DpTone.neutral,
+              ),
+            ),
           ],
         ),
+        if (_customTypeSelected) ...[
+          const SizedBox(height: 12),
+          CoreTextField(
+            controller: _customType,
+            label: 'Enter custom project type',
+            icon: Icons.edit_outlined,
+            onChanged: (value) => setState(() => _type = value.trim()),
+          ),
+        ],
         if (_errors['type'] != null) ...[
           const SizedBox(height: 6),
           Text(_errors['type']!,
@@ -439,19 +494,9 @@ class _DPCreateProjectWizardScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CoreTextField(
-          controller: _cities,
-          label: 'City / cities (e.g., Lahore, Karachi)',
-          icon: Icons.location_on_outlined,
-        ),
+        _citiesField(),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _dateButton('Start date', _startDate)),
-            const SizedBox(width: 10),
-            Expanded(child: _dateButton('End date', _endDate)),
-          ],
-        ),
+        _dateRangeField(),
         if (_errors['dates'] != null) ...[
           const SizedBox(height: 6),
           Text(_errors['dates']!,
@@ -477,7 +522,78 @@ class _DPCreateProjectWizardScreenState
     );
   }
 
-  Widget _dateButton(String label, DateTime? value) {
+  Widget _citiesField() {
+    final colors = context.appColors;
+    return DPGlassCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'City / cities',
+            style:
+                AppTextStyles.panelLabel.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final city in _selectedCities)
+                GestureDetector(
+                  onTap: () => setState(() => _selectedCities.remove(city)),
+                  child: DPStatusChip(
+                    label: '${city.name}  ✕',
+                    tone: DpTone.warning,
+                  ),
+                ),
+              GestureDetector(
+                onTap: _pickCity,
+                child: const DPStatusChip(
+                  label: '+ Add city',
+                  tone: DpTone.neutral,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickCity() async {
+    final citiesFuture = _citiesFuture;
+    if (citiesFuture == null) return;
+    List<ProfileCity> cities;
+    try {
+      cities = await citiesFuture;
+    } catch (_) {
+      if (mounted) {
+        setState(() => _errors['cities'] = 'Could not load the city list.');
+      }
+      return;
+    }
+    final available = cities
+        .where((city) => !_selectedCities
+            .any((selected) => selected.publicId == city.publicId))
+        .toList();
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<ProfileCity>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _CityPickerSheet(cities: available),
+    );
+    if (picked != null) {
+      setState(() => _selectedCities.add(picked));
+    }
+  }
+
+  // One shared calendar (Bookme.pk-style range picker) for both ends of
+  // the shoot — start and end are picked in the same flow, so this is a
+  // single tappable field with one calendar icon, not two independent
+  // date pickers that happen to agree with each other.
+  Widget _dateRangeField() {
     final colors = context.appColors;
     return GestureDetector(
       onTap: () async {
@@ -493,8 +609,7 @@ class _DPCreateProjectWizardScreenState
         });
       },
       child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: colors.softSurface,
@@ -503,20 +618,45 @@ class _DPCreateProjectWizardScreenState
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                value == null ? label : _formatDate(value),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.body.copyWith(
-                  color:
-                      value == null ? colors.textTertiary : colors.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _dateRangeRow('Start', _startDate),
+                  const SizedBox(height: 8),
+                  _dateRangeRow('End', _endDate),
+                ],
               ),
             ),
-            Icon(Icons.date_range_outlined, color: colors.goldDark, size: 17),
+            const SizedBox(width: 10),
+            Icon(Icons.date_range_outlined, color: colors.goldDark, size: 20),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _dateRangeRow(String label, DateTime? value) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        SizedBox(
+          width: 40,
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value == null ? 'Select a date range' : _formatDate(value),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.body.copyWith(
+              color: value == null ? colors.textTertiary : colors.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -673,6 +813,161 @@ class _DPCreateProjectWizardScreenState
         ),
       ],
     );
+  }
+
+  Widget _coverPhotoField() {
+    final colors = context.appColors;
+    final cover = _coverPhoto;
+    return GestureDetector(
+      onTap: cover?.error != null
+          ? () => _uploadCoverPhoto(cover!)
+          : _pickCoverPhoto,
+      child: Container(
+        height: 140,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: colors.softSurface,
+          border: Border.all(color: colors.border),
+          image: cover == null
+              ? null
+              : DecorationImage(
+                  image: MemoryImage(cover.bytes),
+                  fit: BoxFit.cover,
+                ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            if (cover == null)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_photo_alternate_outlined,
+                        color: colors.goldDark, size: 26),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Add project cover photo',
+                      style: AppTextStyles.caption
+                          .copyWith(color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.55),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (cover.progress != null && cover.progress! < 1)
+                const Positioned.fill(
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: GestureDetector(
+                  onTap: () => setState(() => _coverPhoto = null),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                    ),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 16),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 10,
+                bottom: 8,
+                child: Text(
+                  cover.error ?? 'Cover photo',
+                  style: AppTextStyles.caption.copyWith(
+                    color: cover.error != null ? colors.danger : Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCoverPhoto() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
+    );
+    final item = result?.files.single;
+    final bytes = item?.bytes;
+    if (item == null || bytes == null) return;
+    final file = _WizardFile(
+      name: item.name,
+      bytes: bytes,
+      mimeType: switch (item.extension?.toLowerCase()) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        _ => 'image/jpeg',
+      },
+    );
+    setState(() => _coverPhoto = file);
+    await _uploadCoverPhoto(file);
+  }
+
+  Future<void> _uploadCoverPhoto(_WizardFile file) async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) {
+      setState(() => file.error = 'Sign in to upload files');
+      return;
+    }
+    setState(() {
+      file.progress = 0;
+      file.error = null;
+    });
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'project_cover',
+        file: PickedFileData(
+          name: file.name,
+          mimeType: file.mimeType,
+          bytes: file.bytes,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        file.progress = 1;
+        file.uploadedFileId = uploaded.publicId;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        file.progress = null;
+        file.error = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        file.progress = null;
+        file.error = 'Upload failed. Tap to retry.';
+      });
+    }
   }
 
   Future<void> _pickFiles() async {
@@ -888,7 +1183,12 @@ class _DPCreateProjectWizardScreenState
         const SizedBox(height: 10),
         _ReviewRow(label: 'Type', value: _type),
         const SizedBox(height: 10),
-        _ReviewRow(label: 'Cities', value: _cities.text),
+        _ReviewRow(
+          label: 'Cities',
+          value: _selectedCities.isEmpty
+              ? 'Not set'
+              : _selectedCities.map((city) => city.name).join(', '),
+        ),
         const SizedBox(height: 10),
         _ReviewRow(
           label: 'Dates',
@@ -980,16 +1280,27 @@ class _DPCreateProjectWizardScreenState
       _errors.remove('submit');
     });
     try {
-      final description = _team.isEmpty
-          ? _description.text.trim()
-          : '${_description.text.trim()}\n\nTeam: ${_team.join(', ')}';
+      // The backend only tracks one primary city per project — the first
+      // selected city becomes that; any additional ones are folded into
+      // the description, same as Team (no dedicated field for those either).
+      final extraCities = _selectedCities.length > 1
+          ? _selectedCities.skip(1).map((city) => city.name).join(', ')
+          : null;
+      final descriptionParts = [
+        _description.text.trim(),
+        if (_team.isNotEmpty) 'Team: ${_team.join(', ')}',
+        if (extraCities != null) 'Additional cities: $extraCities',
+      ].where((part) => part.isNotEmpty);
+      final description = descriptionParts.join('\n\n');
       final project = await controller.createProject(
         title: _title.text.trim(),
         projectType: _type,
         description: description,
+        cityId: _selectedCities.isEmpty ? null : _selectedCities.first.publicId,
         startDate: _apiDate(_startDate),
         endDate: _apiDate(_endDate),
         estimatedBudgetMinor: _parseMinor(_budgetMax.text),
+        coverFileId: _coverPhoto?.uploadedFileId,
       );
 
       for (final requirement in _requirements) {
@@ -1043,9 +1354,11 @@ class _DPCreateProjectWizardScreenState
   void _resetForm() {
     setState(() {
       _type = '';
+      _customTypeSelected = false;
+      _customType.clear();
       _title.clear();
       _description.clear();
-      _cities.clear();
+      _selectedCities.clear();
       _budgetMin.clear();
       _budgetMax.clear();
       _teamInput.clear();
@@ -1053,6 +1366,7 @@ class _DPCreateProjectWizardScreenState
       _endDate = null;
       _tentative = false;
       _team.clear();
+      _coverPhoto = null;
       _files.clear();
       _requirements.clear();
       _step = 0;
@@ -1144,6 +1458,106 @@ class _DPCreateProjectWizardScreenState
         )
         .join('\n');
     return '${error.message}\n$fieldMessages';
+  }
+}
+
+class _CityPickerSheet extends StatefulWidget {
+  final List<ProfileCity> cities;
+
+  const _CityPickerSheet({required this.cities});
+
+  @override
+  State<_CityPickerSheet> createState() => _CityPickerSheetState();
+}
+
+class _CityPickerSheetState extends State<_CityPickerSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final query = _search.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? widget.cities
+        : widget.cities
+            .where((city) => city.name.toLowerCase().contains(query))
+            .toList();
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
+        decoration: BoxDecoration(
+          color: colors.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          border: Border.all(color: colors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add a city',
+              style:
+                  AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: 14),
+            CoreTextField(
+              controller: _search,
+              label: 'Search cities',
+              icon: Icons.search_rounded,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            Flexible(
+              child: filtered.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        widget.cities.isEmpty
+                            ? 'All available cities are already selected.'
+                            : 'No cities match your search.',
+                        style: AppTextStyles.body
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final city = filtered[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.location_on_outlined,
+                              color: colors.goldDark),
+                          title: Text(
+                            city.name,
+                            style: AppTextStyles.cardLabel
+                                .copyWith(color: colors.textPrimary),
+                          ),
+                          subtitle: city.province == null
+                              ? null
+                              : Text(
+                                  city.province!,
+                                  style: AppTextStyles.caption
+                                      .copyWith(color: colors.textSecondary),
+                                ),
+                          onTap: () => Navigator.pop(context, city),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

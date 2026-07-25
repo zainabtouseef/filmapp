@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -24,6 +25,7 @@ class AuthController extends ChangeNotifier {
   AuthUser? _user;
   String? _refreshToken;
   bool _ready = false;
+  String? _kycStatus;
 
   AuthController({
     required AuthRepository repository,
@@ -37,6 +39,33 @@ class AuthController extends ChangeNotifier {
   bool get isAuthenticated => _user != null && _refreshToken != null;
   bool get ready => _ready;
   ApiClient get apiClient => _client;
+
+  /// Cached latest KYC submission status: `null` until fetched,
+  /// `'not_started'` when the user has no submission yet, otherwise
+  /// `'pending' | 'needs_resubmission' | 'rejected' | 'approved'`.
+  String? get kycStatus => _kycStatus;
+  bool get isKycApproved => _kycStatus == 'approved';
+
+  /// Fetches and caches the user's latest KYC submission status. Safe to
+  /// call repeatedly (e.g. from every portal shell build) — callers should
+  /// treat `kycStatus == null` as "not yet known" rather than "incomplete".
+  Future<String> refreshKycStatus() async {
+    if (!isAuthenticated) {
+      _kycStatus = null;
+      return 'not_started';
+    }
+    try {
+      final submissions = await _repository.myKycSubmissions();
+      final status =
+          submissions.isEmpty ? 'not_started' : submissions.first.status;
+      _kycStatus = status;
+      notifyListeners();
+      return status;
+    } on ApiException {
+      // Leave the previous cached value in place on a transient failure.
+      return _kycStatus ?? 'not_started';
+    }
+  }
 
   String get initialAuthenticatedRoute {
     final roleCode = _user?.primaryRole?.code;
@@ -155,6 +184,18 @@ class AuthController extends ChangeNotifier {
     return _repository.myKycSubmissions();
   }
 
+  /// Same fetch as [myKycSubmissions], but also updates [kycStatus] from
+  /// the result — use this on the verification-status screen (initial
+  /// load and "Check Status") so a fresh decision is reflected by the
+  /// [kycStatus]-driven banner/guard elsewhere in the app immediately,
+  /// instead of only on this one screen until the next login.
+  Future<List<KycSubmission>> myKycSubmissionsAndRefreshStatus() async {
+    final submissions = await _repository.myKycSubmissions();
+    _kycStatus = submissions.isEmpty ? 'not_started' : submissions.first.status;
+    notifyListeners();
+    return submissions;
+  }
+
   Future<List<KycSubmission>> adminKycSubmissions({String status = 'pending'}) {
     return _repository.adminKycSubmissions(status: status);
   }
@@ -188,12 +229,16 @@ class AuthController extends ChangeNotifier {
     required String? cityId,
     String visibility = 'public',
     String? websiteUrl,
+    String? avatarFileId,
+    String? coverFileId,
   }) {
     return _repository.updateMyProfile(
       bio: bio,
       cityId: cityId,
       visibility: visibility,
       websiteUrl: websiteUrl,
+      avatarFileId: avatarFileId,
+      coverFileId: coverFileId,
     );
   }
 
@@ -212,6 +257,7 @@ class AuthController extends ChangeNotifier {
     int? heightCm,
     String? unionNote,
     int? experienceYears,
+    String? resumeFileId,
   }) {
     return _repository.updateTalentProfile(
       screenName: screenName,
@@ -224,6 +270,7 @@ class AuthController extends ChangeNotifier {
       heightCm: heightCm,
       unionNote: unionNote,
       experienceYears: experienceYears,
+      resumeFileId: resumeFileId,
     );
   }
 
@@ -377,6 +424,7 @@ class AuthController extends ChangeNotifier {
   Future<void> clearSession() async {
     _user = null;
     _refreshToken = null;
+    _kycStatus = null;
     _client.accessToken = null;
     await _tokenStore.clear();
     notifyListeners();
@@ -391,6 +439,8 @@ class AuthController extends ChangeNotifier {
       refreshToken: session.tokens.refreshToken,
     );
     notifyListeners();
+    // Fire-and-forget: don't hold up login/register/session-restore on this.
+    unawaited(refreshKycStatus());
   }
 }
 

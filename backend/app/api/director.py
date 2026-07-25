@@ -7,7 +7,7 @@ from flask import Blueprint, Response, jsonify, request
 from sqlalchemy import select
 
 from app.api.auth import _current_user
-from app.api.marketplace import _city_payload, _file_payload
+from app.api.marketplace import _city_payload, _file_payload, _owner_avatar_url
 from app.errors import APIError
 from app.extensions import db
 from app.models.base import utc_now
@@ -186,7 +186,11 @@ def _split_tags(value: str | None) -> list[str]:
 def _owner_payload(user: User | None) -> dict[str, Any] | None:
     if user is None:
         return None
-    return {"public_id": user.public_id, "display_name": user.display_name}
+    return {
+        "public_id": user.public_id,
+        "display_name": user.display_name,
+        "avatar_url": _owner_avatar_url(user.id),
+    }
 
 
 def _detail_row(label: str, value: Any) -> dict[str, str]:
@@ -301,6 +305,7 @@ def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "available": item.availability_status == "available",
         "tags": _talent_tags(item),
         "media": [],
+        "resume_file": _file_payload(item.resume_file),
         "route": "/director/discovery/actor",
         "source": {"table": "talent_profiles"},
     }

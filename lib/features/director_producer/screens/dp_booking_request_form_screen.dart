@@ -16,6 +16,7 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
+import '../../../shared/layout/kyc_status_banner.dart';
 
 class DPBookingRequestFormScreen extends StatefulWidget {
   final String? candidateId;
@@ -338,6 +339,8 @@ class _DPBookingRequestFormScreenState
   }
 
   Future<void> _send() async {
+    if (!await ensureKycApproved(context)) return;
+    if (!mounted) return;
     if (_scheduleTotal != 100) {
       dpSnack(context, 'Payment schedule must total 100%.');
       setState(() => _step = 2);

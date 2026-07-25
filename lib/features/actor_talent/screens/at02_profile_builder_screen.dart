@@ -1,11 +1,14 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/open_url.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/uploads/upload_repository.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
 
@@ -42,6 +45,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   bool publishingListing = false;
   bool attemptedRemoteLoad = false;
   List<ProfileCity> supportedCities = const [];
+  String? avatarUrl;
+  bool uploadingAvatar = false;
+  String? avatarError;
+  String? resumeUrl;
+  String? resumeFileName;
+  bool uploadingResume = false;
+  String? resumeError;
 
   @override
   void initState() {
@@ -113,6 +123,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
               const SizedBox(height: 12),
               const LinearProgressIndicator(minHeight: 2),
             ],
+            const SizedBox(height: 14),
+            _avatarField(),
+            const SizedBox(height: 14),
+            _resumeField(),
             const SizedBox(height: 14),
             CoreTextField(
               controller: stageName,
@@ -304,6 +318,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         ),
       ),
       right: _ProfileSummary(
+        avatarUrl: avatarUrl,
         stageName: stageName.text,
         city: city.text,
         languages: languages.text,
@@ -315,6 +330,154 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         agency: agency.text,
         completeness: _formCompleteness(),
       ),
+    );
+  }
+
+  Widget _avatarField() {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: uploadingAvatar ? null : _pickAvatar,
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.softSurface,
+              border: Border.all(color: colors.border),
+              image: avatarUrl == null
+                  ? null
+                  : DecorationImage(
+                      image: NetworkImage(avatarUrl!),
+                      fit: BoxFit.cover,
+                    ),
+            ),
+            child: uploadingAvatar
+                ? const Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : avatarUrl == null
+                    ? Icon(Icons.add_a_photo_outlined,
+                        color: colors.goldDark, size: 22)
+                    : null,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                avatarUrl == null ? 'Add profile photo' : 'Profile photo',
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Shown to directors on your listing and candidate cards.',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              if (avatarError != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  avatarError!,
+                  style: AppTextStyles.caption.copyWith(color: colors.danger),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _resumeField() {
+    final colors = context.appColors;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: uploadingResume ? null : _pickResume,
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: colors.softSurface,
+              border: Border.all(color: colors.border),
+            ),
+            child: Center(
+              child: uploadingResume
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      resumeUrl == null
+                          ? Icons.upload_file_outlined
+                          : Icons.picture_as_pdf_outlined,
+                      color: colors.goldDark,
+                      size: 26,
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                resumeUrl == null ? 'Add CV / resume (PDF)' : 'CV / resume',
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                resumeFileName ??
+                    'Shown to directors on your stakeholder profile.',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              if (resumeUrl != null) ...[
+                const SizedBox(height: 4),
+                GestureDetector(
+                  onTap: () => openUrlInNewTab(resumeUrl!),
+                  child: Text(
+                    'View uploaded file',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.infoBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+              if (resumeError != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  resumeError!,
+                  style: AppTextStyles.caption.copyWith(color: colors.danger),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -342,6 +505,9 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
           .join(', ');
       setState(() {
         supportedCities = cities;
+        avatarUrl = profile.avatarFile?.publicUrl;
+        resumeUrl = talent.resumeFile?.publicUrl;
+        resumeFileName = talent.resumeFile?.originalName;
         if ((auth.user?.displayName ?? '').trim().isNotEmpty) {
           realName.text = auth.user!.displayName.trim();
         }
@@ -395,6 +561,121 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       if (mounted) {
         setState(() => loadingRemote = false);
       }
+    }
+  }
+
+  Future<void> _pickAvatar() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      actorSnack(context, 'Sign in to upload a profile photo');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
+    );
+    final item = result?.files.single;
+    final bytes = item?.bytes;
+    if (item == null || bytes == null) return;
+    setState(() {
+      uploadingAvatar = true;
+      avatarError = null;
+    });
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'profile_media',
+        file: PickedFileData(
+          name: item.name,
+          mimeType: switch (item.extension?.toLowerCase()) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            _ => 'image/jpeg',
+          },
+          bytes: bytes,
+        ),
+      );
+      // Uploading a new photo saves it as part of the profile right away
+      // (same fields _submit() sends) rather than leaving it staged until
+      // the next full "Save profile" tap.
+      final matchedCity = _matchedCity();
+      final profile = await auth.updateMyProfile(
+        bio: _bioForBackend(),
+        cityId: matchedCity?.publicId,
+        visibility: 'public',
+        websiteUrl: website.text.trim(),
+        avatarFileId: uploaded.publicId,
+      );
+      if (!mounted) return;
+      setState(() => avatarUrl = profile.avatarFile?.publicUrl);
+      actorSnack(context, 'Profile photo updated');
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() => avatarError = exception.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => avatarError = 'Could not upload the photo. Try again.');
+    } finally {
+      if (mounted) setState(() => uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _pickResume() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      actorSnack(context, 'Sign in to upload a CV / resume');
+      return;
+    }
+    if (stageName.text.trim().isEmpty) {
+      actorSnack(context, 'Add your stage name before uploading a CV / resume');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf'],
+      withData: true,
+    );
+    final item = result?.files.single;
+    final bytes = item?.bytes;
+    if (item == null || bytes == null) return;
+    setState(() {
+      uploadingResume = true;
+      resumeError = null;
+    });
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'profile_media',
+        file: PickedFileData(
+          name: item.name,
+          mimeType: 'application/pdf',
+          bytes: bytes,
+        ),
+      );
+      final updated = await auth.updateTalentProfile(
+        screenName: stageName.text.trim(),
+        languages: _languagesForBackend(),
+        ageRange: ageRange.text.trim(),
+        genderIdentity: genderIdentity.text.trim(),
+        heightCm: _heightCmForBackend(),
+        unionNote: unionNote.text.trim(),
+        experienceYears: int.tryParse(experienceYears.text.trim()),
+        resumeFileId: uploaded.publicId,
+      );
+      if (!mounted) return;
+      setState(() {
+        resumeUrl = updated.resumeFile?.publicUrl;
+        resumeFileName = updated.resumeFile?.originalName;
+      });
+      actorSnack(context, 'CV / resume updated');
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() => resumeError = exception.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+          () => resumeError = 'Could not upload the CV / resume. Try again.');
+    } finally {
+      if (mounted) setState(() => uploadingResume = false);
     }
   }
 
@@ -657,6 +938,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
 }
 
 class _ProfileSummary extends StatelessWidget {
+  final String? avatarUrl;
   final String stageName;
   final String city;
   final String languages;
@@ -668,6 +950,7 @@ class _ProfileSummary extends StatelessWidget {
   final String agency;
   final int completeness;
   const _ProfileSummary({
+    this.avatarUrl,
     required this.stageName,
     required this.city,
     required this.languages,
@@ -704,7 +987,7 @@ class _ProfileSummary extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ActorMediaFrame(
-                        imageUrl: '',
+                        imageUrl: avatarUrl ?? '',
                         title: stageName.isEmpty ? 'Stage name' : stageName,
                         badge: 'Draft',
                         fallbackIcon: Icons.person_outline_rounded,
@@ -767,7 +1050,7 @@ class _ProfileSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ActorMediaFrame(
-            imageUrl: '',
+            imageUrl: avatarUrl ?? '',
             title: 'Public headshot',
             badge: 'Draft',
             fallbackIcon: Icons.person_outline_rounded,

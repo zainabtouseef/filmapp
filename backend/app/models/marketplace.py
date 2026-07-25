@@ -81,6 +81,12 @@ class UserProfile(EntityMixin, Base):
 
     user: Mapped[User] = relationship(lazy="joined")
     city: Mapped[City | None] = relationship(lazy="joined")
+    avatar_file: Mapped[FileAsset | None] = relationship(
+        foreign_keys=[avatar_file_id], lazy="joined"
+    )
+    cover_file: Mapped[FileAsset | None] = relationship(
+        foreign_keys=[cover_file_id], lazy="joined"
+    )
 
 
 class TalentProfile(EntityMixin, Base):
@@ -108,12 +114,18 @@ class TalentProfile(EntityMixin, Base):
     )
     day_rate_minor: Mapped[int | None] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PKR")
+    resume_file_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("files.id", ondelete="SET NULL")
+    )
 
     user: Mapped[User] = relationship(lazy="joined")
     languages: Mapped[list[TalentLanguage]] = relationship(
         back_populates="talent_profile",
         cascade="all, delete-orphan",
         lazy="selectin",
+    )
+    resume_file: Mapped[FileAsset | None] = relationship(
+        foreign_keys=[resume_file_id], lazy="joined"
     )
 
 

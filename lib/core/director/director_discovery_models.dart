@@ -1,5 +1,6 @@
 import '../../features/director_producer/models/dp_candidate.dart';
 import '../marketplace/marketplace_models.dart';
+import '../verification/verification_models.dart';
 
 class DirectorDiscoveryBundle {
   final List<DirectorDiscoveryItem> items;
@@ -38,6 +39,7 @@ class DirectorDiscoveryItem {
   final String summary;
   final String cityName;
   final String? ownerName;
+  final String? ownerAvatarUrl;
   final int? rateFromMinor;
   final String currency;
   final String rateLabel;
@@ -47,6 +49,7 @@ class DirectorDiscoveryItem {
   final List<String> tags;
   final List<MarketplaceListingMedia> media;
   final List<DirectorDiscoverySection> sections;
+  final UploadedFile? resumeFile;
 
   const DirectorDiscoveryItem({
     required this.publicId,
@@ -58,6 +61,7 @@ class DirectorDiscoveryItem {
     required this.summary,
     required this.cityName,
     required this.ownerName,
+    this.ownerAvatarUrl,
     required this.rateFromMinor,
     required this.currency,
     required this.rateLabel,
@@ -67,6 +71,7 @@ class DirectorDiscoveryItem {
     required this.tags,
     required this.media,
     required this.sections,
+    this.resumeFile,
   });
 
   factory DirectorDiscoveryItem.fromJson(Map<String, dynamic> json) {
@@ -82,6 +87,7 @@ class DirectorDiscoveryItem {
       summary: json['summary'] as String? ?? '',
       cityName: city?['name'] as String? ?? 'Pakistan',
       ownerName: owner?['display_name'] as String?,
+      ownerAvatarUrl: owner?['avatar_url'] as String?,
       rateFromMinor: (json['rate_from_minor'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'PKR',
       rateLabel: json['rate_label'] as String? ?? 'Rate on request',
@@ -101,6 +107,9 @@ class DirectorDiscoveryItem {
                 item as Map<String, dynamic>,
               ))
           .toList(),
+      resumeFile: json['resume_file'] == null
+          ? null
+          : UploadedFile.fromJson(json['resume_file'] as Map<String, dynamic>),
     );
   }
 
@@ -134,11 +143,11 @@ class DirectorDiscoveryItem {
   }
 
   String? get coverImageUrl {
-    if (media.isEmpty) return null;
+    if (media.isEmpty) return ownerAvatarUrl;
     for (final item in media) {
-      if (item.isCover) return item.file?.publicUrl;
+      if (item.isCover) return item.file?.publicUrl ?? ownerAvatarUrl;
     }
-    return media.first.file?.publicUrl;
+    return media.first.file?.publicUrl ?? ownerAvatarUrl;
   }
 }
 

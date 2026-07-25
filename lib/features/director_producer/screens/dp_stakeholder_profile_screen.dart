@@ -4,8 +4,10 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/director/director_discovery_models.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/open_url.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/verification/verification_models.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
@@ -13,6 +15,7 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
+import '../../../shared/layout/kyc_status_banner.dart';
 
 class DPStakeholderProfileScreen extends StatefulWidget {
   final String? candidateId;
@@ -129,15 +132,19 @@ class _DPStakeholderProfileScreenState
                         child: DPHolographicButton(
                           label: 'Select / Send Request',
                           icon: Icons.send_rounded,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            DirectorProducerRoutes.bookingRequest,
-                            arguments: {
-                              'candidateId': candidate.marketplaceListingId,
-                              'projectId': widget.projectId,
-                              'category': type,
-                            },
-                          ),
+                          onTap: () async {
+                            if (!await ensureKycApproved(context)) return;
+                            if (!context.mounted) return;
+                            Navigator.pushNamed(
+                              context,
+                              DirectorProducerRoutes.bookingRequest,
+                              arguments: {
+                                'candidateId': candidate.marketplaceListingId,
+                                'projectId': widget.projectId,
+                                'category': type,
+                              },
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -179,15 +186,19 @@ class _DPStakeholderProfileScreenState
                     child: DPHolographicButton(
                       label: 'Select / Send Request',
                       icon: Icons.send_rounded,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        DirectorProducerRoutes.bookingRequest,
-                        arguments: {
-                          'candidateId': candidate.id,
-                          'projectId': widget.projectId,
-                          'category': type,
-                        },
-                      ),
+                      onTap: () async {
+                        if (!await ensureKycApproved(context)) return;
+                        if (!context.mounted) return;
+                        Navigator.pushNamed(
+                          context,
+                          DirectorProducerRoutes.bookingRequest,
+                          arguments: {
+                            'candidateId': candidate.id,
+                            'projectId': widget.projectId,
+                            'category': type,
+                          },
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -555,6 +566,10 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        if (item.kind == 'actor') ...[
+          _ResumeSection(resumeFile: item.resumeFile),
+          const SizedBox(height: 12),
+        ],
         for (final section in sections) ...[
           _ProfileSection(
             title: section.title,
@@ -583,6 +598,55 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
           )
         else
           _LiveGallerySection(media: item.media),
+      ],
+    );
+  }
+}
+
+class _ResumeSection extends StatelessWidget {
+  final UploadedFile? resumeFile;
+
+  const _ResumeSection({required this.resumeFile});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final file = resumeFile;
+    final url = file?.publicUrl;
+    return _ProfileSection(
+      title: 'CV / Resume',
+      icon: Icons.description_outlined,
+      children: [
+        if (file == null || url == null)
+          const DPEmptyState(
+            icon: Icons.description_outlined,
+            title: 'No CV / resume uploaded',
+            message: 'This actor / talent has not uploaded a CV or resume yet.',
+          )
+        else
+          Row(
+            children: [
+              Icon(Icons.picture_as_pdf_outlined, color: colors.goldDark),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  file.originalName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              DPHolographicButton(
+                label: 'View',
+                icon: Icons.open_in_new_rounded,
+                secondary: true,
+                onTap: () => openUrlInNewTab(url),
+              ),
+            ],
+          ),
       ],
     );
   }

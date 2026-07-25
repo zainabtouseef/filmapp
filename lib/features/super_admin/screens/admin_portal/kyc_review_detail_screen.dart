@@ -187,6 +187,20 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
         : submission.files.isEmpty
             ? null
             : submission.files.first;
+    // KYC documents are private — `public_url` is only ever populated for
+    // publicly-visible files, so it's always null here. `download_url`
+    // (server-relative, e.g. `/api/v1/files/{id}/download`) is the field
+    // that actually resolves for an authorized admin, but it needs the
+    // client's origin and an auth header attached to load.
+    final apiClient = AuthScope.of(context).apiClient;
+    final imageUrl = file == null
+        ? null
+        : file.downloadUrl != null
+            ? apiClient.resolve(file.downloadUrl!).toString()
+            : file.publicUrl;
+    final imageHeaders = apiClient.accessToken == null
+        ? null
+        : {'Authorization': 'Bearer ${apiClient.accessToken}'};
     return AdminSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,8 +220,9 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
               border: Border.all(color: context.appColors.border),
             ),
             clipBehavior: Clip.antiAlias,
-            child: file?.publicUrl != null &&
-                    file!.mimeType.startsWith('image/')
+            child: file != null &&
+                    imageUrl != null &&
+                    file.mimeType.startsWith('image/')
                 ? InteractiveViewer(
                     minScale: 0.7,
                     maxScale: 5,
@@ -217,7 +232,8 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
                         child: RotatedBox(
                           quarterTurns: _quarterTurns,
                           child: Image.network(
-                            file.publicUrl!,
+                            imageUrl,
+                            headers: imageHeaders,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => AdminEvidenceViewer(
                               title: selectedDocument,
@@ -397,7 +413,13 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
         context,
         title: 'Decision Saved',
         message: message,
-        onDone: () => showCoreSnack(context, 'Decision written to audit log.'),
+        onDone: () {
+          // Returns to the queue with a signal to refresh — otherwise the
+          // just-decided submission would still show there until a manual
+          // "Refresh queue" tap, since the queue screen underneath wasn't
+          // disposed by this push and its cached list doesn't know yet.
+          Navigator.pop(context, true);
+        },
       );
     } on ApiException catch (error) {
       if (!context.mounted) return;

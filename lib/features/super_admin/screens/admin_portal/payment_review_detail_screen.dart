@@ -61,12 +61,42 @@ class _PaymentReviewDetailScreenState extends State<PaymentReviewDetailScreen> {
             : 'Payment verified. Receipt '
                 '${result.receipt!.receiptNumber} generated.',
       );
-      _refresh();
+      await _advanceToNext(proof.publicId);
     } on ApiException catch (error) {
       if (mounted) showCoreSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _deciding = false);
     }
+  }
+
+  // A finance admin working the queue expects verifying/rejecting one
+  // proof to hand them straight to the next one, not to sit on the same
+  // decided proof until they manually go back to the list and pick again.
+  Future<void> _advanceToNext(String decidedProofId) async {
+    List<PaymentProofDto> proofs;
+    try {
+      proofs = await PaymentsScope.of(context).adminProofs(force: true);
+    } catch (_) {
+      if (mounted) _refresh();
+      return;
+    }
+    if (!mounted) return;
+    PaymentProofDto? next;
+    for (final item in proofs) {
+      if (item.publicId != decidedProofId && item.status == 'pending') {
+        next = item;
+        break;
+      }
+    }
+    if (next != null) {
+      Navigator.pushReplacementNamed(
+        context,
+        SuperAdminRoutes.paymentReviewPath(next.publicId),
+      );
+      return;
+    }
+    showCoreSnack(context, 'No more payment proofs are waiting for review.');
+    Navigator.pop(context, true);
   }
 
   Future<void> _decisionWithReason(
@@ -255,7 +285,17 @@ class _PaymentProofMediaState extends State<_PaymentProofMedia> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final url = widget.proof.filePublicUrl;
+    // Payment proofs are private uploads — `filePublicUrl` is only ever
+    // populated for publicly-visible files, so it's always null here.
+    // `fileDownloadUrl` (server-relative) is what actually resolves for
+    // an authorized admin, given the client's origin and an auth header.
+    final apiClient = AuthScope.of(context).apiClient;
+    final url = widget.proof.fileDownloadUrl != null
+        ? apiClient.resolve(widget.proof.fileDownloadUrl!).toString()
+        : widget.proof.filePublicUrl;
+    final imageHeaders = apiClient.accessToken == null
+        ? null
+        : {'Authorization': 'Bearer ${apiClient.accessToken}'};
     return Container(
       width: double.infinity,
       height: 360,
@@ -287,6 +327,7 @@ class _PaymentProofMediaState extends State<_PaymentProofMedia> {
                         quarterTurns: _quarterTurns,
                         child: Image.network(
                           url,
+                          headers: imageHeaders,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const AdminEmptyState(
                             icon: Icons.broken_image_outlined,

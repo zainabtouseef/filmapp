@@ -194,6 +194,8 @@ class AuthRepository {
     required String? cityId,
     String visibility = 'public',
     String? websiteUrl,
+    String? avatarFileId,
+    String? coverFileId,
   }) async {
     final response = await _client.patch(
       '/me/profile',
@@ -202,6 +204,8 @@ class AuthRepository {
         if (cityId != null) 'city_id': cityId,
         if (websiteUrl != null) 'website_url': websiteUrl,
         'profile_visibility': visibility,
+        if (avatarFileId != null) 'avatar_file_id': avatarFileId,
+        if (coverFileId != null) 'cover_file_id': coverFileId,
       },
     );
     final data = response['data'] as Map<String, dynamic>;
@@ -227,6 +231,7 @@ class AuthRepository {
     int? heightCm,
     String? unionNote,
     int? experienceYears,
+    String? resumeFileId,
   }) async {
     final response = await _client.patch(
       '/talent/profile',
@@ -240,6 +245,7 @@ class AuthRepository {
         if (heightCm != null) 'height_cm': heightCm,
         if (unionNote != null) 'union_note': unionNote,
         if (experienceYears != null) 'experience_years': experienceYears,
+        if (resumeFileId != null) 'resume_file_id': resumeFileId,
         'languages': languages.map((item) => item.toJson()).toList(),
       },
     );
