@@ -108,6 +108,30 @@ def _talent_payload(profile: TalentProfile | None) -> dict[str, Any] | None:
         "day_rate_minor": profile.day_rate_minor,
         "currency": profile.currency,
         "resume_file": _file_payload(profile.resume_file),
+        "skills": json.loads(profile.skills_json) if profile.skills_json else [],
+        "accents": json.loads(profile.accents_json) if profile.accents_json else [],
+        "special_abilities": (
+            json.loads(profile.special_abilities_json)
+            if profile.special_abilities_json
+            else []
+        ),
+        "physical_details": (
+            json.loads(profile.physical_details_json)
+            if profile.physical_details_json
+            else {}
+        ),
+        "credits": json.loads(profile.credits_json) if profile.credits_json else [],
+        "training": (
+            json.loads(profile.training_json) if profile.training_json else []
+        ),
+        "representation": (
+            json.loads(profile.representation_json)
+            if profile.representation_json
+            else {}
+        ),
+        "social_links": (
+            json.loads(profile.social_links_json) if profile.social_links_json else {}
+        ),
         "languages": [
             {"language": item.language, "proficiency": item.proficiency}
             for item in profile.languages
@@ -567,6 +591,31 @@ def update_talent_profile() -> ResponseReturnValue:
             if raw_resume_id
             else None
         )
+    structured_fields = {
+        "skills": ("skills_json", list, 64),
+        "accents": ("accents_json", list, 32),
+        "special_abilities": ("special_abilities_json", list, 64),
+        "physical_details": ("physical_details_json", dict, 32),
+        "credits": ("credits_json", list, 50),
+        "training": ("training_json", list, 50),
+        "representation": ("representation_json", dict, 16),
+        "social_links": ("social_links_json", dict, 16),
+    }
+    for field, (attribute, expected_type, maximum) in structured_fields.items():
+        if field not in payload:
+            continue
+        value = payload.get(field)
+        if not isinstance(value, expected_type):
+            type_label = "list" if expected_type is list else "object"
+            raise _field_error(
+                field, f"{field.replace('_', ' ').title()} must be a {type_label}."
+            )
+        if len(value) > maximum:
+            raise _field_error(
+                field,
+                f"{field.replace('_', ' ').title()} supports up to {maximum} entries.",
+            )
+        setattr(profile, attribute, json.dumps(value))
     db.session.flush()
 
     if "languages" in payload:

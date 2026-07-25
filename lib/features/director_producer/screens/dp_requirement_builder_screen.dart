@@ -1,9 +1,13 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/casting/casting_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
+import '../../../core/uploads/upload_repository.dart';
 import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
@@ -25,16 +29,27 @@ class DPRequirementBuilderScreen extends StatefulWidget {
 
 class _DPRequirementBuilderScreenState
     extends State<DPRequirementBuilderScreen> {
-  final _title = TextEditingController(text: 'Lead actor, 28-34');
-  final _summary = TextEditingController(
-    text: 'Urdu/Pashto, athletic, winter exterior comfort',
-  );
-  final _budgetMin = TextEditingController(text: '1200000');
-  final _budgetMax = TextEditingController(text: '1800000');
+  final _title = TextEditingController();
+  final _summary = TextEditingController();
+  final _budgetMin = TextEditingController();
+  final _budgetMax = TextEditingController();
+  final _roleType = TextEditingController();
+  final _workLocation = TextEditingController();
+  final _deadline = TextEditingController();
+  final _instructions = TextEditingController();
+  final _eligibility = TextEditingController();
+  final _questions = TextEditingController();
+  final _contactName = TextEditingController();
+  final _contactEmail = TextEditingController();
   String _category = 'Roles';
+  String _auditionMode = 'self_tape';
   Future<List<ProjectRequirement>>? _requirementsFuture;
   bool _started = false;
   bool _saving = false;
+  bool _uploadingSides = false;
+  double? _sidesProgress;
+  String? _sidesFileId;
+  String? _sidesFileName;
 
   @override
   void didChangeDependencies() {
@@ -51,6 +66,14 @@ class _DPRequirementBuilderScreenState
     _summary.dispose();
     _budgetMin.dispose();
     _budgetMax.dispose();
+    _roleType.dispose();
+    _workLocation.dispose();
+    _deadline.dispose();
+    _instructions.dispose();
+    _eligibility.dispose();
+    _questions.dispose();
+    _contactName.dispose();
+    _contactEmail.dispose();
     super.dispose();
   }
 
@@ -78,7 +101,7 @@ class _DPRequirementBuilderScreenState
           context,
           icon: Icons.add_circle_outline_rounded,
           label: _saving ? 'Saving...' : 'Add',
-          onTap: _saving ? () {} : _saveRequirement,
+          onTap: _saving || _uploadingSides ? () {} : _saveRequirement,
         ),
         const SizedBox(height: 6),
         Wrap(
@@ -131,6 +154,131 @@ class _DPRequirementBuilderScreenState
                 icon: Icons.savings_outlined,
                 keyboardType: TextInputType.number,
               ),
+              if (_backendCategory(_category) == 'talent') ...[
+                const SizedBox(height: 12),
+                CoreTextField(
+                  controller: _roleType,
+                  label: 'Role type',
+                  icon: Icons.theater_comedy_outlined,
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _workLocation,
+                  label: 'Work location or travel requirement',
+                  icon: Icons.location_on_outlined,
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _deadline,
+                  label: 'Application deadline (YYYY-MM-DD)',
+                  icon: Icons.event_busy_outlined,
+                  keyboardType: TextInputType.datetime,
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final mode in const {
+                        'self_tape': 'Self-tape',
+                        'in_person': 'In person',
+                        'online': 'Online',
+                        'hybrid': 'Hybrid',
+                      }.entries)
+                        ChoiceChip(
+                          label: Text(mode.value),
+                          selected: _auditionMode == mode.key,
+                          onSelected: (_) =>
+                              setState(() => _auditionMode = mode.key),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _eligibility,
+                  label: 'Eligibility (comma separated)',
+                  icon: Icons.rule_outlined,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _questions,
+                  label: 'Casting questions (one per line)',
+                  icon: Icons.question_answer_outlined,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _instructions,
+                  label: 'Application and audition instructions',
+                  icon: Icons.assignment_outlined,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 10,
+                    runSpacing: 8,
+                    children: [
+                      SizedBox(
+                        width: 210,
+                        child: CoreSecondaryButton(
+                          icon: Icons.picture_as_pdf_outlined,
+                          label: _sidesFileName == null
+                              ? 'Attach script / sides'
+                              : 'Replace sides PDF',
+                          compact: true,
+                          onTap: _saving || _uploadingSides ? null : _pickSides,
+                        ),
+                      ),
+                      if (_sidesFileName != null)
+                        Chip(
+                          avatar: const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 17,
+                          ),
+                          label: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 210),
+                            child: Text(
+                              _sidesFileName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          onDeleted: _saving || _uploadingSides
+                              ? null
+                              : () => setState(() {
+                                    _sidesFileId = null;
+                                    _sidesFileName = null;
+                                    _sidesProgress = null;
+                                  }),
+                        ),
+                    ],
+                  ),
+                ),
+                if (_uploadingSides) ...[
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(value: _sidesProgress),
+                ],
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _contactName,
+                  label: 'Casting contact name',
+                  icon: Icons.person_outline_rounded,
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: _contactEmail,
+                  label: 'Casting contact email',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
             ],
           ),
         ),
@@ -140,7 +288,7 @@ class _DPRequirementBuilderScreenState
           child: DPHolographicButton(
             label: _saving ? 'Saving Requirement' : 'Save Requirement',
             icon: Icons.save_outlined,
-            onTap: _saving ? null : _saveRequirement,
+            onTap: _saving || _uploadingSides ? null : _saveRequirement,
           ),
         ),
         const SizedBox(height: 14),
@@ -186,9 +334,10 @@ class _DPRequirementBuilderScreenState
       dpSnack(context, 'Requirement title is required');
       return;
     }
+    final casting = CastingScope.maybeOf(context);
     setState(() => _saving = true);
     try {
-      await controller.createRequirement(
+      final requirement = await controller.createRequirement(
         projectId: projectId,
         category: _backendCategory(_category),
         title: _title.text.trim(),
@@ -196,6 +345,38 @@ class _DPRequirementBuilderScreenState
         budgetMinMinor: _parseMinor(_budgetMin.text),
         budgetMaxMinor: _parseMinor(_budgetMax.text),
       );
+      if (_backendCategory(_category) == 'talent') {
+        if (casting == null) {
+          throw const ApiException(
+            code: 'casting.scope_missing',
+            message: 'Casting service is unavailable.',
+          );
+        }
+        final deadline = DateTime.tryParse(_deadline.text.trim());
+        await casting.publishRole(
+          requirement.publicId,
+          {
+            'role_type': _roleType.text.trim(),
+            'work_location': _workLocation.text.trim(),
+            'audition_mode': _auditionMode,
+            'instructions': _instructions.text.trim(),
+            'eligibility': _commaValues(_eligibility.text),
+            'casting_questions': _lineValues(_questions.text),
+            if (_sidesFileId != null) 'sides_file_id': _sidesFileId,
+            if (deadline != null)
+              'application_due_at': DateTime(
+                deadline.year,
+                deadline.month,
+                deadline.day,
+                23,
+                59,
+              ).toUtc().toIso8601String(),
+            'contact_name': _contactName.text.trim(),
+            'contact_email': _contactEmail.text.trim(),
+            'publish': true,
+          },
+        );
+      }
       if (!mounted) return;
       dpSnack(context, 'Requirement saved');
       _reload();
@@ -204,6 +385,52 @@ class _DPRequirementBuilderScreenState
       dpSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickSides() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      dpSnack(context, 'Sign in to upload casting sides');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    final bytes = file?.bytes;
+    if (file == null || bytes == null) return;
+    setState(() {
+      _uploadingSides = true;
+      _sidesProgress = 0;
+    });
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'project_document',
+        file: PickedFileData(
+          name: file.name,
+          mimeType: 'application/pdf',
+          bytes: bytes,
+        ),
+        onProgress: (sent, total) {
+          if (mounted && total > 0) {
+            setState(() => _sidesProgress = sent / total);
+          }
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _sidesFileId = uploaded.publicId;
+        _sidesFileName = uploaded.originalName;
+        _sidesProgress = 1;
+      });
+      dpSnack(context, 'Casting sides ready');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _uploadingSides = false);
     }
   }
 
@@ -221,6 +448,22 @@ class _DPRequirementBuilderScreenState
       'Crew' => 'crew',
       _ => 'service',
     };
+  }
+
+  List<String> _commaValues(String value) {
+    return value
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _lineValues(String value) {
+    return value
+        .split('\n')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
   }
 }
 

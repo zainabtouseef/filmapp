@@ -65,6 +65,17 @@ class TrustSafetyController extends ChangeNotifier {
     return _repository.disputes();
   }
 
+  Future<DisputeDto> dispute(String disputeId) {
+    return _repository.dispute(disputeId);
+  }
+
+  Future<DisputeDto> addDisputeEvidence(
+    String disputeId,
+    Map<String, dynamic> body,
+  ) {
+    return _repository.addDisputeEvidence(disputeId, body);
+  }
+
   Future<List<ModerationCaseDto>> adminModerationCases({
     bool force = false,
     String? status,

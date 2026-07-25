@@ -25,42 +25,38 @@ typedef ActorShellMenuEntry = ({
   IconData icon,
 });
 
+// Five primary destinations an actor reaches in one tap — mirrors the
+// director/producer shell's bottom nav shape. Everything else (Auditions,
+// Calendar, Rates, Contracts, Earnings, Reviews, Safety) lives one tap away
+// in the "More" menu opened from the top-bar menu icon, not the bottom bar,
+// so the bottom bar never needs a 6th "more" slot.
 const _actorBottomDestinations = [
   CineBottomNavDestination(
     label: 'Home',
     icon: Icons.home_outlined,
   ),
   CineBottomNavDestination(
-    label: 'Opportunities',
+    label: 'Discover',
     icon: Icons.local_activity_outlined,
   ),
   CineBottomNavDestination(
-    label: 'Calendar',
-    icon: Icons.calendar_month_outlined,
+    label: 'Applications',
+    icon: Icons.assignment_outlined,
   ),
   CineBottomNavDestination(
-    label: 'Earnings',
-    icon: Icons.account_balance_wallet_outlined,
+    label: 'Bookings',
+    icon: Icons.event_available_outlined,
   ),
   CineBottomNavDestination(
-    label: 'More',
-    icon: Icons.menu_rounded,
+    label: 'Profile',
+    icon: Icons.person_outline_rounded,
   ),
 ];
 
+// Secondary sections, reached from the top-bar menu icon rather than the
+// bottom nav — kept out of the 5 primary taps so the everyday path (home,
+// discover, applications, bookings, profile) never feels crowded.
 const _actorMenuEntries = <ActorShellMenuEntry>[
-  (
-    route: ActorTalentRoutes.dashboard,
-    screenId: 'AT-01',
-    label: 'Dashboard',
-    icon: Icons.dashboard_outlined,
-  ),
-  (
-    route: ActorTalentRoutes.profile,
-    screenId: 'AT-02',
-    label: 'Casting Profile',
-    icon: Icons.badge_outlined,
-  ),
   (
     route: ActorTalentRoutes.portfolio,
     screenId: 'AT-03',
@@ -80,10 +76,10 @@ const _actorMenuEntries = <ActorShellMenuEntry>[
     icon: Icons.price_change_outlined,
   ),
   (
-    route: ActorTalentRoutes.opportunities,
-    screenId: 'AT-06',
-    label: 'Opportunities',
-    icon: Icons.inbox_outlined,
+    route: ActorTalentRoutes.auditions,
+    screenId: 'AT-16',
+    label: 'Auditions',
+    icon: Icons.video_camera_front_outlined,
   ),
   (
     route: ActorTalentRoutes.contracts,
@@ -114,9 +110,14 @@ const _actorMenuEntries = <ActorShellMenuEntry>[
 const _actorBottomIndexOverrides = {
   ActorTalentRoutes.offerDetail: 1,
   ActorTalentRoutes.counteroffer: 1,
-  ActorTalentRoutes.contracts: 1,
+  ActorTalentRoutes.roleDetail: 1,
+  ActorTalentRoutes.applicationDetail: 2,
+  ActorTalentRoutes.auditions: 2,
+  ActorTalentRoutes.contracts: 4,
   ActorTalentRoutes.rates: 4,
   ActorTalentRoutes.portfolio: 4,
+  ActorTalentRoutes.calendar: 4,
+  ActorTalentRoutes.earnings: 4,
   ActorTalentRoutes.reputation: 4,
   ActorTalentRoutes.safety: 4,
 };
@@ -469,6 +470,11 @@ class _ActorRouteHeading extends StatelessWidget {
       ActorTalentRoutes.calendar => 'Availability · booking conflicts',
       ActorTalentRoutes.rates => 'Rate guidance · negotiation baseline',
       ActorTalentRoutes.opportunities => 'Offers · auditions · casting calls',
+      ActorTalentRoutes.roleDetail => 'Casting call · role brief',
+      ActorTalentRoutes.applications => 'Submissions · status tracking',
+      ActorTalentRoutes.applicationDetail => 'Application · next action',
+      ActorTalentRoutes.auditions => 'Auditions · self-tapes · callbacks',
+      ActorTalentRoutes.bookings => 'Confirmed work · schedule · messages',
       ActorTalentRoutes.offerDetail => 'Offer review · response due',
       ActorTalentRoutes.counteroffer => 'Negotiation · revised terms',
       ActorTalentRoutes.contracts => 'Agreements · signatures',
@@ -927,22 +933,16 @@ class _ActorWorkspaceBottomNav extends StatelessWidget {
       destinations: navDestinations,
       compactCenter: true,
       onTap: (index) {
-        if (index == navDestinations.length - 1) {
-          onMoreTap();
-          return;
-        }
         if (index < navRoutes.length) onRouteTap(navRoutes[index]);
       },
     );
   }
 
   int get _currentIndex {
-    if (menuOpen) return navDestinations.length - 1;
     final override = bottomIndexOverrides[currentRoute];
     if (override != null) return override;
     final index = navRoutes.indexOf(currentRoute);
-    if (index >= 0 && index < navDestinations.length - 1) return index;
-    return navDestinations.length - 1;
+    return index == -1 ? 0 : index;
   }
 }
 

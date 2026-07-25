@@ -84,13 +84,20 @@ class _AT10EarningsSecurityScreenState
   Future<void> _createPayoutAccount() async {
     final payments = PaymentsScope.maybeOf(context);
     if (payments == null) return;
+    final draft = await showDialog<_PayoutAccountDraft>(
+      context: context,
+      builder: (_) => const _PayoutAccountDialog(),
+    );
+    if (draft == null || !mounted) return;
     try {
-      await payments.createSandboxPayoutAccount(
-        accountName: 'CineConnect test account',
+      await payments.createPayoutAccount(
+        provider: draft.provider,
+        accountName: draft.accountName,
+        accountIdentifier: draft.accountIdentifier,
       );
       if (!mounted) return;
       setState(() => _accountsFuture = _safePayoutAccounts(payments));
-      actorSnack(context, 'Test payout account added');
+      actorSnack(context, 'Payout account submitted for verification');
     } catch (error) {
       if (!mounted) return;
       actorSnack(context, '$error');
@@ -213,7 +220,7 @@ class _LiveEarnings extends StatelessWidget {
                 const SizedBox(height: 8),
                 CorePrimaryButton(
                   icon: Icons.account_balance_outlined,
-                  label: 'Add test payout account',
+                  label: 'Add payout account',
                   compact: true,
                   onTap: () => onCreateAccount(),
                 ),
@@ -234,6 +241,132 @@ class _LiveEarnings extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PayoutAccountDraft {
+  final String provider;
+  final String accountName;
+  final String accountIdentifier;
+
+  const _PayoutAccountDraft({
+    required this.provider,
+    required this.accountName,
+    required this.accountIdentifier,
+  });
+}
+
+class _PayoutAccountDialog extends StatefulWidget {
+  const _PayoutAccountDialog();
+
+  @override
+  State<_PayoutAccountDialog> createState() => _PayoutAccountDialogState();
+}
+
+class _PayoutAccountDialogState extends State<_PayoutAccountDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _accountName = TextEditingController();
+  final _identifier = TextEditingController();
+  String _provider = 'bank';
+
+  @override
+  void dispose() {
+    _accountName.dispose();
+    _identifier.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _PayoutAccountDraft(
+        provider: _provider,
+        accountName: _accountName.text.trim(),
+        accountIdentifier: _identifier.text.trim(),
+      ),
+    );
+  }
+
+  String? _validateIdentifier(String? value) {
+    final compact = (value ?? '').replaceAll(
+      RegExp(r'[^A-Za-z0-9]'),
+      '',
+    );
+    return compact.length < 4 ? 'Enter a valid account identifier' : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add payout account'),
+      content: SizedBox(
+        width: 460,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _provider,
+                decoration: const InputDecoration(
+                  labelText: 'Account type',
+                  prefixIcon: Icon(Icons.account_balance_outlined),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'bank',
+                    child: Text('Bank account'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'wallet',
+                    child: Text('Mobile wallet'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _provider = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _accountName,
+                decoration: const InputDecoration(
+                  labelText: 'Account holder name',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+                validator: (value) => (value?.trim().length ?? 0) < 2
+                    ? 'Enter the account holder name'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _identifier,
+                decoration: InputDecoration(
+                  labelText: _provider == 'bank'
+                      ? 'IBAN / account number'
+                      : 'Wallet number',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  helperText:
+                      'Stored encrypted. Only the final four characters are displayed.',
+                ),
+                validator: _validateIdentifier,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _save,
+          icon: const Icon(Icons.verified_user_outlined),
+          label: const Text('Submit account'),
         ),
       ],
     );

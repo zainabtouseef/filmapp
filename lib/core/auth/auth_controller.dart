@@ -169,6 +169,12 @@ class AuthController extends ChangeNotifier {
     );
   }
 
+  Future<String> authorizedDownloadUrl(String fileId) async {
+    final response = await _client.post('/files/$fileId/download-link');
+    final data = response['data'] as Map<String, dynamic>;
+    return _client.resolve(data['url'] as String).toString();
+  }
+
   Future<KycSubmission> createAndSubmitKyc({
     required String roleCode,
     required List<KycDocumentDraft> documents,
@@ -258,6 +264,14 @@ class AuthController extends ChangeNotifier {
     String? unionNote,
     int? experienceYears,
     String? resumeFileId,
+    List<String>? skills,
+    List<String>? accents,
+    List<String>? specialAbilities,
+    Map<String, dynamic>? physicalDetails,
+    List<Map<String, dynamic>>? credits,
+    List<Map<String, dynamic>>? training,
+    Map<String, dynamic>? representation,
+    Map<String, dynamic>? socialLinks,
   }) {
     return _repository.updateTalentProfile(
       screenName: screenName,
@@ -271,6 +285,14 @@ class AuthController extends ChangeNotifier {
       unionNote: unionNote,
       experienceYears: experienceYears,
       resumeFileId: resumeFileId,
+      skills: skills,
+      accents: accents,
+      specialAbilities: specialAbilities,
+      physicalDetails: physicalDetails,
+      credits: credits,
+      training: training,
+      representation: representation,
+      socialLinks: socialLinks,
     );
   }
 

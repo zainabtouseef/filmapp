@@ -14,6 +14,10 @@ import 'at09_contract_signing_screen.dart';
 import 'at10_earnings_security_screen.dart';
 import 'at11_reputation_reviews_screen.dart';
 import 'at12_safety_controls_screen.dart';
+import 'at13_role_detail_apply_screen.dart';
+import 'at14_applications_screen.dart';
+import 'at15_application_detail_screen.dart';
+import 'at17_bookings_messages_screen.dart';
 
 class ActorTalentPortalScreen extends StatelessWidget {
   final String routeName;
@@ -39,7 +43,13 @@ class ActorTalentPortalScreen extends StatelessWidget {
   }
 
   Widget _screenFor(String route) {
-    final id = arguments is String ? arguments as String : null;
+    final id = arguments is String
+        ? arguments as String
+        : arguments is Map
+            ? ((arguments! as Map)['id'] ??
+                (arguments! as Map)['roleId'] ??
+                (arguments! as Map)['applicationId']) as String?
+            : null;
     return switch (route) {
       ActorTalentRoutes.dashboard => const AT01TalentDashboardScreen(),
       ActorTalentRoutes.profile => const AT02ProfileBuilderScreen(),
@@ -47,6 +57,13 @@ class ActorTalentPortalScreen extends StatelessWidget {
       ActorTalentRoutes.calendar => const AT04AvailabilityCalendarScreen(),
       ActorTalentRoutes.rates => const AT05RateCardScreen(),
       ActorTalentRoutes.opportunities => const AT06OpportunityInboxScreen(),
+      ActorTalentRoutes.roleDetail => AT13RoleDetailApplyScreen(roleId: id),
+      ActorTalentRoutes.applications => const AT14ApplicationsScreen(),
+      ActorTalentRoutes.applicationDetail =>
+        AT15ApplicationDetailScreen(applicationId: id),
+      ActorTalentRoutes.auditions =>
+        const AT14ApplicationsScreen(auditionsOnly: true),
+      ActorTalentRoutes.bookings => const AT17BookingsMessagesScreen(),
       ActorTalentRoutes.offerDetail => AT07OfferDetailScreen(offerId: id),
       ActorTalentRoutes.counteroffer =>
         AT08CounterofferComposerScreen(offerId: id),

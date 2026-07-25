@@ -28,11 +28,16 @@ from app.models.bookings import (
     Offer,
     PinnedDecision,
 )
+from app.models.casting import (
+    CastingApplication,
+    CastingApplicationStatusEvent,
+)
 from app.models.files import FileAsset
 from app.models.identity import User
 from app.models.marketplace import MarketplaceListing
 from app.models.projects import Project, ProjectMember, ProjectRequirement
 from app.responses import success
+from app.services.notifications import notify_user
 
 bookings_blueprint = Blueprint("bookings", __name__)
 
@@ -122,8 +127,13 @@ def _booking_payload(item: Booking) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
         "project_id": item.project.public_id,
+        "project_title": item.project.title,
+        "project_type": item.project.project_type,
+        "project_city": item.project.city.name if item.project.city else None,
         "requirement_id": item.requirement.public_id if item.requirement else None,
+        "requirement_title": item.requirement.title if item.requirement else None,
         "listing_id": item.listing.public_id,
+        "listing_title": item.listing.title,
         "category": item.category,
         "status": item.status,
         "requester": _user_payload(item.requester),
@@ -319,6 +329,40 @@ def _set_status(
         )
     )
     booking.status = to_status
+
+
+def _sync_casting_application_status(
+    booking: Booking,
+    actor: User,
+    to_status: str,
+    *,
+    note: str,
+) -> None:
+    if booking.requirement_id is None:
+        return
+    application = db.session.execute(
+        select(CastingApplication).where(
+            CastingApplication.requirement_id == booking.requirement_id,
+            CastingApplication.actor_user_id == booking.provider_user_id,
+        )
+    ).scalar_one_or_none()
+    if application is None or application.status == to_status:
+        return
+    if application.status in {"selected", "rejected", "withdrawn"}:
+        return
+    previous = application.status
+    application.status = to_status
+    if to_status == "withdrawn":
+        application.withdrawn_at = utc_now()
+    db.session.add(
+        CastingApplicationStatusEvent(
+            application_id=application.id,
+            actor_user_id=actor.id,
+            from_status=previous,
+            to_status=to_status,
+            note=note,
+        )
+    )
 
 
 def _ensure_calendar(owner_id: str) -> AvailabilityCalendar:
@@ -765,6 +809,23 @@ def send_booking(public_id: str) -> Response:
     booking.agreed_amount_minor = offer.fee_minor
     booking.currency = offer.currency
     _set_status(booking, "sent", user, reason="Initial offer sent.")
+    _sync_casting_application_status(
+        booking,
+        user,
+        "offer_received",
+        note="A booking offer was sent.",
+    )
+    notify_user(
+        booking.provider_user_id,
+        category="booking",
+        title=(
+            "New offer for "
+            f"{booking.requirement.title if booking.requirement else booking.category}"
+        ),
+        body=f"{booking.requester.display_name} sent a booking offer.",
+        route_name="/talent/offers/:id",
+        route_params={"id": booking.public_id},
+    )
     db.session.commit()
     return jsonify(success({"booking": _booking_payload(booking)}))
 
@@ -878,6 +939,12 @@ def accept_offer(public_id: str) -> Response:
         )
     )
     _set_status(booking, "accepted", user, reason="Offer accepted.")
+    _sync_casting_application_status(
+        booking,
+        user,
+        "selected",
+        note="The booking offer was accepted.",
+    )
     db.session.commit()
     return jsonify(success({"booking": _booking_payload(booking)}))
 
@@ -892,6 +959,12 @@ def reject_booking(public_id: str) -> Response:
         )
     reason = str(_json_body().get("reason", "")).strip()[:2000] or "Rejected."
     _set_status(booking, "rejected", user, reason=reason)
+    _sync_casting_application_status(
+        booking,
+        user,
+        "withdrawn" if user.id == booking.provider_user_id else "rejected",
+        note=reason,
+    )
     if booking.negotiation_thread:
         booking.negotiation_thread.status = "rejected"
         booking.negotiation_thread.locked_at = utc_now()

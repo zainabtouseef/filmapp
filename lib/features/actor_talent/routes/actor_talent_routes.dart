@@ -7,6 +7,11 @@ class ActorTalentRoutes {
   static const calendar = '/talent/availability';
   static const rates = '/talent/rates';
   static const opportunities = '/talent/opportunities';
+  static const roleDetail = '/talent/roles/:id';
+  static const applications = '/talent/applications';
+  static const applicationDetail = '/talent/applications/:id';
+  static const auditions = '/talent/auditions';
+  static const bookings = '/talent/bookings';
   static const offerDetail = '/talent/offers/:id';
   static const counteroffer = '/talent/counteroffer';
   static const contracts = '/talent/contracts';
@@ -17,8 +22,8 @@ class ActorTalentRoutes {
   static const primaryNav = [
     dashboard,
     opportunities,
-    calendar,
-    earnings,
+    applications,
+    bookings,
     profile,
   ];
 
@@ -29,6 +34,11 @@ class ActorTalentRoutes {
     calendar,
     rates,
     opportunities,
+    roleDetail,
+    applications,
+    applicationDetail,
+    auditions,
+    bookings,
     offerDetail,
     counteroffer,
     contracts,
@@ -45,6 +55,11 @@ class ActorTalentRoutes {
       calendar => 'Availability',
       rates => 'Rates',
       opportunities => 'Opportunities',
+      roleDetail => 'Role Details',
+      applications => 'Applications',
+      applicationDetail => 'Application Details',
+      auditions => 'Auditions',
+      bookings => 'Bookings & Messages',
       offerDetail => 'Offer Review',
       counteroffer => 'Counteroffer',
       contracts => 'Contracts',
@@ -63,6 +78,11 @@ class ActorTalentRoutes {
       calendar => 'AT-04',
       rates => 'AT-05',
       opportunities => 'AT-06',
+      roleDetail => 'AT-13',
+      applications => 'AT-14',
+      applicationDetail => 'AT-15',
+      auditions => 'AT-16',
+      bookings => 'AT-17',
       offerDetail => 'AT-07',
       counteroffer => 'AT-08',
       contracts => 'AT-09',

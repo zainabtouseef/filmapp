@@ -676,12 +676,15 @@ def create_dispute() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     booking = _booking_for_party(str(payload.get("booking_id", "")).strip(), user)
+    description = str(payload.get("description", "")).strip()
+    if not description:
+        raise _field_error("description", "Describe the booking issue.")
     dispute = Dispute(
         booking_id=booking.id,
         opened_by=user.id,
         respondent_user_id=_counterpart(booking, user.id),
         type=str(payload.get("type", "general")).strip()[:64],
-        description=str(payload.get("description", "")).strip()[:4000],
+        description=description[:4000],
         value_minor=int(payload.get("value_minor") or 0) or None,
         currency=str(payload.get("currency", "PKR")).strip()[:3],
         severity=str(payload.get("severity", "medium")).strip()[:32],
@@ -733,18 +736,30 @@ def dispute_detail(public_id: str) -> Response:
 def add_dispute_evidence(public_id: str) -> ResponseReturnValue:
     user = _current_user()
     dispute = _dispute_for_party(public_id, user)
+    if dispute.status in {"resolved", "rejected"}:
+        raise APIError(
+            "dispute.closed",
+            "Evidence cannot be added to a closed dispute.",
+            status=409,
+        )
     payload = _json_body()
     file = None
     if str(payload.get("file_id", "")).strip():
         file = _owned_ready_file(
             str(payload.get("file_id")).strip(), user.id, "file_id"
         )
+    description = str(payload.get("description", "")).strip()
+    if file is None and not description:
+        raise _field_error(
+            "description",
+            "Add a note or attach a file as evidence.",
+        )
     evidence = DisputeEvidence(
         dispute_id=dispute.id,
         submitted_by=user.id,
         file_id=file.id if file else None,
         evidence_type=str(payload.get("evidence_type", "note")).strip()[:64],
-        description=str(payload.get("description", "")).strip()[:2000] or None,
+        description=description[:2000] or None,
     )
     db.session.add(evidence)
     db.session.add(

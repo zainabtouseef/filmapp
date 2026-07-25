@@ -66,7 +66,9 @@ def _visible_projects(user: User) -> list[Project]:
             ProjectMember.status == "active",
         )
     return list(
-        db.session.execute(query.order_by(Project.updated_at.desc()).limit(20)).scalars()
+        db.session.execute(
+            query.order_by(Project.updated_at.desc()).limit(20)
+        ).scalars()
     )
 
 
@@ -75,7 +77,9 @@ def _requester_bookings(user: User) -> list[Booking]:
     if not _has_role(user, "super_admin"):
         query = query.where(Booking.requester_user_id == user.id)
     return list(
-        db.session.execute(query.order_by(Booking.updated_at.desc()).limit(50)).scalars()
+        db.session.execute(
+            query.order_by(Booking.updated_at.desc()).limit(50)
+        ).scalars()
     )
 
 
@@ -108,9 +112,7 @@ def _project_payload(project: Project) -> dict[str, Any]:
 
 def _booking_counterparty(booking: Booking, user: User) -> User:
     return (
-        booking.provider
-        if booking.requester_user_id == user.id
-        else booking.requester
+        booking.provider if booking.requester_user_id == user.id else booking.requester
     )
 
 
@@ -707,12 +709,16 @@ def _equipment_discovery_detail(item: EquipmentProviderProfile) -> dict[str, Any
 
 
 def _agency_discovery_item(item: CastingAgency) -> dict[str, Any]:
-    roster_count = db.session.execute(
-        select(AgencyTalent).where(
-            AgencyTalent.agency_id == item.id,
-            AgencyTalent.status == "active",
+    roster_count = (
+        db.session.execute(
+            select(AgencyTalent).where(
+                AgencyTalent.agency_id == item.id,
+                AgencyTalent.status == "active",
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     card = {
         "public_id": item.public_id,
         "kind": "agency",
@@ -889,9 +895,7 @@ def _director_discovery_items(
         items.extend(_equipment_discovery_item(row) for row in equipment)
     if "agency" in kinds:
         agencies = db.session.execute(
-            select(CastingAgency)
-            .order_by(CastingAgency.updated_at.desc())
-            .limit(80)
+            select(CastingAgency).order_by(CastingAgency.updated_at.desc()).limit(80)
         ).scalars()
         items.extend(_agency_discovery_item(row) for row in agencies)
     if "distribution" in kinds:
@@ -1141,8 +1145,7 @@ def _director_schedule_payload(
                     "project_title": contract.project.title,
                     "title": "Contract signature pending",
                     "message": (
-                        f"{contract.title} is "
-                        f"{contract.status.replace('_', ' ')}."
+                        f"{contract.title} is {contract.status.replace('_', ' ')}."
                     ),
                     "risk_level": "medium",
                     "route": "/contract",
@@ -1197,8 +1200,7 @@ def _director_schedule_payload(
                 project=project,
                 title=milestone.name,
                 subtitle=(
-                    f"{milestone.schedule.currency} "
-                    f"{milestone.amount_minor // 100}"
+                    f"{milestone.schedule.currency} {milestone.amount_minor // 100}"
                 ),
                 starts_at=due_at,
                 status=milestone.status,
@@ -1229,8 +1231,7 @@ def _director_schedule_payload(
     future_events = [
         row
         for row in events
-        if row["starts_at"]
-        and as_utc(datetime.fromisoformat(row["starts_at"])) >= now
+        if row["starts_at"] and as_utc(datetime.fromisoformat(row["starts_at"])) >= now
     ]
     call_sheet_event = (
         future_events[0] if future_events else (events[0] if events else None)
@@ -1257,7 +1258,9 @@ def _contract_rows(user: User) -> list[Contract]:
     if not _has_role(user, "super_admin"):
         query = query.where(Booking.requester_user_id == user.id)
     return list(
-        db.session.execute(query.order_by(Contract.updated_at.desc()).limit(50)).scalars()
+        db.session.execute(
+            query.order_by(Contract.updated_at.desc()).limit(50)
+        ).scalars()
     )
 
 

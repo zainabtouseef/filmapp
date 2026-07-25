@@ -74,6 +74,7 @@ class CoreRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
+    final actorDeepLink = _actorDeepLink(routeSettings.name);
     final superAdminDeepLink = _superAdminDeepLink(routeSettings.name);
     final contractDeepLinkId = _singleIdPath(routeSettings.name, 'contract');
     final paymentDeepLinkId = _singleIdPath(routeSettings.name, 'payment');
@@ -182,6 +183,17 @@ class CoreRoutes {
           routeName: directorDeepLink.routeName,
           arguments: {
             ...directorDeepLink.arguments,
+            if (routeSettings.arguments is Map)
+              ...(routeSettings.arguments! as Map),
+            if (routeSettings.arguments is String)
+              'id': routeSettings.arguments! as String,
+          },
+        );
+      case _ when actorDeepLink != null:
+        page = ActorTalentPortalScreen(
+          routeName: actorDeepLink.routeName,
+          arguments: {
+            ...actorDeepLink.arguments,
             if (routeSettings.arguments is Map)
               ...(routeSettings.arguments! as Map),
             if (routeSettings.arguments is String)
@@ -399,6 +411,28 @@ class CoreRoutes {
     return segments[1];
   }
 
+  static _ActorDeepLink? _actorDeepLink(String? name) {
+    final segments = _pathSegments(name);
+    if (segments.length != 3 || segments.first != 'talent') return null;
+    final id = segments[2];
+    if (id.isEmpty || id == ':id') return null;
+    return switch (segments[1]) {
+      'roles' => _ActorDeepLink(
+          ActorTalentRoutes.roleDetail,
+          arguments: {'id': id, 'roleId': id},
+        ),
+      'applications' => _ActorDeepLink(
+          ActorTalentRoutes.applicationDetail,
+          arguments: {'id': id, 'applicationId': id},
+        ),
+      'offers' => _ActorDeepLink(
+          ActorTalentRoutes.offerDetail,
+          arguments: {'id': id},
+        ),
+      _ => null,
+    };
+  }
+
   static _SuperAdminDeepLink? _superAdminDeepLink(String? name) {
     final segments = _pathSegments(name);
     if (segments.length != 3 || segments.first != 'admin') return null;
@@ -441,6 +475,13 @@ class _DirectorDeepLink {
   final Map<String, Object?> arguments;
 
   const _DirectorDeepLink(this.routeName, {this.arguments = const {}});
+}
+
+class _ActorDeepLink {
+  final String routeName;
+  final Map<String, Object?> arguments;
+
+  const _ActorDeepLink(this.routeName, {this.arguments = const {}});
 }
 
 class _SuperAdminDeepLink {

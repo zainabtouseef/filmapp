@@ -62,8 +62,13 @@ class BookingOffer {
 class Booking {
   final String publicId;
   final String projectId;
+  final String projectTitle;
+  final String projectType;
+  final String? projectCity;
   final String? requirementId;
+  final String? requirementTitle;
   final String listingId;
+  final String listingTitle;
   final String category;
   final String status;
   final BookingUser requester;
@@ -81,8 +86,13 @@ class Booking {
   const Booking({
     required this.publicId,
     required this.projectId,
+    required this.projectTitle,
+    required this.projectType,
+    required this.projectCity,
     required this.requirementId,
+    required this.requirementTitle,
     required this.listingId,
+    required this.listingTitle,
     required this.category,
     required this.status,
     required this.requester,
@@ -103,8 +113,13 @@ class Booking {
     return Booking(
       publicId: json['public_id'] as String,
       projectId: json['project_id'] as String? ?? '',
+      projectTitle: json['project_title'] as String? ?? 'Untitled project',
+      projectType: json['project_type'] as String? ?? 'production',
+      projectCity: json['project_city'] as String?,
       requirementId: json['requirement_id'] as String?,
+      requirementTitle: json['requirement_title'] as String?,
       listingId: json['listing_id'] as String? ?? '',
+      listingTitle: json['listing_title'] as String? ?? 'Talent booking',
       category: json['category'] as String? ?? 'talent',
       status: json['status'] as String? ?? 'draft',
       requester:
@@ -135,10 +150,10 @@ class Booking {
     return ActorOpportunity(
       id: publicId,
       type: ActorOpportunityType.directOffer,
-      projectTitle: 'Project $projectId',
-      role: _titleCase(category),
+      projectTitle: projectTitle,
+      role: requirementTitle ?? _titleCase(category),
       producer: requester.displayName,
-      city: 'Pakistan',
+      city: projectCity ?? 'Location to be confirmed',
       dates: '${_shortDate(startAt)} - ${_shortDate(endAt)}',
       fee: activeOffer?.feeLabel ??
           (agreedAmountMinor == null

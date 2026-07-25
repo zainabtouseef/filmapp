@@ -77,6 +77,22 @@ class PaymentsController extends ChangeNotifier {
     );
   }
 
+  Future<PayoutAccountDto> createPayoutAccount({
+    required String provider,
+    required String accountName,
+    required String accountIdentifier,
+  }) {
+    final compact = accountIdentifier.replaceAll(' ', '');
+    final suffix =
+        compact.length <= 4 ? compact : compact.substring(compact.length - 4);
+    return _repository.createPayoutAccount(
+      provider: provider,
+      accountName: accountName,
+      accountMasked: '****$suffix',
+      accountToken: accountIdentifier,
+    );
+  }
+
   Future<List<PaymentProofDto>> adminProofs({bool force = false}) async {
     if (!force && _adminProofs != null) return _adminProofs!;
     final rows = await _repository.adminPaymentProofs();

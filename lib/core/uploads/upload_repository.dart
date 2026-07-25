@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../network/api_client.dart';
+import '../network/api_exception.dart';
 import '../verification/verification_models.dart';
 
 class PickedFileData {
@@ -51,6 +52,37 @@ class UploadRepository {
     final complete = await _client.post('/uploads/${ticket.id}/complete');
     onStatus?.call('Upload saved for admin review.');
     final data = complete['data'] as Map<String, dynamic>;
-    return UploadedFile.fromJson(data['file'] as Map<String, dynamic>);
+    var uploaded = UploadedFile.fromJson(
+      data['file'] as Map<String, dynamic>,
+    );
+    if (uploaded.scanStatus == 'clean' &&
+        uploaded.processingStatus == 'ready') {
+      return uploaded;
+    }
+    onStatus?.call('Checking file safety...');
+    for (var attempt = 0; attempt < 40; attempt++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      final status = await _client.get('/files/${uploaded.publicId}');
+      final statusData = status['data'] as Map<String, dynamic>;
+      uploaded = UploadedFile.fromJson(
+        statusData['file'] as Map<String, dynamic>,
+      );
+      if (uploaded.scanStatus == 'clean' &&
+          uploaded.processingStatus == 'ready') {
+        onStatus?.call('Upload ready.');
+        return uploaded;
+      }
+      if (uploaded.scanStatus == 'rejected' ||
+          uploaded.processingStatus == 'failed') {
+        throw const ApiException(
+          code: 'files.processing_failed',
+          message: 'The uploaded file did not pass processing checks.',
+        );
+      }
+    }
+    throw const ApiException(
+      code: 'files.processing_timeout',
+      message: 'The upload is still processing. Please try again shortly.',
+    );
   }
 }

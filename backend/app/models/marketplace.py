@@ -117,6 +117,14 @@ class TalentProfile(EntityMixin, Base):
     resume_file_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("files.id", ondelete="SET NULL")
     )
+    skills_json: Mapped[str | None] = mapped_column(Text)
+    accents_json: Mapped[str | None] = mapped_column(Text)
+    special_abilities_json: Mapped[str | None] = mapped_column(Text)
+    physical_details_json: Mapped[str | None] = mapped_column(Text)
+    credits_json: Mapped[str | None] = mapped_column(Text)
+    training_json: Mapped[str | None] = mapped_column(Text)
+    representation_json: Mapped[str | None] = mapped_column(Text)
+    social_links_json: Mapped[str | None] = mapped_column(Text)
 
     user: Mapped[User] = relationship(lazy="joined")
     languages: Mapped[list[TalentLanguage]] = relationship(

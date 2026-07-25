@@ -1,3 +1,5 @@
+import '../verification/verification_models.dart';
+
 class TrustUserDto {
   final String publicId;
   final String displayName;
@@ -219,23 +221,25 @@ class DisputeDto {
 }
 
 class DisputeEvidenceDto {
-  final String publicId;
   final String evidenceType;
   final String description;
+  final UploadedFile? file;
   final TrustUserDto? submittedBy;
 
   const DisputeEvidenceDto({
-    required this.publicId,
     required this.evidenceType,
     required this.description,
+    this.file,
     this.submittedBy,
   });
 
   factory DisputeEvidenceDto.fromJson(Map<String, dynamic> json) {
     return DisputeEvidenceDto(
-      publicId: json['public_id'] as String? ?? '',
       evidenceType: json['evidence_type'] as String? ?? 'evidence',
       description: json['description'] as String? ?? '',
+      file: json['file'] is Map<String, dynamic>
+          ? UploadedFile.fromJson(json['file'] as Map<String, dynamic>)
+          : null,
       submittedBy: json['submitted_by'] is Map<String, dynamic>
           ? TrustUserDto.fromJson(
               json['submitted_by'] as Map<String, dynamic>,

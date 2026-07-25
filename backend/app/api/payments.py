@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request
+from cryptography.fernet import Fernet
+from flask import Blueprint, Response, current_app, jsonify, request
 from flask.typing import ResponseReturnValue
 from sqlalchemy import or_, select
 
@@ -30,6 +33,17 @@ from app.services.payments import post_verified_payment
 payments_blueprint = Blueprint("payments", __name__)
 
 PAYMENT_METHODS = {"bank_transfer", "card_sandbox"}
+
+
+def _encrypt_private_value(value: str) -> str:
+    configured_key = str(
+        current_app.config.get("FIELD_ENCRYPTION_KEY")
+        or current_app.config["SECRET_KEY"]
+    )
+    key = base64.urlsafe_b64encode(
+        hashlib.sha256(configured_key.encode("utf-8")).digest()
+    )
+    return f"fernet:{Fernet(key).encrypt(value.encode('utf-8')).decode('ascii')}"
 
 
 def _has_role(user: User, *codes: str) -> bool:
@@ -395,16 +409,15 @@ def create_payout_account() -> ResponseReturnValue:
     payload = _json_body()
     provider = str(payload.get("provider", "bank")).strip()
     account_name = str(payload.get("account_name", "")).strip()
-    account_masked = str(payload.get("account_masked", "")).strip()
     token = str(payload.get("account_token", "")).strip()
     if provider not in {"bank", "wallet", "sandbox"}:
         raise _field_error("provider", "Unsupported payout provider.")
     if len(account_name) < 2:
         raise _field_error("account_name", "Account name is required.")
-    if len(account_masked) < 4:
-        raise _field_error("account_masked", "Masked account is required.")
     if len(token) < 4:
         raise _field_error("account_token", "Account token is required.")
+    compact_token = "".join(character for character in token if character.isalnum())
+    account_masked = f"****{compact_token[-4:]}"
     make_default = bool(payload.get("is_default", True))
     if make_default:
         existing = db.session.execute(
@@ -415,7 +428,7 @@ def create_payout_account() -> ResponseReturnValue:
     item = PayoutAccount(
         user_id=user.id,
         provider=provider,
-        account_token_encrypted=f"sandbox:{token[:12]}",
+        account_token_encrypted=_encrypt_private_value(token),
         account_masked=account_masked[:64],
         account_name=account_name[:120],
         status="verified" if provider == "sandbox" else "pending",

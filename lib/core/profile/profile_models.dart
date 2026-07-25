@@ -95,6 +95,14 @@ class TalentProfile {
   final String currency;
   final List<TalentLanguage> languages;
   final UploadedFile? resumeFile;
+  final List<String> skills;
+  final List<String> accents;
+  final List<String> specialAbilities;
+  final Map<String, dynamic> physicalDetails;
+  final List<Map<String, dynamic>> credits;
+  final List<Map<String, dynamic>> training;
+  final Map<String, dynamic> representation;
+  final Map<String, dynamic> socialLinks;
 
   const TalentProfile({
     required this.publicId,
@@ -109,6 +117,14 @@ class TalentProfile {
     required this.currency,
     required this.languages,
     this.resumeFile,
+    this.skills = const [],
+    this.accents = const [],
+    this.specialAbilities = const [],
+    this.physicalDetails = const {},
+    this.credits = const [],
+    this.training = const [],
+    this.representation = const {},
+    this.socialLinks = const {},
   });
 
   factory TalentProfile.fromJson(Map<String, dynamic>? json) {
@@ -143,6 +159,32 @@ class TalentProfile {
           .map((item) => TalentLanguage.fromJson(item as Map<String, dynamic>))
           .toList(),
       resumeFile: resume == null ? null : UploadedFile.fromJson(resume),
+      skills: (json['skills'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
+      accents: (json['accents'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
+      specialAbilities:
+          (json['special_abilities'] as List<dynamic>? ?? const [])
+              .map((item) => item.toString())
+              .toList(),
+      physicalDetails: Map<String, dynamic>.from(
+          json['physical_details'] as Map? ?? const {}),
+      credits: (json['credits'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(),
+      training: (json['training'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(),
+      representation: Map<String, dynamic>.from(
+        json['representation'] as Map? ?? const {},
+      ),
+      socialLinks: Map<String, dynamic>.from(
+        json['social_links'] as Map? ?? const {},
+      ),
     );
   }
 }

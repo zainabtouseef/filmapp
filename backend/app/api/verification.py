@@ -7,16 +7,20 @@ from typing import Any
 from celery import Celery
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy import and_, or_, select
 
 from app.api.auth import _current_user, _json_body
 from app.errors import APIError
 from app.extensions import db, limiter
 from app.models.base import utc_now
+from app.models.casting import CastingApplication, CastingRoleBrief
 from app.models.files import FileAsset, UploadSession
 from app.models.identity import Role, UserRole
 from app.models.kyc import KycDocument, KycSubmission, VerificationEvent
 from app.models.payments import PaymentProof
+from app.models.projects import Project, ProjectMember, ProjectRequirement
+from app.models.trust_safety import Dispute, DisputeEvidence
 from app.policies import has_permission, require_permission
 from app.responses import success
 from app.security import as_utc
@@ -87,6 +91,129 @@ def _serialize_file(file: FileAsset) -> dict[str, Any]:
         "download_url": f"/api/v1/files/{file.public_id}/download",
         "public_url": public_url_for(file),
     }
+
+
+def _can_download_file(file: FileAsset, user: Any) -> bool:
+    is_owner = file.owner_user_id == user.id
+    is_kyc_evidence_reviewer = (
+        not is_owner
+        and has_permission(user, "kyc.review")
+        and db.session.execute(
+            select(KycDocument.id).where(KycDocument.file_id == file.id)
+        ).scalar_one_or_none()
+        is not None
+    )
+    is_payment_evidence_reviewer = (
+        not is_owner
+        and not is_kyc_evidence_reviewer
+        and _has_role_code(user, {"finance_admin", "super_admin", "reviewer"})
+        and db.session.execute(
+            select(PaymentProof.id).where(PaymentProof.file_id == file.id)
+        ).scalar_one_or_none()
+        is not None
+    )
+    dispute_id = db.session.execute(
+        select(Dispute.id)
+        .join(DisputeEvidence, DisputeEvidence.dispute_id == Dispute.id)
+        .where(DisputeEvidence.file_id == file.id)
+    ).scalar_one_or_none()
+    is_dispute_party_or_reviewer = (
+        not is_owner
+        and dispute_id is not None
+        and (
+            _has_role_code(user, {"reviewer", "finance_admin", "super_admin"})
+            or db.session.execute(
+                select(Dispute.id).where(
+                    Dispute.id == dispute_id,
+                    or_(
+                        Dispute.opened_by == user.id,
+                        Dispute.respondent_user_id == user.id,
+                    ),
+                )
+            ).scalar_one_or_none()
+            is not None
+        )
+    )
+    is_open_casting_side = (
+        not is_owner
+        and db.session.execute(
+            select(CastingRoleBrief.id)
+            .join(
+                ProjectRequirement,
+                CastingRoleBrief.requirement_id == ProjectRequirement.id,
+            )
+            .join(Project, ProjectRequirement.project_id == Project.id)
+            .where(
+                CastingRoleBrief.sides_file_id == file.id,
+                ProjectRequirement.status == "open",
+                Project.status == "active",
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
+    is_casting_applicant_side = (
+        not is_owner
+        and db.session.execute(
+            select(CastingApplication.id)
+            .join(
+                CastingRoleBrief,
+                CastingApplication.requirement_id == CastingRoleBrief.requirement_id,
+            )
+            .where(
+                CastingRoleBrief.sides_file_id == file.id,
+                CastingApplication.actor_user_id == user.id,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
+    is_casting_self_tape_reviewer = (
+        not is_owner
+        and db.session.execute(
+            select(CastingApplication.id)
+            .join(
+                ProjectRequirement,
+                CastingApplication.requirement_id == ProjectRequirement.id,
+            )
+            .join(Project, ProjectRequirement.project_id == Project.id)
+            .outerjoin(
+                ProjectMember,
+                and_(
+                    ProjectMember.project_id == Project.id,
+                    ProjectMember.user_id == user.id,
+                    ProjectMember.status == "active",
+                ),
+            )
+            .where(
+                CastingApplication.self_tape_file_id == file.id,
+                or_(
+                    Project.owner_user_id == user.id,
+                    ProjectMember.user_id == user.id,
+                ),
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
+    return any(
+        (
+            is_owner,
+            is_kyc_evidence_reviewer,
+            is_payment_evidence_reviewer,
+            is_dispute_party_or_reviewer,
+            is_open_casting_side,
+            is_casting_applicant_side,
+            is_casting_self_tape_reviewer,
+        )
+    )
+
+
+def _download_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(
+        current_app.config["SECRET_KEY"],
+        salt="file-download",
+    )
 
 
 def _safe_original_name(original_name: str) -> str:
@@ -173,6 +300,8 @@ def presign_upload() -> ResponseReturnValue:
         "damage_evidence",
         "insurance_document",
         "insurance_evidence",
+        "dispute_evidence",
+        "self_tape",
     }:
         raise _field_error("purpose", "Unsupported upload purpose.")
     if mime_type not in ALLOWED_UPLOAD_MIME_TYPES:
@@ -313,48 +442,72 @@ def complete_upload(public_id: str) -> ResponseReturnValue:
     return jsonify(success({"file": _serialize_file(file)})), 201
 
 
+@verification_blueprint.get("/files/<public_id>")
+def file_status(public_id: str) -> Response:
+    user = _current_user()
+    file = db.session.execute(
+        select(FileAsset).where(
+            FileAsset.public_id == public_id,
+            FileAsset.owner_user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if file is None:
+        raise APIError("files.not_found", "File was not found.", status=404)
+    return jsonify(success({"file": _serialize_file(file)}))
+
+
+@verification_blueprint.post("/files/<public_id>/download-link")
+def file_download_link(public_id: str) -> Response:
+    user = _current_user()
+    file = db.session.execute(
+        select(FileAsset).where(FileAsset.public_id == public_id)
+    ).scalar_one_or_none()
+    if file is None or not _can_download_file(file, user):
+        raise APIError("files.not_found", "File was not found.", status=404)
+    token = _download_serializer().dumps({"file_id": file.public_id})
+    return jsonify(
+        success(
+            {
+                "url": f"/api/v1/files/{file.public_id}/download?token={token}",
+                "expires_in": 300,
+            }
+        )
+    )
+
+
 @verification_blueprint.get("/files/<public_id>/download")
 def download_file(public_id: str) -> ResponseReturnValue:
-    user = _current_user()
     file = db.session.execute(
         select(FileAsset).where(FileAsset.public_id == public_id)
     ).scalar_one_or_none()
     if file is None:
         raise APIError("files.not_found", "File was not found.", status=404)
-    is_owner = file.owner_user_id == user.id
-    # A kyc.review admin may download a file they don't own only if it's
-    # actually attached to some KYC submission — reviewing evidence, not a
-    # blanket bypass of file ownership.
-    is_kyc_evidence_reviewer = (
-        not is_owner
-        and has_permission(user, "kyc.review")
-        and (
-            db.session.execute(
-                select(KycDocument.id).where(KycDocument.file_id == file.id)
-            ).scalar_one_or_none()
-            is not None
-        )
-    )
-    # Same idea for a finance reviewer looking at a payment proof they
-    # don't own — matches the role check `_require_finance` already uses
-    # to gate the payment-proof review endpoints themselves.
-    is_payment_evidence_reviewer = (
-        not is_owner
-        and not is_kyc_evidence_reviewer
-        and _has_role_code(user, {"finance_admin", "super_admin", "reviewer"})
-        and (
-            db.session.execute(
-                select(PaymentProof.id).where(PaymentProof.file_id == file.id)
-            ).scalar_one_or_none()
-            is not None
-        )
-    )
-    if (
-        not is_owner
-        and not is_kyc_evidence_reviewer
-        and not is_payment_evidence_reviewer
-    ):
-        raise APIError("files.not_found", "File was not found.", status=404)
+    token = request.args.get("token", "").strip()
+    if token:
+        try:
+            payload = _download_serializer().loads(token, max_age=300)
+        except SignatureExpired as exc:
+            raise APIError(
+                "files.download_expired",
+                "This download link has expired.",
+                status=410,
+            ) from exc
+        except BadSignature as exc:
+            raise APIError(
+                "files.download_invalid",
+                "This download link is invalid.",
+                status=403,
+            ) from exc
+        if payload.get("file_id") != file.public_id:
+            raise APIError(
+                "files.download_invalid",
+                "This download link is invalid.",
+                status=403,
+            )
+    else:
+        user = _current_user()
+        if not _can_download_file(file, user):
+            raise APIError("files.not_found", "File was not found.", status=404)
     path = resolve_path(file)
     if not path.exists() or not path.is_file():
         raise APIError("files.missing", "File bytes are not available.", status=404)

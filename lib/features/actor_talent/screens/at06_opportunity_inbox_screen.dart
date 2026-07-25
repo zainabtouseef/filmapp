@@ -1,13 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/casting/casting_controller.dart';
+import '../../../core/casting/casting_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
+import '../widgets/actor_casting_widgets.dart';
 import '../widgets/actor_talent_components.dart';
 
-/// AT-06 Opportunity Inbox
+/// AT-06 Role discovery and direct offers.
 class AT06OpportunityInboxScreen extends StatefulWidget {
   const AT06OpportunityInboxScreen({super.key});
 
@@ -18,155 +25,297 @@ class AT06OpportunityInboxScreen extends StatefulWidget {
 
 class _AT06OpportunityInboxScreenState
     extends State<AT06OpportunityInboxScreen> {
-  String query = '';
-  String selectedTab = 'All';
-  Future<List<Booking>>? _future;
+  String _query = '';
+  String _filter = 'All';
+  Future<CastingRolePage>? _rolesFuture;
+  Future<List<Booking>>? _offersFuture;
+  Timer? _searchDebounce;
+  bool _loadingMore = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _rolesFuture ??= _loadRoles();
     final bookings = BookingsScope.maybeOf(context);
-    if (bookings != null) {
-      _future ??= bookings.opportunities(force: true);
+    if (_offersFuture == null && bookings != null) {
+      _offersFuture = bookings.opportunities(force: true);
     }
   }
 
   @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  Future<CastingRolePage> _loadRoles({int page = 1}) {
+    final controller = CastingScope.maybeOf(context);
+    if (controller == null) {
+      return Future<CastingRolePage>.error(
+        const ApiException(
+          code: 'casting.scope_missing',
+          message: 'Sign in to discover live casting roles.',
+        ),
+      );
+    }
+    return controller.roles(
+      query: _query,
+      saved: _filter == 'Saved',
+      auditionMode: switch (_filter) {
+        'Self-tape' => 'self_tape',
+        'Online' => 'online',
+        'In person' => 'in_person',
+        _ => null,
+      },
+      page: page,
+      force: true,
+    );
+  }
+
+  void _reload() {
+    setState(() => _rolesFuture = _loadRoles());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ActorSearchFilterBar(
-          query: query,
-          onQueryChanged: (value) => setState(() => query = value),
+          query: _query,
+          onQueryChanged: (value) {
+            _query = value;
+            _searchDebounce?.cancel();
+            _searchDebounce = Timer(
+              const Duration(milliseconds: 350),
+              _reload,
+            );
+          },
           filters: const [
             'All',
-            'Direct Offers',
-            'Audition Invites',
-            'Casting Calls',
+            'Self-tape',
+            'Online',
+            'In person',
+            'Saved',
           ],
-          selectedFilter: selectedTab,
-          onFilterChanged: (value) => setState(() => selectedTab = value),
+          selectedFilter: _filter,
+          onFilterChanged: (value) {
+            _filter = value;
+            _reload();
+          },
         ),
         const SizedBox(height: 12),
         ActorSectionCard(
-          title: 'Opportunity Queue',
-          icon: Icons.inbox_outlined,
-          actionText: _future == null ? null : 'Refresh',
-          onActionTap: _refresh,
-          child: _future == null
-              ? const CoreEmptyState(
-                  icon: Icons.lock_outline_rounded,
-                  title: 'Sign in to view live opportunities',
-                  message:
-                      'Direct offers, audition invites, and casting calls are loaded from the server.',
-                )
-              : FutureBuilder<List<Booking>>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const _EmptyOpportunity(tab: 'Loading offers');
-                    }
-                    if (snapshot.hasError) {
-                      return _OpportunityLoadError(onRetry: _refresh);
-                    }
-                    final bookings = _filter(snapshot.data ?? const []);
-                    if (bookings.isEmpty) {
-                      return _EmptyOpportunity(tab: selectedTab);
-                    }
-                    return ActorResponsiveGrid(
-                      minWidth: 270,
-                      children: [
-                        for (final booking in bookings)
-                          ActorOpportunityCard(
-                            opportunity: booking.toActorOpportunity(),
-                            status: booking.toActorOpportunity().status,
-                            onOpen: () => Navigator.pushNamed(
-                              context,
-                              ActorTalentRoutes.offerDetail,
-                              arguments: booking.publicId,
-                            ),
-                            onHold: () => Navigator.pushNamed(
-                              context,
-                              ActorTalentRoutes.calendar,
-                            ),
+          title: _filter == 'Saved' ? 'Saved Roles' : 'Casting Calls',
+          icon: _filter == 'Saved'
+              ? Icons.bookmarks_outlined
+              : Icons.manage_search_outlined,
+          actionText: 'Refresh',
+          onActionTap: _reload,
+          child: FutureBuilder<CastingRolePage>(
+            future: _rolesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const _RoleSkeletons();
+              }
+              if (snapshot.hasError) {
+                return CoreEmptyState(
+                  icon: Icons.cloud_off_outlined,
+                  title: 'Casting roles unavailable',
+                  message: snapshot.error is ApiException
+                      ? (snapshot.error! as ApiException).message
+                      : 'Could not load casting calls. Check your connection.',
+                  actionLabel: 'Try again',
+                  onAction: _reload,
+                );
+              }
+              final roles = snapshot.data?.roles ?? const <CastingRole>[];
+              if (roles.isEmpty) {
+                return CoreEmptyState(
+                  icon: _filter == 'Saved'
+                      ? Icons.bookmark_add_outlined
+                      : Icons.search_off_rounded,
+                  title: _filter == 'Saved'
+                      ? 'No saved roles'
+                      : 'No matching roles',
+                  message: _filter == 'Saved'
+                      ? 'Save a casting call to compare it here later.'
+                      : 'Try a different search or check again when productions publish new roles.',
+                  actionLabel: _filter == 'Saved' ? 'Browse roles' : null,
+                  onAction: _filter == 'Saved'
+                      ? () {
+                          _filter = 'All';
+                          _reload();
+                        }
+                      : null,
+                );
+              }
+              final page = snapshot.data!;
+              return Column(
+                children: [
+                  ActorResponsiveGrid(
+                    minWidth: 285,
+                    children: [
+                      for (final role in roles)
+                        ActorCastingRoleCard(
+                          role: role,
+                          onOpen: () => Navigator.pushNamed(
+                            context,
+                            role.applicationId == null
+                                ? ActorTalentRoutes.roleDetail
+                                : ActorTalentRoutes.applicationDetail,
+                            arguments: role.applicationId ?? role.publicId,
                           ),
-                      ],
-                    );
-                  },
-                ),
+                          onSave: () => _toggleSaved(role),
+                        ),
+                    ],
+                  ),
+                  if (roles.length < page.total) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: 190,
+                      child: CoreSecondaryButton(
+                        icon: Icons.expand_more_rounded,
+                        label:
+                            _loadingMore ? 'Loading roles' : 'Load more roles',
+                        compact: true,
+                        onTap: _loadingMore ? null : () => _loadMore(page),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        ActorSectionCard(
+          title: 'Direct Offers',
+          icon: Icons.local_activity_outlined,
+          actionText: 'Bookings',
+          onActionTap: () =>
+              Navigator.pushNamed(context, ActorTalentRoutes.bookings),
+          tone: ActorTone.green,
+          child: _DirectOffers(future: _offersFuture),
         ),
       ],
     );
   }
 
-  List<Booking> _filter(List<Booking> rows) {
-    final normalized = query.toLowerCase().trim();
-    return rows.where((item) {
-      final opportunity = item.toActorOpportunity();
-      final haystack =
-          '${item.requester.displayName} ${item.category} ${item.status}'
-              .toLowerCase();
-      final matchesQuery = normalized.isEmpty || haystack.contains(normalized);
-      final matchesType =
-          selectedTab == 'All' || selectedTab == _tabFor(opportunity.type);
-      return matchesQuery && matchesType;
-    }).toList();
+  Future<void> _toggleSaved(CastingRole role) async {
+    final controller = CastingScope.maybeOf(context);
+    if (controller == null) return;
+    try {
+      await controller.setSaved(role, !role.saved);
+      if (!mounted) return;
+      actorSnack(
+        context,
+        role.saved ? 'Role removed from saved' : 'Role saved',
+      );
+      _reload();
+    } on ApiException catch (error) {
+      if (mounted) actorSnack(context, error.message);
+    }
   }
 
-  void _refresh() {
-    final bookings = BookingsScope.maybeOf(context);
-    if (bookings == null) return;
-    setState(() => _future = bookings.opportunities(force: true));
-  }
-
-  String _tabFor(ActorOpportunityType type) {
-    return switch (type) {
-      ActorOpportunityType.directOffer => 'Direct Offers',
-      ActorOpportunityType.auditionInvite => 'Audition Invites',
-      ActorOpportunityType.castingCall => 'Casting Calls',
-    };
-  }
-}
-
-class _EmptyOpportunity extends StatelessWidget {
-  final String tab;
-
-  const _EmptyOpportunity({required this.tab});
-
-  @override
-  Widget build(BuildContext context) {
-    return CoreEmptyState(
-      icon: Icons.mark_email_read_outlined,
-      title: tab == 'Loading offers' ? 'Loading opportunities' : 'No $tab',
-      message: tab == 'Loading offers'
-          ? 'Fetching your latest offers from CineConnect.'
-          : 'New matching offers will appear here when a producer sends them.',
-    );
+  Future<void> _loadMore(CastingRolePage current) async {
+    if (_loadingMore || current.roles.length >= current.total) return;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await _loadRoles(page: current.page + 1);
+      if (!mounted) return;
+      setState(() {
+        _rolesFuture = Future.value(
+          CastingRolePage(
+            roles: [...current.roles, ...next.roles],
+            page: next.page,
+            perPage: next.perPage,
+            total: next.total,
+          ),
+        );
+      });
+    } on ApiException catch (error) {
+      if (mounted) actorSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 }
 
-class _OpportunityLoadError extends StatelessWidget {
-  final VoidCallback onRetry;
-
-  const _OpportunityLoadError({required this.onRetry});
+class _RoleSkeletons extends StatelessWidget {
+  const _RoleSkeletons();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const ActorResponsiveGrid(
+      minWidth: 285,
       children: [
-        const CoreEmptyState(
-          icon: Icons.cloud_off_outlined,
-          title: 'Could not load opportunities',
-          message: 'Check your connection and try again.',
-        ),
-        const SizedBox(height: 10),
-        CoreSecondaryButton(
-          icon: Icons.refresh_rounded,
-          label: 'Try again',
-          compact: true,
-          onTap: onRetry,
-        ),
+        SkeletonCard(height: 340),
+        SkeletonCard(height: 340),
+        SkeletonCard(height: 340),
       ],
+    );
+  }
+}
+
+class _DirectOffers extends StatelessWidget {
+  final Future<List<Booking>>? future;
+
+  const _DirectOffers({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    if (future == null) {
+      return const CoreEmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in to view offers',
+        message: 'Producer booking offers will appear here.',
+      );
+    }
+    return FutureBuilder<List<Booking>>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SkeletonCard(height: 120);
+        }
+        if (snapshot.hasError) {
+          return const CoreEmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Offers unavailable',
+            message: 'Could not load direct booking offers.',
+          );
+        }
+        final rows = snapshot.data ?? const <Booking>[];
+        if (rows.isEmpty) {
+          return const CoreEmptyState(
+            icon: Icons.mark_email_read_outlined,
+            title: 'No direct offers',
+            message: 'New producer offers will appear here.',
+          );
+        }
+        return Column(
+          children: [
+            for (final booking in rows.take(3))
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.handshake_outlined),
+                title: Text(booking.requester.displayName),
+                subtitle: Text(
+                  '${booking.activeOffer?.feeLabel ?? 'Rate TBD'} · ${actorCastingTitleCase(booking.status)}',
+                ),
+                trailing: IconButton(
+                  tooltip: 'Review offer',
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    ActorTalentRoutes.offerDetail,
+                    arguments: booking.publicId,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

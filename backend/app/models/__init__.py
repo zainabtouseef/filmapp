@@ -15,6 +15,12 @@ from app.models.bookings import (
     Offer,
     PinnedDecision,
 )
+from app.models.casting import (
+    CastingApplication,
+    CastingApplicationStatusEvent,
+    CastingRoleBrief,
+    SavedCastingRole,
+)
 from app.models.contracts import (
     Contract,
     ContractAddendum,
@@ -170,6 +176,9 @@ __all__ = [
     "CampaignDeliverable",
     "CampaignMetric",
     "CastingAgency",
+    "CastingApplication",
+    "CastingApplicationStatusEvent",
+    "CastingRoleBrief",
     "City",
     "Contract",
     "ContractAddendum",
@@ -264,6 +273,7 @@ __all__ = [
     "SafetyCheck",
     "SafetyCheckIn",
     "SafetyCheckItem",
+    "SavedCastingRole",
     "SavedSearch",
     "SelectionNote",
     "SelfTape",

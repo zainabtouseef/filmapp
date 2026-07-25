@@ -7,6 +7,7 @@ import 'core/auth/auth_repository.dart';
 import 'core/auth/token_store.dart';
 import 'core/analytics/analytics_controller.dart';
 import 'core/bookings/bookings_controller.dart';
+import 'core/casting/casting_controller.dart';
 import 'core/contracts/contracts_controller.dart';
 import 'core/core_ui/core_routes.dart';
 import 'core/insurance/insurance_controller.dart';
@@ -49,6 +50,7 @@ class CineConnectApp extends StatelessWidget {
   final AuthController authController;
   final BookingsController? bookingsController;
   final ContractsController? contractsController;
+  final CastingController? castingController;
   final PaymentsController? paymentsController;
   final OperationsController? operationsController;
   final InsuranceController? insuranceController;
@@ -65,6 +67,7 @@ class CineConnectApp extends StatelessWidget {
     required this.authController,
     this.bookingsController,
     this.contractsController,
+    this.castingController,
     this.paymentsController,
     this.operationsController,
     this.insuranceController,
@@ -141,7 +144,13 @@ class CineConnectApp extends StatelessWidget {
                       controller: bookingsController ??
                           BookingsController.fromClient(
                               authController.apiClient),
-                      child: app,
+                      child: CastingScope(
+                        controller: castingController ??
+                            CastingController.fromClient(
+                              authController.apiClient,
+                            ),
+                        child: app,
+                      ),
                     ),
                   ),
                 ),

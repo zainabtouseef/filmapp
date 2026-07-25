@@ -9,6 +9,7 @@ import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
 
@@ -27,7 +28,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   late final TextEditingController city;
   late final TextEditingController languages;
   late final TextEditingController skills;
+  late final TextEditingController accents;
+  late final TextEditingController specialAbilities;
   late final TextEditingController credits;
+  late final TextEditingController training;
   late final TextEditingController instagram;
   late final TextEditingController followers;
   late final TextEditingController website;
@@ -38,6 +42,8 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   late final TextEditingController experienceYears;
   late final TextEditingController unionNote;
   late final TextEditingController agency;
+  late final TextEditingController eyeColor;
+  late final TextEditingController hairColor;
   String? error;
   String? remoteStatus;
   bool loadingRemote = false;
@@ -48,6 +54,9 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   String? avatarUrl;
   bool uploadingAvatar = false;
   String? avatarError;
+  String? coverUrl;
+  bool uploadingCover = false;
+  String? coverError;
   String? resumeUrl;
   String? resumeFileName;
   bool uploadingResume = false;
@@ -61,7 +70,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     city = TextEditingController();
     languages = TextEditingController();
     skills = TextEditingController();
+    accents = TextEditingController();
+    specialAbilities = TextEditingController();
     credits = TextEditingController();
+    training = TextEditingController();
     instagram = TextEditingController();
     followers = TextEditingController();
     website = TextEditingController();
@@ -72,6 +84,8 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     experienceYears = TextEditingController();
     unionNote = TextEditingController();
     agency = TextEditingController();
+    eyeColor = TextEditingController();
+    hairColor = TextEditingController();
   }
 
   @override
@@ -90,7 +104,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     city.dispose();
     languages.dispose();
     skills.dispose();
+    accents.dispose();
+    specialAbilities.dispose();
     credits.dispose();
+    training.dispose();
     instagram.dispose();
     followers.dispose();
     website.dispose();
@@ -101,221 +118,331 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     experienceYears.dispose();
     unionNote.dispose();
     agency.dispose();
+    eyeColor.dispose();
+    hairColor.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ActorTwoColumn(
-      left: ActorSectionCard(
-        title: 'Profile Form',
-        icon: Icons.badge_outlined,
-        child: Column(
-          children: [
-            Text(
-              'Build the public casting profile directors use for search, shortlisting and booking decisions.',
-              style: AppTextStyles.smallMeta.copyWith(
-                color: context.appColors.textSecondary,
-                height: 1.35,
-              ),
-            ),
-            if (loadingRemote) ...[
-              const SizedBox(height: 12),
-              const LinearProgressIndicator(minHeight: 2),
-            ],
-            const SizedBox(height: 14),
-            _avatarField(),
-            const SizedBox(height: 14),
-            _resumeField(),
-            const SizedBox(height: 14),
-            CoreTextField(
-              controller: stageName,
-              label: 'Stage name',
-              icon: Icons.theater_comedy_outlined,
-              errorText: _fieldError(stageName),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: realName,
-              label: 'Account name',
-              icon: Icons.person_outline_rounded,
-              enabled: AuthScope.maybeOf(context)?.isAuthenticated != true,
-              errorText: _fieldError(realName),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: website,
-              label: 'Portfolio website',
-              icon: Icons.language_outlined,
-              keyboardType: TextInputType.url,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: city,
-              label: 'City',
-              icon: Icons.location_on_outlined,
-              errorText: _fieldError(city),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: languages,
-              label: 'Languages',
-              icon: Icons.translate_rounded,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: skills,
-              label: 'Skills tags',
-              icon: Icons.local_offer_outlined,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: credits,
-              label: 'Training / credits',
-              icon: Icons.workspace_premium_outlined,
-              maxLines: 3,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: workHistory,
-              label: 'Work history',
-              icon: Icons.history_edu_outlined,
-              maxLines: 3,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            Row(
+      left: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: CoreTextField(
-                    controller: genderIdentity,
-                    label: 'Gender identity',
-                    icon: Icons.diversity_1_outlined,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: CoreTextField(
-                    controller: experienceYears,
-                    label: 'Experience (years)',
-                    icon: Icons.work_history_outlined,
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: unionNote,
-              label: 'Union / professional membership',
-              icon: Icons.verified_user_outlined,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: CoreTextField(
-                    controller: ageRange,
-                    label: 'Playable age',
-                    icon: Icons.face_retouching_natural_outlined,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: CoreTextField(
-                    controller: height,
-                    label: 'Height',
-                    icon: Icons.height_outlined,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: CoreTextField(
-                    controller: instagram,
-                    label: 'Instagram',
-                    icon: Icons.alternate_email_rounded,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: CoreTextField(
-                    controller: followers,
-                    label: 'Followers',
-                    icon: Icons.people_alt_outlined,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: agency,
-              label: 'Agency affiliation',
-              icon: Icons.apartment_outlined,
-              onChanged: (_) => setState(() {}),
-            ),
-            if (error != null) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  error!,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: context.appColors.danger,
-                  ),
-                ),
-              ),
-            ],
-            if (remoteStatus != null) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  remoteStatus!,
+                Text(
+                  'Build the public casting profile directors use for search, shortlisting and booking decisions. Edit one section at a time — everything saves together.',
                   style: AppTextStyles.smallMeta.copyWith(
                     color: context.appColors.textSecondary,
+                    height: 1.35,
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            CorePrimaryButton(
-              icon: Icons.verified_outlined,
-              label: 'Save profile',
-              compact: true,
-              loading: savingRemote,
-              onTap: savingRemote ? null : _submit,
+                if (loadingRemote) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(minHeight: 2),
+                ],
+              ],
             ),
-            const SizedBox(height: 8),
-            CoreSecondaryButton(
-              icon: Icons.travel_explore_outlined,
-              label: publishingListing
-                  ? 'Publishing listing…'
-                  : 'Publish marketplace listing',
-              compact: true,
-              onTap: savingRemote || publishingListing
-                  ? null
-                  : _publishMarketplaceListing,
+          ),
+          const SizedBox(height: 12),
+          ActorCollapsibleSection(
+            title: 'Photos & CV',
+            subtitle: 'Headshot, cover image and resume',
+            icon: Icons.photo_camera_outlined,
+            initiallyExpanded: true,
+            child: Column(
+              children: [
+                _avatarField(),
+                const SizedBox(height: 14),
+                _coverField(),
+                const SizedBox(height: 14),
+                _resumeField(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActorCollapsibleSection(
+            title: 'Identity',
+            subtitle: 'Name, city and website',
+            icon: Icons.badge_outlined,
+            initiallyExpanded: true,
+            child: Column(
+              children: [
+                CoreTextField(
+                  controller: stageName,
+                  label: 'Stage name',
+                  icon: Icons.theater_comedy_outlined,
+                  errorText: _fieldError(stageName),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: realName,
+                  label: 'Account name',
+                  icon: Icons.person_outline_rounded,
+                  enabled: AuthScope.maybeOf(context)?.isAuthenticated != true,
+                  errorText: _fieldError(realName),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: city,
+                  label: 'City',
+                  icon: Icons.location_on_outlined,
+                  errorText: _fieldError(city),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: website,
+                  label: 'Portfolio website',
+                  icon: Icons.language_outlined,
+                  keyboardType: TextInputType.url,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActorCollapsibleSection(
+            title: 'Bio & Experience',
+            subtitle: 'Languages, skills, credits, training',
+            icon: Icons.history_edu_outlined,
+            tone: ActorTone.blue,
+            child: Column(
+              children: [
+                CoreTextField(
+                  controller: workHistory,
+                  label: 'Biography and acting experience',
+                  icon: Icons.history_edu_outlined,
+                  maxLines: 3,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: languages,
+                  label: 'Languages',
+                  icon: Icons.translate_rounded,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: skills,
+                  label: 'Acting skills',
+                  icon: Icons.local_offer_outlined,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: credits,
+                  label: 'Acting credits (one per line)',
+                  icon: Icons.workspace_premium_outlined,
+                  maxLines: 3,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: training,
+                  label: 'Education, workshops and training (one per line)',
+                  icon: Icons.school_outlined,
+                  maxLines: 3,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActorCollapsibleSection(
+            title: 'Physical & Voice',
+            subtitle: 'Look, accents, playable age',
+            icon: Icons.face_retouching_natural_outlined,
+            tone: ActorTone.green,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: ageRange,
+                        label: 'Playable age',
+                        icon: Icons.face_retouching_natural_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: height,
+                        label: 'Height',
+                        icon: Icons.height_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: eyeColor,
+                        label: 'Eye colour',
+                        icon: Icons.visibility_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: hairColor,
+                        label: 'Hair colour',
+                        icon: Icons.face_retouching_natural_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: accents,
+                        label: 'Accents',
+                        icon: Icons.record_voice_over_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: specialAbilities,
+                        label: 'Special abilities',
+                        icon: Icons.sports_martial_arts_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: genderIdentity,
+                        label: 'Gender identity',
+                        icon: Icons.diversity_1_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: experienceYears,
+                        label: 'Experience (years)',
+                        icon: Icons.work_history_outlined,
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: unionNote,
+                  label: 'Union / professional membership',
+                  icon: Icons.verified_user_outlined,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActorCollapsibleSection(
+            title: 'Social & Representation',
+            subtitle: 'Instagram, followers, agency',
+            icon: Icons.apartment_outlined,
+            tone: ActorTone.purple,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: CoreTextField(
+                        controller: instagram,
+                        label: 'Instagram',
+                        icon: Icons.alternate_email_rounded,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CoreTextField(
+                        controller: followers,
+                        label: 'Followers',
+                        icon: Icons.people_alt_outlined,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: agency,
+                  label: 'Agency affiliation',
+                  icon: Icons.apartment_outlined,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                error!,
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: context.appColors.danger,
+                ),
+              ),
             ),
           ],
-        ),
+          if (remoteStatus != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                remoteStatus!,
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: context.appColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          CorePrimaryButton(
+            icon: Icons.verified_outlined,
+            label: 'Save profile',
+            compact: true,
+            loading: savingRemote,
+            onTap: savingRemote ? null : _submit,
+          ),
+          const SizedBox(height: 8),
+          CoreSecondaryButton(
+            icon: Icons.travel_explore_outlined,
+            label: publishingListing
+                ? 'Publishing listing…'
+                : 'Publish marketplace listing',
+            compact: true,
+            onTap: savingRemote || publishingListing
+                ? null
+                : _publishMarketplaceListing,
+          ),
+        ],
       ),
       right: _ProfileSummary(
         avatarUrl: avatarUrl,
@@ -481,6 +608,70 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     );
   }
 
+  Widget _coverField() {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: uploadingCover ? null : _pickCover,
+          child: AspectRatio(
+            aspectRatio: 3.2,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: colors.softSurface,
+                border: Border.all(color: colors.border),
+                image: coverUrl == null
+                    ? null
+                    : DecorationImage(
+                        image: NetworkImage(coverUrl!),
+                        fit: BoxFit.cover,
+                      ),
+              ),
+              child: uploadingCover
+                  ? const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : coverUrl == null
+                      ? Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: colors.goldDark,
+                          size: 28,
+                        )
+                      : null,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          coverUrl == null ? 'Add profile cover' : 'Profile cover',
+          style: AppTextStyles.cardLabel.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Use a wide image that represents your casting identity.',
+          style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+        ),
+        if (coverError != null) ...[
+          const SizedBox(height: 3),
+          Text(
+            coverError!,
+            style: AppTextStyles.caption.copyWith(color: colors.danger),
+          ),
+        ],
+      ],
+    );
+  }
+
   String? _fieldError(TextEditingController controller) {
     if (error == null) return null;
     return controller.text.trim().isEmpty ? error : null;
@@ -506,6 +697,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       setState(() {
         supportedCities = cities;
         avatarUrl = profile.avatarFile?.publicUrl;
+        coverUrl = profile.coverFile?.publicUrl;
         resumeUrl = talent.resumeFile?.publicUrl;
         resumeFileName = talent.resumeFile?.originalName;
         if ((auth.user?.displayName ?? '').trim().isNotEmpty) {
@@ -537,14 +729,23 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
           unionNote.text = talent.unionNote!.trim();
         }
         final parsedSkills = _bioValue(profile.bio, 'Skills');
-        skills.text = parsedSkills.isNotEmpty || _hasStructuredBio(profile.bio)
-            ? parsedSkills
+        skills.text =
+            talent.skills.isNotEmpty ? talent.skills.join(', ') : parsedSkills;
+        accents.text = talent.accents.join(', ');
+        specialAbilities.text = talent.specialAbilities.join(', ');
+        credits.text = _entryTitles(talent.credits).join('\n');
+        training.text = _entryTitles(talent.training).join('\n');
+        workHistory.text = _hasStructuredBio(profile.bio)
+            ? _bioValue(profile.bio, 'Work history')
             : profile.bio ?? '';
-        credits.text = _bioValue(profile.bio, 'Credits');
-        workHistory.text = _bioValue(profile.bio, 'Work history');
-        instagram.text = _bioValue(profile.bio, 'Instagram');
-        followers.text = _bioValue(profile.bio, 'Followers');
-        agency.text = _bioValue(profile.bio, 'Agency');
+        instagram.text = talent.socialLinks['instagram']?.toString() ??
+            _bioValue(profile.bio, 'Instagram');
+        followers.text = talent.socialLinks['followers']?.toString() ??
+            _bioValue(profile.bio, 'Followers');
+        agency.text = talent.representation['agency_name']?.toString() ??
+            _bioValue(profile.bio, 'Agency');
+        eyeColor.text = talent.physicalDetails['eye_color']?.toString() ?? '';
+        hairColor.text = talent.physicalDetails['hair_color']?.toString() ?? '';
         remoteStatus = 'Synced with backend profile';
       });
     } on ApiException catch (exception) {
@@ -620,6 +821,58 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     }
   }
 
+  Future<void> _pickCover() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      actorSnack(context, 'Sign in to upload a profile cover');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
+    );
+    final item = result?.files.single;
+    final bytes = item?.bytes;
+    if (item == null || bytes == null) return;
+    setState(() {
+      uploadingCover = true;
+      coverError = null;
+    });
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'profile_media',
+        file: PickedFileData(
+          name: item.name,
+          mimeType: switch (item.extension?.toLowerCase()) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            _ => 'image/jpeg',
+          },
+          bytes: bytes,
+        ),
+      );
+      final profile = await auth.updateMyProfile(
+        bio: _bioForBackend(),
+        cityId: _matchedCity()?.publicId,
+        visibility: 'public',
+        websiteUrl: website.text.trim(),
+        coverFileId: uploaded.publicId,
+      );
+      if (!mounted) return;
+      setState(() => coverUrl = profile.coverFile?.publicUrl);
+      actorSnack(context, 'Profile cover updated');
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() => coverError = exception.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => coverError = 'Could not upload the cover. Try again.');
+    } finally {
+      if (mounted) setState(() => uploadingCover = false);
+    }
+  }
+
   Future<void> _pickResume() async {
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) {
@@ -660,6 +913,14 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         unionNote: unionNote.text.trim(),
         experienceYears: int.tryParse(experienceYears.text.trim()),
         resumeFileId: uploaded.publicId,
+        skills: _commaValues(skills.text),
+        accents: _commaValues(accents.text),
+        specialAbilities: _commaValues(specialAbilities.text),
+        physicalDetails: _physicalDetailsForBackend(),
+        credits: _lineEntries(credits.text),
+        training: _lineEntries(training.text),
+        representation: _representationForBackend(),
+        socialLinks: _socialLinksForBackend(),
       );
       if (!mounted) return;
       setState(() {
@@ -721,6 +982,14 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         heightCm: _heightCmForBackend(),
         unionNote: unionNote.text.trim(),
         experienceYears: int.tryParse(experienceYears.text.trim()),
+        skills: _commaValues(skills.text),
+        accents: _commaValues(accents.text),
+        specialAbilities: _commaValues(specialAbilities.text),
+        physicalDetails: _physicalDetailsForBackend(),
+        credits: _lineEntries(credits.text),
+        training: _lineEntries(training.text),
+        representation: _representationForBackend(),
+        socialLinks: _socialLinksForBackend(),
       );
       if (!mounted) return;
       setState(() => remoteStatus = 'Backend profile saved');
@@ -784,6 +1053,14 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         heightCm: _heightCmForBackend(),
         unionNote: unionNote.text.trim(),
         experienceYears: int.tryParse(experienceYears.text.trim()),
+        skills: _commaValues(skills.text),
+        accents: _commaValues(accents.text),
+        specialAbilities: _commaValues(specialAbilities.text),
+        physicalDetails: _physicalDetailsForBackend(),
+        credits: _lineEntries(credits.text),
+        training: _lineEntries(training.text),
+        representation: _representationForBackend(),
+        socialLinks: _socialLinksForBackend(),
       );
       final listing = await auth.publishMarketplaceListing(
         title: '${stageName.text.trim()} — Actor',
@@ -840,7 +1117,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     city.clear();
     languages.clear();
     skills.clear();
+    accents.clear();
+    specialAbilities.clear();
     credits.clear();
+    training.clear();
     instagram.clear();
     followers.clear();
     website.clear();
@@ -851,6 +1131,8 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     experienceYears.clear();
     unionNote.clear();
     agency.clear();
+    eyeColor.clear();
+    hairColor.clear();
   }
 
   String _bioValue(String? bio, String label) {
@@ -885,23 +1167,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   }
 
   String _bioForBackend() {
-    final parts = <String>[
-      if (skills.text.trim().isNotEmpty) 'Skills: ${skills.text.trim()}',
-      if (credits.text.trim().isNotEmpty) 'Credits: ${credits.text.trim()}',
-      if (workHistory.text.trim().isNotEmpty)
-        'Work history: ${workHistory.text.trim()}',
-      if (ageRange.text.trim().isNotEmpty)
-        'Playable age: ${ageRange.text.trim()}',
-      if (height.text.trim().isNotEmpty) 'Height: ${height.text.trim()}',
-      if (instagram.text.trim().isNotEmpty)
-        'Instagram: ${instagram.text.trim()}',
-      if (followers.text.trim().isNotEmpty)
-        'Followers: ${followers.text.trim()}',
-      if (unionNote.text.trim().isNotEmpty)
-        'Membership: ${unionNote.text.trim()}',
-      if (agency.text.trim().isNotEmpty) 'Agency: ${agency.text.trim()}',
-    ];
-    return parts.join('\n');
+    return workHistory.text.trim();
   }
 
   String _listingSummary() {
@@ -924,7 +1190,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       city,
       languages,
       skills,
+      accents,
+      specialAbilities,
       credits,
+      training,
       workHistory,
       ageRange,
       height,
@@ -934,6 +1203,50 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     final completed =
         fields.where((field) => field.text.trim().isNotEmpty).length;
     return ((completed / fields.length) * 100).round();
+  }
+
+  List<String> _commaValues(String value) {
+    return value
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _lineEntries(String value) {
+    return value
+        .split('\n')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .map((item) => <String, dynamic>{'title': item})
+        .toList();
+  }
+
+  List<String> _entryTitles(List<Map<String, dynamic>> entries) {
+    return entries
+        .map((item) => item['title']?.toString().trim() ?? '')
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  Map<String, dynamic> _physicalDetailsForBackend() {
+    return {
+      if (eyeColor.text.trim().isNotEmpty) 'eye_color': eyeColor.text.trim(),
+      if (hairColor.text.trim().isNotEmpty) 'hair_color': hairColor.text.trim(),
+    };
+  }
+
+  Map<String, dynamic> _representationForBackend() {
+    return {
+      if (agency.text.trim().isNotEmpty) 'agency_name': agency.text.trim(),
+    };
+  }
+
+  Map<String, dynamic> _socialLinksForBackend() {
+    return {
+      if (instagram.text.trim().isNotEmpty) 'instagram': instagram.text.trim(),
+      if (followers.text.trim().isNotEmpty) 'followers': followers.text.trim(),
+    };
   }
 }
 

@@ -117,6 +117,28 @@ class TrustSafetyRepository {
         .toList();
   }
 
+  Future<DisputeDto> dispute(String disputeId) async {
+    final response = await _client.get('/disputes/$disputeId');
+    return DisputeDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['dispute']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<DisputeDto> addDisputeEvidence(
+    String disputeId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.post(
+      '/disputes/$disputeId/evidence',
+      body: body,
+    );
+    return DisputeDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['dispute']
+          as Map<String, dynamic>,
+    );
+  }
+
   Future<List<DisputeDto>> adminDisputes({String? status}) async {
     final response = await _client
         .get('/admin/disputes${status == null ? '' : '?status=$status'}');

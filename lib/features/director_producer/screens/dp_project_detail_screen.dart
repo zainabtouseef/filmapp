@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/casting/casting_controller.dart';
+import '../../../core/casting/casting_models.dart';
 import '../../../core/contracts/contract_models.dart';
 import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/open_url.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/projects/project_models.dart';
@@ -50,6 +55,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
     'Overview',
     'Budget & Costs',
     'Shortlists',
+    'Casting',
     'Bookings',
     'Contracts',
     'Payments',
@@ -77,6 +83,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
     final projects = ProjectsScope.maybeOf(context);
     final bookingsController = BookingsScope.maybeOf(context);
     final contractsController = ContractsScope.maybeOf(context);
+    final castingController = CastingScope.maybeOf(context);
     final paymentsController = PaymentsScope.maybeOf(context);
     if (projects == null) {
       throw Exception('Projects scope is missing.');
@@ -128,6 +135,11 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
         )
         .expand(_toDpPayments)
         .toList();
+    final castingApplications = castingController == null
+        ? <CastingApplication>[]
+        : await castingController
+            .directorApplications(project.publicId)
+            .catchError((_) => <CastingApplication>[]);
 
     return _ProjectHubData(
       project: _toDpProject(
@@ -142,6 +154,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
       bookings: bookings,
       contracts: contracts,
       payments: payments,
+      castingApplications: castingApplications,
     );
   }
 
@@ -217,6 +230,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
               bookings: data.bookings,
               contracts: data.contracts,
               payments: data.payments,
+              castingApplications: data.castingApplications,
             ),
           ],
         );
@@ -361,6 +375,7 @@ class _ProjectHubData {
   final List<DpBooking> bookings;
   final List<DpContract> contracts;
   final List<DpPayment> payments;
+  final List<CastingApplication> castingApplications;
 
   const _ProjectHubData({
     required this.project,
@@ -368,6 +383,7 @@ class _ProjectHubData {
     required this.bookings,
     required this.contracts,
     required this.payments,
+    required this.castingApplications,
   });
 }
 
@@ -569,6 +585,7 @@ class _ProjectTabBody extends StatelessWidget {
   final List<DpBooking> bookings;
   final List<DpContract> contracts;
   final List<DpPayment> payments;
+  final List<CastingApplication> castingApplications;
 
   const _ProjectTabBody({
     required this.tab,
@@ -577,6 +594,7 @@ class _ProjectTabBody extends StatelessWidget {
     required this.bookings,
     required this.contracts,
     required this.payments,
+    required this.castingApplications,
   });
 
   @override
@@ -590,6 +608,7 @@ class _ProjectTabBody extends StatelessWidget {
       'Budget & Costs' =>
         _BudgetTab(project: project, bookings: bookings, contracts: contracts),
       'Shortlists' => DPProjectScopedShortlists(project: project),
+      'Casting' => _CastingApplicationsTab(applications: castingApplications),
       'Bookings' => _BookingsTab(bookings: bookings),
       'Contracts' => _ContractsTab(project: project, contracts: contracts),
       'Payments' => _PaymentsTab(payments: payments),
@@ -764,6 +783,524 @@ class _BudgetBookingRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _CastingApplicationsTab extends StatefulWidget {
+  final List<CastingApplication> applications;
+
+  const _CastingApplicationsTab({required this.applications});
+
+  @override
+  State<_CastingApplicationsTab> createState() =>
+      _CastingApplicationsTabState();
+}
+
+class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
+  late List<CastingApplication> _rows = [...widget.applications];
+  String _filter = 'All';
+  String? _workingId;
+
+  @override
+  void didUpdateWidget(covariant _CastingApplicationsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.applications != widget.applications) {
+      _rows = [...widget.applications];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _rows.where(_matchesFilter).toList();
+    return DPSectionCard(
+      title: 'Casting Applications',
+      icon: Icons.groups_2_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final filter in const [
+                  'All',
+                  'New',
+                  'Shortlisted',
+                  'Auditions',
+                  'Offers',
+                  'Closed',
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: DpDotChip(
+                      label: filter,
+                      active: _filter == filter,
+                      onTap: () => setState(() => _filter = filter),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (rows.isEmpty)
+            const CoreEmptyState(
+              icon: Icons.person_search_outlined,
+              title: 'No casting applications',
+              message:
+                  'Applications appear here when actors submit to an open role on this project.',
+            )
+          else
+            for (var index = 0; index < rows.length; index++) ...[
+              _DirectorCastingApplicationCard(
+                application: rows[index],
+                working: _workingId == rows[index].publicId,
+                onStatus: (status) => _updateStatus(rows[index], status),
+                onMessage: () => _openConversation(rows[index]),
+                onSendOffer: rows[index].marketplaceListingId == null ||
+                        const {'rejected', 'withdrawn'}
+                            .contains(rows[index].status)
+                    ? null
+                    : () => Navigator.pushNamed(
+                          context,
+                          DirectorProducerRoutes.bookingRequest,
+                          arguments: {
+                            'candidateId': rows[index].marketplaceListingId,
+                            'projectId': rows[index].role.project.publicId,
+                          },
+                        ),
+              ),
+              if (index != rows.length - 1) const SizedBox(height: 10),
+            ],
+        ],
+      ),
+    );
+  }
+
+  bool _matchesFilter(CastingApplication item) {
+    return switch (_filter) {
+      'New' => const {'submitted', 'viewed'}.contains(item.status),
+      'Shortlisted' => item.status == 'shortlisted',
+      'Auditions' => item.isAudition,
+      'Offers' => const {'offer_received', 'selected'}.contains(item.status),
+      'Closed' => const {'rejected', 'withdrawn'}.contains(item.status),
+      _ => true,
+    };
+  }
+
+  Future<void> _updateStatus(
+    CastingApplication application,
+    String status,
+  ) async {
+    Map<String, dynamic> body = {'status': status};
+    if (status == 'audition_requested' ||
+        status == 'self_tape_requested' ||
+        status == 'callback') {
+      final details = await _auditionDialog(status);
+      if (details == null || !mounted) return;
+      body = {...body, ...details};
+    } else if (status == 'rejected') {
+      final reason = await _rejectionDialog();
+      if (reason == null || !mounted) return;
+      body['rejection_reason'] = reason;
+    }
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await casting.updateDirectorApplication(
+        application.publicId,
+        body,
+      );
+      if (!mounted) return;
+      setState(() {
+        final index = _rows.indexWhere(
+          (item) => item.publicId == updated.publicId,
+        );
+        if (index >= 0) _rows[index] = updated;
+      });
+      dpSnack(context, 'Application updated to ${updated.statusLabel}');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<void> _openConversation(CastingApplication application) async {
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final conversationId = application.conversationId ??
+          await casting.ensureConversation(application.publicId);
+      if (!mounted) return;
+      Navigator.pushNamed(
+        context,
+        CoreRoutes.chat,
+        arguments: conversationId,
+      );
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<Map<String, dynamic>?> _auditionDialog(String status) async {
+    final date = TextEditingController();
+    final location = TextEditingController();
+    final onlineUrl = TextEditingController();
+    final instructions = TextEditingController();
+    final contact = TextEditingController();
+    final callback = status == 'callback';
+    final selfTape = status == 'self_tape_requested';
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          callback
+              ? 'Schedule callback'
+              : selfTape
+                  ? 'Request self-tape'
+                  : 'Schedule audition',
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CoreTextField(
+                controller: date,
+                label: selfTape
+                    ? 'Deadline (ISO date/time)'
+                    : 'Date and time (ISO)',
+                icon: Icons.schedule_outlined,
+                keyboardType: TextInputType.datetime,
+              ),
+              if (!selfTape) ...[
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: location,
+                  label: 'Location',
+                  icon: Icons.location_on_outlined,
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: onlineUrl,
+                  label: 'Online meeting link',
+                  icon: Icons.link_outlined,
+                  keyboardType: TextInputType.url,
+                ),
+              ],
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: instructions,
+                label: 'Instructions',
+                icon: Icons.assignment_outlined,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: contact,
+                label: 'Contact details',
+                icon: Icons.contact_mail_outlined,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = DateTime.tryParse(date.text.trim());
+              if (parsed == null) {
+                dpSnack(context, 'Enter a valid ISO date and time');
+                return;
+              }
+              Navigator.pop(
+                dialogContext,
+                {
+                  if (callback)
+                    'callback_at': parsed.toUtc().toIso8601String()
+                  else if (selfTape)
+                    'audition_due_at': parsed.toUtc().toIso8601String()
+                  else
+                    'audition_at': parsed.toUtc().toIso8601String(),
+                  if (location.text.trim().isNotEmpty)
+                    'audition_location': location.text.trim(),
+                  if (onlineUrl.text.trim().isNotEmpty)
+                    'audition_online_url': onlineUrl.text.trim(),
+                  if (callback)
+                    'callback_details': instructions.text.trim()
+                  else
+                    'audition_instructions': instructions.text.trim(),
+                  if (contact.text.trim().isNotEmpty)
+                    'audition_contact': contact.text.trim(),
+                },
+              );
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+    date.dispose();
+    location.dispose();
+    onlineUrl.dispose();
+    instructions.dispose();
+    contact.dispose();
+    return result;
+  }
+
+  Future<String?> _rejectionDialog() async {
+    final reason = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Close application'),
+        content: CoreTextField(
+          controller: reason,
+          label: 'Actor-facing reason',
+          icon: Icons.notes_outlined,
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (reason.text.trim().isEmpty) {
+                dpSnack(context, 'Add a short reason for the actor');
+                return;
+              }
+              Navigator.pop(dialogContext, reason.text.trim());
+            },
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    reason.dispose();
+    return result;
+  }
+}
+
+class _DirectorCastingApplicationCard extends StatelessWidget {
+  final CastingApplication application;
+  final bool working;
+  final ValueChanged<String> onStatus;
+  final VoidCallback onMessage;
+  final VoidCallback? onSendOffer;
+
+  const _DirectorCastingApplicationCard({
+    required this.application,
+    required this.working,
+    required this.onStatus,
+    required this.onMessage,
+    required this.onSendOffer,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final selfTape = application.selfTapeFile;
+    final statusOptions = _statusOptions(application.status);
+    return DPGlassCard(
+      selected: const {
+        'submitted',
+        'viewed',
+        'audition_requested',
+        'self_tape_requested',
+      }.contains(application.status),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              EntityAvatar(
+                label: application.screenName,
+                image: application.actorAvatarUrl == null
+                    ? null
+                    : NetworkImage(application.actorAvatarUrl!),
+                size: 44,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      application.screenName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      application.role.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              DPStatusChip(
+                label: application.statusLabel,
+                tone: _tone(application.status),
+              ),
+              const SizedBox(width: 6),
+              PopupMenuButton<String>(
+                tooltip: 'Update application',
+                enabled: !working && statusOptions.isNotEmpty,
+                onSelected: onStatus,
+                itemBuilder: (_) => [
+                  for (final option in statusOptions)
+                    PopupMenuItem(
+                      value: option.$1,
+                      child: Text(option.$2),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if ((application.coverNote ?? '').isNotEmpty)
+            Text(
+              application.coverNote!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              DPStatusChip(
+                label: '${application.portfolioItemIds.length} portfolio items',
+                tone: DpTone.info,
+              ),
+              if (application.audition.confirmedAt != null)
+                const DPStatusChip(
+                  label: 'Audition confirmed',
+                  tone: DpTone.success,
+                ),
+              if (selfTape != null)
+                const DPStatusChip(
+                  label: 'Self-tape received',
+                  tone: DpTone.success,
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: 154,
+                child: CoreSecondaryButton(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  label: 'Message',
+                  compact: true,
+                  onTap: working ? null : onMessage,
+                ),
+              ),
+              if (onSendOffer != null)
+                SizedBox(
+                  width: 190,
+                  child: CorePrimaryButton(
+                    icon: Icons.send_outlined,
+                    label: 'Send booking offer',
+                    compact: true,
+                    onTap: working ? null : onSendOffer,
+                  ),
+                ),
+              if (selfTape != null)
+                SizedBox(
+                  width: 170,
+                  child: CorePrimaryButton(
+                    icon: Icons.play_circle_outline_rounded,
+                    label: 'View self-tape',
+                    compact: true,
+                    onTap: () async {
+                      final auth = AuthScope.maybeOf(context);
+                      if (auth == null) return;
+                      try {
+                        final url = await auth.authorizedDownloadUrl(
+                          selfTape.publicId,
+                        );
+                        openUrlInNewTab(url);
+                      } on ApiException catch (error) {
+                        if (context.mounted) dpSnack(context, error.message);
+                      }
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  DpTone _tone(String status) {
+    return switch (status) {
+      'selected' || 'offer_received' => DpTone.success,
+      'rejected' || 'withdrawn' => DpTone.danger,
+      'shortlisted' || 'callback' => DpTone.warning,
+      'audition_requested' || 'self_tape_requested' => DpTone.info,
+      _ => DpTone.neutral,
+    };
+  }
+
+  List<(String, String)> _statusOptions(String status) {
+    return switch (status) {
+      'submitted' || 'viewed' => const [
+          ('shortlisted', 'Shortlist'),
+          ('self_tape_requested', 'Request self-tape'),
+          ('audition_requested', 'Schedule audition'),
+          ('rejected', 'Reject application'),
+        ],
+      'shortlisted' => const [
+          ('self_tape_requested', 'Request self-tape'),
+          ('audition_requested', 'Schedule audition'),
+          ('callback', 'Schedule callback'),
+          ('selected', 'Select actor'),
+          ('rejected', 'Reject application'),
+        ],
+      'audition_requested' => const [
+          ('self_tape_requested', 'Request self-tape'),
+          ('callback', 'Schedule callback'),
+          ('selected', 'Select actor'),
+          ('rejected', 'Reject application'),
+        ],
+      'self_tape_requested' => const [
+          ('audition_requested', 'Schedule audition'),
+          ('callback', 'Schedule callback'),
+          ('selected', 'Select actor'),
+          ('rejected', 'Reject application'),
+        ],
+      'callback' || 'offer_received' => const [
+          ('selected', 'Select actor'),
+          ('rejected', 'Reject application'),
+        ],
+      _ => const [],
+    };
   }
 }
 

@@ -4,11 +4,14 @@ import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/casting/casting_controller.dart';
+import '../../../core/casting/casting_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/cards/glass_section_card.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -25,6 +28,7 @@ class AT01TalentDashboardScreen extends StatefulWidget {
 class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
   Future<_TalentProfileSnapshot>? _profileFuture;
   Future<List<Booking>>? _opportunitiesFuture;
+  Future<_CastingDashboardData>? _castingFuture;
 
   @override
   void didChangeDependencies() {
@@ -37,6 +41,23 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
     if (_opportunitiesFuture == null && bookings != null) {
       _opportunitiesFuture = bookings.opportunities(force: true);
     }
+    final casting = CastingScope.maybeOf(context);
+    if (_castingFuture == null && casting != null) {
+      _castingFuture = _loadCasting(casting);
+    }
+  }
+
+  Future<_CastingDashboardData> _loadCasting(
+    CastingController casting,
+  ) async {
+    final values = await Future.wait<Object>([
+      casting.roles(force: true),
+      casting.actorApplications(force: true),
+    ]);
+    return _CastingDashboardData(
+      roles: (values[0] as CastingRolePage).roles,
+      applications: values[1] as List<CastingApplication>,
+    );
   }
 
   Future<_TalentProfileSnapshot> _loadProfile(AuthController auth) async {
@@ -63,6 +84,12 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _PriorityActionHero(
+          profileFuture: _profileFuture,
+          opportunitiesFuture: _opportunitiesFuture,
+          castingFuture: _castingFuture,
+        ),
+        const SizedBox(height: 12),
         ActorSectionCard(
           title: 'Talent Snapshot',
           icon: Icons.auto_awesome_outlined,
@@ -78,17 +105,388 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
               'Live dashboard metrics are temporarily unavailable.',
         ),
         const SizedBox(height: 12),
+        _CastingDashboardOverview(future: _castingFuture),
+        const SizedBox(height: 12),
         ActorTwoColumn(
           left: _PendingWork(
             future: _opportunitiesFuture,
             onRefresh: _refreshOpportunities,
           ),
-          right: _DashboardSideRail(
-            opportunitiesFuture: _opportunitiesFuture,
-            profileFuture: _profileFuture,
-          ),
+          right: _DashboardSideRail(profileFuture: _profileFuture),
         ),
       ],
+    );
+  }
+}
+
+/// The single most important next step, shown above everything else so a
+/// first-time actor never has to hunt for what to do — priority order is
+/// profile completeness, then any audition awaiting a response, then a
+/// pending offer, then an imminent secured booking.
+class _PriorityActionHero extends StatelessWidget {
+  final Future<_TalentProfileSnapshot>? profileFuture;
+  final Future<List<Booking>>? opportunitiesFuture;
+  final Future<_CastingDashboardData>? castingFuture;
+
+  const _PriorityActionHero({
+    required this.profileFuture,
+    required this.opportunitiesFuture,
+    required this.castingFuture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = profileFuture;
+    if (profile == null) {
+      return const _HeroCard(
+        icon: Icons.login_rounded,
+        eyebrow: 'Get started',
+        title: 'Sign in to see your next step',
+        message:
+            'Your next priority — profile, auditions, offers or bookings — will show here once you sign in.',
+      );
+    }
+    return FutureBuilder<List<Object?>>(
+      future: Future.wait<Object?>([
+        profile,
+        opportunitiesFuture ?? Future.value(const <Booking>[]),
+        castingFuture ?? Future.value(null),
+      ]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SkeletonCard(height: 118);
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const _HeroCard(
+            icon: Icons.cloud_off_outlined,
+            eyebrow: 'Next step',
+            title: 'Could not load your next step',
+            message: 'Pull to refresh or reopen the dashboard to try again.',
+          );
+        }
+        final results = snapshot.data!;
+        final talentSnapshot = results[0] as _TalentProfileSnapshot;
+        final bookings = results[1] as List<Booking>;
+        final casting = results[2] as _CastingDashboardData?;
+        return _resolveHero(context, talentSnapshot, bookings, casting);
+      },
+    );
+  }
+
+  Widget _resolveHero(
+    BuildContext context,
+    _TalentProfileSnapshot snapshot,
+    List<Booking> bookings,
+    _CastingDashboardData? casting,
+  ) {
+    final completeness =
+        _profileCompleteness(snapshot.talentProfile, snapshot.userProfile);
+    if (completeness < 70) {
+      return _HeroCard(
+        icon: Icons.badge_outlined,
+        eyebrow: 'Next step · $completeness% complete',
+        title: 'Complete your profile',
+        message:
+            'Directors match faster with actors who have a full profile — add the missing details to start appearing in more searches.',
+        actionLabel: 'Complete profile',
+        onAction: () => Navigator.pushNamed(context, ActorTalentRoutes.profile),
+      );
+    }
+
+    final auditions = (casting?.applications ?? const [])
+        .where((item) => item.isAudition)
+        .toList();
+    if (auditions.isNotEmpty) {
+      final next = auditions.first;
+      return _HeroCard(
+        icon: Icons.video_camera_front_outlined,
+        eyebrow: 'Next step · Audition',
+        title: 'Respond to your audition invitation',
+        message:
+            '${next.role.title} for ${next.role.project.title} needs your response.',
+        actionLabel: 'Open audition',
+        onAction: () => Navigator.pushNamed(
+          context,
+          ActorTalentRoutes.applicationDetail,
+          arguments: next.publicId,
+        ),
+      );
+    }
+
+    final pendingOffers = bookings
+        .where((item) =>
+            item.toActorOpportunity().status == ActorBookingStatus.sent ||
+            item.toActorOpportunity().status ==
+                ActorBookingStatus.underNegotiation)
+        .toList();
+    if (pendingOffers.isNotEmpty) {
+      final offer = pendingOffers.first;
+      return _HeroCard(
+        icon: Icons.rate_review_outlined,
+        eyebrow: 'Next step · Offer',
+        title: 'Review your offer',
+        message:
+            '${offer.projectTitle} sent an offer that is waiting on your response.',
+        actionLabel: 'Review offer',
+        onAction: () => Navigator.pushNamed(
+          context,
+          ActorTalentRoutes.offerDetail,
+          arguments: offer.publicId,
+        ),
+      );
+    }
+
+    final upcoming = bookings
+        .where((item) => item.status == 'secured')
+        .where((item) =>
+            item.startAt.difference(DateTime.now()).inDays <= 14 &&
+            item.startAt.isAfter(DateTime.now()))
+        .toList()
+      ..sort((a, b) => a.startAt.compareTo(b.startAt));
+    if (upcoming.isNotEmpty) {
+      final next = upcoming.first;
+      final days = next.startAt.difference(DateTime.now()).inDays;
+      return _HeroCard(
+        icon: Icons.event_available_outlined,
+        eyebrow: 'Next step · Upcoming booking',
+        title: 'Confirm your upcoming booking',
+        message: days <= 0
+            ? '${next.projectTitle} call time is today — check the schedule and location.'
+            : '${next.projectTitle} starts in $days day${days == 1 ? '' : 's'}.',
+        actionLabel: 'Open booking',
+        onAction: () =>
+            Navigator.pushNamed(context, ActorTalentRoutes.bookings),
+      );
+    }
+
+    return _HeroCard(
+      icon: Icons.check_circle_outline_rounded,
+      eyebrow: 'Next step',
+      title: 'You are all caught up',
+      message:
+          'No pending actions right now. Browse new casting calls to keep your pipeline moving.',
+      actionLabel: 'Discover roles',
+      onAction: () =>
+          Navigator.pushNamed(context, ActorTalentRoutes.opportunities),
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  final IconData icon;
+  final String eyebrow;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _HeroCard({
+    required this.icon,
+    required this.eyebrow,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GlassSectionCard(
+      radius: 20,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              gradient: colors.goldGradient,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: colors.onGold, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow.toUpperCase(),
+                  style: AppTextStyles.micro.copyWith(
+                    color: colors.goldDark,
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  title,
+                  style: AppTextStyles.sectionHeading.copyWith(
+                    color: colors.textPrimary,
+                    fontSize: 19,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textSecondary,
+                    height: 1.32,
+                  ),
+                ),
+                if (actionLabel != null) ...[
+                  const SizedBox(height: 12),
+                  CorePrimaryButton(
+                    icon: Icons.arrow_forward_rounded,
+                    label: actionLabel!,
+                    compact: true,
+                    onTap: onAction,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CastingDashboardData {
+  final List<CastingRole> roles;
+  final List<CastingApplication> applications;
+
+  const _CastingDashboardData({
+    required this.roles,
+    required this.applications,
+  });
+}
+
+class _CastingDashboardOverview extends StatelessWidget {
+  final Future<_CastingDashboardData>? future;
+
+  const _CastingDashboardOverview({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    if (future == null) {
+      return const SizedBox.shrink();
+    }
+    return FutureBuilder<_CastingDashboardData>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const ActorTwoColumn(
+            left: SkeletonCard(height: 220),
+            right: SkeletonCard(height: 220),
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return const InlineNotice(
+            message: 'Casting updates are temporarily unavailable.',
+            tone: CoreStatusTone.warning,
+          );
+        }
+        final data = snapshot.data!;
+        final active = data.applications
+            .where(
+              (item) => !const {
+                'draft',
+                'selected',
+                'rejected',
+                'withdrawn',
+              }.contains(item.status),
+            )
+            .toList();
+        final auditions =
+            data.applications.where((item) => item.isAudition).toList();
+        return ActorTwoColumn(
+          left: ActorSectionCard(
+            title: 'Recommended Roles',
+            icon: Icons.manage_search_outlined,
+            actionText: 'View all',
+            onActionTap: () => Navigator.pushNamed(
+              context,
+              ActorTalentRoutes.opportunities,
+            ),
+            child: data.roles.isEmpty
+                ? const CoreEmptyState(
+                    icon: Icons.search_off_outlined,
+                    title: 'No role recommendations',
+                    message: 'New matching casting calls appear here.',
+                  )
+                : Column(
+                    children: [
+                      for (final role in data.roles.take(3))
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.theater_comedy_outlined),
+                          title: Text(role.title),
+                          subtitle: Text(
+                            '${role.project.title} · ${role.feeLabel}',
+                          ),
+                          trailing: IconButton(
+                            tooltip: 'Open role',
+                            icon: const Icon(Icons.arrow_forward_rounded),
+                            onPressed: () => Navigator.pushNamed(
+                              context,
+                              ActorTalentRoutes.roleDetail,
+                              arguments: role.publicId,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+          right: ActorSectionCard(
+            title: 'Application Activity',
+            icon: Icons.assignment_outlined,
+            actionText: 'Tracker',
+            onActionTap: () => Navigator.pushNamed(
+              context,
+              ActorTalentRoutes.applications,
+            ),
+            tone: ActorTone.blue,
+            child: Column(
+              children: [
+                ActorInfoRow(
+                  icon: Icons.pending_actions_outlined,
+                  label: 'Active applications',
+                  value: '${active.length}',
+                ),
+                ActorInfoRow(
+                  icon: Icons.video_camera_front_outlined,
+                  label: 'Auditions and callbacks',
+                  value: '${auditions.length}',
+                ),
+                ActorInfoRow(
+                  icon: Icons.update_rounded,
+                  label: 'Recent updates',
+                  value: data.applications.isEmpty
+                      ? 'No application updates'
+                      : data.applications.first.statusLabel,
+                ),
+                if (auditions.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  CorePrimaryButton(
+                    icon: Icons.event_available_outlined,
+                    label: 'Open next audition',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      ActorTalentRoutes.applicationDetail,
+                      arguments: auditions.first.publicId,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -166,15 +564,14 @@ class _IdentityCard extends StatelessWidget {
         ? 'No languages added'
         : talent.languages.map((item) => item.language).join(', ');
     final availability = talent.availabilityStatus.replaceAll('_', ' ');
-    final agency = _bioProfileValue(snapshot.userProfile.bio, 'Agency').isEmpty
-        ? 'Independent'
-        : _bioProfileValue(snapshot.userProfile.bio, 'Agency');
+    final agency =
+        talent.representation['agency_name']?.toString().trim() ?? '';
     return Row(
       children: [
         SizedBox(
           width: 82,
           child: ActorMediaFrame(
-            imageUrl: '',
+            imageUrl: snapshot.userProfile.avatarFile?.publicUrl ?? '',
             title: stageName,
             badge: 'Talent',
             fallbackIcon: Icons.person_outline_rounded,
@@ -212,7 +609,9 @@ class _IdentityCard extends StatelessWidget {
                 spacing: 7,
                 runSpacing: 7,
                 children: [
-                  ActorStatusLabel(label: agency),
+                  ActorStatusLabel(
+                    label: agency.isEmpty ? 'Independent' : agency,
+                  ),
                   ActorStatusLabel(
                     label: availability,
                     tone: ActorTone.green,
@@ -348,50 +747,54 @@ class _LiveActionRow extends StatelessWidget {
 }
 
 class _DashboardSideRail extends StatelessWidget {
-  final Future<List<Booking>>? opportunitiesFuture;
   final Future<_TalentProfileSnapshot>? profileFuture;
 
-  const _DashboardSideRail({
-    required this.opportunitiesFuture,
-    required this.profileFuture,
-  });
+  const _DashboardSideRail({required this.profileFuture});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         ActorSectionCard(
-          title: 'Next Opportunity',
-          icon: Icons.local_activity_outlined,
-          actionText: 'Open inbox',
-          onActionTap: () =>
-              Navigator.pushNamed(context, ActorTalentRoutes.opportunities),
-          child: opportunitiesFuture == null
-              ? const CoreEmptyState(
-                  icon: Icons.lock_outline_rounded,
-                  title: 'Sign in to view next opportunity',
-                  message: 'Producer offers are loaded from live bookings.',
-                )
-              : FutureBuilder<List<Booking>>(
-                  future: opportunitiesFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SkeletonCard(
-                        height: 190,
-                        density: CardDensity.compact,
-                      );
-                    }
-                    final rows = snapshot.data ?? const [];
-                    if (snapshot.hasError || rows.isEmpty) {
-                      return const CoreEmptyState(
-                        icon: Icons.inbox_outlined,
-                        title: 'No active opportunity',
-                        message: 'New offers will appear here.',
-                      );
-                    }
-                    return _LivePrimaryMatch(booking: rows.first);
-                  },
-                ),
+          title: 'Manage Your Profile',
+          icon: Icons.tune_rounded,
+          tone: ActorTone.purple,
+          child: const ActorTaskRail(
+            tasks: [
+              ActorTask(
+                id: 'portfolio',
+                title: 'Portfolio',
+                subtitle: 'Photos, showreel, self-tapes',
+                route: ActorTalentRoutes.portfolio,
+                icon: Icons.video_library_outlined,
+                tone: ActorTone.blue,
+              ),
+              ActorTask(
+                id: 'calendar',
+                title: 'Calendar',
+                subtitle: 'Availability',
+                route: ActorTalentRoutes.calendar,
+                icon: Icons.calendar_month_outlined,
+                tone: ActorTone.gold,
+              ),
+              ActorTask(
+                id: 'rates',
+                title: 'Rates',
+                subtitle: 'Day rate & terms',
+                route: ActorTalentRoutes.rates,
+                icon: Icons.price_change_outlined,
+                tone: ActorTone.green,
+              ),
+              ActorTask(
+                id: 'safety',
+                title: 'Safety',
+                subtitle: 'Privacy & support',
+                route: ActorTalentRoutes.safety,
+                icon: Icons.health_and_safety_outlined,
+                tone: ActorTone.purple,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         ActorSectionCard(
@@ -449,47 +852,6 @@ class _DashboardSideRail extends StatelessWidget {
   }
 }
 
-class _LivePrimaryMatch extends StatelessWidget {
-  final Booking booking;
-
-  const _LivePrimaryMatch({required this.booking});
-
-  @override
-  Widget build(BuildContext context) {
-    final opportunity = booking.toActorOpportunity();
-    return Column(
-      children: [
-        ActorInfoRow(
-          icon: Icons.badge_outlined,
-          label: opportunity.role,
-          value: opportunity.fee,
-        ),
-        ActorInfoRow(
-          icon: Icons.apartment_outlined,
-          label: 'Producer',
-          value: opportunity.producer,
-        ),
-        ActorInfoRow(
-          icon: Icons.date_range_outlined,
-          label: 'Dates',
-          value: opportunity.dates,
-        ),
-        const SizedBox(height: 6),
-        CorePrimaryButton(
-          icon: Icons.rate_review_outlined,
-          label: 'Review terms',
-          compact: true,
-          onTap: () => Navigator.pushNamed(
-            context,
-            ActorTalentRoutes.offerDetail,
-            arguments: booking.publicId,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _NoActivityCard extends StatelessWidget {
   const _NoActivityCard();
 
@@ -540,16 +902,6 @@ class ActorStatusLabel extends StatelessWidget {
   }
 }
 
-String _bioProfileValue(String? bio, String label) {
-  final prefix = '$label:';
-  for (final line in (bio ?? '').split('\n')) {
-    if (line.toLowerCase().startsWith(prefix.toLowerCase())) {
-      return line.substring(prefix.length).trim();
-    }
-  }
-  return '';
-}
-
 int _profileCompleteness(
   TalentProfile talent,
   UserProfile profile,
@@ -559,10 +911,13 @@ int _profileCompleteness(
     (profile.bio ?? '').trim().isNotEmpty,
     profile.city != null,
     talent.languages.isNotEmpty,
+    talent.skills.isNotEmpty,
     (talent.ageRange ?? '').trim().isNotEmpty,
     talent.heightCm != null,
     talent.dayRateMinor != null,
-    (talent.unionNote ?? '').trim().isNotEmpty,
+    profile.avatarFile != null,
+    (profile.bio ?? '').trim().isNotEmpty,
+    talent.credits.isNotEmpty || talent.training.isNotEmpty,
   ];
   return ((checks.where((value) => value).length / checks.length) * 100)
       .round();

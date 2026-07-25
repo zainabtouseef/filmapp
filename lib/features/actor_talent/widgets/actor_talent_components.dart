@@ -226,6 +226,125 @@ class ActorSectionCard extends StatelessWidget {
   }
 }
 
+/// A single collapsible profile section — lets a long form (identity, bio,
+/// physical details, social links...) be edited one focused group at a
+/// time instead of scrolling through every field at once.
+class ActorCollapsibleSection extends StatefulWidget {
+  final String title;
+  final IconData icon;
+  final String? subtitle;
+  final Widget child;
+  final bool initiallyExpanded;
+  final ActorTone tone;
+
+  const ActorCollapsibleSection({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.subtitle,
+    this.initiallyExpanded = false,
+    this.tone = ActorTone.gold,
+  });
+
+  @override
+  State<ActorCollapsibleSection> createState() =>
+      _ActorCollapsibleSectionState();
+}
+
+class _ActorCollapsibleSectionState extends State<ActorCollapsibleSection> {
+  late bool _expanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = actorToneColor(context, widget.tone);
+    return GlassSectionCard(
+      radius: 18,
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.28),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Icon(widget.icon, color: accent, size: 19),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        if (widget.subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 160),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: colors.iconMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 14, 16),
+              child: widget.child,
+            ),
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 160),
+            sizeCurve: Curves.easeInOut,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ActorResponsiveGrid extends StatelessWidget {
   final List<Widget> children;
   final double minWidth;
