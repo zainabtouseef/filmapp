@@ -373,7 +373,9 @@ def _owned_ready_file(public_id: str | None, user_id: object, field: str) -> Fil
     return file
 
 
-def _owned_profile_file(public_id: str | None, user_id: object, field: str) -> FileAsset:
+def _owned_profile_file(
+    public_id: str | None, user_id: object, field: str
+) -> FileAsset:
     if not public_id:
         raise _field_error(field, "File id is required.")
     file = db.session.execute(
