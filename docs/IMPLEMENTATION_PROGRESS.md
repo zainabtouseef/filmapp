@@ -1491,3 +1491,33 @@
   - Deployed `main.dart.js` contains the new `AI Match` and `CineMatch AI casting score` strings.
 - Future upgrade:
   - Replace or augment the transparent local scoring formula with a server-side AI provider endpoint once AI provider keys, audit logging rules and prompt/data-retention policy are finalized.
+
+### 2026-07-27 — Self-tape audition room
+
+- Goal: make auditions feel film-industry native by letting directors request self-tapes, review uploaded tapes, score candidates and store team comments.
+- Backend changes:
+  - Added migration `ab12cd34ef56_casting_application_reviews.py`.
+  - Added persisted review fields on `casting_applications`: `review_score`, `review_comment`, `reviewed_by_id`, `reviewed_at`.
+  - Extended `/director/casting-applications/{id}` so director updates can save a 1–10 review score and team comment.
+  - Extended casting application payloads with a `review` object.
+- Flutter behavior:
+  - Project Hub → Casting is now presented as `Self-tape Audition Room`.
+  - Added room-level stats for applicants, tape requests, received self-tapes and scored submissions.
+  - Added `Self-tapes` and `Scored` filters.
+  - Candidate cards now show self-tape room details, deadlines, instructions, upload status, saved score and team comment.
+  - Directors can open a score dialog, set a 1–10 self-tape score and save team comments.
+  - Existing flows remain connected: request self-tape, view uploaded self-tape, message talent, schedule audition/callback and send booking offer.
+- Deployment:
+  - Backend source synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt.
+  - Production migration applied with `flask --app app.wsgi:app db upgrade`.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated with the existing storage mount and localhost DB/Redis runtime overrides.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `python3 -m py_compile backend/app/models/casting.py backend/app/api/casting.py backend/migrations/versions/ab12cd34ef56_casting_application_reviews.py` passes.
+  - `flutter analyze` passes.
+  - `flutter test test/director_producer_portal_test.dart` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production `/api/v1/health/ready` returns database and Redis `ok`.
+  - Production DB has the new casting review columns.
+  - Deployed `main.dart.js` contains `Self-tape Audition Room`, `Score tape`, `Team comment`, and `review_score`.

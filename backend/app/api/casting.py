@@ -353,6 +353,14 @@ def _application_payload(item: CastingApplication) -> dict[str, Any]:
             thread_for_subject("casting_application", item.public_id)
         ),
         "rejection_reason": item.rejection_reason,
+        "review": {
+            "score": item.review_score,
+            "comment": item.review_comment,
+            "reviewed_by": _user_payload(item.reviewer) if item.reviewer else None,
+            "reviewed_at": item.reviewed_at.isoformat()
+            if item.reviewed_at
+            else None,
+        },
         "status_events": [_status_event_payload(row) for row in item.status_events],
         "created_at": item.created_at.isoformat(),
         "updated_at": item.updated_at.isoformat(),
@@ -1224,6 +1232,28 @@ def update_director_casting_application(public_id: str) -> Response:
                 attribute,
                 _parse_datetime(payload[key], key) if payload.get(key) else None,
             )
+    review_touched = False
+    if "review_score" in payload:
+        raw_score = payload.get("review_score")
+        if raw_score in (None, ""):
+            application.review_score = None
+        else:
+            try:
+                score = int(raw_score)
+            except (TypeError, ValueError):
+                raise _field_error("review_score", "Review score must be a number.")
+            if score < 1 or score > 10:
+                raise _field_error("review_score", "Review score must be from 1 to 10.")
+            application.review_score = score
+        review_touched = True
+    if "review_comment" in payload:
+        application.review_comment = (
+            str(payload.get("review_comment", "")).strip()[:4000] or None
+        )
+        review_touched = True
+    if review_touched:
+        application.reviewed_by_id = user.id
+        application.reviewed_at = utc_now()
     if (
         "status" in payload
         and status in {"audition_requested", "self_tape_requested", "callback"}

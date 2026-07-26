@@ -299,6 +299,7 @@ class CastingApplication {
   final String? callbackDetails;
   final MeetingThread? meetingThread;
   final String? rejectionReason;
+  final CastingApplicationReview review;
   final List<CastingApplicationEvent> statusEvents;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -327,6 +328,7 @@ class CastingApplication {
     required this.callbackDetails,
     required this.meetingThread,
     required this.rejectionReason,
+    required this.review,
     required this.statusEvents,
     required this.createdAt,
     required this.updatedAt,
@@ -373,6 +375,9 @@ class CastingApplication {
         json['meeting_thread'] as Map<String, dynamic>?,
       ),
       rejectionReason: json['rejection_reason'] as String?,
+      review: CastingApplicationReview.fromJson(
+        json['review'] as Map<String, dynamic>? ?? const {},
+      ),
       statusEvents: (json['status_events'] as List<dynamic>? ?? const [])
           .map((item) => CastingApplicationEvent.fromJson(
                 item as Map<String, dynamic>,
@@ -393,6 +398,32 @@ class CastingApplication {
       !const {'selected', 'rejected', 'withdrawn'}.contains(status);
 
   String get statusLabel => _titleCase(status);
+}
+
+class CastingApplicationReview {
+  final int? score;
+  final String? comment;
+  final String? reviewedByName;
+  final DateTime? reviewedAt;
+
+  const CastingApplicationReview({
+    required this.score,
+    required this.comment,
+    required this.reviewedByName,
+    required this.reviewedAt,
+  });
+
+  factory CastingApplicationReview.fromJson(Map<String, dynamic> json) {
+    final reviewer = json['reviewed_by'] as Map<String, dynamic>?;
+    return CastingApplicationReview(
+      score: (json['score'] as num?)?.toInt(),
+      comment: json['comment'] as String?,
+      reviewedByName: reviewer?['display_name'] as String?,
+      reviewedAt: DateTime.tryParse(json['reviewed_at'] as String? ?? ''),
+    );
+  }
+
+  bool get hasReview => score != null || (comment?.trim().isNotEmpty ?? false);
 }
 
 String _compactMoney(int value) {

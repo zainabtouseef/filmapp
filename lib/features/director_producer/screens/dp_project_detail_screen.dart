@@ -890,12 +890,52 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
   @override
   Widget build(BuildContext context) {
     final rows = _rows.where(_matchesFilter).toList();
+    final total = _rows.length;
+    final requested =
+        _rows.where((item) => item.status == 'self_tape_requested').length;
+    final received = _rows.where((item) => item.selfTapeFile != null).length;
+    final reviewed = _rows.where((item) => item.review.hasReview).length;
     return DPSectionCard(
-      title: 'Casting Applications',
-      icon: Icons.groups_2_outlined,
+      title: 'Self-tape Audition Room',
+      icon: Icons.video_camera_front_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          DPGlassCard(
+            padding: const EdgeInsets.all(12),
+            accentColor: context.appColors.infoPurple,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                dpText(
+                  context,
+                  'Send self-tape briefs, collect uploads, score performances and keep team comments in one project room.',
+                  strong: true,
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    DPStatusChip(label: '$total applicants', tone: DpTone.info),
+                    DPStatusChip(
+                      label: '$requested tape requests',
+                      tone: DpTone.warning,
+                    ),
+                    DPStatusChip(
+                      label: '$received received',
+                      tone: DpTone.success,
+                    ),
+                    DPStatusChip(
+                      label: '$reviewed scored',
+                      tone: reviewed == 0 ? DpTone.neutral : DpTone.purple,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -905,6 +945,8 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
                   'New',
                   'Shortlisted',
                   'Auditions',
+                  'Self-tapes',
+                  'Scored',
                   'Offers',
                   'Closed',
                 ])
@@ -940,6 +982,7 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
                 working: _workingId == rows[index].publicId,
                 onStatus: (status) => _updateStatus(rows[index], status),
                 onMessage: () => _openConversation(rows[index]),
+                onReview: () => _reviewApplication(rows[index]),
                 onSendOffer: rows[index].marketplaceListingId == null ||
                         const {'rejected', 'withdrawn'}
                             .contains(rows[index].status)
@@ -986,6 +1029,9 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
       'New' => const {'submitted', 'viewed'}.contains(item.status),
       'Shortlisted' => item.status == 'shortlisted',
       'Auditions' => item.isAudition,
+      'Self-tapes' =>
+        item.status == 'self_tape_requested' || item.selfTapeFile != null,
+      'Scored' => item.review.hasReview,
       'Offers' => const {'offer_received', 'selected'}.contains(item.status),
       'Closed' => const {'rejected', 'withdrawn'}.contains(item.status),
       _ => true,
@@ -1034,6 +1080,30 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
   void _replaceRow(CastingApplication updated) {
     final index = _rows.indexWhere((item) => item.publicId == updated.publicId);
     if (index >= 0) setState(() => _rows[index] = updated);
+  }
+
+  Future<void> _reviewApplication(CastingApplication application) async {
+    final review = await _selfTapeReviewDialog(application);
+    if (review == null || !mounted) return;
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await casting.updateDirectorApplication(
+        application.publicId,
+        {
+          'review_score': review.score,
+          'review_comment': review.comment,
+        },
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Self-tape review saved');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
   }
 
   Future<void> _proposeMeeting(
@@ -1275,6 +1345,201 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
     reason.dispose();
     return result;
   }
+
+  Future<_SelfTapeReview?> _selfTapeReviewDialog(
+    CastingApplication application,
+  ) async {
+    var score = application.review.score ?? 8;
+    final comment = TextEditingController(text: application.review.comment);
+    final result = await showDialog<_SelfTapeReview>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Text('Score ${application.screenName}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Self-tape score',
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: context.appColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Slider(
+                    value: score.toDouble(),
+                    min: 1,
+                    max: 10,
+                    divisions: 9,
+                    label: '$score / 10',
+                    onChanged: (value) =>
+                        setDialogState(() => score = value.round()),
+                  ),
+                  Center(
+                    child: Text(
+                      '$score / 10',
+                      style: AppTextStyles.metricNumberCompact.copyWith(
+                        color: context.appColors.goldDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CoreTextField(
+                    controller: comment,
+                    label: 'Team comment',
+                    icon: Icons.rate_review_outlined,
+                    maxLines: 4,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                icon: const Icon(Icons.check_circle_outline_rounded),
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  _SelfTapeReview(
+                    score: score,
+                    comment: comment.text.trim(),
+                  ),
+                ),
+                label: const Text('Save review'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    comment.dispose();
+    return result;
+  }
+}
+
+class _SelfTapeReview {
+  final int score;
+  final String comment;
+
+  const _SelfTapeReview({
+    required this.score,
+    required this.comment,
+  });
+}
+
+class _SelfTapeRoomPanel extends StatelessWidget {
+  final CastingApplication application;
+
+  const _SelfTapeRoomPanel({required this.application});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final dueAt = application.audition.dueAt;
+    final instructions = application.audition.instructions?.trim();
+    final comment = application.review.comment?.trim();
+    return DPGlassCard(
+      padding: const EdgeInsets.all(11),
+      accentColor: colors.infoPurple,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.video_camera_front_outlined,
+                  color: colors.infoPurple, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Self-tape room',
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (dueAt != null)
+                DPStatusChip(
+                  label: 'Due ${_compactDate(dueAt)}',
+                  tone: DpTone.warning,
+                ),
+            ],
+          ),
+          if (instructions?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Text(
+              instructions!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.smallMeta.copyWith(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              DPStatusChip(
+                label: application.selfTapeFile == null
+                    ? 'Awaiting upload'
+                    : 'Tape uploaded',
+                tone: application.selfTapeFile == null
+                    ? DpTone.warning
+                    : DpTone.success,
+                icon: application.selfTapeFile == null
+                    ? Icons.hourglass_top_rounded
+                    : Icons.cloud_done_outlined,
+              ),
+              if (application.review.reviewedByName != null)
+                DPStatusChip(
+                  label: 'Reviewed by ${application.review.reviewedByName}',
+                  tone: DpTone.info,
+                  icon: Icons.person_outline_rounded,
+                ),
+              if (application.review.reviewedAt != null)
+                DPStatusChip(
+                  label: _compactDate(application.review.reviewedAt!),
+                  tone: DpTone.neutral,
+                  icon: Icons.schedule_outlined,
+                ),
+            ],
+          ),
+          if (comment?.isNotEmpty == true) ...[
+            const SizedBox(height: 9),
+            Text(
+              'Team comment',
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textTertiary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              comment!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _compactDate(DateTime value) {
+    return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+  }
 }
 
 class _DirectorCastingApplicationCard extends StatefulWidget {
@@ -1282,6 +1547,7 @@ class _DirectorCastingApplicationCard extends StatefulWidget {
   final bool working;
   final ValueChanged<String> onStatus;
   final VoidCallback onMessage;
+  final VoidCallback onReview;
   final VoidCallback? onSendOffer;
   final Future<void> Function({
     required DateTime meetingAt,
@@ -1299,6 +1565,7 @@ class _DirectorCastingApplicationCard extends StatefulWidget {
     required this.working,
     required this.onStatus,
     required this.onMessage,
+    required this.onReview,
     required this.onSendOffer,
     required this.onProposeMeeting,
     required this.onAcceptMeeting,
@@ -1417,8 +1684,20 @@ class _DirectorCastingApplicationCardState
                   label: 'Self-tape received',
                   tone: DpTone.success,
                 ),
+              if (application.review.score != null)
+                DPStatusChip(
+                  label: 'Score ${application.review.score}/10',
+                  tone: DpTone.purple,
+                  icon: Icons.star_rounded,
+                ),
             ],
           ),
+          if (application.audition.dueAt != null ||
+              (application.audition.instructions ?? '').isNotEmpty ||
+              application.review.hasReview) ...[
+            const SizedBox(height: 10),
+            _SelfTapeRoomPanel(application: application),
+          ],
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1476,6 +1755,17 @@ class _DirectorCastingApplicationCardState
                     },
                   ),
                 ),
+              SizedBox(
+                width: 170,
+                child: CoreSecondaryButton(
+                  icon: Icons.rate_review_outlined,
+                  label: application.review.hasReview
+                      ? 'Edit score'
+                      : 'Score tape',
+                  compact: true,
+                  onTap: working ? null : widget.onReview,
+                ),
+              ),
             ],
           ),
           if (_meetingExpanded) ...[

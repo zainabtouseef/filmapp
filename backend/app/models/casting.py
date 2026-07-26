@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -156,9 +157,18 @@ class CastingApplication(EntityMixin, Base):
     callback_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     callback_details: Mapped[str | None] = mapped_column(Text)
     rejection_reason: Mapped[str | None] = mapped_column(Text)
+    review_score: Mapped[int | None] = mapped_column(Integer)
+    review_comment: Mapped[str | None] = mapped_column(Text)
+    reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     requirement: Mapped[ProjectRequirement] = relationship(lazy="joined")
     actor: Mapped[User] = relationship(lazy="joined")
+    reviewer: Mapped[User | None] = relationship(
+        foreign_keys=[reviewed_by_id], lazy="joined"
+    )
     talent_profile: Mapped[TalentProfile] = relationship(lazy="joined")
     conversation: Mapped[Conversation | None] = relationship(lazy="joined")
     self_tape_file: Mapped[FileAsset | None] = relationship(lazy="joined")
