@@ -1416,3 +1416,35 @@
   - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
   - Deployed `main.dart.js` contains the new `Public Booking` portal strings.
   - Full `flutter test` currently stops on an existing Actor/Talent mobile "More" finder failure outside this General Public work; the dedicated public portal build/analyze/deploy checks are clean.
+
+### 2026-07-26 — Influencer and General Public production demo seed
+
+- Goal: add live database demo data for the new `influencer` and `general_public` roles, including backend-served images and one login PDF per portal.
+- Files changed: new `backend/scripts/seed_influencer_public_demo_data.py`, `backend/app/api/director.py`, and two generated PDF login handoff files under `output/pdf/`.
+- Seeded production data:
+  - 10 influencer users: `DEMO-INF-001` through `DEMO-INF-010`.
+  - 10 influencer `talent_profiles` with `availability_categories_json=["influencer"]`.
+  - 10 approved influencer KYC submissions and verification events.
+  - 10 public influencer marketplace listings: `DEMO-LST-INF-001` through `DEMO-LST-INF-010`.
+  - 10 backend public image files stored under `/media/demo/cineconnect-influencer-public-demo-2026-07-26/influencer-covers/...`.
+  - 1 General Public customer: `DEMO-GP-001`.
+  - 5 General Public marketing campaign projects, 5 influencer booking requests, offers, negotiation threads, conversations and messages.
+- Backend behavior:
+  - General Public users can now read Director discovery for public-campaign provider categories only: actors, models and influencers.
+  - Director/Producer, Casting Agency and Super Admin retain the full discovery surface.
+- Demo login PDFs:
+  - `output/pdf/cineconnect_general_public_demo_login.pdf`
+  - `output/pdf/cineconnect_influencer_demo_login.pdf`
+- Deployment:
+  - Backend source synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated with the existing env and storage mount.
+  - Seed script rerun after deploy and returned all rows as existing, proving idempotency.
+- Live verification:
+  - `/api/v1/health/ready` returns database and Redis `ok`.
+  - `public01@demo.cine.nalexustechnologies.com` logs in as `general_public`.
+  - `influencer01@demo.cine.nalexustechnologies.com` logs in as `influencer`.
+  - General Public `/bookings?role=requester` returns 5 seeded bookings.
+  - General Public `/director/discovery?category=Influencers` returns 10 influencer items.
+  - Sample backend image URL returns HTTP 200 as `image/png`.
+  - PDF files were generated with ReportLab, text-checked with pypdf, rendered to PNG with PyMuPDF, and visually inspected.

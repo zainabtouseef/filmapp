@@ -65,6 +65,18 @@ def _require_director_dashboard(user: User) -> None:
         )
 
 
+def _require_discovery_access(user: User) -> set[str] | None:
+    if _has_role(user, "director_producer", "casting_agency", "super_admin"):
+        return None
+    if _has_role(user, "general_public"):
+        return {"actor", "model", "influencer"}
+    raise APIError(
+        "director.role_required",
+        "A director/producer, casting agency, admin, or public buyer role is required.",
+        status=403,
+    )
+
+
 def _visible_projects(user: User) -> list[Project]:
     query = select(Project)
     if not _has_role(user, "super_admin"):
@@ -996,6 +1008,7 @@ def _director_discovery_items(
     *,
     category: str | None,
     query: str | None,
+    allowed_kinds: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     category_key = (category or "all").strip().lower().replace("-", "_")
     kinds = _DIRECTOR_DISCOVERY_KIND_ALIASES.get(
@@ -1010,6 +1023,8 @@ def _director_discovery_items(
             "distribution",
         },
     )
+    if allowed_kinds is not None:
+        kinds = kinds & allowed_kinds
     items: list[dict[str, Any]] = []
 
     if "actor" in kinds:
@@ -1663,10 +1678,11 @@ def director_schedule() -> Response:
 @director_blueprint.get("/director/discovery")
 def director_discovery() -> Response:
     user = _current_user()
-    _require_director_dashboard(user)
+    allowed_kinds = _require_discovery_access(user)
     items = _director_discovery_items(
         category=request.args.get("category"),
         query=request.args.get("q"),
+        allowed_kinds=allowed_kinds,
     )
     return jsonify(
         success(
@@ -1683,6 +1699,14 @@ def director_discovery() -> Response:
 @director_blueprint.get("/director/discovery/<kind>/<public_id>")
 def director_discovery_item(kind: str, public_id: str) -> Response:
     user = _current_user()
-    _require_director_dashboard(user)
+    allowed_kinds = _require_discovery_access(user)
+    kind_key = kind.strip().lower().replace("-", "_")
+    requested_kinds = _DIRECTOR_DISCOVERY_KIND_ALIASES.get(kind_key, {kind_key})
+    if allowed_kinds is not None and not (requested_kinds & allowed_kinds):
+        raise APIError(
+            "director.discovery_forbidden",
+            "This discovery profile is not available to public buyers.",
+            status=403,
+        )
     item = _director_discovery_detail(kind, public_id)
     return jsonify(success({"item": item}))
