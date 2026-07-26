@@ -16,6 +16,8 @@ import '../../features/distribution_partner/routes/distribution_partner_routes.d
 import '../../features/distribution_partner/screens/distribution_partner_portal_screen.dart';
 import '../../features/general_public/routes/general_public_routes.dart';
 import '../../features/general_public/screens/general_public_portal_screen.dart';
+import '../../features/influencer/routes/influencer_routes.dart';
+import '../../features/influencer/screens/influencer_portal_screen.dart';
 import '../../features/insurance_partner/routes/insurance_partner_routes.dart';
 import '../../features/insurance_partner/screens/insurance_partner_portal_screen.dart';
 import '../../features/legal_partner/routes/legal_partner_routes.dart';
@@ -77,6 +79,7 @@ class CoreRoutes {
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
     final generalPublicDeepLink = _generalPublicDeepLink(routeSettings.name);
+    final influencerDeepLink = _influencerDeepLink(routeSettings.name);
     final actorDeepLink = _actorDeepLink(routeSettings.name);
     final superAdminDeepLink = _superAdminDeepLink(routeSettings.name);
     final contractDeepLinkId = _singleIdPath(routeSettings.name, 'contract');
@@ -203,6 +206,11 @@ class CoreRoutes {
               'id': routeSettings.arguments! as String,
           },
         );
+      case _ when influencerDeepLink != null:
+        page = InfluencerPortalScreen(
+          routeName: influencerDeepLink.routeName,
+          arguments: routeSettings.arguments,
+        );
       case _ when actorDeepLink != null:
         page = ActorTalentPortalScreen(
           routeName: actorDeepLink.routeName,
@@ -242,6 +250,11 @@ class CoreRoutes {
       case _ when GeneralPublicRoutes.allRoutes.contains(routeSettings.name):
         page = GeneralPublicPortalScreen(
           routeName: routeSettings.name ?? GeneralPublicRoutes.home,
+          arguments: routeSettings.arguments,
+        );
+      case _ when InfluencerRoutes.allRoutes.contains(routeSettings.name):
+        page = InfluencerPortalScreen(
+          routeName: routeSettings.name ?? InfluencerRoutes.home,
           arguments: routeSettings.arguments,
         );
       case _ when ActorTalentRoutes.allRoutes.contains(routeSettings.name):
@@ -468,6 +481,28 @@ class CoreRoutes {
     };
   }
 
+  static _InfluencerDeepLink? _influencerDeepLink(String? name) {
+    final segments = _pathSegments(name);
+    if (segments.isEmpty || segments.first != 'influencer') return null;
+
+    if (segments.length == 1) {
+      return const _InfluencerDeepLink(InfluencerRoutes.home);
+    }
+    return switch (segments[1]) {
+      'media-kit' => const _InfluencerDeepLink(InfluencerRoutes.mediaKit),
+      'packages' => const _InfluencerDeepLink(InfluencerRoutes.packages),
+      'campaigns' => const _InfluencerDeepLink(InfluencerRoutes.campaigns),
+      'analytics' => const _InfluencerDeepLink(InfluencerRoutes.analytics),
+      'portfolio' => const _InfluencerDeepLink(InfluencerRoutes.portfolio),
+      'calendar' => const _InfluencerDeepLink(InfluencerRoutes.calendar),
+      'contracts' => const _InfluencerDeepLink(InfluencerRoutes.contracts),
+      'earnings' => const _InfluencerDeepLink(InfluencerRoutes.earnings),
+      'reviews' => const _InfluencerDeepLink(InfluencerRoutes.reviews),
+      'safety' => const _InfluencerDeepLink(InfluencerRoutes.safety),
+      _ => null,
+    };
+  }
+
   static String? _singleIdPath(String? name, String root) {
     final segments = _pathSegments(name);
     if (segments.length != 2 || segments.first != root) return null;
@@ -545,6 +580,12 @@ class _GeneralPublicDeepLink {
   final Map<String, Object?> arguments;
 
   const _GeneralPublicDeepLink(this.routeName, {this.arguments = const {}});
+}
+
+class _InfluencerDeepLink {
+  final String routeName;
+
+  const _InfluencerDeepLink(this.routeName);
 }
 
 class _ActorDeepLink {

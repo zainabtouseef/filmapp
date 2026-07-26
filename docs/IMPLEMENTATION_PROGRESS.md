@@ -1448,3 +1448,22 @@
   - General Public `/director/discovery?category=Influencers` returns 10 influencer items.
   - Sample backend image URL returns HTTP 200 as `image/png`.
   - PDF files were generated with ReportLab, text-checked with pypdf, rendered to PNG with PyMuPDF, and visually inspected.
+
+### 2026-07-27 — Dedicated Influencer portal
+
+- Goal: replace the temporary “Influencer role routes into Actor/Talent” behavior with a fully separate Influencer workspace.
+- Files changed: new `features/influencer` routes/screens, core route resolver, role mapper, and focused widget tests.
+- Flutter behavior:
+  - `influencer` now lands on `/influencer`, not `/talent`.
+  - Added dedicated routes for Dashboard, Media Kit, Rate Packages, Campaigns, Analytics, Portfolio, Calendar, Contracts, Earnings, Reviews, and Safety.
+  - Influencer Media Kit edits database-backed `UserProfile`/`TalentProfile` social links and enables `availability_categories=["influencer"]`.
+  - Influencer Rate Packages are saved into the existing live `TalentProfile.representation` JSON under `influencer_packages`.
+  - Influencer marketplace publish uses the existing live `/marketplace/listings` endpoint with `listing_type=influencer`.
+  - Campaign inbox uses live provider booking opportunities and supports accept/decline through existing booking/offer endpoints.
+  - Analytics are calculated from live profile, package, booking, and payment dashboard data.
+- Deployment:
+  - No backend deploy required; the portal uses existing deployed profile, marketplace, booking, payment, portfolio, contract, review, and safety APIs.
+- Verification:
+  - `flutter analyze` passes.
+  - `flutter test test/influencer_portal_test.dart` passes for all 11 influencer routes in light/dark/mobile/desktop coverage.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
