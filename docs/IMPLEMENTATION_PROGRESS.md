@@ -1521,3 +1521,23 @@
   - Production `/api/v1/health/ready` returns database and Redis `ok`.
   - Production DB has the new casting review columns.
   - Deployed `main.dart.js` contains `Self-tape Audition Room`, `Score tape`, `Team comment`, and `review_score`.
+
+### 2026-07-27 — Payment trust timeline
+
+- Goal: make booking/payment trust clearer for both producers and providers by showing the full money flow from booking lock to payout release.
+- Flutter behavior:
+  - Added reusable `PaymentTrustTimeline` over live `PaymentScheduleDto` data.
+  - Canonical stages are now visible as: booking lock, shoot day, deliverable approval, and payout release.
+  - Director Payments now has a dedicated `Timeline` tab beside Ledger and History.
+  - Actor/Talent Earnings and Influencer Earnings now show the provider-facing payment trust timeline.
+  - Location Owner and Media/Equipment Earnings now show the same provider-facing trust timeline.
+  - No static demo payment rows were added; cards are derived from live payment schedules and milestones.
+- Deployment:
+  - No backend deploy required; the existing payment schedule/milestone API already provides the needed live data.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `flutter analyze` passes.
+  - Focused route tests pass for `/payment/pay-001`, `/talent/earnings`, and `/influencer/earnings`.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
+  - Deployed `main.dart.js` contains `Payment trust timeline`, `Booking lock`, `Deliverable approval`, and `Payout release`.

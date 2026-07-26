@@ -5,6 +5,7 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/payments/payment_trust_timeline.dart';
 import '../models/dp_payment.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -62,6 +63,7 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
         final payments = _toDpPayments(snapshot.data?.schedules ?? const []);
         return _PaymentCenterContent(
           payments: payments,
+          schedules: snapshot.data?.schedules ?? const [],
           tab: _tab,
           onTab: (value) => setState(() => _tab = value),
         );
@@ -105,11 +107,13 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
 
 class _PaymentCenterContent extends StatelessWidget {
   final List<DpPayment> payments;
+  final List<PaymentScheduleDto> schedules;
   final String tab;
   final ValueChanged<String> onTab;
 
   const _PaymentCenterContent({
     required this.payments,
+    required this.schedules,
     required this.tab,
     required this.onTab,
   });
@@ -139,6 +143,12 @@ class _PaymentCenterContent extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             DpDotChip(
+              label: 'Timeline',
+              active: tab == 'Timeline',
+              onTap: () => onTab('Timeline'),
+            ),
+            const SizedBox(width: 8),
+            DpDotChip(
               label: 'History',
               active: tab == 'History',
               onTap: () => onTab('History'),
@@ -156,6 +166,11 @@ class _PaymentCenterContent extends StatelessWidget {
         const SizedBox(height: 14),
         if (tab == 'Ledger')
           DPMilestoneBoard(payments: payments)
+        else if (tab == 'Timeline')
+          PaymentTrustTimeline(
+            schedules: schedules,
+            audience: PaymentTimelineAudience.producer,
+          )
         else
           _HistoryList(items: [...verified, ...rejected]),
       ],

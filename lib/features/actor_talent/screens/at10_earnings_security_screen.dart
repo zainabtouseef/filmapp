@@ -6,6 +6,7 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/payments/payment_trust_timeline.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/actor_talent_models.dart';
 import '../widgets/actor_talent_components.dart';
@@ -178,25 +179,9 @@ class _LiveEarnings extends StatelessWidget {
           left: ActorSectionCard(
             title: 'Payment Timeline',
             icon: Icons.timeline_outlined,
-            child: Column(
-              children: [
-                if (dashboard.schedules.isEmpty)
-                  const CoreEmptyState(
-                    icon: Icons.payments_outlined,
-                    title: 'No payment schedule',
-                    message:
-                        'Payment milestones appear after a contract is secured.',
-                  )
-                else
-                  for (final schedule in dashboard.schedules)
-                    for (final milestone in schedule.milestones)
-                      ActorInfoRow(
-                        icon: Icons.payments_outlined,
-                        label: milestone.status,
-                        value:
-                            '${schedule.bookingId} • ${milestone.name} • ${milestone.amountLabel}',
-                      ),
-              ],
+            child: PaymentTrustTimeline(
+              schedules: dashboard.schedules,
+              audience: PaymentTimelineAudience.provider,
             ),
           ),
           right: ActorSectionCard(

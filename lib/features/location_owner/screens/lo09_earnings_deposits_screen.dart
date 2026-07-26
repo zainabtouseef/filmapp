@@ -10,7 +10,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
-import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/payments/payment_trust_timeline.dart';
 import '../models/location_owner_models.dart';
 import '../widgets/location_owner_components.dart';
 import '../widgets/location_owner_live.dart';
@@ -189,23 +189,13 @@ class _LO09EarningsDepositsScreenState
           right: Column(
             children: [
               LocationSectionCard(
-                title: 'Payment schedules',
+                title: 'Payment trust timeline',
                 icon: Icons.account_tree_outlined,
                 tone: LocationTone.blue,
-                child: data.dashboard.schedules.isEmpty
-                    ? const CoreEmptyState(
-                        icon: Icons.event_note_outlined,
-                        title: 'No payment schedules',
-                        message:
-                            'Schedules are created through secured booking contracts.',
-                      )
-                    : Column(
-                        children: [
-                          for (final schedule
-                              in data.dashboard.schedules.take(4))
-                            _ScheduleRow(schedule: schedule),
-                        ],
-                      ),
+                child: PaymentTrustTimeline(
+                  schedules: data.dashboard.schedules,
+                  audience: PaymentTimelineAudience.provider,
+                ),
               ),
               const SizedBox(height: 12),
               LocationSectionCard(
@@ -378,62 +368,6 @@ class _LedgerRow extends StatelessWidget {
       'disputed' || 'rejected' => LocationBookingStatus.disputed,
       _ => LocationBookingStatus.depositPending,
     };
-  }
-}
-
-class _ScheduleRow extends StatelessWidget {
-  final PaymentScheduleDto schedule;
-
-  const _ScheduleRow({required this.schedule});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          gradient: colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.event_note_outlined, color: colors.goldDark, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    schedule.bookingId,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${schedule.totalLabel} · '
-                    '${schedule.milestones.length} milestones',
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            StatusChip(
-              label: readableLocationStatus(schedule.status),
-              color: colors.infoBlue,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

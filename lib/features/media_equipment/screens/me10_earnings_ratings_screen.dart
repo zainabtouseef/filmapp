@@ -16,6 +16,7 @@ import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/payments/payment_trust_timeline.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../widgets/media_equipment_components.dart';
 
@@ -306,13 +307,12 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
               if (data.dashboard.schedules.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 MediaSectionCard(
-                  title: 'Payment schedules',
+                  title: 'Payment trust timeline',
                   icon: Icons.account_tree_outlined,
-                  child: Column(
-                    children: [
-                      for (final schedule in data.dashboard.schedules.take(3))
-                        _ScheduleRow(schedule: schedule),
-                    ],
+                  child: PaymentTrustTimeline(
+                    schedules: data.dashboard.schedules,
+                    audience: PaymentTimelineAudience.provider,
+                    maxSchedules: 3,
                   ),
                 ),
               ],
@@ -554,58 +554,6 @@ class _LedgerRow extends StatelessWidget {
       'disputed' || 'rejected' => colors.danger,
       _ => colors.goldMid,
     };
-  }
-}
-
-class _ScheduleRow extends StatelessWidget {
-  final PaymentScheduleDto schedule;
-
-  const _ScheduleRow({required this.schedule});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: GlassSectionCard(
-        radius: 8,
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            Icon(Icons.event_note_outlined, color: colors.goldDark, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    schedule.bookingId,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${schedule.totalLabel} · '
-                    '${schedule.milestones.length} milestones',
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            StatusChip(
-              label: _title(schedule.status),
-              color: colors.infoBlue,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
