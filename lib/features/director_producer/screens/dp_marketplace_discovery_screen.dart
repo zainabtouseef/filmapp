@@ -225,6 +225,9 @@ class _DPMarketplaceDiscoveryScreenState
                 final verified =
                     b.verified.toString().compareTo(a.verified.toString());
                 if (verified != 0) return verified;
+                final trust = (b.trustMetrics?.score ?? -1)
+                    .compareTo(a.trustMetrics?.score ?? -1);
+                if (trust != 0) return trust;
                 final rating = b.rating.compareTo(a.rating);
                 if (rating != 0) return rating;
                 return a.name.compareTo(b.name);

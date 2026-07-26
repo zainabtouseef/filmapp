@@ -1561,3 +1561,32 @@
   - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
   - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
   - Deployed `main.dart.js` contains `In-app contract wizard`, `Usage rights`, `Cancellation`, `Overtime`, and `Generate contract`.
+
+### 2026-07-27 — Reputation and safety score
+
+- Goal: make the marketplace safer and more game-like with a transparent provider trust score.
+- Backend behavior:
+  - Director discovery payloads now include `trust_metrics` for actors, models, influencers, locations, media/equipment providers, agencies, and distribution partners.
+  - Score factors are KYC/verification, reviews, booking completion history, dispute history, and response behavior.
+  - Where there is not enough booking/response/review history, the payload marks that factor as `new` instead of pretending the data exists.
+  - Fixed the `CastingApplication.actor` SQLAlchemy relationship ambiguity caused by the self-tape review user foreign key so login and mapper initialization remain healthy.
+- Flutter behavior:
+  - Added shared reputation/safety DTOs.
+  - Director/Public marketplace cards now show an expandable `Reputation & safety` panel.
+  - The panel shows score, label, completion summary, response summary, and per-factor progress rows for KYC, reviews, completion, disputes, and response.
+  - Marketplace sorting now uses verified status, then reputation/safety score, then rating/name.
+- Deployment:
+  - Backend source synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated with the existing storage mount and localhost DB/Redis runtime overrides.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `python3 -m py_compile backend/app/api/director.py backend/app/models/casting.py` passes.
+  - `flutter analyze` passes.
+  - `flutter test test/director_producer_portal_test.dart --plain-name "/discover/Talent"` passes.
+  - `flutter test test/influencer_portal_test.dart --plain-name "/influencer"` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production `/api/v1/health/ready` returns database and Redis `ok`.
+  - Production login for `dp01@demo.cine.nalexustechnologies.com` succeeds.
+  - Production `/api/v1/director/discovery?category=Actors` returns `trust_metrics` with factors `kyc`, `reviews`, `completion`, `disputes`, and `response`.
+  - Deployed `main.dart.js` contains `Reputation & safety` and `trust_metrics`.

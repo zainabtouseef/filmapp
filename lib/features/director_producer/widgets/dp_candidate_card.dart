@@ -120,6 +120,8 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
             ],
           ),
           const SizedBox(height: 9),
+          _ReputationSafetyPanel(candidate: candidate),
+          const SizedBox(height: 9),
           Text(
             candidate.skills.take(3).join(' - '),
             maxLines: 1,
@@ -167,6 +169,241 @@ class _DPCandidateCardState extends State<DPCandidateCard> {
       _shortlisted = saved || _shortlisted;
     });
   }
+}
+
+class _ReputationSafetyPanel extends StatefulWidget {
+  final DpCandidate candidate;
+
+  const _ReputationSafetyPanel({required this.candidate});
+
+  @override
+  State<_ReputationSafetyPanel> createState() => _ReputationSafetyPanelState();
+}
+
+class _ReputationSafetyPanelState extends State<_ReputationSafetyPanel> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final metrics = widget.candidate.trustMetrics;
+    final score = metrics?.score;
+    final label = metrics?.label ?? 'Pending';
+    final tone = _scoreTone(score);
+    final color = _scoreColor(context, score);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: color.withValues(alpha: colors.isLight ? 0.08 : 0.13),
+        border: Border.all(color: color.withValues(alpha: 0.38)),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: CircularProgressIndicator(
+                        value: score == null ? 0 : score / 100,
+                        strokeWidth: 5,
+                        backgroundColor: colors.surface.withValues(alpha: 0.5),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                    Text(
+                      score?.toString() ?? '--',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.shield_outlined,
+                            color: color,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              'Reputation & safety',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption.copyWith(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          DPStatusChip(label: label, tone: tone),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        metrics == null
+                            ? 'Backend trust score pending for this listing.'
+                            : '${metrics.completionLabel} · ${metrics.responseLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: colors.textTertiary,
+                ),
+              ],
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: metrics == null
+                  ? _TrustFactorRow(
+                      label: 'Score inputs',
+                      value:
+                          'Waiting for live KYC, reviews, disputes, completion and response metrics.',
+                      fraction: 0,
+                      color: colors.textTertiary,
+                    )
+                  : Column(
+                      children: [
+                        for (final factor in metrics.factors) ...[
+                          _TrustFactorRow(
+                            label:
+                                '${factor.label} · ${factor.score}/${factor.maxScore}',
+                            value: factor.summary,
+                            fraction: factor.maxScore == 0
+                                ? 0
+                                : factor.score / factor.maxScore,
+                            color: _factorColor(context, factor.status),
+                          ),
+                          if (factor != metrics.factors.last)
+                            const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
+            ),
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DpTone _scoreTone(int? score) {
+    if (score == null) return DpTone.neutral;
+    if (score >= 90) return DpTone.success;
+    if (score >= 75) return DpTone.info;
+    if (score >= 55) return DpTone.warning;
+    return DpTone.danger;
+  }
+}
+
+class _TrustFactorRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final double fraction;
+  final Color color;
+
+  const _TrustFactorRow({
+    required this.label,
+    required this.value,
+    required this.fraction,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: fraction.clamp(0, 1),
+            minHeight: 5,
+            backgroundColor: colors.surface.withValues(alpha: 0.4),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Color _scoreColor(BuildContext context, int? score) {
+  final colors = context.appColors;
+  if (score == null) return colors.textTertiary;
+  if (score >= 90) return colors.success;
+  if (score >= 75) return colors.infoBlue;
+  if (score >= 55) return colors.warning;
+  return colors.danger;
+}
+
+Color _factorColor(BuildContext context, String status) {
+  final colors = context.appColors;
+  return switch (status) {
+    'verified' || 'tracked' || 'clear' => colors.success,
+    'attention' => colors.danger,
+    'pending' => colors.warning,
+    _ => colors.infoBlue,
+  };
 }
 
 class _AvatarFallback extends StatelessWidget {

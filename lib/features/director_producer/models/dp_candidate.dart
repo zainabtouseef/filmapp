@@ -1,3 +1,5 @@
+import '../../../core/reputation/reputation_safety_models.dart';
+
 class DpCandidate {
   final String id;
   final String name;
@@ -17,6 +19,7 @@ class DpCandidate {
   final int completedBookings;
   final String instagramHandle;
   final int instagramFollowers;
+  final ReputationSafetyMetrics? trustMetrics;
 
   const DpCandidate({
     required this.id,
@@ -37,6 +40,7 @@ class DpCandidate {
     this.completedBookings = 18,
     this.instagramHandle = '@cineconnect.profile',
     this.instagramFollowers = 12800,
+    this.trustMetrics,
   }) : profileId = profileId ?? id;
 
   bool get isNew => joinedDaysAgo < 30;

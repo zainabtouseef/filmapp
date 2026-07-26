@@ -86,7 +86,7 @@ class SavedCastingRole(EntityMixin, Base):
         nullable=False,
     )
 
-    actor: Mapped[User] = relationship(lazy="joined")
+    actor: Mapped[User] = relationship(foreign_keys=[actor_user_id], lazy="joined")
     requirement: Mapped[ProjectRequirement] = relationship(lazy="joined")
 
 
@@ -165,7 +165,7 @@ class CastingApplication(EntityMixin, Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     requirement: Mapped[ProjectRequirement] = relationship(lazy="joined")
-    actor: Mapped[User] = relationship(lazy="joined")
+    actor: Mapped[User] = relationship(foreign_keys=[actor_user_id], lazy="joined")
     reviewer: Mapped[User | None] = relationship(
         foreign_keys=[reviewed_by_id], lazy="joined"
     )

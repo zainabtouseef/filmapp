@@ -1,5 +1,6 @@
 import '../../features/director_producer/models/dp_candidate.dart';
 import '../marketplace/marketplace_models.dart';
+import '../reputation/reputation_safety_models.dart';
 import '../verification/verification_models.dart';
 
 class DirectorDiscoveryBundle {
@@ -50,6 +51,7 @@ class DirectorDiscoveryItem {
   final List<MarketplaceListingMedia> media;
   final List<DirectorDiscoverySection> sections;
   final UploadedFile? resumeFile;
+  final ReputationSafetyMetrics? trustMetrics;
 
   const DirectorDiscoveryItem({
     required this.publicId,
@@ -72,6 +74,7 @@ class DirectorDiscoveryItem {
     required this.media,
     required this.sections,
     this.resumeFile,
+    this.trustMetrics,
   });
 
   factory DirectorDiscoveryItem.fromJson(Map<String, dynamic> json) {
@@ -110,6 +113,11 @@ class DirectorDiscoveryItem {
       resumeFile: json['resume_file'] == null
           ? null
           : UploadedFile.fromJson(json['resume_file'] as Map<String, dynamic>),
+      trustMetrics: json['trust_metrics'] is Map<String, dynamic>
+          ? ReputationSafetyMetrics.fromJson(
+              json['trust_metrics'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -139,6 +147,7 @@ class DirectorDiscoveryItem {
       avatarLabel: initials.isEmpty ? 'CC' : initials,
       imageUrl: coverImageUrl,
       notes: summary,
+      trustMetrics: trustMetrics,
     );
   }
 

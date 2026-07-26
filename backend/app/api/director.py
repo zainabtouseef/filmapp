@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, time
+from decimal import Decimal
 from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.auth import _current_user
 from app.api.marketplace import (
@@ -17,7 +18,7 @@ from app.api.marketplace import (
 from app.errors import APIError
 from app.extensions import db
 from app.models.base import utc_now
-from app.models.bookings import Booking
+from app.models.bookings import Booking, Offer
 from app.models.contracts import Contract
 from app.models.identity import User, UserRole
 from app.models.marketplace import (
@@ -43,6 +44,7 @@ from app.models.specialist import (
     CastingAgency,
     DistributionPartnerProfile,
 )
+from app.models.trust_safety import Dispute
 from app.responses import success
 from app.security import as_utc
 
@@ -325,6 +327,216 @@ def _profile_for_user(user_id: Any) -> UserProfile | None:
     ).scalar_one_or_none()
 
 
+def _trust_metrics_payload(
+    *,
+    user_id: Any,
+    verification_status: str,
+    rating_average: int | float | Decimal,
+    review_count: int,
+    available: bool,
+) -> dict[str, Any]:
+    verified_statuses = {"approved", "verified", "published", "active"}
+    verified = verification_status in verified_statuses
+    rating = float(rating_average or 0)
+    reviews = max(int(review_count or 0), 0)
+
+    total_bookings = (
+        db.session.execute(
+            select(func.count(Booking.id)).where(Booking.provider_user_id == user_id)
+        ).scalar_one()
+        or 0
+    )
+    completed_bookings = (
+        db.session.execute(
+            select(func.count(Booking.id)).where(
+                Booking.provider_user_id == user_id,
+                Booking.status.in_(["secured", "completed", "closed"]),
+            )
+        ).scalar_one()
+        or 0
+    )
+    cancelled_bookings = (
+        db.session.execute(
+            select(func.count(Booking.id)).where(
+                Booking.provider_user_id == user_id,
+                Booking.status.in_(["cancelled", "rejected"]),
+            )
+        ).scalar_one()
+        or 0
+    )
+    open_disputes = (
+        db.session.execute(
+            select(func.count(Dispute.id)).where(
+                Dispute.respondent_user_id == user_id,
+                Dispute.status.in_(["open", "under_review", "evidence_requested"]),
+            )
+        ).scalar_one()
+        or 0
+    )
+    resolved_disputes = (
+        db.session.execute(
+            select(func.count(Dispute.id)).where(
+                Dispute.respondent_user_id == user_id,
+                Dispute.status.in_(["resolved", "closed"]),
+            )
+        ).scalar_one()
+        or 0
+    )
+
+    offers = list(
+        db.session.execute(
+            select(Offer)
+            .join(Booking, Booking.id == Offer.booking_id)
+            .where(
+                Booking.provider_user_id == user_id,
+                Offer.sender_user_id == user_id,
+            )
+            .order_by(Offer.created_at.desc())
+            .limit(40)
+        ).scalars()
+    )
+    first_response_by_booking: dict[Any, float] = {}
+    for offer in offers:
+        if offer.booking_id in first_response_by_booking:
+            continue
+        delta = offer.created_at - offer.booking.created_at
+        first_response_by_booking[offer.booking_id] = max(
+            delta.total_seconds() / 3600,
+            0,
+        )
+    avg_response_hours = (
+        sum(first_response_by_booking.values()) / len(first_response_by_booking)
+        if first_response_by_booking
+        else None
+    )
+
+    kyc_score = 25 if verified else 8
+    review_score = min(20, round((rating / 5) * 20)) + min(5, reviews)
+    if reviews == 0:
+        review_score = 8
+    if total_bookings > 0:
+        completion_rate = completed_bookings / total_bookings
+        completion_score = round(completion_rate * 20)
+        if cancelled_bookings:
+            completion_score = max(0, completion_score - min(6, cancelled_bookings * 2))
+    else:
+        completion_rate = None
+        completion_score = 8
+    dispute_score = max(0, 20 - open_disputes * 8 - resolved_disputes * 2)
+    if avg_response_hours is None:
+        response_score = 5
+    elif avg_response_hours <= 4:
+        response_score = 10
+    elif avg_response_hours <= 12:
+        response_score = 8
+    elif avg_response_hours <= 24:
+        response_score = 6
+    else:
+        response_score = 4
+    availability_bonus = 2 if available else -2
+    total_score = max(
+        0,
+        min(
+            100,
+            kyc_score
+            + review_score
+            + completion_score
+            + dispute_score
+            + response_score
+            + availability_bonus,
+        ),
+    )
+
+    label = "Excellent"
+    if total_score < 55:
+        label = "Building"
+    elif total_score < 75:
+        label = "Good"
+    elif total_score < 90:
+        label = "Strong"
+
+    factors = [
+        {
+            "key": "kyc",
+            "label": "KYC",
+            "score": kyc_score,
+            "max_score": 25,
+            "status": "verified" if verified else "pending",
+            "summary": "Identity verified" if verified else "Verification pending",
+        },
+        {
+            "key": "reviews",
+            "label": "Reviews",
+            "score": review_score,
+            "max_score": 25,
+            "status": "tracked" if reviews else "new",
+            "summary": f"{rating:.1f}/5 from {reviews} review{'s' if reviews != 1 else ''}"
+            if reviews
+            else "No verified booking reviews yet",
+        },
+        {
+            "key": "completion",
+            "label": "Completion",
+            "score": completion_score,
+            "max_score": 20,
+            "status": "tracked" if total_bookings else "new",
+            "summary": f"{completed_bookings}/{total_bookings} bookings completed"
+            if total_bookings
+            else "Not enough booking history yet",
+        },
+        {
+            "key": "disputes",
+            "label": "Disputes",
+            "score": dispute_score,
+            "max_score": 20,
+            "status": "clear" if open_disputes == 0 else "attention",
+            "summary": f"{open_disputes} open dispute{'s' if open_disputes != 1 else ''}"
+            if open_disputes
+            else f"{resolved_disputes} resolved dispute{'s' if resolved_disputes != 1 else ''}; none open",
+        },
+        {
+            "key": "response",
+            "label": "Response",
+            "score": response_score,
+            "max_score": 10,
+            "status": "tracked" if avg_response_hours is not None else "new",
+            "summary": f"Avg first response {avg_response_hours:.1f}h"
+            if avg_response_hours is not None
+            else "Response time not enough history yet",
+        },
+    ]
+    return {
+        "score": int(total_score),
+        "label": label,
+        "verified": verified,
+        "rating_average": rating,
+        "review_count": reviews,
+        "completion_rate": completion_rate,
+        "completed_bookings": completed_bookings,
+        "total_bookings": total_bookings,
+        "open_disputes": open_disputes,
+        "resolved_disputes": resolved_disputes,
+        "avg_response_hours": avg_response_hours,
+        "factors": factors,
+    }
+
+
+def _attach_trust_metrics(
+    card: dict[str, Any],
+    *,
+    user_id: Any,
+    review_count: int,
+) -> dict[str, Any]:
+    card["trust_metrics"] = _trust_metrics_payload(
+        user_id=user_id,
+        verification_status=str(card.get("verification_status") or "pending"),
+        rating_average=card.get("rating_average") or 0,
+        review_count=review_count,
+        available=bool(card.get("available")),
+    )
+    return card
+
+
 def _talent_tags(profile: TalentProfile) -> list[str]:
     tags = [
         *(row.language for row in profile.languages),
@@ -336,6 +548,7 @@ def _talent_tags(profile: TalentProfile) -> list[str]:
 
 def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
     profile = _profile_for_user(item.user_id)
+    review_count = profile.review_count if profile else 0
     card = {
         "public_id": item.public_id,
         "kind": "actor",
@@ -357,11 +570,16 @@ def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "route": "/director/discovery/actor",
         "source": {"table": "talent_profiles"},
     }
-    return _with_listing(card, "actor", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "actor", item.public_id),
+        user_id=item.user_id,
+        review_count=review_count,
+    )
 
 
 def _influencer_discovery_item(item: TalentProfile) -> dict[str, Any]:
     profile = _profile_for_user(item.user_id)
+    review_count = profile.review_count if profile else 0
     social_tags: list[str] = []
     if item.social_links_json:
         try:
@@ -395,11 +613,16 @@ def _influencer_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "route": "/director/discovery/influencer",
         "source": {"table": "talent_profiles"},
     }
-    return _with_listing(card, "influencer", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "influencer", item.public_id),
+        user_id=item.user_id,
+        review_count=review_count,
+    )
 
 
 def _talent_model_discovery_item(item: TalentProfile) -> dict[str, Any]:
     profile = _profile_for_user(item.user_id)
+    review_count = profile.review_count if profile else 0
     card = {
         "public_id": item.public_id,
         "kind": "model",
@@ -421,7 +644,11 @@ def _talent_model_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "route": "/director/discovery/model",
         "source": {"table": "talent_profiles"},
     }
-    return _with_listing(card, "model", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "model", item.public_id),
+        user_id=item.user_id,
+        review_count=review_count,
+    )
 
 
 def _talent_model_discovery_detail(item: TalentProfile) -> dict[str, Any]:
@@ -509,6 +736,7 @@ def _model_rate(item: ModelProfile) -> tuple[int | None, str]:
 
 def _model_discovery_item(item: ModelProfile) -> dict[str, Any]:
     profile = _profile_for_user(item.user_id)
+    review_count = profile.review_count if profile else 0
     rate_minor, currency = _model_rate(item)
     categories = [
         row.category
@@ -538,7 +766,11 @@ def _model_discovery_item(item: ModelProfile) -> dict[str, Any]:
         "route": "/director/discovery/model",
         "source": {"table": "model_profiles"},
     }
-    return _with_listing(card, "model", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "model", item.public_id),
+        user_id=item.user_id,
+        review_count=review_count,
+    )
 
 
 def _model_discovery_detail(item: ModelProfile) -> dict[str, Any]:
@@ -656,7 +888,11 @@ def _location_discovery_item(item: LocationProperty) -> dict[str, Any]:
         "route": "/director/discovery/location",
         "source": {"table": "location_properties"},
     }
-    return _with_listing(card, "location", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "location", item.public_id),
+        user_id=item.owner_user_id,
+        review_count=0,
+    )
 
 
 def _location_discovery_detail(item: LocationProperty) -> dict[str, Any]:
@@ -769,7 +1005,11 @@ def _equipment_discovery_item(item: EquipmentProviderProfile) -> dict[str, Any]:
         "route": "/director/discovery/equipment",
         "source": {"table": "equipment_provider_profiles"},
     }
-    return _with_listing(card, "equipment", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "equipment", item.public_id),
+        user_id=item.user_id,
+        review_count=0,
+    )
 
 
 def _equipment_discovery_detail(item: EquipmentProviderProfile) -> dict[str, Any]:
@@ -894,7 +1134,11 @@ def _agency_discovery_item(item: CastingAgency) -> dict[str, Any]:
         "route": "/director/discovery/agency",
         "source": {"table": "casting_agencies"},
     }
-    return _with_listing(card, "agency", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "agency", item.public_id),
+        user_id=item.owner_user_id,
+        review_count=0,
+    )
 
 
 def _agency_discovery_detail(item: CastingAgency) -> dict[str, Any]:
@@ -955,7 +1199,11 @@ def _distribution_discovery_item(item: DistributionPartnerProfile) -> dict[str, 
         "route": "/director/discovery/distribution",
         "source": {"table": "distribution_partner_profiles"},
     }
-    return _with_listing(card, "distribution", item.public_id)
+    return _attach_trust_metrics(
+        _with_listing(card, "distribution", item.public_id),
+        user_id=item.user_id,
+        review_count=0,
+    )
 
 
 def _distribution_discovery_detail(item: DistributionPartnerProfile) -> dict[str, Any]:
