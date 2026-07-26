@@ -278,8 +278,156 @@ def _owner_avatar_url(owner_user_id: object) -> str | None:
     return public_url_for(profile.avatar_file)
 
 
-def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
+def _money_label(amount_minor: int | None, currency: str = "PKR") -> str:
+    if amount_minor is None:
+        return "Rate on request"
+    whole = round(amount_minor / 100)
+    if whole >= 1_000_000:
+        return f"{currency} {whole / 1_000_000:.1f}M"
+    if whole >= 1_000:
+        return f"{currency} {round(whole / 1_000)}k"
+    return f"{currency} {whole}"
+
+
+def _safe_json_dict(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        decoded = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return decoded if isinstance(decoded, dict) else {}
+
+
+def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None:
+    if listing.listing_type not in TALENT_LISTING_TYPES:
+        return None
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == listing.owner_user_id)
+    ).scalar_one_or_none()
+    talent = db.session.execute(
+        select(TalentProfile).where(TalentProfile.public_id == listing.profile_entity_id)
+    ).scalar_one_or_none()
+    model_profile = None
+    if talent is None and listing.listing_type == "model":
+        model_profile = db.session.execute(
+            select(ModelProfile).where(ModelProfile.public_id == listing.profile_entity_id)
+        ).scalar_one_or_none()
+        talent = model_profile.talent_profile if model_profile else None
+    social_links = _safe_json_dict(talent.social_links_json if talent else None)
+    portfolio_profile_type = "model" if model_profile else "talent"
+    portfolio_profile_id = (
+        model_profile.public_id if model_profile else (talent.public_id if talent else "")
+    )
+    portfolio = []
+    if portfolio_profile_id:
+        portfolio = list(
+            db.session.execute(
+                select(PortfolioItem)
+                .where(
+                    PortfolioItem.profile_type == portfolio_profile_type,
+                    PortfolioItem.profile_id == portfolio_profile_id,
+                    PortfolioItem.status == "published",
+                    PortfolioItem.moderation_status == "approved",
+                )
+                .order_by(PortfolioItem.is_cover.desc(), PortfolioItem.sort_order.asc())
+                .limit(12)
+            ).scalars()
+        )
+    reels = [
+        {
+            "title": row.title,
+            "category": row.category,
+            "duration_seconds": row.duration_seconds,
+            "file": _file_payload(row.file),
+            "thumbnail_file": _file_payload(row.thumbnail_file),
+        }
+        for row in portfolio
+        if row.file is not None and row.file.mime_type.startswith("video/")
+    ]
+    if not reels:
+        reels = [
+            {
+                "title": row.title,
+                "category": row.category,
+                "duration_seconds": row.duration_seconds,
+                "file": _file_payload(row.file),
+                "thumbnail_file": _file_payload(row.thumbnail_file),
+            }
+            for row in portfolio[:6]
+            if row.file is not None
+        ]
+    rate_cards = [
+        {
+            "label": "Starting package",
+            "price_label": _money_label(listing.price_from_minor, listing.currency),
+            "scope": "Booking request starting rate",
+            "negotiable": True,
+        }
+    ]
+    if talent and talent.day_rate_minor is not None:
+        rate_cards.append(
+            {
+                "label": "Day rate",
+                "price_label": _money_label(talent.day_rate_minor, talent.currency),
+                "scope": "Shoot day / campaign production",
+                "negotiable": True,
+            }
+        )
+    if model_profile:
+        for rate in model_profile.usage_rates[:6]:
+            rate_cards.append(
+                {
+                    "label": rate.label,
+                    "price_label": _money_label(rate.amount_minor, rate.currency),
+                    "scope": rate.scope or "Usage package",
+                    "negotiable": rate.negotiable,
+                }
+            )
+    platforms = [
+        {"platform": key.title(), "url": str(value)}
+        for key, value in social_links.items()
+        if str(value).strip()
+    ][:6]
+    follower_values = [
+        int(str(value).replace(",", ""))
+        for key, value in social_links.items()
+        if any(token in key.lower() for token in ["followers", "audience", "reach"])
+        and str(value).replace(",", "").isdigit()
+    ]
     return {
+        "verified": listing.verification_status in {"approved", "verified", "published"},
+        "headline": "Verified media kit",
+        "reels": reels,
+        "metrics": [
+            {"label": "Rating", "value": f"{float(profile.rating_average):.1f}/5" if profile else "Not reviewed yet"},
+            {"label": "Reviews", "value": str(profile.review_count if profile else 0)},
+            {"label": "Portfolio media", "value": str(len(portfolio))},
+            {"label": "Social links", "value": str(len(platforms))},
+            {
+                "label": "Declared audience",
+                "value": _money_label(sum(follower_values) * 100, "").strip()
+                if follower_values
+                else "Not provided",
+            },
+        ],
+        "audience": [
+            {"label": "Top markets", "value": "Not provided yet"},
+            {"label": "Age bands", "value": "Not provided yet"},
+            {"label": "Gender split", "value": "Not provided yet"},
+            {"label": "Niche", "value": ", ".join(platform["platform"] for platform in platforms) or "Not provided yet"},
+        ],
+        "platforms": platforms,
+        "rate_cards": rate_cards,
+        "reviews": {
+            "rating_average": float(profile.rating_average) if profile else 0,
+            "review_count": profile.review_count if profile else 0,
+        },
+    }
+
+
+def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
+    payload = {
         "public_id": listing.public_id,
         "listing_type": listing.listing_type,
         "profile_entity_id": listing.profile_entity_id,
@@ -301,6 +449,10 @@ def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
         },
         "media": [_listing_media_payload(item) for item in listing.media],
     }
+    media_kit = _media_kit_for_listing(listing)
+    if media_kit is not None:
+        payload["media_kit"] = media_kit
+    return payload
 
 
 def _shortlist_item_payload(item: ShortlistItem) -> dict[str, Any]:

@@ -52,6 +52,7 @@ class DirectorDiscoveryItem {
   final List<DirectorDiscoverySection> sections;
   final UploadedFile? resumeFile;
   final ReputationSafetyMetrics? trustMetrics;
+  final VerifiedMediaKit? mediaKit;
 
   const DirectorDiscoveryItem({
     required this.publicId,
@@ -75,6 +76,7 @@ class DirectorDiscoveryItem {
     required this.sections,
     this.resumeFile,
     this.trustMetrics,
+    this.mediaKit,
   });
 
   factory DirectorDiscoveryItem.fromJson(Map<String, dynamic> json) {
@@ -117,6 +119,9 @@ class DirectorDiscoveryItem {
           ? ReputationSafetyMetrics.fromJson(
               json['trust_metrics'] as Map<String, dynamic>,
             )
+          : null,
+      mediaKit: json['media_kit'] is Map<String, dynamic>
+          ? VerifiedMediaKit.fromJson(json['media_kit'] as Map<String, dynamic>)
           : null,
     );
   }

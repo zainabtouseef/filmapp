@@ -1616,3 +1616,30 @@
   - Production `/api/v1/health/ready` returns database and Redis `ok`.
   - Production `/api/v1/public/cinema` returns a valid live response; currently `items` is empty until directors upload public trailer/OST media.
   - Deployed `main.dart.js` contains `CINECONNECT CINEMA`, `Upload Trailer`, `Upload OST`, and `Cinema trailers`.
+
+### 2026-07-27 — Verified media kit for talent/influencers
+
+- Goal: make actor/model/influencer public pages feel premium and commercially credible for campaign buyers.
+- Backend behavior:
+  - Marketplace listing payloads now include a composed `media_kit` for talent-style listing types: talent, actor, model, and influencer.
+  - Director discovery actor/model/influencer DTOs now include the same `media_kit` shape.
+  - The media kit is composed from existing live data: approved portfolio media/reels, profile reviews, listing/talent/model rates, social links, and profile/listing verification state.
+  - Audience demographics currently show truthful “not provided yet” values unless the database contains structured audience fields; no fake demographic numbers were introduced.
+  - No database migration was needed for this pass.
+- Flutter behavior:
+  - Shared media-kit DTOs were added for marketplace and Director discovery models.
+  - Stakeholder public/profile pages now show `Verified media kit` for actor/model/influencer/talent profiles.
+  - The section includes metric tiles, reels/featured media, audience demographics, rate cards, social platform links, and review summary.
+  - The existing public gallery remains below the commercial media-kit section.
+- Deployment:
+  - Backend source synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt from the release root.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated with existing live DB/Redis/storage runtime overrides.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `python3 -m py_compile backend/app/api/marketplace.py backend/app/api/director.py` passes.
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production `/api/v1/health/ready` returns database and Redis `ok`.
+  - Production `/api/v1/marketplace/listings?type=influencer` returns influencer listings with `media_kit`.
+  - Deployed `main.dart.js` contains `Verified media kit`, `Audience demographics`, `Rate cards`, and `Reels & featured media`.

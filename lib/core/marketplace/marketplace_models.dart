@@ -13,6 +13,7 @@ class MarketplaceListing {
   final String ownerName;
   final String? ownerAvatarUrl;
   final List<MarketplaceListingMedia> media;
+  final VerifiedMediaKit? mediaKit;
 
   const MarketplaceListing({
     required this.publicId,
@@ -26,6 +27,7 @@ class MarketplaceListing {
     required this.ownerName,
     this.ownerAvatarUrl,
     required this.media,
+    this.mediaKit,
   });
 
   factory MarketplaceListing.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,9 @@ class MarketplaceListing {
               MarketplaceListingMedia.fromJson(item as Map<String, dynamic>))
           .toList()
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+      mediaKit: json['media_kit'] is Map<String, dynamic>
+          ? VerifiedMediaKit.fromJson(json['media_kit'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -104,6 +109,137 @@ class MarketplaceListing {
       return '$currency ${(whole / 1000).round()}k';
     }
     return '$currency $whole';
+  }
+}
+
+class VerifiedMediaKit {
+  final bool verified;
+  final String headline;
+  final List<MediaKitReel> reels;
+  final List<MediaKitMetric> metrics;
+  final List<MediaKitMetric> audience;
+  final List<MediaKitPlatform> platforms;
+  final List<MediaKitRateCard> rateCards;
+  final double ratingAverage;
+  final int reviewCount;
+
+  const VerifiedMediaKit({
+    required this.verified,
+    required this.headline,
+    required this.reels,
+    required this.metrics,
+    required this.audience,
+    required this.platforms,
+    required this.rateCards,
+    required this.ratingAverage,
+    required this.reviewCount,
+  });
+
+  factory VerifiedMediaKit.fromJson(Map<String, dynamic> json) {
+    final reviews = json['reviews'] as Map<String, dynamic>? ?? const {};
+    return VerifiedMediaKit(
+      verified: json['verified'] as bool? ?? false,
+      headline: json['headline'] as String? ?? 'Verified media kit',
+      reels: (json['reels'] as List<dynamic>? ?? const [])
+          .map((item) => MediaKitReel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      metrics: (json['metrics'] as List<dynamic>? ?? const [])
+          .map((item) => MediaKitMetric.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      audience: (json['audience'] as List<dynamic>? ?? const [])
+          .map((item) => MediaKitMetric.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      platforms: (json['platforms'] as List<dynamic>? ?? const [])
+          .map(
+              (item) => MediaKitPlatform.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      rateCards: (json['rate_cards'] as List<dynamic>? ?? const [])
+          .map(
+              (item) => MediaKitRateCard.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      ratingAverage: (reviews['rating_average'] as num?)?.toDouble() ?? 0,
+      reviewCount: (reviews['review_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class MediaKitReel {
+  final String title;
+  final String category;
+  final int? durationSeconds;
+  final UploadedFile? file;
+  final UploadedFile? thumbnailFile;
+
+  const MediaKitReel({
+    required this.title,
+    required this.category,
+    required this.durationSeconds,
+    required this.file,
+    required this.thumbnailFile,
+  });
+
+  factory MediaKitReel.fromJson(Map<String, dynamic> json) {
+    return MediaKitReel(
+      title: json['title'] as String? ?? 'Portfolio reel',
+      category: json['category'] as String? ?? 'showreel',
+      durationSeconds: (json['duration_seconds'] as num?)?.toInt(),
+      file: MarketplacePortfolioItem._uploadedFileOrNull(json['file']),
+      thumbnailFile:
+          MarketplacePortfolioItem._uploadedFileOrNull(json['thumbnail_file']),
+    );
+  }
+
+  bool get isVideo => file?.mimeType.startsWith('video/') ?? false;
+}
+
+class MediaKitMetric {
+  final String label;
+  final String value;
+
+  const MediaKitMetric({required this.label, required this.value});
+
+  factory MediaKitMetric.fromJson(Map<String, dynamic> json) {
+    return MediaKitMetric(
+      label: json['label'] as String? ?? 'Metric',
+      value: json['value'] as String? ?? 'Not provided',
+    );
+  }
+}
+
+class MediaKitPlatform {
+  final String platform;
+  final String url;
+
+  const MediaKitPlatform({required this.platform, required this.url});
+
+  factory MediaKitPlatform.fromJson(Map<String, dynamic> json) {
+    return MediaKitPlatform(
+      platform: json['platform'] as String? ?? 'Social',
+      url: json['url'] as String? ?? '',
+    );
+  }
+}
+
+class MediaKitRateCard {
+  final String label;
+  final String priceLabel;
+  final String scope;
+  final bool negotiable;
+
+  const MediaKitRateCard({
+    required this.label,
+    required this.priceLabel,
+    required this.scope,
+    required this.negotiable,
+  });
+
+  factory MediaKitRateCard.fromJson(Map<String, dynamic> json) {
+    return MediaKitRateCard(
+      label: json['label'] as String? ?? 'Package',
+      priceLabel: json['price_label'] as String? ?? 'Rate on request',
+      scope: json['scope'] as String? ?? 'Campaign package',
+      negotiable: json['negotiable'] as bool? ?? true,
+    );
   }
 }
 

@@ -293,6 +293,104 @@ def _portfolio_media_payload(
     ]
 
 
+def _media_kit_payload(
+    *,
+    profile_type: str,
+    profile_id: str,
+    talent_profile: TalentProfile | None,
+    user_profile: UserProfile | None,
+    rate_label: str,
+) -> dict[str, Any]:
+    rows = list(
+        db.session.execute(
+            select(PortfolioItem)
+            .where(
+                PortfolioItem.profile_type == profile_type,
+                PortfolioItem.profile_id == profile_id,
+                PortfolioItem.status == "published",
+                PortfolioItem.moderation_status == "approved",
+            )
+            .order_by(PortfolioItem.is_cover.desc(), PortfolioItem.sort_order.asc())
+            .limit(12)
+        ).scalars()
+    )
+    social_links: dict[str, Any] = {}
+    if talent_profile and talent_profile.social_links_json:
+        try:
+            decoded = json.loads(talent_profile.social_links_json)
+        except json.JSONDecodeError:
+            decoded = {}
+        if isinstance(decoded, dict):
+            social_links = decoded
+    platforms = [
+        {"platform": key.title(), "url": str(value)}
+        for key, value in social_links.items()
+        if str(value).strip()
+    ][:6]
+    reels = [
+        {
+            "title": row.title,
+            "category": row.category,
+            "duration_seconds": row.duration_seconds,
+            "file": _file_payload(row.file),
+            "thumbnail_file": _file_payload(row.thumbnail_file),
+        }
+        for row in rows
+        if row.file is not None and row.file.mime_type.startswith("video/")
+    ]
+    if not reels:
+        reels = [
+            {
+                "title": row.title,
+                "category": row.category,
+                "duration_seconds": row.duration_seconds,
+                "file": _file_payload(row.file),
+                "thumbnail_file": _file_payload(row.thumbnail_file),
+            }
+            for row in rows[:6]
+            if row.file is not None
+        ]
+    return {
+        "verified": True,
+        "headline": "Verified media kit",
+        "reels": reels,
+        "metrics": [
+            {
+                "label": "Rating",
+                "value": f"{float(user_profile.rating_average):.1f}/5"
+                if user_profile
+                else "Not reviewed yet",
+            },
+            {"label": "Reviews", "value": str(user_profile.review_count if user_profile else 0)},
+            {"label": "Portfolio media", "value": str(len(rows))},
+            {"label": "Social links", "value": str(len(platforms))},
+        ],
+        "audience": [
+            {"label": "Top markets", "value": "Not provided yet"},
+            {"label": "Age bands", "value": "Not provided yet"},
+            {"label": "Gender split", "value": "Not provided yet"},
+            {
+                "label": "Commercial niche",
+                "value": ", ".join(platform["platform"] for platform in platforms)
+                or "Not provided yet",
+            },
+        ],
+        "platforms": platforms,
+        "rate_cards": [
+            {
+                "label": "Campaign / booking rate",
+                "price_label": rate_label,
+                "scope": "Live marketplace rate",
+                "negotiable": True,
+            }
+        ],
+        "reviews": {
+            "rating_average": float(user_profile.rating_average) if user_profile else 0,
+            "review_count": user_profile.review_count if user_profile else 0,
+        },
+    }
+
+
 def _with_listing(
     item: dict[str, Any],
     listing_type: str,
@@ -570,6 +668,13 @@ def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "route": "/director/discovery/actor",
         "source": {"table": "talent_profiles"},
     }
+    card["media_kit"] = _media_kit_payload(
+        profile_type="talent",
+        profile_id=item.public_id,
+        talent_profile=item,
+        user_profile=profile,
+        rate_label=card["rate_label"],
+    )
     return _attach_trust_metrics(
         _with_listing(card, "actor", item.public_id),
         user_id=item.user_id,
@@ -613,6 +718,13 @@ def _influencer_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "route": "/director/discovery/influencer",
         "source": {"table": "talent_profiles"},
     }
+    card["media_kit"] = _media_kit_payload(
+        profile_type="talent",
+        profile_id=item.public_id,
+        talent_profile=item,
+        user_profile=profile,
+        rate_label=card["rate_label"],
+    )
     return _attach_trust_metrics(
         _with_listing(card, "influencer", item.public_id),
         user_id=item.user_id,
@@ -644,6 +756,13 @@ def _talent_model_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "route": "/director/discovery/model",
         "source": {"table": "talent_profiles"},
     }
+    card["media_kit"] = _media_kit_payload(
+        profile_type="talent",
+        profile_id=item.public_id,
+        talent_profile=item,
+        user_profile=profile,
+        rate_label=card["rate_label"],
+    )
     return _attach_trust_metrics(
         _with_listing(card, "model", item.public_id),
         user_id=item.user_id,
@@ -766,6 +885,13 @@ def _model_discovery_item(item: ModelProfile) -> dict[str, Any]:
         "route": "/director/discovery/model",
         "source": {"table": "model_profiles"},
     }
+    card["media_kit"] = _media_kit_payload(
+        profile_type="model",
+        profile_id=item.public_id,
+        talent_profile=item.talent_profile,
+        user_profile=profile,
+        rate_label=card["rate_label"],
+    )
     return _attach_trust_metrics(
         _with_listing(card, "model", item.public_id),
         user_id=item.user_id,

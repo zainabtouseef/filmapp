@@ -496,6 +496,10 @@ class _LiveListingProfile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        if (listing.mediaKit != null) ...[
+          _VerifiedMediaKitSection(mediaKit: listing.mediaKit!),
+          const SizedBox(height: 12),
+        ],
         if (media.isEmpty)
           const DPEmptyState(
             icon: Icons.photo_library_outlined,
@@ -568,6 +572,10 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
         const SizedBox(height: 12),
         if (item.kind == 'actor' || item.kind == 'model') ...[
           _ResumeSection(resumeFile: item.resumeFile),
+          const SizedBox(height: 12),
+        ],
+        if (item.mediaKit != null) ...[
+          _VerifiedMediaKitSection(mediaKit: item.mediaKit!),
           const SizedBox(height: 12),
         ],
         for (final section in sections) ...[
@@ -671,12 +679,306 @@ class _LiveGallerySection extends StatelessWidget {
               _PhotoTile(
                 label: item.caption ?? item.file?.originalName ?? 'Media',
                 imageUrl: item.file?.publicUrl,
-                isVideo:
-                    item.file?.mimeType.startsWith('video/') ?? false,
+                isVideo: item.file?.mimeType.startsWith('video/') ?? false,
               ),
           ],
         ),
       ],
+    );
+  }
+}
+
+class _VerifiedMediaKitSection extends StatelessWidget {
+  final VerifiedMediaKit mediaKit;
+
+  const _VerifiedMediaKitSection({required this.mediaKit});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DPSectionCard(
+      title: mediaKit.headline,
+      icon: Icons.verified_user_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              DPStatusChip(
+                label: mediaKit.verified ? 'Verified media kit' : 'Media kit',
+                tone: mediaKit.verified ? DpTone.success : DpTone.info,
+                icon: Icons.verified_outlined,
+              ),
+              const SizedBox(width: 8),
+              DPStatusChip(
+                label:
+                    '${mediaKit.ratingAverage.toStringAsFixed(1)}/5 · ${mediaKit.reviewCount} reviews',
+                tone: DpTone.warning,
+                icon: Icons.star_border_rounded,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final metric in mediaKit.metrics)
+                _MediaKitMetricTile(metric: metric),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Reels & featured media',
+            style: AppTextStyles.cardLabel.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (mediaKit.reels.isEmpty)
+            const DPEmptyState(
+              icon: Icons.video_library_outlined,
+              title: 'No reels published yet',
+              message:
+                  'This creator has not published approved reels or portfolio media yet.',
+            )
+          else
+            SizedBox(
+              height: 142,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: mediaKit.reels.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) =>
+                    _MediaKitReelCard(reel: mediaKit.reels[index]),
+              ),
+            ),
+          const SizedBox(height: 16),
+          DPTwoColumn(
+            left: _MiniMediaKitPanel(
+              title: 'Audience demographics',
+              icon: Icons.groups_2_outlined,
+              children: [
+                for (final row in mediaKit.audience)
+                  DPDetailRow(label: row.label, value: row.value),
+              ],
+            ),
+            right: _MiniMediaKitPanel(
+              title: 'Rate cards',
+              icon: Icons.sell_outlined,
+              children: [
+                if (mediaKit.rateCards.isEmpty)
+                  DPDetailRow(label: 'Package', value: 'Rate on request')
+                else
+                  for (final card in mediaKit.rateCards)
+                    DPDetailRow(
+                      label: card.label,
+                      value:
+                          '${card.priceLabel} · ${card.scope}${card.negotiable ? ' · negotiable' : ''}',
+                    ),
+              ],
+            ),
+          ),
+          if (mediaKit.platforms.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final platform in mediaKit.platforms)
+                  OutlinedButton.icon(
+                    onPressed: platform.url.isEmpty
+                        ? null
+                        : () => openUrlInNewTab(platform.url),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: Text(platform.platform),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MediaKitMetricTile extends StatelessWidget {
+  final MediaKitMetric metric;
+
+  const _MediaKitMetricTile({required this.metric});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: 148,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+        gradient: colors.inactiveChipGradient,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            metric.value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.metricNumberCompact.copyWith(
+              color: colors.textPrimary,
+              fontSize: 20,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            metric.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MediaKitReelCard extends StatelessWidget {
+  final MediaKitReel reel;
+
+  const _MediaKitReelCard({required this.reel});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final file = reel.file;
+    final url = file?.publicUrl;
+    return GestureDetector(
+      onTap: url == null ? null : () => openUrlInNewTab(url),
+      child: Container(
+        width: 212,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colors.border),
+          gradient: LinearGradient(
+            colors: [
+              colors.surface,
+              colors.goldDark.withValues(alpha: 0.18),
+            ],
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 82,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: colors.goldGlow.withValues(alpha: 0.18),
+                image: reel.thumbnailFile?.publicUrl == null
+                    ? null
+                    : DecorationImage(
+                        image: NetworkImage(reel.thumbnailFile!.publicUrl!),
+                        fit: BoxFit.cover,
+                      ),
+              ),
+              child: Icon(
+                reel.isVideo
+                    ? Icons.play_circle_outline_rounded
+                    : Icons.photo_outlined,
+                color: colors.goldDark,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    reel.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _mediaKitCategory(reel.category),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  if (reel.durationSeconds != null)
+                    Text(
+                      '${(reel.durationSeconds! / 60).floor()}:${(reel.durationSeconds! % 60).toString().padLeft(2, '0')}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniMediaKitPanel extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  const _MiniMediaKitPanel({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.borderMuted),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: colors.goldDark),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...children,
+        ],
+      ),
     );
   }
 }
@@ -839,4 +1141,14 @@ class _PhotoTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _mediaKitCategory(String value) {
+  if (value.trim().isEmpty) return 'Portfolio media';
+  return value
+      .replaceAll('_', ' ')
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
