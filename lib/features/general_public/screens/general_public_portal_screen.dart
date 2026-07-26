@@ -172,6 +172,7 @@ class GeneralPublicShell extends StatelessWidget {
       title: title,
       currentRoute: currentRoute,
       showHeading: false,
+      showKycStatusBanner: false,
       topBarBuilder: (context, wide, onMenuTap) => _PublicTopBar(
         wide: wide,
         onMenuTap: onMenuTap,
@@ -236,7 +237,7 @@ class GeneralPublicHomeScreen extends StatelessWidget {
               const SizedBox(height: 6),
               dpText(
                 context,
-                'Create direct booking requests for actors, models and influencers. No KYC is needed for public customers; providers remain verified before they can publish.',
+                'Create direct booking requests for actors, models and influencers. Track offers, messages and campaign terms from your customer workspace.',
                 strong: true,
               ),
             ],
@@ -412,9 +413,9 @@ class GeneralPublicAccountScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const DPStatusChip(
-                label: 'KYC not required for customer bookings',
-                tone: DpTone.success,
-                icon: Icons.verified_user_outlined,
+                label: 'Customer account',
+                tone: DpTone.info,
+                icon: Icons.shopping_bag_outlined,
               ),
             ],
           ),

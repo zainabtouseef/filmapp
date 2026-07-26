@@ -60,6 +60,11 @@ class AdminScreenScaffold extends StatefulWidget {
   /// compact command header as part of the content instead.
   final bool showHeading;
 
+  /// Set false for portals that do not participate in KYC gating.
+  /// Defaults to true so existing provider/admin portals keep their
+  /// verification prompt unchanged.
+  final bool showKycStatusBanner;
+
   const AdminScreenScaffold({
     super.key,
     required this.title,
@@ -72,6 +77,7 @@ class AdminScreenScaffold extends StatefulWidget {
     this.floatingMenuBuilder,
     this.floatingActionBuilder,
     this.showHeading = true,
+    this.showKycStatusBanner = true,
   });
 
   @override
@@ -125,7 +131,8 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                 wide,
                                 _openMenu,
                               ),
-                              const KycStatusBanner(),
+                              if (widget.showKycStatusBanner)
+                                const KycStatusBanner(),
                               if (widget.showHeading)
                                 Padding(
                                   padding: EdgeInsets.fromLTRB(
