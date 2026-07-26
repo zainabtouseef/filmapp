@@ -292,6 +292,7 @@ class AuthController extends ChangeNotifier {
     List<Map<String, dynamic>>? training,
     Map<String, dynamic>? representation,
     Map<String, dynamic>? socialLinks,
+    List<String>? availabilityCategories,
   }) {
     return _repository.updateTalentProfile(
       screenName: screenName,
@@ -313,6 +314,7 @@ class AuthController extends ChangeNotifier {
       training: training,
       representation: representation,
       socialLinks: socialLinks,
+      availabilityCategories: availabilityCategories,
     );
   }
 
@@ -330,12 +332,14 @@ class AuthController extends ChangeNotifier {
   Future<MarketplaceListing> publishMarketplaceListing({
     required String title,
     required String summary,
+    String listingType = 'talent',
     String? cityId,
     List<String> portfolioItemIds = const [],
   }) {
     return _repository.publishMarketplaceListing(
       title: title,
       summary: summary,
+      listingType: listingType,
       cityId: cityId,
       portfolioItemIds: portfolioItemIds,
     );

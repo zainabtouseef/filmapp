@@ -60,7 +60,8 @@ class UserProfile {
       visibility: json['profile_visibility'] as String? ?? 'private',
       // Backend sends this as a formatted decimal string (e.g. "0.00") to
       // avoid float precision issues, not a JSON number.
-      ratingAverage: double.tryParse(json['rating_average']?.toString() ?? '') ?? 0,
+      ratingAverage:
+          double.tryParse(json['rating_average']?.toString() ?? '') ?? 0,
       reviewCount: json['review_count'] as int? ?? 0,
       avatarFile: avatar == null ? null : UploadedFile.fromJson(avatar),
       coverFile: cover == null ? null : UploadedFile.fromJson(cover),
@@ -110,6 +111,7 @@ class TalentProfile {
   final List<Map<String, dynamic>> training;
   final Map<String, dynamic> representation;
   final Map<String, dynamic> socialLinks;
+  final List<String> availabilityCategories;
 
   const TalentProfile({
     required this.publicId,
@@ -132,6 +134,7 @@ class TalentProfile {
     this.training = const [],
     this.representation = const {},
     this.socialLinks = const {},
+    this.availabilityCategories = const ['actor'],
   });
 
   factory TalentProfile.fromJson(Map<String, dynamic>? json) {
@@ -148,6 +151,7 @@ class TalentProfile {
         dayRateMinor: null,
         currency: 'PKR',
         languages: [],
+        availabilityCategories: ['actor'],
       );
     }
     final resume = json['resume_file'] as Map<String, dynamic>?;
@@ -192,6 +196,11 @@ class TalentProfile {
       socialLinks: Map<String, dynamic>.from(
         json['social_links'] as Map? ?? const {},
       ),
+      availabilityCategories:
+          (json['availability_categories'] as List<dynamic>? ?? const ['actor'])
+              .map((item) => item.toString())
+              .where((item) => item.isNotEmpty)
+              .toList(),
     );
   }
 }

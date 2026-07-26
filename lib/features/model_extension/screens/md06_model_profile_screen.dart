@@ -22,8 +22,7 @@ class MD06ModelProfileScreen extends StatefulWidget {
   const MD06ModelProfileScreen({super.key});
 
   @override
-  State<MD06ModelProfileScreen> createState() =>
-      _MD06ModelProfileScreenState();
+  State<MD06ModelProfileScreen> createState() => _MD06ModelProfileScreenState();
 }
 
 class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
@@ -40,6 +39,7 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
   String? remoteStatus;
   bool loadingRemote = false;
   bool savingRemote = false;
+  bool publishingListing = false;
   bool attemptedRemoteLoad = false;
   List<ProfileCity> supportedCities = const [];
   String? avatarUrl;
@@ -52,6 +52,9 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
   String? resumeFileName;
   bool uploadingResume = false;
   String? resumeError;
+  bool availableAsActor = false;
+  bool availableAsModel = true;
+  bool availableAsInfluencer = false;
 
   @override
   void initState() {
@@ -172,6 +175,41 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
           ),
           const SizedBox(height: 10),
           ActorCollapsibleSection(
+            title: 'Marketplace Availability',
+            subtitle:
+                'Choose all discovery categories this profile should appear in',
+            icon: Icons.storefront_outlined,
+            tone: ActorTone.gold,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  avatar: const Icon(Icons.style_outlined, size: 18),
+                  label: const Text('Available as Model'),
+                  selected: availableAsModel,
+                  onSelected: (value) =>
+                      setState(() => availableAsModel = value),
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.campaign_outlined, size: 18),
+                  label: const Text('Available as Influencer'),
+                  selected: availableAsInfluencer,
+                  onSelected: (value) =>
+                      setState(() => availableAsInfluencer = value),
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.theater_comedy_outlined, size: 18),
+                  label: const Text('Available as Actor'),
+                  selected: availableAsActor,
+                  onSelected: (value) =>
+                      setState(() => availableAsActor = value),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActorCollapsibleSection(
             title: 'Social & Representation',
             subtitle: 'Instagram, TikTok, followers, agency',
             icon: Icons.apartment_outlined,
@@ -246,7 +284,18 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
             label: 'Save profile',
             compact: true,
             loading: savingRemote,
-            onTap: savingRemote ? null : _submit,
+            onTap: savingRemote || publishingListing ? null : _submit,
+          ),
+          const SizedBox(height: 8),
+          CoreSecondaryButton(
+            icon: Icons.travel_explore_outlined,
+            label: publishingListing
+                ? 'Publishing listings…'
+                : 'Publish marketplace listings',
+            compact: true,
+            onTap: savingRemote || publishingListing
+                ? null
+                : _publishMarketplaceListings,
           ),
         ],
       ),
@@ -509,8 +558,11 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
         instagram.text = talent.socialLinks['instagram']?.toString() ?? '';
         tiktok.text = talent.socialLinks['tiktok']?.toString() ?? '';
         followers.text = talent.socialLinks['followers']?.toString() ?? '';
-        agency.text =
-            talent.representation['agency_name']?.toString() ?? '';
+        agency.text = talent.representation['agency_name']?.toString() ?? '';
+        final availability = talent.availabilityCategories;
+        availableAsActor = availability.contains('actor');
+        availableAsModel = availability.contains('model');
+        availableAsInfluencer = availability.contains('influencer');
         remoteStatus = 'Synced with backend profile';
       });
     } on ApiException catch (exception) {
@@ -670,6 +722,7 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
         resumeFileId: uploaded.publicId,
         representation: _representationForBackend(),
         socialLinks: _socialLinksForBackend(),
+        availabilityCategories: _availabilityCategoriesForBackend(),
       );
       if (!mounted) return;
       setState(() {
@@ -735,6 +788,7 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
         screenName: stageName.text.trim(),
         representation: _representationForBackend(),
         socialLinks: _socialLinksForBackend(),
+        availabilityCategories: _availabilityCategoriesForBackend(),
       );
       if (!mounted) return;
       setState(() => remoteStatus = 'Backend profile saved');
@@ -758,6 +812,76 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
     }
   }
 
+  Future<void> _publishMarketplaceListings() async {
+    if (stageName.text.trim().isEmpty || city.text.trim().isEmpty) {
+      setState(() => error = 'Required');
+      return;
+    }
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      actorSnack(context, 'Sign in to publish marketplace listings');
+      return;
+    }
+    final matchedCity = _matchedCity();
+    if (supportedCities.isNotEmpty && matchedCity == null) {
+      setState(() {
+        error = 'Choose a supported city';
+        remoteStatus =
+            'Supported cities: ${supportedCities.map((item) => item.name).join(', ')}';
+      });
+      return;
+    }
+    setState(() {
+      error = null;
+      publishingListing = true;
+      remoteStatus = 'Publishing marketplace listings…';
+    });
+    try {
+      await auth.updateMyProfile(
+        bio: bio.text.trim(),
+        cityId: matchedCity?.publicId,
+        visibility: 'public',
+        websiteUrl: website.text.trim(),
+      );
+      await auth.updateTalentProfile(
+        screenName: stageName.text.trim(),
+        representation: _representationForBackend(),
+        socialLinks: _socialLinksForBackend(),
+        availabilityCategories: _availabilityCategoriesForBackend(),
+      );
+      final listings = <String>[];
+      for (final category in _availabilityCategoriesForBackend()) {
+        final listing = await auth.publishMarketplaceListing(
+          title: '${stageName.text.trim()} — ${_availabilityLabel(category)}',
+          summary: _listingSummary(),
+          listingType: category,
+          cityId: matchedCity?.publicId,
+        );
+        listings.add(listing.publicId);
+      }
+      if (!mounted) return;
+      setState(
+          () => remoteStatus = 'Published listings ${listings.join(', ')}');
+      actorSnack(context, 'Marketplace listings published');
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      setState(() {
+        error = exception.message;
+        remoteStatus = exception.code == 'marketplace.kyc_required'
+            ? 'Approved provider KYC is required before public listing.'
+            : 'Listings were not published. Check the details and try again.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        error = 'Could not reach backend';
+        remoteStatus = 'Listings were not published. Try again when online.';
+      });
+    } finally {
+      if (mounted) setState(() => publishingListing = false);
+    }
+  }
+
   ProfileCity? _matchedCity() {
     final value = city.text.trim().toLowerCase();
     for (final item in supportedCities) {
@@ -774,6 +898,38 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
     final completed =
         fields.where((field) => field.text.trim().isNotEmpty).length;
     return ((completed / fields.length) * 100).round();
+  }
+
+  List<String> _availabilityCategoriesForBackend() {
+    final categories = <String>[
+      if (availableAsActor) 'actor',
+      if (availableAsModel) 'model',
+      if (availableAsInfluencer) 'influencer',
+    ];
+    return categories.isEmpty ? ['model'] : categories;
+  }
+
+  String _availabilityLabel(String category) {
+    return switch (category) {
+      'actor' => 'Actor',
+      'model' => 'Model',
+      'influencer' => 'Influencer',
+      _ => category,
+    };
+  }
+
+  String _listingSummary() {
+    final parts = <String>[
+      if (bio.text.trim().isNotEmpty) bio.text.trim(),
+      if (instagram.text.trim().isNotEmpty)
+        'Instagram: ${instagram.text.trim()}',
+      if (tiktok.text.trim().isNotEmpty) 'TikTok: ${tiktok.text.trim()}',
+      if (followers.text.trim().isNotEmpty)
+        'Followers: ${followers.text.trim()}',
+    ];
+    final summary = parts.join('\n');
+    if (summary.trim().length >= 10) return summary;
+    return 'Available model/influencer profile for CineConnect campaigns.';
   }
 
   Map<String, dynamic> _representationForBackend() {

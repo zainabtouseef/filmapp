@@ -295,6 +295,69 @@ def _project_for_booking(public_id: str, user: User) -> Project:
     return project
 
 
+def _has_role(user: User, *role_codes: str) -> bool:
+    return any(
+        user_role.status == "active" and user_role.role.code in role_codes
+        for user_role in user.roles
+    )
+
+
+def _campaign_project_for_public_booking(
+    payload: dict[str, Any],
+    user: User,
+    *,
+    start_at: datetime,
+    end_at: datetime,
+) -> Project:
+    if not _has_role(user, "general_public"):
+        raise _field_error("project_id", "Select a project you can access.")
+    title = (
+        str(payload.get("campaign_title") or payload.get("title") or "").strip()
+        or "Marketing Campaign Booking"
+    )
+    description_parts = [
+        str(payload.get("brand_name") or "").strip(),
+        str(payload.get("campaign_objective") or "").strip(),
+        str(payload.get("deliverables") or "").strip(),
+        str(payload.get("notes") or "").strip(),
+    ]
+    project = Project(
+        owner_user_id=user.id,
+        title=title[:180],
+        project_type="marketing_campaign",
+        description="\n".join(part for part in description_parts if part)[:4000]
+        or "General Public campaign booking request.",
+        start_date=start_at.date(),
+        end_date=end_at.date(),
+        status="draft",
+        visibility="private",
+        currency=str(payload.get("currency") or "PKR").strip().upper()[:3],
+        estimated_budget_minor=_optional_int(
+            payload.get("fee_minor") or payload.get("budget_minor"),
+            "fee_minor",
+        ),
+    )
+    db.session.add(project)
+    db.session.flush()
+    db.session.add(
+        ProjectMember(
+            project_id=project.id,
+            user_id=user.id,
+            role_label="Campaign Owner",
+            permissions_json=json.dumps(
+                {
+                    "manage_project": True,
+                    "manage_requirements": False,
+                    "manage_members": False,
+                },
+                sort_keys=True,
+            ),
+            status="active",
+        )
+    )
+    return project
+
+
 def _listing_for_booking(public_id: str) -> MarketplaceListing:
     listing = db.session.execute(
         select(MarketplaceListing).where(
@@ -696,10 +759,24 @@ def booking_detail(public_id: str) -> Response:
 def create_booking() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
-    project = _project_for_booking(str(payload.get("project_id", "")).strip(), user)
     listing = _listing_for_booking(str(payload.get("listing_id", "")).strip())
     if listing.owner_user_id == user.id:
         raise _field_error("listing_id", "You cannot book your own listing.")
+    start_at = _parse_datetime(payload.get("start_at"), "start_at")
+    end_at = _parse_datetime(payload.get("end_at"), "end_at")
+    if end_at <= start_at:
+        raise _field_error("end_at", "End time must be after start time.")
+    project_id = str(payload.get("project_id", "")).strip()
+    project = (
+        _project_for_booking(project_id, user)
+        if project_id
+        else _campaign_project_for_public_booking(
+            payload,
+            user,
+            start_at=start_at,
+            end_at=end_at,
+        )
+    )
     requirement = None
     requirement_id = str(payload.get("requirement_id", "")).strip()
     if requirement_id:
@@ -713,10 +790,6 @@ def create_booking() -> ResponseReturnValue:
             raise _field_error(
                 "requirement_id", "Select a requirement in this project."
             )
-    start_at = _parse_datetime(payload.get("start_at"), "start_at")
-    end_at = _parse_datetime(payload.get("end_at"), "end_at")
-    if end_at <= start_at:
-        raise _field_error("end_at", "End time must be after start time.")
     if _availability_conflicts(listing.owner.public_id, start_at, end_at):
         raise APIError(
             "availability.conflict",

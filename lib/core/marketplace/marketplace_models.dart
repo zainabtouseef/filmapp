@@ -66,6 +66,7 @@ class MarketplaceListing {
         'talent' => 'Talent',
         'actor' => 'Actors',
         'model' => 'Models',
+        'influencer' => 'Influencers',
         'location' => 'Locations',
         'equipment' => 'Media & Equipment',
         'agency' => 'Agencies',

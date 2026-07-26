@@ -127,6 +127,7 @@ class TalentProfile(EntityMixin, Base):
     training_json: Mapped[str | None] = mapped_column(Text)
     representation_json: Mapped[str | None] = mapped_column(Text)
     social_links_json: Mapped[str | None] = mapped_column(Text)
+    availability_categories_json: Mapped[str | None] = mapped_column(Text)
 
     user: Mapped[User] = relationship(lazy="joined")
     languages: Mapped[list[TalentLanguage]] = relationship(

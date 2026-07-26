@@ -20,6 +20,7 @@ const _categoryKeys = [
   'All',
   'Actors',
   'Models',
+  'Influencers',
   'Crew',
   'Locations',
   'Media & Equipment',
@@ -82,6 +83,7 @@ class _DPMarketplaceDiscoveryScreenState
     return category == 'All' ||
         category == 'Actors' ||
         category == 'Models' ||
+        category == 'Influencers' ||
         category == 'Locations' ||
         category == 'Media & Equipment' ||
         category == 'Agencies';
@@ -247,7 +249,14 @@ class _DPMarketplaceDiscoveryScreenState
                           onRequest: candidate.marketplaceListingId == null
                               ? () => _showProviderActionPending(candidate)
                               : () async {
-                                  if (!await ensureKycApproved(context)) {
+                                  final isPublicBuyer =
+                                      AuthScope.maybeOf(context)
+                                              ?.user
+                                              ?.primaryRole
+                                              ?.code ==
+                                          'general_public';
+                                  if (!isPublicBuyer &&
+                                      !await ensureKycApproved(context)) {
                                     return;
                                   }
                                   if (!context.mounted) return;
@@ -292,6 +301,7 @@ class _DPMarketplaceDiscoveryScreenState
         listingType: switch (_category) {
           'Actors' => 'actor',
           'Models' => 'model',
+          'Influencers' => 'influencer',
           'Locations' => 'location',
           'Media & Equipment' => 'equipment',
           'Agencies' => 'agency',

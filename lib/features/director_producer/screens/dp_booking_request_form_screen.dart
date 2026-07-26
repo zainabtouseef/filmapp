@@ -60,6 +60,9 @@ class _DPBookingRequestFormScreenState
   int _step = 0;
   bool _sending = false;
 
+  bool get _isPublicBuyer =>
+      AuthScope.maybeOf(context)?.user?.primaryRole?.code == 'general_public';
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -82,26 +85,31 @@ class _DPBookingRequestFormScreenState
         message: 'Sign in to compose a live booking request.',
       );
     }
-    if (projectsController == null) {
+    final publicBuyer = auth.user?.primaryRole?.code == 'general_public';
+    if (projectsController == null && !publicBuyer) {
       throw const ApiException(
         code: 'projects.scope_missing',
         message: 'Projects are not available in this session.',
       );
     }
     final listing = await auth.marketplaceListing(listingId);
-    final projects = await projectsController.projects();
-    if (projects.isEmpty) {
+    final projects = projectsController == null
+        ? const <Project>[]
+        : await projectsController.projects();
+    if (projects.isEmpty && !publicBuyer) {
       throw const ApiException(
         code: 'projects.empty',
         message: 'Create a live project before sending booking requests.',
       );
     }
-    final initialProjectId =
-        projects.any((project) => project.publicId == widget.projectId)
+    final initialProjectId = projects.isEmpty
+        ? null
+        : projects.any((project) => project.publicId == widget.projectId)
             ? widget.projectId!
             : projects.first.publicId;
-    final requirements =
-        await projectsController.requirements(initialProjectId);
+    final requirements = initialProjectId == null || projectsController == null
+        ? const <ProjectRequirement>[]
+        : await projectsController.requirements(initialProjectId);
     return _BookingFormData(
       listing: listing,
       projects: projects,
@@ -159,10 +167,12 @@ class _DPBookingRequestFormScreenState
     _dynamicC.text = _schema.fieldHints[2];
   }
 
-  Project get _project => _projects.firstWhere(
-        (project) => project.publicId == _projectId,
-        orElse: () => _projects.first,
-      );
+  Project? get _project => _projects.isEmpty
+      ? null
+      : _projects.firstWhere(
+          (project) => project.publicId == _projectId,
+          orElse: () => _projects.first,
+        );
 
   ProjectRequirement? get _selectedRequirement {
     if (_requirementId == null) return null;
@@ -210,16 +220,18 @@ class _DPBookingRequestFormScreenState
 
   Widget _buildLoaded(BuildContext context) {
     final steps = [
-      'Project',
-      'Requirement',
+      _isPublicBuyer ? 'Campaign' : 'Project',
+      _isPublicBuyer ? 'Brief' : 'Requirement',
       'Terms',
       'Review',
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DPProjectBreadcrumbs(project: _project, current: 'Booking composer'),
-        const SizedBox(height: 10),
+        if (_project != null) ...[
+          DPProjectBreadcrumbs(project: _project!, current: 'Booking composer'),
+          const SizedBox(height: 10),
+        ],
         dpHeaderAction(
           context,
           icon: _step == steps.length - 1
@@ -259,7 +271,8 @@ class _DPBookingRequestFormScreenState
     return switch (_step) {
       0 => _ProjectAttachStep(
           projects: _projects,
-          projectId: _projectId!,
+          projectId: _projectId,
+          isPublicBuyer: _isPublicBuyer,
           onProjectChanged: (value) async {
             final projectsController = ProjectsScope.of(context);
             final requirements = await projectsController.requirements(value);
@@ -334,12 +347,14 @@ class _DPBookingRequestFormScreenState
   void _saveDraft() {
     dpSnack(
       context,
-      'Draft saved to ${_project.title} → ${_selectedRequirement?.title ?? 'General request'}.',
+      _project == null
+          ? 'Campaign booking draft staged.'
+          : 'Draft saved to ${_project!.title} → ${_selectedRequirement?.title ?? 'General request'}.',
     );
   }
 
   Future<void> _send() async {
-    if (!await ensureKycApproved(context)) return;
+    if (!_isPublicBuyer && !await ensureKycApproved(context)) return;
     if (!mounted) return;
     if (_scheduleTotal != 100) {
       dpSnack(context, 'Payment schedule must total 100%.');
@@ -348,7 +363,7 @@ class _DPBookingRequestFormScreenState
     }
     final bookings = BookingsScope.maybeOf(context);
     final listing = _listing;
-    if (bookings == null || listing == null || _projectId == null) {
+    if (bookings == null || listing == null) {
       dpSnack(context, 'Live booking service is unavailable.');
       return;
     }
@@ -361,7 +376,7 @@ class _DPBookingRequestFormScreenState
     setState(() => _sending = true);
     try {
       await bookings.createAndSendBooking(
-        projectId: _projectId!,
+        projectId: _projectId,
         listingId: listing.publicId,
         requirementId: _requirementId,
         startAt: _startIso(),
@@ -399,19 +414,20 @@ class _DPBookingRequestFormScreenState
   }
 
   String _startIso() {
-    final start = _selectedRequirement?.startDate ?? _project.startDate;
+    final start = _selectedRequirement?.startDate ?? _project?.startDate;
     return (start ?? DateTime.now().add(const Duration(days: 1)))
         .toUtc()
         .toIso8601String();
   }
 
   String _endIso() {
-    final end = _selectedRequirement?.endDate ?? _project.endDate;
+    final end = _selectedRequirement?.endDate ?? _project?.endDate;
     final fallback = DateTime.now().add(const Duration(days: 2));
     return (end ?? fallback).toUtc().toIso8601String();
   }
 
-  String _projectDateLabel(Project project) {
+  String _projectDateLabel(Project? project) {
+    if (project == null) return _dateRange(null, null);
     return _dateRange(project.startDate, project.endDate);
   }
 
@@ -441,56 +457,70 @@ class _DPBookingRequestFormScreenState
 
 class _ProjectAttachStep extends StatelessWidget {
   final List<Project> projects;
-  final String projectId;
+  final String? projectId;
+  final bool isPublicBuyer;
   final ValueChanged<String> onProjectChanged;
 
   const _ProjectAttachStep({
     required this.projects,
     required this.projectId,
+    required this.isPublicBuyer,
     required this.onProjectChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return DPSectionCard(
-      title: 'Project attach',
-      icon: Icons.account_tree_outlined,
+      title: isPublicBuyer ? 'Campaign booking' : 'Project attach',
+      icon:
+          isPublicBuyer ? Icons.campaign_outlined : Icons.account_tree_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DropdownButtonFormField<String>(
-            key: ValueKey(projectId),
-            initialValue: projectId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Parent project',
-              prefixIcon: Icon(Icons.movie_creation_outlined),
-            ),
-            items: [
-              for (final project in projects)
-                DropdownMenuItem(
-                  value: project.publicId,
-                  child: Text(
-                    project.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-            onChanged: (value) {
-              if (value != null) onProjectChanged(value);
-            },
-          ),
-          const SizedBox(height: 12),
-          DPHolographicButton(
-            label: 'New Project inline',
-            icon: Icons.add_rounded,
-            onTap: () => Navigator.pushNamed(
+          if (isPublicBuyer && projects.isEmpty) ...[
+            dpText(
               context,
-              DirectorProducerRoutes.createProject,
+              'Your marketing campaign project will be created automatically when this request is sent.',
+              strong: true,
             ),
-            secondary: true,
-          ),
+            const SizedBox(height: 12),
+          ],
+          if (!isPublicBuyer || projects.isNotEmpty) ...[
+            DropdownButtonFormField<String>(
+              key: ValueKey(projectId),
+              initialValue: projectId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Parent project',
+                prefixIcon: Icon(Icons.movie_creation_outlined),
+              ),
+              items: [
+                for (final project in projects)
+                  DropdownMenuItem(
+                    value: project.publicId,
+                    child: Text(
+                      project.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) onProjectChanged(value);
+              },
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (!isPublicBuyer)
+            DPHolographicButton(
+              label: 'New Project inline',
+              icon: Icons.add_rounded,
+              onTap: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.createProject,
+              ),
+              secondary: true,
+            ),
         ],
       ),
     );
@@ -498,7 +528,7 @@ class _ProjectAttachStep extends StatelessWidget {
 }
 
 class _RequirementStep extends StatelessWidget {
-  final Project project;
+  final Project? project;
   final List<ProjectRequirement> requirements;
   final String? selectedRequirementId;
   final ValueChanged<String?> onRequirementChanged;
@@ -513,53 +543,65 @@ class _RequirementStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DPSectionCard(
-      title: 'Requirement link',
-      icon: Icons.rule_folder_outlined,
+      title: project == null ? 'Campaign brief' : 'Requirement link',
+      icon: project == null
+          ? Icons.assignment_outlined
+          : Icons.rule_folder_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DropdownButtonFormField<String?>(
-            key: ValueKey('${project.publicId}-$selectedRequirementId'),
-            initialValue: selectedRequirementId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Project requirement',
-              prefixIcon: Icon(Icons.link_outlined),
+          if (project == null) ...[
+            dpText(
+              context,
+              'Use the terms step to describe campaign deliverables, usage rights, dates and budget.',
+              strong: true,
             ),
-            items: [
-              const DropdownMenuItem<String?>(
-                value: null,
-                child: Text('General booking request'),
+          ] else ...[
+            DropdownButtonFormField<String?>(
+              key: ValueKey('${project!.publicId}-$selectedRequirementId'),
+              initialValue: selectedRequirementId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Project requirement',
+                prefixIcon: Icon(Icons.link_outlined),
               ),
-              for (final requirement in requirements)
-                DropdownMenuItem<String?>(
-                  value: requirement.publicId,
-                  child: Text(
-                    requirement.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('General booking request'),
                 ),
-            ],
-            onChanged: onRequirementChanged,
-          ),
-          const SizedBox(height: 12),
-          if (requirements.isEmpty)
-            dpText(context,
-                'No requirements yet. Add them in the project builder.')
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
                 for (final requirement in requirements)
-                  DPStatusChip(
-                    label:
-                        '${requirement.displayCategory}: ${_titleCase(requirement.status)}',
-                    tone: DpTone.info,
+                  DropdownMenuItem<String?>(
+                    value: requirement.publicId,
+                    child: Text(
+                      requirement.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
               ],
+              onChanged: onRequirementChanged,
             ),
+            const SizedBox(height: 12),
+            if (requirements.isEmpty)
+              dpText(
+                context,
+                'No requirements yet. Add them in the project builder.',
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final requirement in requirements)
+                    DPStatusChip(
+                      label:
+                          '${requirement.displayCategory}: ${_titleCase(requirement.status)}',
+                      tone: DpTone.info,
+                    ),
+                ],
+              ),
+          ],
         ],
       ),
     );
@@ -784,7 +826,7 @@ class _ScheduleBuilder extends StatelessWidget {
 }
 
 class _ReviewStep extends StatelessWidget {
-  final Project project;
+  final Project? project;
   final ProjectRequirement? requirement;
   final DpCandidate candidate;
   final String category;
@@ -827,7 +869,10 @@ class _ReviewStep extends StatelessWidget {
       icon: Icons.fact_check_outlined,
       child: Column(
         children: [
-          DPDetailRow(label: 'Project', value: project.title),
+          DPDetailRow(
+            label: project == null ? 'Campaign' : 'Project',
+            value: project?.title ?? 'Marketing campaign booking',
+          ),
           DPDetailRow(
               label: 'Requirement',
               value: requirement?.title ?? 'General booking request'),
@@ -880,7 +925,7 @@ class _BookingFormData {
   final MarketplaceListing listing;
   final List<Project> projects;
   final List<ProjectRequirement> requirements;
-  final String projectId;
+  final String? projectId;
 
   const _BookingFormData({
     required this.listing,

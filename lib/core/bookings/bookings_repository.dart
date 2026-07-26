@@ -35,7 +35,7 @@ class BookingsRepository {
   }
 
   Future<Booking> createBooking({
-    required String projectId,
+    String? projectId,
     required String listingId,
     String? requirementId,
     required String startAt,
@@ -46,7 +46,7 @@ class BookingsRepository {
     final response = await _client.post(
       '/bookings',
       body: {
-        'project_id': projectId,
+        if (projectId != null) 'project_id': projectId,
         'listing_id': listingId,
         if (requirementId != null) 'requirement_id': requirementId,
         'start_at': startAt,

@@ -62,6 +62,9 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   String? resumeFileName;
   bool uploadingResume = false;
   String? resumeError;
+  bool availableAsActor = true;
+  bool availableAsModel = false;
+  bool availableAsInfluencer = false;
 
   @override
   void initState() {
@@ -359,6 +362,40 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                   label: 'Union / professional membership',
                   icon: Icons.verified_user_outlined,
                   onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActorCollapsibleSection(
+            title: 'Marketplace Availability',
+            subtitle: 'Choose where directors and customers can discover you',
+            icon: Icons.storefront_outlined,
+            tone: ActorTone.gold,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  avatar: const Icon(Icons.theater_comedy_outlined, size: 18),
+                  label: const Text('Available as Actor'),
+                  selected: availableAsActor,
+                  onSelected: (value) =>
+                      setState(() => availableAsActor = value),
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.style_outlined, size: 18),
+                  label: const Text('Available as Model'),
+                  selected: availableAsModel,
+                  onSelected: (value) =>
+                      setState(() => availableAsModel = value),
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.campaign_outlined, size: 18),
+                  label: const Text('Available as Influencer'),
+                  selected: availableAsInfluencer,
+                  onSelected: (value) =>
+                      setState(() => availableAsInfluencer = value),
                 ),
               ],
             ),
@@ -758,6 +795,10 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             _bioValue(profile.bio, 'Agency');
         eyeColor.text = talent.physicalDetails['eye_color']?.toString() ?? '';
         hairColor.text = talent.physicalDetails['hair_color']?.toString() ?? '';
+        final availability = talent.availabilityCategories;
+        availableAsActor = availability.contains('actor');
+        availableAsModel = availability.contains('model');
+        availableAsInfluencer = availability.contains('influencer');
         remoteStatus = 'Synced with backend profile';
       });
     } on ApiException catch (exception) {
@@ -933,6 +974,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         training: _lineEntries(training.text),
         representation: _representationForBackend(),
         socialLinks: _socialLinksForBackend(),
+        availabilityCategories: _availabilityCategoriesForBackend(),
       );
       if (!mounted) return;
       setState(() {
@@ -1012,6 +1054,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         training: _lineEntries(training.text),
         representation: _representationForBackend(),
         socialLinks: _socialLinksForBackend(),
+        availabilityCategories: _availabilityCategoriesForBackend(),
       );
       if (!mounted) return;
       setState(() => remoteStatus = 'Backend profile saved');
@@ -1083,15 +1126,22 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         training: _lineEntries(training.text),
         representation: _representationForBackend(),
         socialLinks: _socialLinksForBackend(),
+        availabilityCategories: _availabilityCategoriesForBackend(),
       );
-      final listing = await auth.publishMarketplaceListing(
-        title: '${stageName.text.trim()} — Actor',
-        summary: _listingSummary(),
-        cityId: matchedCity?.publicId,
-      );
+      final listings = <String>[];
+      for (final category in _availabilityCategoriesForBackend()) {
+        final listing = await auth.publishMarketplaceListing(
+          title: '${stageName.text.trim()} — ${_availabilityLabel(category)}',
+          summary: _listingSummary(),
+          listingType: category,
+          cityId: matchedCity?.publicId,
+        );
+        listings.add(listing.publicId);
+      }
       if (!mounted) return;
-      setState(() => remoteStatus = 'Published listing ${listing.publicId}');
-      actorSnack(context, 'Marketplace listing published');
+      setState(
+          () => remoteStatus = 'Published listings ${listings.join(', ')}');
+      actorSnack(context, 'Marketplace listings published');
     } on ApiException catch (exception) {
       if (!mounted) return;
       setState(() {
@@ -1205,6 +1255,24 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     final summary = parts.join('\n');
     if (summary.trim().length >= 10) return summary;
     return 'Available actor/talent profile for CineConnect productions.';
+  }
+
+  List<String> _availabilityCategoriesForBackend() {
+    final categories = <String>[
+      if (availableAsActor) 'actor',
+      if (availableAsModel) 'model',
+      if (availableAsInfluencer) 'influencer',
+    ];
+    return categories.isEmpty ? ['actor'] : categories;
+  }
+
+  String _availabilityLabel(String category) {
+    return switch (category) {
+      'actor' => 'Actor',
+      'model' => 'Model',
+      'influencer' => 'Influencer',
+      _ => category,
+    };
   }
 
   int _formCompleteness() {

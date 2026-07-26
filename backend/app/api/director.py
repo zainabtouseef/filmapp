@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, time
 from typing import Any
 
@@ -7,7 +8,12 @@ from flask import Blueprint, Response, jsonify, request
 from sqlalchemy import select
 
 from app.api.auth import _current_user
-from app.api.marketplace import _city_payload, _file_payload, _owner_avatar_url
+from app.api.marketplace import (
+    _city_payload,
+    _file_payload,
+    _owner_avatar_url,
+    _talent_availability_categories,
+)
 from app.errors import APIError
 from app.extensions import db
 from app.models.base import utc_now
@@ -340,6 +346,111 @@ def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "source": {"table": "talent_profiles"},
     }
     return _with_listing(card, "actor", item.public_id)
+
+
+def _influencer_discovery_item(item: TalentProfile) -> dict[str, Any]:
+    profile = _profile_for_user(item.user_id)
+    social_tags: list[str] = []
+    if item.social_links_json:
+        try:
+            social_links = json.loads(item.social_links_json)
+        except json.JSONDecodeError:
+            social_links = {}
+        if isinstance(social_links, dict):
+            social_tags = [
+                key.title()
+                for key, value in social_links.items()
+                if str(value).strip()
+            ][:4]
+    card = {
+        "public_id": item.public_id,
+        "kind": "influencer",
+        "category": "Influencers",
+        "title": item.screen_name,
+        "subtitle": "Influencer / creator profile",
+        "summary": profile.bio if profile else "Influencer campaign profile.",
+        "city": _city_payload(profile.city) if profile else None,
+        "owner": _owner_payload(item.user),
+        "rate_from_minor": item.day_rate_minor,
+        "currency": item.currency,
+        "rate_label": _minor_money_label(item.day_rate_minor, item.currency),
+        "verification_status": "approved",
+        "rating_average": int(profile.rating_average) if profile else 0,
+        "available": item.availability_status == "available",
+        "tags": social_tags or _talent_tags(item),
+        "media": _portfolio_media_payload("talent", item.public_id),
+        "resume_file": _file_payload(item.resume_file),
+        "route": "/director/discovery/influencer",
+        "source": {"table": "talent_profiles"},
+    }
+    return _with_listing(card, "influencer", item.public_id)
+
+
+def _talent_model_discovery_item(item: TalentProfile) -> dict[str, Any]:
+    profile = _profile_for_user(item.user_id)
+    card = {
+        "public_id": item.public_id,
+        "kind": "model",
+        "category": "Models",
+        "title": item.screen_name,
+        "subtitle": "Model / talent profile",
+        "summary": profile.bio if profile else "Model campaign profile.",
+        "city": _city_payload(profile.city) if profile else None,
+        "owner": _owner_payload(item.user),
+        "rate_from_minor": item.day_rate_minor,
+        "currency": item.currency,
+        "rate_label": _minor_money_label(item.day_rate_minor, item.currency),
+        "verification_status": "approved",
+        "rating_average": int(profile.rating_average) if profile else 0,
+        "available": item.availability_status == "available",
+        "tags": _talent_tags(item),
+        "media": _portfolio_media_payload("talent", item.public_id),
+        "resume_file": _file_payload(item.resume_file),
+        "route": "/director/discovery/model",
+        "source": {"table": "talent_profiles"},
+    }
+    return _with_listing(card, "model", item.public_id)
+
+
+def _talent_model_discovery_detail(item: TalentProfile) -> dict[str, Any]:
+    card = _talent_model_discovery_item(item)
+    card["sections"] = [
+        _detail_section(
+            "Model availability",
+            ("Screen name", item.screen_name),
+            ("Display name", item.user.display_name),
+            ("Availability", item.availability_status),
+            (
+                "Available as",
+                ", ".join(_talent_availability_categories(item)),
+            ),
+        )
+    ]
+    return card
+
+
+def _influencer_discovery_detail(item: TalentProfile) -> dict[str, Any]:
+    profile = _profile_for_user(item.user_id)
+    card = _influencer_discovery_item(item)
+    card["sections"] = [
+        _detail_section(
+            "Influencer profile",
+            ("Creator name", item.screen_name),
+            ("Display name", item.user.display_name),
+            ("Availability", item.availability_status),
+            (
+                "Available as",
+                ", ".join(_talent_availability_categories(item)),
+            ),
+        ),
+        _detail_section(
+            "Campaign profile",
+            ("Bio", profile.bio if profile else None),
+            ("Website", profile.website_url if profile else None),
+            ("Reviews", profile.review_count if profile else 0),
+        ),
+    ]
+    return card
 
 
 def _actor_discovery_detail(item: TalentProfile) -> dict[str, Any]:
@@ -850,12 +961,24 @@ def _distribution_discovery_detail(item: DistributionPartnerProfile) -> dict[str
 
 
 _DIRECTOR_DISCOVERY_KIND_ALIASES = {
-    "all": {"actor", "model", "location", "equipment", "agency", "distribution"},
+    "all": {
+        "actor",
+        "model",
+        "influencer",
+        "location",
+        "equipment",
+        "agency",
+        "distribution",
+    },
     "actors": {"actor"},
     "actor": {"actor"},
     "talent": {"actor"},
     "models": {"model"},
     "model": {"model"},
+    "influencers": {"influencer"},
+    "influencer": {"influencer"},
+    "creators": {"influencer"},
+    "creator": {"influencer"},
     "locations": {"location"},
     "location": {"location"},
     "media": {"equipment"},
@@ -877,7 +1000,15 @@ def _director_discovery_items(
     category_key = (category or "all").strip().lower().replace("-", "_")
     kinds = _DIRECTOR_DISCOVERY_KIND_ALIASES.get(
         category_key,
-        {"actor", "model", "location", "equipment", "agency", "distribution"},
+        {
+            "actor",
+            "model",
+            "influencer",
+            "location",
+            "equipment",
+            "agency",
+            "distribution",
+        },
     )
     items: list[dict[str, Any]] = []
 
@@ -892,15 +1023,11 @@ def _director_discovery_items(
             .order_by(TalentProfile.updated_at.desc())
             .limit(120)
         )
-        model_talent_ids = {
-            row.talent_profile_id
-            for row in db.session.execute(select(ModelProfile)).scalars()
-        }
         actors = db.session.execute(actor_query).scalars()
         items.extend(
             _actor_discovery_item(row)
             for row in actors
-            if row.id not in model_talent_ids
+            if "actor" in _talent_availability_categories(row)
         )
     if "model" in kinds:
         models = db.session.execute(
@@ -909,7 +1036,30 @@ def _director_discovery_items(
             .order_by(ModelProfile.updated_at.desc())
             .limit(120)
         ).scalars()
-        items.extend(_model_discovery_item(row) for row in models)
+        model_rows = list(models)
+        items.extend(_model_discovery_item(row) for row in model_rows)
+        model_talent_ids = {row.talent_profile_id for row in model_rows}
+        talent_models = db.session.execute(
+            select(TalentProfile).order_by(TalentProfile.updated_at.desc()).limit(120)
+        ).scalars()
+        items.extend(
+            _talent_model_discovery_item(row)
+            for row in talent_models
+            if row.id not in model_talent_ids
+            and "model" in _talent_availability_categories(row)
+        )
+    if "influencer" in kinds:
+        influencer_query = (
+            select(TalentProfile)
+            .order_by(TalentProfile.updated_at.desc())
+            .limit(120)
+        )
+        influencers = db.session.execute(influencer_query).scalars()
+        items.extend(
+            _influencer_discovery_item(row)
+            for row in influencers
+            if "influencer" in _talent_availability_categories(row)
+        )
     if "location" in kinds:
         locations = db.session.execute(
             select(LocationProperty)
@@ -982,6 +1132,17 @@ def _director_discovery_detail(kind: str, public_id: str) -> dict[str, Any]:
         ).scalar_one_or_none()
         if row:
             return _model_discovery_detail(row)
+        talent_row = db.session.execute(
+            select(TalentProfile).where(TalentProfile.public_id == public_id)
+        ).scalar_one_or_none()
+        if talent_row and "model" in _talent_availability_categories(talent_row):
+            return _talent_model_discovery_detail(talent_row)
+    elif kind_key == "influencer":
+        row = db.session.execute(
+            select(TalentProfile).where(TalentProfile.public_id == public_id)
+        ).scalar_one_or_none()
+        if row:
+            return _influencer_discovery_detail(row)
     elif kind_key == "equipment":
         row = db.session.execute(
             select(EquipmentProviderProfile).where(

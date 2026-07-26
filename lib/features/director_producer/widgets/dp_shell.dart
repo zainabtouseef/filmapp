@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -93,6 +94,8 @@ class DPShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPublicBuyer =
+        AuthScope.maybeOf(context)?.user?.primaryRole?.code == 'general_public';
     final routedChild = showHeading
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,10 +114,12 @@ class DPShell extends StatelessWidget {
       topBarBuilder: (context, wide, onMenuTap) => _DPTopBar(
         wide: wide,
         onMenuTap: onMenuTap,
+        isPublicBuyer: isPublicBuyer,
       ),
       sideNavBuilder: (context, currentRoute, onRouteTap) => _DPSidebar(
         currentRoute: currentRoute,
         onRouteTap: onRouteTap,
+        isPublicBuyer: isPublicBuyer,
       ),
       bottomNavBuilder:
           (context, currentRoute, menuOpen, onRouteTap, onMoreTap) =>
@@ -132,6 +137,7 @@ class DPShell extends StatelessWidget {
         currentRoute: currentRoute,
         onClose: onClose,
         onRouteTap: onRouteTap,
+        isPublicBuyer: isPublicBuyer,
       ),
       onRouteSelected: (context, route) => Navigator.pushNamed(context, route),
       child: routedChild,
@@ -176,10 +182,12 @@ class _DPRouteHeading extends StatelessWidget {
 class _DPTopBar extends StatelessWidget {
   final bool wide;
   final VoidCallback onMenuTap;
+  final bool isPublicBuyer;
 
   const _DPTopBar({
     required this.wide,
     required this.onMenuTap,
+    required this.isPublicBuyer,
   });
 
   @override
@@ -196,9 +204,14 @@ class _DPTopBar extends StatelessWidget {
             onTap: canGoBack ? () => navigateCoreBack(context) : onMenuTap,
           ),
           const SizedBox(width: 10),
-          _DPBrandLockup(compact: compact),
+          _DPBrandLockup(compact: compact, isPublicBuyer: isPublicBuyer),
           SizedBox(width: compact ? 8 : 16),
-          Expanded(child: _DPSearchPill(compact: compact)),
+          Expanded(
+            child: _DPSearchPill(
+              compact: compact,
+              isPublicBuyer: isPublicBuyer,
+            ),
+          ),
           const SizedBox(width: 10),
           if (wide) ...[
             _DPNotificationIcon(
@@ -221,10 +234,12 @@ class _DPTopBar extends StatelessWidget {
               onTap: () => logoutToLogin(context),
             ),
             const SizedBox(width: 10),
-            const DPStatusChip(
-              label: 'Producer',
+            DPStatusChip(
+              label: isPublicBuyer ? 'Customer' : 'Producer',
               tone: DpTone.warning,
-              icon: Icons.workspace_premium_outlined,
+              icon: isPublicBuyer
+                  ? Icons.shopping_bag_outlined
+                  : Icons.workspace_premium_outlined,
             ),
           ],
         ],
@@ -235,8 +250,12 @@ class _DPTopBar extends StatelessWidget {
 
 class _DPBrandLockup extends StatelessWidget {
   final bool compact;
+  final bool isPublicBuyer;
 
-  const _DPBrandLockup({required this.compact});
+  const _DPBrandLockup({
+    required this.compact,
+    required this.isPublicBuyer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +290,7 @@ class _DPBrandLockup extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Producer Console',
+            isPublicBuyer ? 'Campaign Booking' : 'Producer Console',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.caption.copyWith(
@@ -288,8 +307,12 @@ class _DPBrandLockup extends StatelessWidget {
 
 class _DPSearchPill extends StatelessWidget {
   final bool compact;
+  final bool isPublicBuyer;
 
-  const _DPSearchPill({required this.compact});
+  const _DPSearchPill({
+    required this.compact,
+    required this.isPublicBuyer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +332,11 @@ class _DPSearchPill extends StatelessWidget {
           SizedBox(width: compact ? 7 : 9),
           Expanded(
             child: Text(
-              compact ? 'Search...' : 'Search productions, talent...',
+              compact
+                  ? 'Search...'
+                  : isPublicBuyer
+                      ? 'Search actors, models, influencers...'
+                      : 'Search productions, talent...',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.smallMeta.copyWith(
@@ -442,10 +469,12 @@ class _DPAvatarButton extends StatelessWidget {
 class _DPSidebar extends StatelessWidget {
   final String currentRoute;
   final ValueChanged<String> onRouteTap;
+  final bool isPublicBuyer;
 
   const _DPSidebar({
     required this.currentRoute,
     required this.onRouteTap,
+    required this.isPublicBuyer,
   });
 
   @override
@@ -461,7 +490,7 @@ class _DPSidebar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'DIRECTOR',
+              isPublicBuyer ? 'CUSTOMER' : 'DIRECTOR',
               style: AppTextStyles.sectionHeaderStyle.copyWith(
                 color: colors.textPrimary,
                 fontSize: 18,
@@ -470,7 +499,9 @@ class _DPSidebar extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Production command center',
+              isPublicBuyer
+                  ? 'Campaign booking center'
+                  : 'Production command center',
               style: AppTextStyles.smallMeta.copyWith(
                 color: colors.textSecondary,
               ),
@@ -599,12 +630,14 @@ class _DPMenuOverlay extends StatelessWidget {
   final String currentRoute;
   final VoidCallback onClose;
   final ValueChanged<String> onRouteTap;
+  final bool isPublicBuyer;
 
   const _DPMenuOverlay({
     required this.open,
     required this.currentRoute,
     required this.onClose,
     required this.onRouteTap,
+    required this.isPublicBuyer,
   });
 
   @override
@@ -620,9 +653,13 @@ class _DPMenuOverlay extends StatelessWidget {
             icon: item.icon,
           ),
       ],
-      statusTitle: 'Production Portal',
-      statusSubtitle: 'Production command center',
-      statusIcon: Icons.movie_filter_rounded,
+      statusTitle: isPublicBuyer ? 'Campaign Portal' : 'Production Portal',
+      statusSubtitle: isPublicBuyer
+          ? 'Customer booking center'
+          : 'Production command center',
+      statusIcon: isPublicBuyer
+          ? Icons.shopping_bag_outlined
+          : Icons.movie_filter_rounded,
       onClose: onClose,
       onRouteTap: onRouteTap,
       isRouteActive: _active,

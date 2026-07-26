@@ -35,6 +35,9 @@ from app.services.local_storage import public_url_for
 
 marketplace_blueprint = Blueprint("marketplace", __name__)
 
+TALENT_LISTING_TYPES = {"talent", "actor", "model", "influencer"}
+TALENT_AVAILABILITY_CATEGORIES = {"actor", "model", "influencer"}
+
 
 def _field_error(field: str, message: str) -> APIError:
     return APIError(
@@ -52,6 +55,51 @@ def _optional_int(value: Any, field: str) -> int | None:
         return int(str(value))
     except ValueError as exc:
         raise _field_error(field, "Value must be an integer.") from exc
+
+
+def _json_list(value: str | None) -> list[Any]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _talent_availability_categories(profile: TalentProfile | None) -> list[str]:
+    if profile is None:
+        return ["actor"]
+    values = [
+        str(item).strip().lower()
+        for item in _json_list(profile.availability_categories_json)
+    ]
+    cleaned = [item for item in values if item in TALENT_AVAILABILITY_CATEGORIES]
+    return cleaned or ["actor"]
+
+
+def _parse_talent_availability_categories(value: Any) -> list[str]:
+    if value in {None, ""}:
+        return ["actor"]
+    if not isinstance(value, list):
+        raise _field_error(
+            "availability_categories", "Availability categories must be a list."
+        )
+    cleaned: list[str] = []
+    for item in value:
+        category = str(item).strip().lower()
+        if category not in TALENT_AVAILABILITY_CATEGORIES:
+            raise _field_error(
+                "availability_categories",
+                "Use actor, model, or influencer availability categories.",
+            )
+        if category not in cleaned:
+            cleaned.append(category)
+    if not cleaned:
+        raise _field_error(
+            "availability_categories", "Select at least one availability category."
+        )
+    return cleaned
 
 
 def _city_payload(city: City | None) -> dict[str, Any] | None:
@@ -137,6 +185,7 @@ def _talent_payload(profile: TalentProfile | None) -> dict[str, Any] | None:
         "social_links": (
             json.loads(profile.social_links_json) if profile.social_links_json else {}
         ),
+        "availability_categories": _talent_availability_categories(profile),
         "languages": [
             {"language": item.language, "proficiency": item.proficiency}
             for item in profile.languages
@@ -343,6 +392,13 @@ def _has_approved_kyc_for_role(user_id: object, role_code: str) -> bool:
             .limit(1)
         ).scalar_one_or_none()
         is not None
+    )
+
+
+def _has_any_provider_kyc(user_id: object) -> bool:
+    return any(
+        _has_approved_kyc_for_role(user_id, code)
+        for code in ("actor_talent", "model", "influencer")
     )
 
 
@@ -650,6 +706,12 @@ def update_talent_profile() -> ResponseReturnValue:
         profile.availability_status = str(
             payload.get("availability_status", "")
         ).strip()
+    if "availability_categories" in payload:
+        profile.availability_categories_json = json.dumps(
+            _parse_talent_availability_categories(
+                payload.get("availability_categories")
+            )
+        )
     if "day_rate_minor" in payload:
         profile.day_rate_minor = day_rate_minor
     if currency is not None:
@@ -993,6 +1055,7 @@ def create_saved_search() -> ResponseReturnValue:
     supported_listing_types = {
         "actor",
         "model",
+        "influencer",
         "location",
         "equipment",
         "agency",
@@ -1130,9 +1193,10 @@ def publish_listing() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     listing_type = str(payload.get("listing_type", "")).strip()
-    if listing_type not in {"talent", "location"}:
+    if listing_type not in TALENT_LISTING_TYPES | {"location"}:
         raise _field_error(
-            "listing_type", "Only talent and location listings can be published."
+            "listing_type",
+            "Only actor, model, influencer, talent and location listings can be published.",
         )
     if listing_type == "location":
         property_id = str(
@@ -1199,10 +1263,10 @@ def publish_listing() -> ResponseReturnValue:
         _sync_listing_media(listing, user.id, payload)
         db.session.commit()
         return jsonify(success({"listing": _listing_payload(listing)})), 201
-    if not _has_approved_kyc_for_role(user.id, "actor_talent"):
+    if not _has_any_provider_kyc(user.id):
         raise APIError(
             "marketplace.kyc_required",
-            "Approved Actor / Talent KYC is required before publishing.",
+            "Approved provider KYC is required before publishing actor, model, or influencer listings.",
             status=403,
         )
     talent = db.session.execute(
@@ -1214,6 +1278,13 @@ def publish_listing() -> ResponseReturnValue:
             "Create a talent profile before publishing.",
             status=409,
         )
+    selected_categories = _talent_availability_categories(talent)
+    normalized_listing_type = "actor" if listing_type == "talent" else listing_type
+    if normalized_listing_type not in selected_categories:
+        raise _field_error(
+            "listing_type",
+            "Enable this availability category on your profile before publishing it.",
+        )
     title = str(payload.get("title") or talent.screen_name).strip()
     summary = str(payload.get("summary", "")).strip()
     if len(title) < 2:
@@ -1224,14 +1295,14 @@ def publish_listing() -> ResponseReturnValue:
     listing = db.session.execute(
         select(MarketplaceListing).where(
             MarketplaceListing.owner_user_id == user.id,
-            MarketplaceListing.listing_type == "talent",
+            MarketplaceListing.listing_type == listing_type,
             MarketplaceListing.profile_entity_id == talent.public_id,
         )
     ).scalar_one_or_none()
     if listing is None:
         listing = MarketplaceListing(
             owner_user_id=user.id,
-            listing_type="talent",
+            listing_type=listing_type,
             profile_entity_id=talent.public_id,
             verification_status="approved",
             moderation_status="approved",

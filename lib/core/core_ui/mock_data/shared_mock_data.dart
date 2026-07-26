@@ -26,6 +26,12 @@ class SharedMockData {
           'Manage campaigns, usage rights, releases and brand bookings.',
     ),
     CineRole(
+      icon: Icons.campaign_outlined,
+      name: 'Influencer',
+      description:
+          'Publish creator availability and receive campaign collaboration requests.',
+    ),
+    CineRole(
       icon: Icons.location_city_outlined,
       name: 'Location Owner',
       description:
@@ -53,6 +59,12 @@ class SharedMockData {
       name: 'Brand / Sponsor',
       description:
           'Post campaigns, product placements and sponsorship opportunities.',
+    ),
+    CineRole(
+      icon: Icons.shopping_bag_outlined,
+      name: 'General Public',
+      description:
+          'Book actors, models and influencers for marketing campaigns without provider KYC.',
     ),
     CineRole(
       icon: Icons.gavel_outlined,

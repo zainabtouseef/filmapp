@@ -45,7 +45,7 @@ class BookingsController extends ChangeNotifier {
   }
 
   Future<Booking> createAndSendBooking({
-    required String projectId,
+    String? projectId,
     required String listingId,
     String? requirementId,
     required String startAt,

@@ -242,12 +242,14 @@ class AuthRepository {
     List<Map<String, dynamic>>? training,
     Map<String, dynamic>? representation,
     Map<String, dynamic>? socialLinks,
+    List<String>? availabilityCategories,
   }) async {
     final response = await _client.patch(
       '/talent/profile',
       body: {
         'screen_name': screenName,
-        if (availabilityStatus != null) 'availability_status': availabilityStatus,
+        if (availabilityStatus != null)
+          'availability_status': availabilityStatus,
         if (currency != null) 'currency': currency,
         if (dayRateMinor != null) 'day_rate_minor': dayRateMinor,
         if (ageRange != null) 'age_range': ageRange,
@@ -264,6 +266,8 @@ class AuthRepository {
         if (training != null) 'training': training,
         if (representation != null) 'representation': representation,
         if (socialLinks != null) 'social_links': socialLinks,
+        if (availabilityCategories != null)
+          'availability_categories': availabilityCategories,
         if (languages != null)
           'languages': languages.map((item) => item.toJson()).toList(),
       },
@@ -301,13 +305,14 @@ class AuthRepository {
   Future<MarketplaceListing> publishMarketplaceListing({
     required String title,
     required String summary,
+    String listingType = 'talent',
     String? cityId,
     List<String> portfolioItemIds = const [],
   }) async {
     final response = await _client.post(
       '/marketplace/listings',
       body: {
-        'listing_type': 'talent',
+        'listing_type': listingType,
         'title': title,
         'summary': summary,
         if (cityId != null) 'city_id': cityId,
