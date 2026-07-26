@@ -120,10 +120,11 @@ class _DPMarketplaceDiscoveryScreenState
               ? 'Live marketplace listings'
               : 'Backend feed pending for $_category',
           title: 'Marketplace',
-          actionLabel: 'Smart Filters',
-          actionIcon: Icons.tune_rounded,
-          onActionTap: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.filters),
+          trailing: _MarketplaceHeaderActions(
+            onCreateAudition: _openAuditionBuilder,
+            onFilters: () =>
+                Navigator.pushNamed(context, DirectorProducerRoutes.filters),
+          ),
         ),
         const SizedBox(height: 14),
         _MarketplaceSearchBar(
@@ -306,6 +307,57 @@ class _DPMarketplaceDiscoveryScreenState
       if (!mounted) return;
       _showSnack('Could not save search right now.');
     }
+  }
+
+  Future<void> _openAuditionBuilder() async {
+    if (_projectId != null) {
+      Navigator.pushNamed(
+        context,
+        DirectorProducerRoutes.requirements,
+        arguments: {'id': _projectId},
+      );
+      return;
+    }
+
+    final projectsController = ProjectsScope.maybeOf(context);
+    if (projectsController == null) {
+      _showSnack('Sign in and create a project before publishing auditions.');
+      return;
+    }
+
+    late final List<Project> projects;
+    try {
+      projects = await projectsController.projects();
+    } on ApiException catch (exception) {
+      if (!mounted) return;
+      _showSnack(exception.message);
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      _showSnack('Could not load projects for audition creation.');
+      return;
+    }
+
+    if (!mounted) return;
+    if (projects.isEmpty) {
+      _showSnack('Create a project first, then add audition calls to it.');
+      Navigator.pushNamed(context, DirectorProducerRoutes.createProject);
+      return;
+    }
+
+    final selectedProject = await showModalBottomSheet<Project>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => _AuditionProjectPicker(projects: projects),
+    );
+    if (!mounted || selectedProject == null) return;
+    setState(() => _projectId = selectedProject.publicId);
+    Navigator.pushNamed(
+      context,
+      DirectorProducerRoutes.requirements,
+      arguments: {'id': selectedProject.publicId},
+    );
   }
 
   Future<bool> _shortlistCandidate(DpCandidate candidate) async {
@@ -567,6 +619,163 @@ class _ShortlistTarget {
   const _ShortlistTarget(this.project, this.requirement);
 }
 
+class _MarketplaceHeaderActions extends StatelessWidget {
+  final VoidCallback onCreateAudition;
+  final VoidCallback onFilters;
+
+  const _MarketplaceHeaderActions({
+    required this.onCreateAudition,
+    required this.onFilters,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack = constraints.maxWidth < 310;
+        final buttons = [
+          DPHolographicButton(
+            label: 'Create Audition',
+            icon: Icons.campaign_outlined,
+            onTap: onCreateAudition,
+          ),
+          DPHolographicButton(
+            label: 'Smart Filters',
+            icon: Icons.tune_rounded,
+            secondary: true,
+            onTap: onFilters,
+          ),
+        ];
+        if (stack) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final button in buttons) ...[
+                SizedBox(width: double.infinity, child: button),
+                if (button != buttons.last) const SizedBox(height: 8),
+              ],
+            ],
+          );
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: buttons.first),
+            const SizedBox(width: 8),
+            Flexible(child: buttons.last),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AuditionProjectPicker extends StatelessWidget {
+  final List<Project> projects;
+
+  const _AuditionProjectPicker({required this.projects});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: DPGlassCard(
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Create audition for project',
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              dpText(
+                context,
+                'Pick the production this audition call belongs to.',
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 360),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: projects.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final project = projects[index];
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Navigator.pop(context, project),
+                      child: DPGlassCard(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.movie_creation_outlined,
+                              color: colors.goldDark,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    project.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.statusText.copyWith(
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    [
+                                      _titleCase(project.projectType),
+                                      project.status,
+                                      if (project.city != null)
+                                        project.city!.name,
+                                    ].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.smallMeta.copyWith(
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: colors.iconMuted,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MarketplaceErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
@@ -721,4 +930,13 @@ class _MarketplaceSearchBar extends StatelessWidget {
       ],
     );
   }
+}
+
+String _titleCase(String value) {
+  return value
+      .replaceAll('_', ' ')
+      .split(' ')
+      .where((part) => part.trim().isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
