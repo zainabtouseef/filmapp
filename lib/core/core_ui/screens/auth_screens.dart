@@ -7,7 +7,7 @@ import '../../auth/role_mapper.dart';
 import '../../network/api_exception.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
-import '../../../features/director_producer/routes/director_producer_routes.dart';
+import '../../../features/general_public/routes/general_public_routes.dart';
 import '../core_routes.dart';
 import '../mock_data/shared_mock_data.dart';
 import '../widgets/core_widgets.dart';
@@ -458,7 +458,7 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
     if (widget.selectedRole == 'General Public') {
       Navigator.pushNamedAndRemoveUntil(
         context,
-        DirectorProducerRoutes.marketplace,
+        GeneralPublicRoutes.home,
         (route) => false,
       );
       return;

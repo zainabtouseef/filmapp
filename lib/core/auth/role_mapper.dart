@@ -6,6 +6,7 @@ import '../../features/casting_agency/routes/casting_agency_routes.dart';
 import '../../features/crew_services/routes/crew_services_routes.dart';
 import '../../features/director_producer/routes/director_producer_routes.dart';
 import '../../features/distribution_partner/routes/distribution_partner_routes.dart';
+import '../../features/general_public/routes/general_public_routes.dart';
 import '../../features/insurance_partner/routes/insurance_partner_routes.dart';
 import '../../features/legal_partner/routes/legal_partner_routes.dart';
 import '../../features/location_owner/routes/location_owner_routes.dart';
@@ -41,7 +42,7 @@ class RoleMapper {
       'actor_talent' => ActorTalentRoutes.dashboard,
       'model' => ModelExtensionRoutes.categories,
       'influencer' => ActorTalentRoutes.dashboard,
-      'general_public' => DirectorProducerRoutes.marketplace,
+      'general_public' => GeneralPublicRoutes.home,
       'location_owner' => LocationOwnerRoutes.home,
       'equipment_provider' => MediaEquipmentRoutes.home,
       'crew_service' => CrewServicesRoutes.home,

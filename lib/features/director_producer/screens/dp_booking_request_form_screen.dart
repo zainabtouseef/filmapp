@@ -9,6 +9,7 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../general_public/routes/general_public_routes.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_booking_status_spine.dart';
@@ -387,7 +388,12 @@ class _DPBookingRequestFormScreenState
       );
       if (!mounted) return;
       dpSnack(context, 'Booking request sent to ${_candidate!.name}.');
-      Navigator.pushNamed(context, DirectorProducerRoutes.bargaining);
+      Navigator.pushNamed(
+        context,
+        _isPublicBuyer
+            ? GeneralPublicRoutes.requests
+            : DirectorProducerRoutes.bargaining,
+      );
     } on ApiException catch (exception) {
       if (!mounted) return;
       dpSnack(context, exception.message);

@@ -6,6 +6,7 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../general_public/routes/general_public_routes.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_candidate_card.dart';
@@ -30,11 +31,13 @@ const _categoryKeys = [
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
   final String? initialCategory;
   final String? projectId;
+  final bool publicBuyerMode;
 
   const DPMarketplaceDiscoveryScreen({
     super.key,
     this.initialCategory,
     this.projectId,
+    this.publicBuyerMode = false,
   });
 
   @override
@@ -114,15 +117,23 @@ class _DPMarketplaceDiscoveryScreenState
 
   @override
   Widget build(BuildContext context) {
+    final categories = widget.publicBuyerMode
+        ? const ['All', 'Actors', 'Models', 'Influencers']
+        : _categoryKeys;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DPPageHeader(
-          eyebrow: _categoryHasLiveFeed(_category)
-              ? 'Live marketplace listings'
-              : 'Backend feed pending for $_category',
-          title: 'Marketplace',
+          eyebrow: widget.publicBuyerMode
+              ? 'Book actors, models and influencers'
+              : _categoryHasLiveFeed(_category)
+                  ? 'Live marketplace listings'
+                  : 'Backend feed pending for $_category',
+          title: widget.publicBuyerMode
+              ? 'Find talent for your campaign'
+              : 'Marketplace',
           trailing: _MarketplaceHeaderActions(
+            showAudition: !widget.publicBuyerMode,
             onCreateAudition: _openAuditionBuilder,
             onFilters: () =>
                 Navigator.pushNamed(context, DirectorProducerRoutes.filters),
@@ -131,13 +142,16 @@ class _DPMarketplaceDiscoveryScreenState
         const SizedBox(height: 14),
         _MarketplaceSearchBar(
           controller: _search,
+          hintText: widget.publicBuyerMode
+              ? 'Search actors, models, influencers…'
+              : null,
           onChanged: () => setState(() {}),
           onFilters: () =>
               Navigator.pushNamed(context, DirectorProducerRoutes.filters),
           onSaveSearch: _saveCurrentSearch,
         ),
         const SizedBox(height: 10),
-        if (_projectId != null) ...[
+        if (!widget.publicBuyerMode && _projectId != null) ...[
           DPGlassCard(
             padding: const EdgeInsets.all(11),
             child: Row(
@@ -160,7 +174,7 @@ class _DPMarketplaceDiscoveryScreenState
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (final category in _categoryKeys)
+              for (final category in categories)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: DpDotChip(
@@ -239,11 +253,14 @@ class _DPMarketplaceDiscoveryScreenState
                           candidate: candidate,
                           onProfile: () => Navigator.pushNamed(
                             context,
-                            DirectorProducerRoutes.profile,
+                            widget.publicBuyerMode
+                                ? GeneralPublicRoutes.profile
+                                : DirectorProducerRoutes.profile,
                             arguments: {
                               'candidateId': candidate.profileId,
                               'type': candidate.category,
-                              'projectId': _projectId,
+                              if (!widget.publicBuyerMode)
+                                'projectId': _projectId,
                             },
                           ),
                           onRequest: candidate.marketplaceListingId == null
@@ -262,21 +279,31 @@ class _DPMarketplaceDiscoveryScreenState
                                   if (!context.mounted) return;
                                   Navigator.pushNamed(
                                     context,
-                                    DirectorProducerRoutes.bookingRequest,
+                                    widget.publicBuyerMode
+                                        ? GeneralPublicRoutes.bookingRequest
+                                        : DirectorProducerRoutes.bookingRequest,
                                     arguments: {
                                       'candidateId':
                                           candidate.marketplaceListingId,
-                                      'projectId': _projectId,
+                                      if (!widget.publicBuyerMode)
+                                        'projectId': _projectId,
                                       'category': candidate.category,
                                     },
                                   );
                                 },
-                          onShortlist: candidate.marketplaceListingId == null
+                          onShortlist: widget.publicBuyerMode
                               ? () async {
-                                  _showProviderActionPending(candidate);
+                                  _showSnack(
+                                    'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
+                                  );
                                   return false;
                                 }
-                              : () => _shortlistCandidate(candidate),
+                              : candidate.marketplaceListingId == null
+                                  ? () async {
+                                      _showProviderActionPending(candidate);
+                                      return false;
+                                    }
+                                  : () => _shortlistCandidate(candidate),
                         ),
                       )
                       .toList(),
@@ -632,10 +659,12 @@ class _ShortlistTarget {
 class _MarketplaceHeaderActions extends StatelessWidget {
   final VoidCallback onCreateAudition;
   final VoidCallback onFilters;
+  final bool showAudition;
 
   const _MarketplaceHeaderActions({
     required this.onCreateAudition,
     required this.onFilters,
+    this.showAudition = true,
   });
 
   @override
@@ -644,11 +673,12 @@ class _MarketplaceHeaderActions extends StatelessWidget {
       builder: (context, constraints) {
         final stack = constraints.maxWidth < 310;
         final buttons = [
-          DPHolographicButton(
-            label: 'Create Audition',
-            icon: Icons.campaign_outlined,
-            onTap: onCreateAudition,
-          ),
+          if (showAudition)
+            DPHolographicButton(
+              label: 'Create Audition',
+              icon: Icons.campaign_outlined,
+              onTap: onCreateAudition,
+            ),
           DPHolographicButton(
             label: 'Smart Filters',
             icon: Icons.tune_rounded,
@@ -667,6 +697,7 @@ class _MarketplaceHeaderActions extends StatelessWidget {
             ],
           );
         }
+        if (buttons.length == 1) return buttons.first;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -842,12 +873,14 @@ class _MarketplaceErrorState extends StatelessWidget {
 
 class _MarketplaceSearchBar extends StatelessWidget {
   final TextEditingController controller;
+  final String? hintText;
   final VoidCallback onChanged;
   final VoidCallback onFilters;
   final VoidCallback onSaveSearch;
 
   const _MarketplaceSearchBar({
     required this.controller,
+    this.hintText,
     required this.onChanged,
     required this.onFilters,
     required this.onSaveSearch,
@@ -880,7 +913,7 @@ class _MarketplaceSearchBar extends StatelessWidget {
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: 'Search talent, crew, locations…',
+                      hintText: hintText ?? 'Search talent, crew, locations…',
                       hintStyle: AppTextStyles.smallMeta
                           .copyWith(color: colors.textSecondary),
                     ),

@@ -1394,5 +1394,25 @@
   - Actor rich detail returns 3 sections with `listing_id`.
   - Model rich detail returns 5 sections with `listing_id`.
   - Web root returns HTTP 200.
-- Incomplete work:
+  - Incomplete work:
   - Crew still needs a dedicated crew-provider schema or a deliberate mapping from existing crew profiles/project roles into marketplace listings.
+
+### 2026-07-26 — Dedicated General Public portal
+
+- Goal: move General Public customers out of the Director/Producer shell and into a fully separate customer-facing booking portal.
+- Files changed: new `features/general_public` route/screen package, core route resolver, role mapper, signup routing, Director marketplace customer mode, and booking-request redirect.
+- Flutter behavior:
+  - `general_public` now lands on `/public`, not `/director/marketplace`.
+  - Added separate public routes for Home, Browse, Actors, Models, Influencers, Requests, Payments, Contracts, Account, profile detail, and booking request.
+  - The public marketplace view uses database-backed live listings but hides Director-only concepts such as project scope, shortlist boards, and audition creation.
+  - Public customers can browse actors/models/influencers and send booking requests through the existing live booking endpoint.
+  - Successful public booking requests now return to `/public/requests`.
+- Deployment:
+  - No backend deploy was required; existing backend already supports `general_public` projectless campaign bookings.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
+  - Deployed `main.dart.js` contains the new `Public Booking` portal strings.
+  - Full `flutter test` currently stops on an existing Actor/Talent mobile "More" finder failure outside this General Public work; the dedicated public portal build/analyze/deploy checks are clean.

@@ -14,6 +14,8 @@ import '../../features/director_producer/routes/director_producer_routes.dart';
 import '../../features/director_producer/screens/director_producer_portal_screen.dart';
 import '../../features/distribution_partner/routes/distribution_partner_routes.dart';
 import '../../features/distribution_partner/screens/distribution_partner_portal_screen.dart';
+import '../../features/general_public/routes/general_public_routes.dart';
+import '../../features/general_public/screens/general_public_portal_screen.dart';
 import '../../features/insurance_partner/routes/insurance_partner_routes.dart';
 import '../../features/insurance_partner/screens/insurance_partner_portal_screen.dart';
 import '../../features/legal_partner/routes/legal_partner_routes.dart';
@@ -74,6 +76,7 @@ class CoreRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
+    final generalPublicDeepLink = _generalPublicDeepLink(routeSettings.name);
     final actorDeepLink = _actorDeepLink(routeSettings.name);
     final superAdminDeepLink = _superAdminDeepLink(routeSettings.name);
     final contractDeepLinkId = _singleIdPath(routeSettings.name, 'contract');
@@ -189,6 +192,17 @@ class CoreRoutes {
               'id': routeSettings.arguments! as String,
           },
         );
+      case _ when generalPublicDeepLink != null:
+        page = GeneralPublicPortalScreen(
+          routeName: generalPublicDeepLink.routeName,
+          arguments: {
+            ...generalPublicDeepLink.arguments,
+            if (routeSettings.arguments is Map)
+              ...(routeSettings.arguments! as Map),
+            if (routeSettings.arguments is String)
+              'id': routeSettings.arguments! as String,
+          },
+        );
       case _ when actorDeepLink != null:
         page = ActorTalentPortalScreen(
           routeName: actorDeepLink.routeName,
@@ -223,6 +237,11 @@ class CoreRoutes {
       case DirectorProducerRoutes.reports:
         page = DirectorProducerPortalScreen(
           routeName: routeSettings.name ?? DirectorProducerRoutes.home,
+          arguments: routeSettings.arguments,
+        );
+      case _ when GeneralPublicRoutes.allRoutes.contains(routeSettings.name):
+        page = GeneralPublicPortalScreen(
+          routeName: routeSettings.name ?? GeneralPublicRoutes.home,
           arguments: routeSettings.arguments,
         );
       case _ when ActorTalentRoutes.allRoutes.contains(routeSettings.name):
@@ -405,6 +424,50 @@ class CoreRoutes {
     };
   }
 
+  static _GeneralPublicDeepLink? _generalPublicDeepLink(String? name) {
+    final segments = _pathSegments(name);
+    if (segments.isEmpty || segments.first != 'public') return null;
+
+    if (segments.length == 1) {
+      return const _GeneralPublicDeepLink(GeneralPublicRoutes.home);
+    }
+    return switch (segments[1]) {
+      'browse' => _GeneralPublicDeepLink(
+          GeneralPublicRoutes.browse,
+          arguments: {
+            if (segments.length > 2) 'category': segments[2],
+          },
+        ),
+      'actors' => const _GeneralPublicDeepLink(GeneralPublicRoutes.actors),
+      'models' => const _GeneralPublicDeepLink(GeneralPublicRoutes.models),
+      'influencers' =>
+        const _GeneralPublicDeepLink(GeneralPublicRoutes.influencers),
+      'requests' => const _GeneralPublicDeepLink(GeneralPublicRoutes.requests),
+      'contracts' =>
+        const _GeneralPublicDeepLink(GeneralPublicRoutes.contracts),
+      'payments' => const _GeneralPublicDeepLink(GeneralPublicRoutes.payments),
+      'account' => const _GeneralPublicDeepLink(GeneralPublicRoutes.account),
+      'profile' when segments.length >= 3 => _GeneralPublicDeepLink(
+          GeneralPublicRoutes.profile,
+          arguments: {
+            if (segments.length > 3) 'type': segments[2],
+            if (segments.length > 3) 'category': segments[2],
+            'candidateId': segments.length > 3 ? segments[3] : segments[2],
+            'id': segments.length > 3 ? segments[3] : segments[2],
+          },
+        ),
+      'booking' when segments.length >= 3 => _GeneralPublicDeepLink(
+          GeneralPublicRoutes.bookingRequest,
+          arguments: {
+            'candidateId': segments[2],
+            'id': segments[2],
+            if (segments.length > 3) 'category': segments[3],
+          },
+        ),
+      _ => null,
+    };
+  }
+
   static String? _singleIdPath(String? name, String root) {
     final segments = _pathSegments(name);
     if (segments.length != 2 || segments.first != root) return null;
@@ -475,6 +538,13 @@ class _DirectorDeepLink {
   final Map<String, Object?> arguments;
 
   const _DirectorDeepLink(this.routeName, {this.arguments = const {}});
+}
+
+class _GeneralPublicDeepLink {
+  final String routeName;
+  final Map<String, Object?> arguments;
+
+  const _GeneralPublicDeepLink(this.routeName, {this.arguments = const {}});
 }
 
 class _ActorDeepLink {
