@@ -126,6 +126,10 @@ def _project_file_payload(item: ProjectFile) -> dict[str, Any]:
         "file": _file_payload(item.file),
         "folder": item.folder,
         "label": item.label,
+        "external_url": item.external_url,
+        "external_provider": item.external_provider,
+        "external_thumbnail_url": item.external_thumbnail_url,
+        "external_duration_seconds": item.external_duration_seconds,
         "uploaded_by": {
             "public_id": item.uploader.public_id,
             "display_name": item.uploader.display_name,
@@ -165,6 +169,10 @@ def _public_cinema_payload(item: ProjectFile) -> dict[str, Any]:
             "member_count": len([row for row in project.members if row.status == "active"]),
         },
         "file": file_payload,
+        "external_url": item.external_url,
+        "external_provider": item.external_provider,
+        "external_thumbnail_url": item.external_thumbnail_url,
+        "external_duration_seconds": item.external_duration_seconds,
         "uploaded_by": {
             "public_id": item.uploader.public_id,
             "display_name": item.uploader.display_name,
@@ -581,12 +589,18 @@ def public_cinema() -> Response:
     statement = (
         select(ProjectFile)
         .join(Project, ProjectFile.project_id == Project.id)
-        .join(FileAsset, ProjectFile.file_id == FileAsset.id)
+        .outerjoin(FileAsset, ProjectFile.file_id == FileAsset.id)
         .where(
             ProjectFile.folder.in_(PUBLIC_CINEMA_FOLDERS),
-            FileAsset.visibility == "public",
-            FileAsset.scan_status == "clean",
-            FileAsset.processing_status == "ready",
+            (
+                (
+                    (FileAsset.id.is_not(None))
+                    & (FileAsset.visibility == "public")
+                    & (FileAsset.scan_status == "clean")
+                    & (FileAsset.processing_status == "ready")
+                )
+                | (ProjectFile.external_url.is_not(None))
+            ),
             Project.status.in_({"active", "paused", "completed"}),
         )
         .order_by(desc(ProjectFile.created_at))

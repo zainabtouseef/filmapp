@@ -190,10 +190,14 @@ class ProjectFile(EntityMixin, Base):
     )
     file_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("files.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     folder: Mapped[str] = mapped_column(String(64), nullable=False, default="briefs")
     label: Mapped[str] = mapped_column(String(180), nullable=False)
+    external_url: Mapped[str | None] = mapped_column(String(1000))
+    external_provider: Mapped[str | None] = mapped_column(String(64))
+    external_thumbnail_url: Mapped[str | None] = mapped_column(String(1000))
+    external_duration_seconds: Mapped[int | None] = mapped_column(Integer)
     uploaded_by: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -204,7 +208,7 @@ class ProjectFile(EntityMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
 
     project: Mapped[Project] = relationship(back_populates="files")
-    file: Mapped[FileAsset] = relationship(lazy="joined")
+    file: Mapped[FileAsset | None] = relationship(lazy="joined")
     uploader: Mapped[User | None] = relationship(lazy="joined")
 
 

@@ -320,7 +320,11 @@ class PublicCinemaItem {
   final String kind;
   final String title;
   final Project project;
-  final UploadedFile file;
+  final UploadedFile? file;
+  final String? externalUrl;
+  final String? externalProvider;
+  final String? externalThumbnailUrl;
+  final int? externalDurationSeconds;
   final String? uploadedByName;
   final DateTime? createdAt;
 
@@ -330,6 +334,10 @@ class PublicCinemaItem {
     required this.title,
     required this.project,
     required this.file,
+    required this.externalUrl,
+    required this.externalProvider,
+    required this.externalThumbnailUrl,
+    required this.externalDurationSeconds,
     required this.uploadedByName,
     required this.createdAt,
   });
@@ -341,16 +349,25 @@ class PublicCinemaItem {
       kind: json['kind'] as String? ?? 'trailer',
       title: json['title'] as String? ?? 'CineConnect media',
       project: Project.fromJson(json['project'] as Map<String, dynamic>),
-      file: UploadedFile.fromJson(json['file'] as Map<String, dynamic>),
+      file: json['file'] is Map<String, dynamic>
+          ? UploadedFile.fromJson(json['file'] as Map<String, dynamic>)
+          : null,
+      externalUrl: json['external_url'] as String?,
+      externalProvider: json['external_provider'] as String?,
+      externalThumbnailUrl: json['external_thumbnail_url'] as String?,
+      externalDurationSeconds:
+          (json['external_duration_seconds'] as num?)?.toInt(),
       uploadedByName: uploader?['display_name'] as String?,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
     );
   }
 
   String? get mediaUrl {
-    final publicUrl = file.publicUrl;
+    final external = externalUrl;
+    if (external != null && external.isNotEmpty) return external;
+    final publicUrl = file?.publicUrl;
     if (publicUrl != null && publicUrl.isNotEmpty) return publicUrl;
-    final downloadUrl = file.downloadUrl;
+    final downloadUrl = file?.downloadUrl;
     if (downloadUrl != null && downloadUrl.isNotEmpty) return downloadUrl;
     return null;
   }

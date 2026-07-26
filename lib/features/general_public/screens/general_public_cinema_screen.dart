@@ -423,6 +423,7 @@ class _CinemaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final thumbnailUrl = item.externalThumbnailUrl;
     return GestureDetector(
       onTap: onPlay,
       child: Container(
@@ -447,6 +448,12 @@ class _CinemaCard extends StatelessWidget {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
+                  image: thumbnailUrl == null || thumbnailUrl.isEmpty
+                      ? null
+                      : DecorationImage(
+                          image: NetworkImage(thumbnailUrl),
+                          fit: BoxFit.cover,
+                        ),
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -477,6 +484,28 @@ class _CinemaCard extends StatelessWidget {
                         tone: item.isOst ? DpTone.warning : DpTone.success,
                       ),
                     ),
+                    if (item.externalDurationSeconds != null)
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.62),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            _durationLabel(item.externalDurationSeconds!),
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -680,4 +709,10 @@ String _titleCase(String value) {
       .where((part) => part.isNotEmpty)
       .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
+}
+
+String _durationLabel(int seconds) {
+  final minutes = seconds ~/ 60;
+  final remaining = seconds % 60;
+  return '$minutes:${remaining.toString().padLeft(2, '0')}';
 }

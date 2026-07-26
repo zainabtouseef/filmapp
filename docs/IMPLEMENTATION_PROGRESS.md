@@ -1643,3 +1643,35 @@
   - Production `/api/v1/health/ready` returns database and Redis `ok`.
   - Production `/api/v1/marketplace/listings?type=influencer` returns influencer listings with `media_kit`.
   - Deployed `main.dart.js` contains `Verified media kit`, `Audience demographics`, `Rate cards`, and `Reels & featured media`.
+
+### 2026-07-27 — Cinema demo media seeded from official links
+
+- Goal: make the new General Public Cinema page visibly populated with Pakistani film/drama trailers and OSTs while keeping demo media database-driven.
+- Important legal/product decision:
+  - Copyrighted trailers/OSTs were not downloaded or rehosted.
+  - The database stores official public YouTube links, thumbnails, provider metadata, and durations.
+  - Uploaded Director media remains supported through CineConnect storage; official demo links are a second DB-backed source.
+- Backend behavior:
+  - `project_files.file_id` is now nullable so a cinema row can represent either an uploaded file or an official external media link.
+  - Added external media columns to `project_files`: `external_url`, `external_provider`, `external_thumbnail_url`, and `external_duration_seconds`.
+  - `/api/v1/public/cinema` now returns both clean public uploaded files and official external media rows.
+  - Added idempotent seed script `python -m app.scripts.seed_cinema_demo_media`.
+- Seeded live data:
+  - Trailers: The Legend of Maula Jatt, Joyland, Khuda Kay Liye, Bol.
+  - OSTs: Humsafar, Mere Humsafar, Parizaad, Tere Bin.
+  - Seed created 8 database-backed `project_files` cinema records attached to active demo projects.
+- Flutter behavior:
+  - Cinema items now support optional uploaded `file` or `external_url`.
+  - Public Cinema cards show external thumbnails and duration badges.
+  - The fullscreen player now embeds YouTube links in-app and still uses native audio/video controls for uploaded CineConnect files.
+- Deployment:
+  - Migration `cinema_external_media` applied on production.
+  - Seed script run on production; output: `created=8 updated=0`.
+  - Backend containers recreated and Flutter web synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `python3 -m py_compile backend/app/models/projects.py backend/app/api/projects.py backend/app/scripts/seed_cinema_demo_media.py backend/migrations/versions/cinema_external_project_media.py` passes.
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production `/api/v1/health/ready` returns database and Redis `ok`.
+  - Production `/api/v1/public/cinema` returns 8 items with both `trailer` and `ost` kinds.
+  - Deployed `main.dart.js` contains the YouTube embed player path and `CINECONNECT CINEMA`.
