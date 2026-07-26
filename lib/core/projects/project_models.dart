@@ -111,7 +111,8 @@ class ProjectRequirement {
 
   factory ProjectRequirement.fromJson(Map<String, dynamic> json) {
     final rawSkills = json['skills'] as List<dynamic>? ?? const [];
-    final rawDocuments = json['required_documents'] as List<dynamic>? ?? const [];
+    final rawDocuments =
+        json['required_documents'] as List<dynamic>? ?? const [];
     return ProjectRequirement(
       publicId: json['public_id'] as String,
       projectId: json['project_id'] as String? ?? '',
@@ -312,6 +313,55 @@ class ProjectFile {
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
     );
   }
+}
+
+class PublicCinemaItem {
+  final String publicId;
+  final String kind;
+  final String title;
+  final Project project;
+  final UploadedFile file;
+  final String? uploadedByName;
+  final DateTime? createdAt;
+
+  const PublicCinemaItem({
+    required this.publicId,
+    required this.kind,
+    required this.title,
+    required this.project,
+    required this.file,
+    required this.uploadedByName,
+    required this.createdAt,
+  });
+
+  factory PublicCinemaItem.fromJson(Map<String, dynamic> json) {
+    final uploader = json['uploaded_by'] as Map<String, dynamic>?;
+    return PublicCinemaItem(
+      publicId: json['public_id'] as String,
+      kind: json['kind'] as String? ?? 'trailer',
+      title: json['title'] as String? ?? 'CineConnect media',
+      project: Project.fromJson(json['project'] as Map<String, dynamic>),
+      file: UploadedFile.fromJson(json['file'] as Map<String, dynamic>),
+      uploadedByName: uploader?['display_name'] as String?,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+    );
+  }
+
+  String? get mediaUrl {
+    final publicUrl = file.publicUrl;
+    if (publicUrl != null && publicUrl.isNotEmpty) return publicUrl;
+    final downloadUrl = file.downloadUrl;
+    if (downloadUrl != null && downloadUrl.isNotEmpty) return downloadUrl;
+    return null;
+  }
+
+  bool get isTrailer => kind == 'trailer';
+
+  bool get isOst => kind == 'ost';
+
+  String get displayKind => isOst ? 'OST' : 'Trailer';
+
+  String get cityLabel => project.city?.name ?? 'Pakistan';
 }
 
 class ProjectRoomItem {

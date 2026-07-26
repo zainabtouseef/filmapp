@@ -1590,3 +1590,29 @@
   - Production login for `dp01@demo.cine.nalexustechnologies.com` succeeds.
   - Production `/api/v1/director/discovery?category=Actors` returns `trust_metrics` with factors `kyc`, `reviews`, `completion`, `disputes`, and `response`.
   - Deployed `main.dart.js` contains `Reputation & safety` and `trust_metrics`.
+
+### 2026-07-27 — Project trailers, OST uploads, and Public Cinema
+
+- Goal: let directors publish real project trailer/OST media and give general public customers a cinematic Netflix-style page for trailers and soundtracks.
+- Backend behavior:
+  - Project files now support first-class `trailer` and `ost` folders.
+  - Upload validation now supports public `project_media` uploads for mp4/mov/webm trailers and mp3/m4a/aac/wav OST files.
+  - Added `GET /api/v1/public/cinema`, returning only clean, ready, public trailer/OST project files from active/paused/completed projects.
+  - The public cinema feed is database/storage-backed; no static frontend media was added.
+- Flutter behavior:
+  - Director Project Room now has a `Public Project Media` panel with `Upload Trailer` and `Upload OST` actions plus visible upload progress/status.
+  - General Public portal now includes a dedicated `Cinema` route/nav item at `/public/cinema`.
+  - Public Cinema has a dark cinematic hero, search, trailer/OST/type filters, horizontal media shelves, empty/no-result states, and fullscreen browser-native playback controls.
+  - Mobile bottom navigation exposes `Cinema` directly for demo walkthroughs.
+- Deployment:
+  - Backend source synced to `/var/www/cineconnect/release/backend`.
+  - Docker image `cineconnect-prod-api:latest` rebuilt from the release root.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated with the existing storage mount and localhost DB/Redis runtime overrides.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `python3 -m py_compile backend/app/api/projects.py backend/app/api/verification.py` passes.
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production `/api/v1/health/ready` returns database and Redis `ok`.
+  - Production `/api/v1/public/cinema` returns a valid live response; currently `items` is empty until directors upload public trailer/OST media.
+  - Deployed `main.dart.js` contains `CINECONNECT CINEMA`, `Upload Trailer`, `Upload OST`, and `Cinema trailers`.

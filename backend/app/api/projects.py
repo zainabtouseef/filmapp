@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
+from sqlalchemy import desc, select
 
 from app.api.auth import _current_user, _json_body
 from app.api.marketplace import (
@@ -20,6 +20,7 @@ from app.extensions import db
 from app.models.base import utc_now
 from app.models.files import FileAsset
 from app.models.identity import User
+from app.models.marketplace import City
 from app.models.projects import (
     Project,
     ProjectFile,
@@ -47,7 +48,16 @@ REQUIREMENT_CATEGORIES = {
 }
 REQUIREMENT_STATUSES = {"draft", "open", "paused", "filled", "closed", "archived"}
 REQUIREMENT_VISIBILITIES = {"all", "verified_only"}
-PROJECT_FILE_FOLDERS = {"briefs", "scripts", "contracts", "references", "deliverables"}
+PROJECT_FILE_FOLDERS = {
+    "briefs",
+    "scripts",
+    "contracts",
+    "references",
+    "deliverables",
+    "trailer",
+    "ost",
+}
+PUBLIC_CINEMA_FOLDERS = {"trailer", "ost"}
 PROJECT_ROOM_ITEM_TYPES = {"note", "decision", "activity", "milestone"}
 
 
@@ -124,6 +134,43 @@ def _project_file_payload(item: ProjectFile) -> dict[str, Any]:
         else None,
         "visibility": item.visibility,
         "sort_order": item.sort_order,
+        "created_at": item.created_at.isoformat(),
+    }
+
+
+def _public_cinema_payload(item: ProjectFile) -> dict[str, Any]:
+    project = item.project
+    file_payload = _file_payload(item.file)
+    return {
+        "public_id": item.public_id,
+        "kind": item.folder,
+        "title": item.label or item.file.original_name or project.title,
+        "project": {
+            "public_id": project.public_id,
+            "title": project.title,
+            "project_type": project.project_type,
+            "description": project.description,
+            "city": _city_payload(project.city),
+            "cover_file": _file_payload(project.cover_file),
+            "start_date": project.start_date.isoformat()
+            if project.start_date
+            else None,
+            "end_date": project.end_date.isoformat() if project.end_date else None,
+            "status": project.status,
+            "estimated_budget_minor": project.estimated_budget_minor,
+            "currency": project.currency,
+            "visibility": project.visibility,
+            "progress_percent": project.progress_percent,
+            "requirement_count": len(project.requirements),
+            "member_count": len([row for row in project.members if row.status == "active"]),
+        },
+        "file": file_payload,
+        "uploaded_by": {
+            "public_id": item.uploader.public_id,
+            "display_name": item.uploader.display_name,
+        }
+        if item.uploader
+        else None,
         "created_at": item.created_at.isoformat(),
     }
 
@@ -518,6 +565,46 @@ def create_project() -> ResponseReturnValue:
     return jsonify(
         success({"project": _project_payload(project, include_nested=True)})
     ), 201
+
+
+@projects_blueprint.get("/public/cinema")
+def public_cinema() -> Response:
+    kind = str(request.args.get("kind", "")).strip().lower()
+    project_type = str(request.args.get("project_type", "")).strip().lower()
+    city = str(request.args.get("city", "")).strip().lower()
+    search = str(request.args.get("q", "")).strip().lower()
+    try:
+        limit = min(max(int(request.args.get("limit", 60) or 60), 1), 100)
+    except ValueError:
+        raise _field_error("limit", "Limit must be an integer.")
+
+    statement = (
+        select(ProjectFile)
+        .join(Project, ProjectFile.project_id == Project.id)
+        .join(FileAsset, ProjectFile.file_id == FileAsset.id)
+        .where(
+            ProjectFile.folder.in_(PUBLIC_CINEMA_FOLDERS),
+            FileAsset.visibility == "public",
+            FileAsset.scan_status == "clean",
+            FileAsset.processing_status == "ready",
+            Project.status.in_({"active", "paused", "completed"}),
+        )
+        .order_by(desc(ProjectFile.created_at))
+        .limit(limit)
+    )
+    if kind in PUBLIC_CINEMA_FOLDERS:
+        statement = statement.where(ProjectFile.folder == kind)
+    if project_type:
+        statement = statement.where(Project.project_type.ilike(f"%{project_type}%"))
+    if city:
+        statement = statement.where(Project.city.has(City.name.ilike(f"%{city}%")))
+    if search:
+        pattern = f"%{search}%"
+        statement = statement.where(
+            Project.title.ilike(pattern) | ProjectFile.label.ilike(pattern)
+        )
+    items = db.session.execute(statement).scalars().unique().all()
+    return jsonify(success({"items": [_public_cinema_payload(item) for item in items]}))
 
 
 @projects_blueprint.get("/projects/<public_id>")

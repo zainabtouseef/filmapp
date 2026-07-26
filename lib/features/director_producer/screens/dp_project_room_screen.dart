@@ -29,6 +29,9 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
   bool _started = false;
   bool _savingDecision = false;
   bool _uploadingFile = false;
+  String? _uploadingFolder;
+  String? _uploadStatus;
+  double _uploadProgress = 0;
 
   @override
   void didChangeDependencies() {
@@ -126,6 +129,18 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
                 icon: Icons.folder_copy_outlined,
                 child: Column(
                   children: [
+                    _ProjectMediaUploadPanel(
+                      uploadingFolder: _uploadingFolder,
+                      uploadStatus: _uploadStatus,
+                      uploadProgress: _uploadProgress,
+                      onUploadTrailer: _uploadingFolder == null
+                          ? () => _uploadProjectMedia('trailer')
+                          : null,
+                      onUploadOst: _uploadingFolder == null
+                          ? () => _uploadProjectMedia('ost')
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
                     for (var i = 0; i < room.files.length; i++)
                       _RoomFileItem(
                         kind: room.files[i].folder,
@@ -224,11 +239,77 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
     }
   }
 
+  Future<void> _uploadProjectMedia(String folder) async {
+    final auth = AuthScope.maybeOf(context);
+    final projects = ProjectsScope.maybeOf(context);
+    final projectId = widget.projectId;
+    if (auth == null || projects == null || projectId == null) {
+      dpSnack(context, 'Open a live project before uploading media');
+      return;
+    }
+    final isTrailer = folder == 'trailer';
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: isTrailer
+          ? const ['mp4', 'mov', 'webm']
+          : const ['mp3', 'm4a', 'aac', 'wav'],
+      withData: true,
+    );
+    final picked = result?.files.single;
+    final bytes = picked?.bytes;
+    if (picked == null || bytes == null) return;
+    setState(() {
+      _uploadingFolder = folder;
+      _uploadStatus = 'Preparing ${isTrailer ? 'trailer' : 'OST'} upload...';
+      _uploadProgress = 0;
+    });
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'project_media',
+        file: PickedFileData(
+          name: picked.name,
+          mimeType: _mimeTypeFor(picked),
+          bytes: bytes,
+        ),
+        onProgress: (sent, total) {
+          if (!mounted || total <= 0) return;
+          setState(() => _uploadProgress = sent / total);
+        },
+        onStatus: (status) {
+          if (!mounted) return;
+          setState(() => _uploadStatus = status);
+        },
+      );
+      await _linkFileWhenReady(
+        controller: projects,
+        projectId: projectId,
+        fileId: uploaded.publicId,
+        label: picked.name,
+        folder: folder,
+      );
+      if (!mounted) return;
+      dpSnack(context, isTrailer ? 'Trailer published' : 'OST published');
+      _reload();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      dpSnack(context, error.message);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploadingFolder = null;
+          _uploadStatus = null;
+          _uploadProgress = 0;
+        });
+      }
+    }
+  }
+
   Future<void> _linkFileWhenReady({
     required ProjectsController controller,
     required String projectId,
     required String fileId,
     required String label,
+    String folder = 'briefs',
   }) async {
     for (var attempt = 0; attempt < 6; attempt += 1) {
       try {
@@ -236,6 +317,7 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
           projectId: projectId,
           fileId: fileId,
           label: label,
+          folder: folder,
         );
         return;
       } on ApiException catch (error) {
@@ -255,6 +337,13 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',
       'webp' => 'image/webp',
+      'mp4' => 'video/mp4',
+      'mov' => 'video/quicktime',
+      'webm' => 'video/webm',
+      'mp3' => 'audio/mpeg',
+      'm4a' => 'audio/mp4',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
       _ => 'application/octet-stream',
     };
   }
@@ -322,6 +411,92 @@ class _RoomFeedItem extends StatelessWidget {
             time,
             style:
                 AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectMediaUploadPanel extends StatelessWidget {
+  final String? uploadingFolder;
+  final String? uploadStatus;
+  final double uploadProgress;
+  final VoidCallback? onUploadTrailer;
+  final VoidCallback? onUploadOst;
+
+  const _ProjectMediaUploadPanel({
+    required this.uploadingFolder,
+    required this.uploadStatus,
+    required this.uploadProgress,
+    required this.onUploadTrailer,
+    required this.onUploadOst,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final busy = uploadingFolder != null;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: 0.54),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.borderMuted),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.movie_creation_outlined, color: colors.goldDark),
+              const SizedBox(width: 8),
+              Expanded(
+                child: dpText(
+                  context,
+                  'Public Project Media',
+                  strong: true,
+                ),
+              ),
+              DPStatusChip(label: 'Cinema feed', tone: DpTone.info),
+            ],
+          ),
+          const SizedBox(height: 8),
+          dpText(
+            context,
+            'Upload trailers and OST tracks here. Clean, ready files appear in the General Public Cinema page.',
+          ),
+          if (busy) ...[
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+              value: uploadProgress <= 0 ? null : uploadProgress,
+              color: colors.goldMid,
+              backgroundColor: colors.borderMuted,
+            ),
+            const SizedBox(height: 6),
+            dpText(
+              context,
+              '${uploadingFolder == 'ost' ? 'OST' : 'Trailer'} · ${uploadStatus ?? 'Uploading...'}',
+              strong: true,
+            ),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              DPHolographicButton(
+                label: 'Upload Trailer',
+                icon: Icons.play_circle_outline_rounded,
+                onTap: onUploadTrailer,
+              ),
+              DPHolographicButton(
+                label: 'Upload OST',
+                icon: Icons.library_music_outlined,
+                onTap: onUploadOst,
+              ),
+            ],
           ),
         ],
       ),

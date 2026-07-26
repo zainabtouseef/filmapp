@@ -35,10 +35,18 @@ ALLOWED_UPLOAD_MIME_TYPES = {
     "image/webp",
     "application/pdf",
     "video/mp4",
+    "video/quicktime",
+    "video/webm",
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/aac",
+    "audio/wav",
+    "audio/x-wav",
 }
 PUBLIC_UPLOAD_PURPOSES = {
     "profile_media",
     "project_cover",
+    "project_media",
     "location_media",
     "equipment_media",
 }
@@ -294,6 +302,7 @@ def presign_upload() -> ResponseReturnValue:
         "project_cover",
         "payment_proof",
         "project_document",
+        "project_media",
         "location_media",
         "equipment_media",
         "inspection_evidence",

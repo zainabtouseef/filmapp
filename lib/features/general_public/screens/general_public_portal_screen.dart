@@ -26,6 +26,7 @@ import '../../director_producer/widgets/dp_holographic_button.dart';
 import '../../director_producer/widgets/dp_layout_helpers.dart';
 import '../../director_producer/widgets/dp_status_chip.dart';
 import '../routes/general_public_routes.dart';
+import 'general_public_cinema_screen.dart';
 
 class GeneralPublicPortalScreen extends StatelessWidget {
   final String routeName;
@@ -43,6 +44,7 @@ class GeneralPublicPortalScreen extends StatelessWidget {
     GeneralPublicRoutes.actors,
     GeneralPublicRoutes.models,
     GeneralPublicRoutes.influencers,
+    GeneralPublicRoutes.cinema,
   };
 
   @override
@@ -62,6 +64,7 @@ class GeneralPublicPortalScreen extends StatelessWidget {
     final category = _stringArg('category') ?? _stringArg('type');
     return switch (route) {
       GeneralPublicRoutes.home => const GeneralPublicHomeScreen(),
+      GeneralPublicRoutes.cinema => const GeneralPublicCinemaScreen(),
       GeneralPublicRoutes.actors => const DPMarketplaceDiscoveryScreen(
           publicBuyerMode: true,
           initialCategory: 'Actors',
@@ -125,6 +128,11 @@ class GeneralPublicShell extends StatelessWidget {
       label: 'Browse',
       icon: Icons.manage_search_rounded,
       route: GeneralPublicRoutes.browse,
+    ),
+    GeneralPublicNavItem(
+      label: 'Cinema',
+      icon: Icons.local_movies_outlined,
+      route: GeneralPublicRoutes.cinema,
     ),
     GeneralPublicNavItem(
       label: 'Actors',
@@ -266,6 +274,13 @@ class GeneralPublicHomeScreen extends StatelessWidget {
               title: 'Models',
               body: 'Find models for fashion, ecommerce and product visuals.',
               route: GeneralPublicRoutes.models,
+            ),
+            _PublicActionCard(
+              icon: Icons.local_movies_outlined,
+              title: 'Cinema trailers',
+              body:
+                  'Watch project trailers and listen to OST releases from live productions.',
+              route: GeneralPublicRoutes.cinema,
             ),
             _PublicActionCard(
               icon: Icons.receipt_long_outlined,
@@ -746,7 +761,8 @@ class _PublicBottomNav extends StatelessWidget {
   static const _destinations = [
     CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
     CineBottomNavDestination(label: 'Browse', icon: Icons.search_rounded),
-    CineBottomNavDestination(label: 'Book', icon: Icons.campaign_outlined),
+    CineBottomNavDestination(
+        label: 'Cinema', icon: Icons.local_movies_outlined),
     CineBottomNavDestination(label: 'Requests', icon: Icons.handshake_outlined),
     CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
   ];
@@ -766,7 +782,7 @@ class _PublicBottomNav extends StatelessWidget {
             onRouteTap(GeneralPublicRoutes.browse);
             return;
           case 2:
-            onRouteTap(GeneralPublicRoutes.influencers);
+            onRouteTap(GeneralPublicRoutes.cinema);
             return;
           case 3:
             onRouteTap(GeneralPublicRoutes.requests);
@@ -786,7 +802,7 @@ class _PublicBottomNav extends StatelessWidget {
         _publicActive(currentRoute, GeneralPublicRoutes.models)) {
       return 1;
     }
-    if (_publicActive(currentRoute, GeneralPublicRoutes.influencers)) return 2;
+    if (_publicActive(currentRoute, GeneralPublicRoutes.cinema)) return 2;
     if (_publicActive(currentRoute, GeneralPublicRoutes.requests)) return 3;
     return 4;
   }

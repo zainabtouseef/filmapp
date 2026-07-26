@@ -4,6 +4,7 @@ class GeneralPublicRoutes {
   GeneralPublicRoutes._();
 
   static const home = '/public';
+  static const cinema = '/public/cinema';
   static const browse = '/public/browse';
   static const actors = '/public/actors';
   static const models = '/public/models';
@@ -17,6 +18,7 @@ class GeneralPublicRoutes {
 
   static const allRoutes = [
     home,
+    cinema,
     browse,
     actors,
     models,
@@ -32,6 +34,7 @@ class GeneralPublicRoutes {
   static String titleFor(String route) {
     return switch (route) {
       home => 'Campaign Home',
+      cinema => 'Cinema',
       browse => 'Browse Talent',
       actors => 'Book Actors',
       models => 'Book Models',

@@ -100,6 +100,20 @@ class ProjectsController extends ChangeNotifier {
     return _repository.room(projectId);
   }
 
+  Future<List<PublicCinemaItem>> publicCinema({
+    String? query,
+    String? kind,
+    String? projectType,
+    String? city,
+  }) {
+    return _repository.publicCinema(
+      query: query,
+      kind: kind,
+      projectType: projectType,
+      city: city,
+    );
+  }
+
   Future<ProjectRoomItem> createRoomItem({
     required String projectId,
     required String title,

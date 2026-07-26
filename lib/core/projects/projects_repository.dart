@@ -107,7 +107,8 @@ class ProjectsRepository {
         if (skillIds.isNotEmpty) 'skills': skillIds,
         'visibility': visibility,
         'quantity': quantity,
-        if (requiredDocuments.isNotEmpty) 'required_documents': requiredDocuments,
+        if (requiredDocuments.isNotEmpty)
+          'required_documents': requiredDocuments,
       },
     );
     final data = response['data'] as Map<String, dynamic>;
@@ -120,6 +121,29 @@ class ProjectsRepository {
     final response = await _client.get('/projects/$projectId/room');
     final data = response['data'] as Map<String, dynamic>;
     return ProjectRoom.fromJson(data['room'] as Map<String, dynamic>);
+  }
+
+  Future<List<PublicCinemaItem>> publicCinema({
+    String? query,
+    String? kind,
+    String? projectType,
+    String? city,
+  }) async {
+    final params = <String, String>{
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      if (kind != null && kind.trim().isNotEmpty) 'kind': kind.trim(),
+      if (projectType != null && projectType.trim().isNotEmpty)
+        'project_type': projectType.trim(),
+      if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+    };
+    final suffix = params.isEmpty
+        ? ''
+        : '?${params.entries.map((item) => '${Uri.encodeQueryComponent(item.key)}=${Uri.encodeQueryComponent(item.value)}').join('&')}';
+    final response = await _client.get('/public/cinema$suffix');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['items'] as List<dynamic>? ?? const [])
+        .map((item) => PublicCinemaItem.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Future<ProjectRoomItem> createRoomItem({
