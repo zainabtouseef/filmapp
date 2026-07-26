@@ -1541,3 +1541,23 @@
   - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
   - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
   - Deployed `main.dart.js` contains `Payment trust timeline`, `Booking lock`, `Deliverable approval`, and `Payout release`.
+
+### 2026-07-27 — In-app contract wizard
+
+- Goal: differentiate CineConnect from generic booking apps by letting producers generate booking contracts through a guided clause wizard.
+- Flutter behavior:
+  - Director Contracts now opens an `In-app contract wizard` instead of a one-click generator.
+  - The wizard uses live accepted/secured bookings only; it does not introduce static booking data.
+  - Step 1 selects the booking/provider/project/value.
+  - Step 2 configures variable clauses for shoot type, usage rights, cancellation, and overtime, with optional special terms.
+  - Step 3 previews the generated clause pack before submission.
+  - Submission generates the live backend contract through the existing booking contract endpoint, then saves the selected variable clauses as a contract addendum which automatically queues legal review.
+- Deployment:
+  - No backend deploy required; existing contract generation and addendum/legal-review APIs already support the stored wizard output.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `flutter analyze` passes.
+  - `flutter test test/director_producer_portal_test.dart` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
+  - Deployed `main.dart.js` contains `In-app contract wizard`, `Usage rights`, `Cancellation`, `Overtime`, and `Generate contract`.
