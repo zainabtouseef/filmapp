@@ -1467,3 +1467,27 @@
   - `flutter analyze` passes.
   - `flutter test test/influencer_portal_test.dart` passes for all 11 influencer routes in light/dark/mobile/desktop coverage.
   - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+
+### 2026-07-27 — Director CineMatch AI casting score
+
+- Goal: add an AI-style casting match action to Director discovery/marketplace so production teams can rank live actors, models and influencers by brief fit.
+- Files changed: new `dp_ai_casting_match_sheet.dart` and Director portal marketplace floating-action wiring.
+- Flutter behavior:
+  - Director Discover/Marketplace now shows a floating `AI Match` action.
+  - Public Customer mode does not show this Director-only action.
+  - The sheet accepts a script/role brief, talent type, city, language, max budget and verified-profile preference.
+  - Ranking is calculated from live backend marketplace/discovery candidates only; no static demo candidates are introduced.
+  - Scores explain why each person matched: talent type, city, availability, verification, language, budget, brief terms, booking history and influencer audience reach.
+  - Risk flags are shown when city, language, budget, availability or verification need attention.
+  - Result cards can open the live profile or continue into the existing booking-request flow.
+- Deployment:
+  - No backend deploy was required; this pass uses the existing `/director/discovery` marketplace feed.
+  - Flutter web rebuilt with `CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `flutter analyze` passes.
+  - `flutter test test/director_producer_portal_test.dart` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Live root `https://cine.nalexustechnologies.com/` returns HTTP 200.
+  - Deployed `main.dart.js` contains the new `AI Match` and `CineMatch AI casting score` strings.
+- Future upgrade:
+  - Replace or augment the transparent local scoring formula with a server-side AI provider endpoint once AI provider keys, audit logging rules and prompt/data-retention policy are finalized.

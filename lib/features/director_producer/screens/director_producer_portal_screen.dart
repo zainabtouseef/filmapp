@@ -8,6 +8,7 @@ import '../../../core/projects/projects_controller.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_shell.dart';
 import 'dp_bargaining_center_screen.dart';
+import 'dp_ai_casting_match_sheet.dart';
 import 'dp_booking_request_form_screen.dart';
 import 'dp_calendar_schedule_screen.dart';
 import 'dp_contract_center_screen.dart';
@@ -56,10 +57,23 @@ class DirectorProducerPortalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = AuthScope.maybeOf(context);
+    final showAiMatch = (routeName == DirectorProducerRoutes.marketplace ||
+            routeName == DirectorProducerRoutes.discover) &&
+        auth?.user?.primaryRole?.code != 'general_public';
     final content = DPShell(
       title: _title(routeName),
       currentRoute: routeName,
       showHeading: !_ownHeaderRoutes.contains(routeName),
+      floatingActionBuilder: showAiMatch
+          ? (context, wide, bottomInset) => Positioned(
+                right: wide ? 28 : 18,
+                bottom: bottomInset,
+                child: DPAICastingMatchFab(
+                  initialCategory: _stringArg('category') ?? _stringArg('type'),
+                  projectId: _stringArg('projectId'),
+                ),
+              )
+          : null,
       child: _content(routeName),
     );
     if (auth == null) return content;
