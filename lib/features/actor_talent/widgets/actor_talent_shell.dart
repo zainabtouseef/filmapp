@@ -36,7 +36,7 @@ const _actorBottomDestinations = [
     icon: Icons.home_outlined,
   ),
   CineBottomNavDestination(
-    label: 'Discover',
+    label: 'Opportunities',
     icon: Icons.local_activity_outlined,
   ),
   CineBottomNavDestination(

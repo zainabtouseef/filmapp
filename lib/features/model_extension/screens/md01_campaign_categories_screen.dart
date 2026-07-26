@@ -6,6 +6,7 @@ import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../actor_talent/models/actor_talent_models.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../routes/model_extension_routes.dart';
 
@@ -74,6 +75,30 @@ class _MD01CampaignCategoriesScreenState
             .length;
         return Column(
           children: [
+            ActorSectionCard(
+              title: 'Model Opportunities',
+              icon: Icons.travel_explore_outlined,
+              tone: ActorTone.blue,
+              child: ActorTwoColumn(
+                left: Text(
+                  'Browse live campaign and production needs, apply with your model profile, then track application updates.',
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                right: CorePrimaryButton(
+                  icon: Icons.arrow_forward_rounded,
+                  label: 'Open opportunities',
+                  compact: true,
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    ModelExtensionRoutes.opportunities,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             ActorSectionCard(
               title: 'Model Profile Extension',
               icon: Icons.category_outlined,

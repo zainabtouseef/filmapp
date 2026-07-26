@@ -13,9 +13,9 @@ class CR01CrewDashboardScreen extends StatelessWidget {
       icon: Icons.groups_2_outlined,
       needed: 'Crew profile/dashboard API',
       detail:
-          'Crew dashboard cannot show demo profile, credits, bookings, or rating data. Add crew-specific profile/dashboard endpoints and seed MySQL rows for a real demo.',
-      actionRoute: CrewServicesRoutes.requests,
-      actionLabel: 'Open requests gap',
+          'Crew dashboard is still waiting for a dedicated summary API, but open production opportunities and applications are live now.',
+      actionRoute: CrewServicesRoutes.opportunities,
+      actionLabel: 'Browse opportunities',
     );
   }
 }

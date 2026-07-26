@@ -128,6 +128,14 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
         tone: LocationTone.gold,
         route: LocationOwnerRoutes.requests,
       ),
+      const LocationMetric(
+        label: 'Opportunities',
+        value: 'Live',
+        delta: 'Apply to open needs',
+        icon: Icons.travel_explore_outlined,
+        tone: LocationTone.blue,
+        route: LocationOwnerRoutes.opportunities,
+      ),
       LocationMetric(
         label: 'Upcoming Shoots',
         value: '${upcoming.length}',
@@ -271,6 +279,35 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
                     onTap: () => Navigator.pushNamed(
                       context,
                       LocationOwnerRoutes.earnings,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            LocationSectionCard(
+              title: 'Open Opportunities',
+              icon: Icons.travel_explore_outlined,
+              tone: LocationTone.blue,
+              child: Column(
+                children: [
+                  const LocationInfoRow(
+                    icon: Icons.campaign_outlined,
+                    label: 'Production needs',
+                    value: 'Browse projects seeking locations',
+                  ),
+                  const LocationInfoRow(
+                    icon: Icons.assignment_turned_in_outlined,
+                    label: 'Applications',
+                    value: 'Track submitted property pitches',
+                  ),
+                  const SizedBox(height: 8),
+                  CorePrimaryButton(
+                    icon: Icons.arrow_forward_rounded,
+                    label: 'Browse opportunities',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      LocationOwnerRoutes.opportunities,
                     ),
                   ),
                 ],

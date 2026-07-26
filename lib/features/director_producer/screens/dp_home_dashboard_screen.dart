@@ -78,6 +78,8 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
                 const SizedBox(height: 14),
                 DPPulseStrip(summary: dashboard.summary),
                 const SizedBox(height: 14),
+                const _ApplicationsShortcutSection(),
+                const SizedBox(height: 14),
                 if (wide)
                   _WideBody(dashboard: dashboard)
                 else
@@ -87,6 +89,47 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
           },
         );
       },
+    );
+  }
+}
+
+class _ApplicationsShortcutSection extends StatelessWidget {
+  const _ApplicationsShortcutSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'Casting, Auditions & Applications',
+      icon: Icons.how_to_reg_outlined,
+      actionText: 'Open projects',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.projects),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          FilledButton.icon(
+            icon: const Icon(Icons.assignment_ind_outlined),
+            label: const Text('Review project applications'),
+            onPressed: () =>
+                Navigator.pushNamed(context, DirectorProducerRoutes.projects),
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.video_camera_front_outlined),
+            label: const Text('Create audition requirements'),
+            onPressed: () => Navigator.pushNamed(
+              context,
+              DirectorProducerRoutes.projects,
+            ),
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.travel_explore_outlined),
+            label: const Text('Find providers'),
+            onPressed: () => Navigator.pushNamed(
+                context, DirectorProducerRoutes.marketplace),
+          ),
+        ],
+      ),
     );
   }
 }

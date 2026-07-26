@@ -129,6 +129,14 @@ class _DashboardBody extends StatelessWidget {
         tone: MediaTone.gold,
         route: MediaEquipmentRoutes.requests,
       ),
+      const MediaMetric(
+        label: 'Opportunities',
+        value: 'Live',
+        delta: 'Open production needs',
+        icon: Icons.travel_explore_outlined,
+        tone: MediaTone.blue,
+        route: MediaEquipmentRoutes.opportunities,
+      ),
       MediaMetric(
         label: 'Utilization',
         value: '$utilization%',
@@ -398,6 +406,17 @@ class _DashboardBody extends StatelessWidget {
                     onTap: () => Navigator.pushNamed(
                       context,
                       MediaEquipmentRoutes.packages,
+                    ),
+                  ),
+                  MetricActionItem(
+                    icon: Icons.travel_explore_outlined,
+                    value: 'Open',
+                    title: 'Opportunities',
+                    subtitle: 'Apply',
+                    accentColor: colors.success,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      MediaEquipmentRoutes.opportunities,
                     ),
                   ),
                   MetricActionItem(

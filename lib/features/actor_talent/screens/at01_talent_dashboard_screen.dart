@@ -90,6 +90,8 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
           castingFuture: _castingFuture,
         ),
         const SizedBox(height: 12),
+        const _OpportunityShortcutStrip(),
+        const SizedBox(height: 12),
         ActorSectionCard(
           title: 'Talent Snapshot',
           icon: Icons.auto_awesome_outlined,
@@ -115,6 +117,89 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
           right: _DashboardSideRail(profileFuture: _profileFuture),
         ),
       ],
+    );
+  }
+}
+
+class _OpportunityShortcutStrip extends StatelessWidget {
+  const _OpportunityShortcutStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return ActorResponsiveGrid(
+      minWidth: 245,
+      children: [
+        _ShortcutCard(
+          icon: Icons.travel_explore_outlined,
+          title: 'Browse Opportunities',
+          message: 'Find live casting calls and apply for roles.',
+          label: 'Open opportunities',
+          route: ActorTalentRoutes.opportunities,
+          tone: ActorTone.gold,
+        ),
+        _ShortcutCard(
+          icon: Icons.assignment_outlined,
+          title: 'My Applications',
+          message: 'Track submitted roles, updates and next steps.',
+          label: 'Open tracker',
+          route: ActorTalentRoutes.applications,
+          tone: ActorTone.blue,
+        ),
+        _ShortcutCard(
+          icon: Icons.video_camera_front_outlined,
+          title: 'Auditions',
+          message: 'See audition invites, callbacks and meeting rounds.',
+          label: 'Open auditions',
+          route: ActorTalentRoutes.auditions,
+          tone: ActorTone.purple,
+        ),
+      ],
+    );
+  }
+}
+
+class _ShortcutCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final String label;
+  final String route;
+  final ActorTone tone;
+
+  const _ShortcutCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.label,
+    required this.route,
+    required this.tone,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActorSectionCard(
+      title: title,
+      icon: icon,
+      tone: tone,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: context.appColors.textSecondary,
+              height: 1.32,
+            ),
+          ),
+          const SizedBox(height: 10),
+          CorePrimaryButton(
+            icon: Icons.arrow_forward_rounded,
+            label: label,
+            compact: true,
+            onTap: () => Navigator.pushNamed(context, route),
+          ),
+        ],
+      ),
     );
   }
 }
