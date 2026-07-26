@@ -624,7 +624,10 @@ class _ProjectTabBody extends StatelessWidget {
       'Budget & Costs' =>
         _BudgetTab(project: project, bookings: bookings, contracts: contracts),
       'Shortlists' => DPProjectScopedShortlists(project: project),
-      'Casting' => _CastingApplicationsTab(applications: castingApplications),
+      'Casting' => _CastingApplicationsTab(
+          projectId: project.id,
+          applications: castingApplications,
+        ),
       'Applications' =>
         _OpportunityApplicationsTab(applications: opportunityApplications),
       'Bookings' => _BookingsTab(bookings: bookings),
@@ -658,10 +661,63 @@ class _OverviewTab extends StatelessWidget {
       left: DPSectionCard(
         title: 'Build your production',
         icon: Icons.fact_check_outlined,
-        child: DPProductionChecklist(
-          project: project,
-          requirements: requirements,
-          bookings: bookings,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DPGlassCard(
+              padding: const EdgeInsets.all(12),
+              accentColor: context.appColors.infoBlue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  dpText(
+                    context,
+                    'Need actors, models, crew, locations or equipment?',
+                    strong: true,
+                  ),
+                  const SizedBox(height: 6),
+                  dpText(
+                    context,
+                    'Create an audition/casting requirement for this project so providers can apply from their opportunity screens.',
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        icon: const Icon(Icons.video_camera_front_outlined),
+                        label: const Text('Create audition call'),
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          DirectorProducerRoutes.requirements,
+                          arguments: {'id': project.id},
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.assignment_outlined),
+                        label: const Text('Open applications'),
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          DirectorProducerRoutes.projectDetail,
+                          arguments: {
+                            'id': project.id,
+                            'tab': 'Casting',
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            DPProductionChecklist(
+              project: project,
+              requirements: requirements,
+              bookings: bookings,
+            ),
+          ],
         ),
       ),
       right: DPSectionCard(
@@ -805,9 +861,13 @@ class _BudgetBookingRow extends StatelessWidget {
 }
 
 class _CastingApplicationsTab extends StatefulWidget {
+  final String projectId;
   final List<CastingApplication> applications;
 
-  const _CastingApplicationsTab({required this.applications});
+  const _CastingApplicationsTab({
+    required this.projectId,
+    required this.applications,
+  });
 
   @override
   State<_CastingApplicationsTab> createState() =>
@@ -861,11 +921,17 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
           ),
           const SizedBox(height: 12),
           if (rows.isEmpty)
-            const CoreEmptyState(
+            CoreEmptyState(
               icon: Icons.person_search_outlined,
-              title: 'No casting applications',
+              title: 'No casting applications yet',
               message:
-                  'Applications appear here when actors submit to an open role on this project.',
+                  'Create an audition/casting requirement for this project, then actors can apply from their Opportunities screen.',
+              actionLabel: 'Create audition call',
+              onAction: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.requirements,
+                arguments: {'id': widget.projectId},
+              ),
             )
           else
             for (var index = 0; index < rows.length; index++) ...[
@@ -1012,8 +1078,8 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
     if (casting == null) return;
     setState(() => _workingId = application.publicId);
     try {
-      final updated =
-          await casting.acceptDirectorMeetingRound(application.publicId, roundId);
+      final updated = await casting.acceptDirectorMeetingRound(
+          application.publicId, roundId);
       if (!mounted) return;
       _replaceRow(updated);
       dpSnack(context, 'Meeting confirmed');
@@ -1639,8 +1705,7 @@ class _OpportunityApplicationsTabState
   }
 
   void _replaceRow(OpportunityApplication updated) {
-    final index =
-        _rows.indexWhere((item) => item.publicId == updated.publicId);
+    final index = _rows.indexWhere((item) => item.publicId == updated.publicId);
     if (index >= 0) setState(() => _rows[index] = updated);
   }
 
