@@ -10,9 +10,11 @@ import 'core/bookings/bookings_controller.dart';
 import 'core/casting/casting_controller.dart';
 import 'core/contracts/contracts_controller.dart';
 import 'core/core_ui/core_routes.dart';
+import 'core/credits/credits_controller.dart';
 import 'core/insurance/insurance_controller.dart';
 import 'core/network/api_client.dart';
 import 'core/operations/operations_controller.dart';
+import 'core/opportunities/opportunities_controller.dart';
 import 'core/payments/payments_controller.dart';
 import 'core/specialist/specialist_controller.dart';
 import 'core/theme/app_theme.dart';
@@ -51,6 +53,8 @@ class CineConnectApp extends StatelessWidget {
   final BookingsController? bookingsController;
   final ContractsController? contractsController;
   final CastingController? castingController;
+  final OpportunitiesController? opportunitiesController;
+  final CreditsController? creditsController;
   final PaymentsController? paymentsController;
   final OperationsController? operationsController;
   final InsuranceController? insuranceController;
@@ -68,6 +72,8 @@ class CineConnectApp extends StatelessWidget {
     this.bookingsController,
     this.contractsController,
     this.castingController,
+    this.opportunitiesController,
+    this.creditsController,
     this.paymentsController,
     this.operationsController,
     this.insuranceController,
@@ -149,7 +155,19 @@ class CineConnectApp extends StatelessWidget {
                             CastingController.fromClient(
                               authController.apiClient,
                             ),
-                        child: app,
+                        child: OpportunitiesScope(
+                          controller: opportunitiesController ??
+                              OpportunitiesController.fromClient(
+                                authController.apiClient,
+                              ),
+                          child: CreditsScope(
+                            controller: creditsController ??
+                                CreditsController.fromClient(
+                                  authController.apiClient,
+                                ),
+                            child: app,
+                          ),
+                        ),
                       ),
                     ),
                   ),

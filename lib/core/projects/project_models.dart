@@ -85,6 +85,9 @@ class ProjectRequirement {
   final int candidateCount;
   final List<ProjectRequirementSkill> skills;
   final DateTime? createdAt;
+  final String visibility;
+  final int quantity;
+  final List<String> requiredDocuments;
 
   const ProjectRequirement({
     required this.publicId,
@@ -101,10 +104,14 @@ class ProjectRequirement {
     required this.candidateCount,
     required this.skills,
     required this.createdAt,
+    this.visibility = 'all',
+    this.quantity = 1,
+    this.requiredDocuments = const [],
   });
 
   factory ProjectRequirement.fromJson(Map<String, dynamic> json) {
     final rawSkills = json['skills'] as List<dynamic>? ?? const [];
+    final rawDocuments = json['required_documents'] as List<dynamic>? ?? const [];
     return ProjectRequirement(
       publicId: json['public_id'] as String,
       projectId: json['project_id'] as String? ?? '',
@@ -123,6 +130,9 @@ class ProjectRequirement {
               ProjectRequirementSkill.fromJson(item as Map<String, dynamic>))
           .toList(),
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+      visibility: json['visibility'] as String? ?? 'all',
+      quantity: json['quantity'] as int? ?? 1,
+      requiredDocuments: rawDocuments.map((item) => item.toString()).toList(),
     );
   }
 
@@ -145,6 +155,7 @@ class ProjectRequirement {
   String get displayCategory {
     return switch (category) {
       'talent' => 'Roles',
+      'model' => 'Models',
       'location' => 'Locations',
       'equipment' => 'Media & Equipment',
       'crew' => 'Crew',

@@ -1,4 +1,5 @@
 import '../profile/profile_models.dart';
+import '../scheduling/meeting_models.dart';
 import '../verification/verification_models.dart';
 
 class CastingRoleProject {
@@ -92,6 +93,9 @@ class CastingRole {
   final bool saved;
   final String? applicationId;
   final String? applicationStatus;
+  final String visibility;
+  final int quantity;
+  final List<String> requiredDocuments;
 
   const CastingRole({
     required this.publicId,
@@ -120,6 +124,9 @@ class CastingRole {
     required this.saved,
     required this.applicationId,
     required this.applicationStatus,
+    this.visibility = 'all',
+    this.quantity = 1,
+    this.requiredDocuments = const [],
   });
 
   factory CastingRole.fromJson(Map<String, dynamic> json) {
@@ -165,6 +172,12 @@ class CastingRole {
       saved: json['saved'] as bool? ?? false,
       applicationId: json['application_id'] as String?,
       applicationStatus: json['application_status'] as String?,
+      visibility: json['visibility'] as String? ?? 'all',
+      quantity: json['quantity'] as int? ?? 1,
+      requiredDocuments:
+          (json['required_documents'] as List<dynamic>? ?? const [])
+              .map((value) => value.toString())
+              .toList(),
     );
   }
 
@@ -183,6 +196,8 @@ class CastingRole {
     final due = applicationDueAt;
     return status == 'open' && (due == null || due.isAfter(DateTime.now()));
   }
+
+  bool get verifiedOnly => visibility == 'verified_only';
 }
 
 class CastingRolePage {
@@ -282,6 +297,7 @@ class CastingApplication {
   final CastingAudition audition;
   final DateTime? callbackAt;
   final String? callbackDetails;
+  final MeetingThread? meetingThread;
   final String? rejectionReason;
   final List<CastingApplicationEvent> statusEvents;
   final DateTime? createdAt;
@@ -309,6 +325,7 @@ class CastingApplication {
     required this.audition,
     required this.callbackAt,
     required this.callbackDetails,
+    required this.meetingThread,
     required this.rejectionReason,
     required this.statusEvents,
     required this.createdAt,
@@ -352,6 +369,9 @@ class CastingApplication {
       ),
       callbackAt: DateTime.tryParse(callback['at'] as String? ?? ''),
       callbackDetails: callback['details'] as String?,
+      meetingThread: MeetingThread.fromJsonOrNull(
+        json['meeting_thread'] as Map<String, dynamic>?,
+      ),
       rejectionReason: json['rejection_reason'] as String?,
       statusEvents: (json['status_events'] as List<dynamic>? ?? const [])
           .map((item) => CastingApplicationEvent.fromJson(

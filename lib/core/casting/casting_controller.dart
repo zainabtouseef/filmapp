@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../network/api_client.dart';
+import '../scheduling/meeting_models.dart';
 import 'casting_models.dart';
 import 'casting_repository.dart';
 
@@ -167,6 +168,73 @@ class CastingController extends ChangeNotifier {
     Map<String, dynamic> body,
   ) {
     return _repository.updateDirectorApplication(publicId, body);
+  }
+
+  Future<MeetingThread?> meetings(String applicationId) {
+    return _repository.meetings(applicationId);
+  }
+
+  Future<CastingApplication> proposeMeeting(
+    String applicationId,
+    Map<String, dynamic> body,
+  ) async {
+    final result = await _repository.proposeMeeting(applicationId, body);
+    await actorApplications(force: true);
+    return result;
+  }
+
+  Future<CastingApplication> acceptMeetingRound(
+    String applicationId,
+    String roundId,
+  ) async {
+    final result =
+        await _repository.acceptMeetingRound(applicationId, roundId);
+    await actorApplications(force: true);
+    return result;
+  }
+
+  Future<CastingApplication> declineMeetingRound(
+    String applicationId,
+    String roundId, {
+    String? reason,
+  }) async {
+    final result = await _repository.declineMeetingRound(
+      applicationId,
+      roundId,
+      reason: reason,
+    );
+    await actorApplications(force: true);
+    return result;
+  }
+
+  Future<MeetingThread?> directorMeetings(String applicationId) {
+    return _repository.directorMeetings(applicationId);
+  }
+
+  Future<CastingApplication> proposeDirectorMeeting(
+    String applicationId,
+    Map<String, dynamic> body,
+  ) {
+    return _repository.proposeDirectorMeeting(applicationId, body);
+  }
+
+  Future<CastingApplication> acceptDirectorMeetingRound(
+    String applicationId,
+    String roundId,
+  ) {
+    return _repository.acceptDirectorMeetingRound(applicationId, roundId);
+  }
+
+  Future<CastingApplication> declineDirectorMeetingRound(
+    String applicationId,
+    String roundId, {
+    String? reason,
+  }) {
+    return _repository.declineDirectorMeetingRound(
+      applicationId,
+      roundId,
+      reason: reason,
+    );
   }
 }
 

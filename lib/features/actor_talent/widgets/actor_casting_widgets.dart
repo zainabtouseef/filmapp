@@ -112,6 +112,11 @@ class ActorCastingRoleCard extends StatelessWidget {
                         label: _titleCase(role.auditionMode!),
                         color: colors.infoPurple,
                       ),
+                    if (role.verifiedOnly)
+                      StatusChip(
+                        label: 'Verified profiles only',
+                        color: colors.success,
+                      ),
                   ],
                 ),
                 if ((role.summary ?? '').isNotEmpty) ...[

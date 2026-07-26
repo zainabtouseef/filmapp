@@ -58,7 +58,8 @@ const _requirementTemplates = [
 
 String _backendCategory(String value) {
   return switch (value) {
-    'Roles' || 'Models' => 'talent',
+    'Roles' => 'talent',
+    'Models' => 'model',
     'Locations' => 'location',
     'Media & Equipment' => 'equipment',
     'Crew' => 'crew',
@@ -1307,9 +1308,7 @@ class _DPCreateProjectWizardScreenState
         await controller.createRequirement(
           projectId: project.publicId,
           category: _backendCategory(requirement.category),
-          title: requirement.quantity > 1
-              ? '${requirement.name} ×${requirement.quantity}'
-              : requirement.name,
+          title: requirement.name,
           summary: [requirement.description, requirement.notes]
               .where((s) => s.trim().isNotEmpty)
               .join(' — '),
@@ -1319,6 +1318,7 @@ class _DPCreateProjectWizardScreenState
           endDate: requirement.deadline.isEmpty
               ? _apiDate(_endDate)
               : _apiDate(_parseDateOnly(requirement.deadline)),
+          quantity: requirement.quantity,
         );
       }
 

@@ -12,8 +12,23 @@ class ApiClient {
   final String baseUrl;
   String? accessToken;
 
+  /// Called when a request comes back 401. Should attempt to refresh the
+  /// session and return the new access token, or `null` if the session
+  /// could not be refreshed (e.g. the refresh token is also expired).
+  Future<String?> Function()? onUnauthorized;
+
+  Future<String?>? _refreshInFlight;
+
   ApiClient({http.Client? httpClient, this.baseUrl = ApiConfig.baseUrl})
       : _http = httpClient ?? http.Client();
+
+  Future<String?> _refreshAccessToken() {
+    final handler = onUnauthorized;
+    if (handler == null) return Future.value(null);
+    return _refreshInFlight ??= handler().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
 
   /// Resolves a path returned by the API (e.g. a file's `download_url`,
   /// always path-only like `/api/v1/files/{id}/download`) into an absolute
@@ -49,6 +64,7 @@ class ApiClient {
     required List<int> bytes,
     required String contentType,
     void Function(int sentBytes, int totalBytes)? onProgress,
+    bool isRetry = false,
   }) async {
     final request = http.StreamedRequest('PUT', _uriFor(pathOrUrl))
       ..headers[HttpHeaders.acceptHeader] = 'application/json'
@@ -83,6 +99,20 @@ class ApiClient {
         message: 'Upload timed out. Please try a smaller image or retry.',
       );
     }
+
+    if (streamed.statusCode == 401 && !isRetry && onUnauthorized != null) {
+      final refreshed = await _refreshAccessToken();
+      if (refreshed != null) {
+        return putBytes(
+          pathOrUrl,
+          bytes: bytes,
+          contentType: contentType,
+          onProgress: onProgress,
+          isRetry: true,
+        );
+      }
+    }
+
     return _decodeResponse(streamed);
   }
 
@@ -90,6 +120,7 @@ class ApiClient {
     String method,
     String path, {
     Map<String, dynamic>? body,
+    bool isRetry = false,
   }) async {
     final request = http.Request(method, _uriFor(path))
       ..headers[HttpHeaders.acceptHeader] = 'application/json'
@@ -114,6 +145,13 @@ class ApiClient {
         code: 'network.timeout',
         message: 'CineConnect took too long to respond. Please retry.',
       );
+    }
+
+    if (streamed.statusCode == 401 && !isRetry && onUnauthorized != null) {
+      final refreshed = await _refreshAccessToken();
+      if (refreshed != null) {
+        return _send(method, path, body: body, isRetry: true);
+      }
     }
 
     return _decodeResponse(streamed);

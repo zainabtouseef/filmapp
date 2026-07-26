@@ -11,6 +11,10 @@ class MediaEquipmentRoutes {
   static const handover = '/equipment-provider/handover';
   static const returns = '/equipment-provider/return';
   static const earnings = '/equipment-provider/earnings';
+  static const portfolio = '/equipment-provider/portfolio';
+  static const opportunities = '/equipment-provider/opportunities';
+  static const opportunityApplicationDetail =
+      '/equipment-provider/opportunities/application';
 
   static const primaryNav = [
     home,
@@ -31,6 +35,9 @@ class MediaEquipmentRoutes {
     handover,
     returns,
     earnings,
+    portfolio,
+    opportunities,
+    opportunityApplicationDetail,
   ];
 
   static String titleFor(String route) {
@@ -45,6 +52,9 @@ class MediaEquipmentRoutes {
       handover => 'Handover Checklist',
       returns => 'Return Checklist',
       earnings => 'Earnings & Ratings',
+      portfolio => 'Portfolio',
+      opportunities => 'Opportunities',
+      opportunityApplicationDetail => 'Application Details',
       _ => 'Media / Equipment',
     };
   }
@@ -61,6 +71,9 @@ class MediaEquipmentRoutes {
       handover => 'ME-08',
       returns => 'ME-09',
       earnings => 'ME-10',
+      portfolio => 'ME-11',
+      opportunities => 'ME-12',
+      opportunityApplicationDetail => 'ME-13',
       _ => 'ME',
     };
   }

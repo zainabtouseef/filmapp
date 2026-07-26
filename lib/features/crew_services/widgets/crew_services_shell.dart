@@ -57,11 +57,18 @@ const crewMenuEntries = <ActorShellMenuEntry>[
     label: 'Ratings & Work History',
     icon: Icons.stars_outlined,
   ),
+  (
+    route: CrewServicesRoutes.opportunities,
+    screenId: 'CR-08',
+    label: 'Opportunities',
+    icon: Icons.travel_explore_outlined,
+  ),
 ];
 
 const _crewBottomIndexOverrides = {
   CrewServicesRoutes.portfolio: 4,
   CrewServicesRoutes.ratings: 4,
+  CrewServicesRoutes.opportunities: 4,
 };
 
 class CrewServicesShell extends StatelessWidget {

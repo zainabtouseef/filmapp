@@ -33,7 +33,25 @@ class AuthController extends ChangeNotifier {
     required TokenStore tokenStore,
   })  : _repository = repository,
         _client = client,
-        _tokenStore = tokenStore;
+        _tokenStore = tokenStore {
+    _client.onUnauthorized = _handleUnauthorized;
+  }
+
+  /// Wired into [ApiClient.onUnauthorized] so every screen sharing this
+  /// client silently recovers from an expired access token instead of each
+  /// independently rendering its own "could not load" error.
+  Future<String?> _handleUnauthorized() async {
+    final token = _refreshToken;
+    if (token == null) return null;
+    try {
+      final session = await _repository.refresh(token);
+      await _acceptSession(session);
+      return session.tokens.accessToken;
+    } on ApiException {
+      await clearSession();
+      return null;
+    }
+  }
 
   AuthUser? get user => _user;
   bool get isAuthenticated => _user != null && _refreshToken != null;
@@ -235,6 +253,7 @@ class AuthController extends ChangeNotifier {
     required String? cityId,
     String visibility = 'public',
     String? websiteUrl,
+    Map<String, dynamic>? socialLinks,
     String? avatarFileId,
     String? coverFileId,
   }) {
@@ -243,6 +262,7 @@ class AuthController extends ChangeNotifier {
       cityId: cityId,
       visibility: visibility,
       websiteUrl: websiteUrl,
+      socialLinks: socialLinks,
       avatarFileId: avatarFileId,
       coverFileId: coverFileId,
     );
@@ -254,10 +274,10 @@ class AuthController extends ChangeNotifier {
 
   Future<TalentProfile> updateTalentProfile({
     required String screenName,
-    required List<TalentLanguage> languages,
+    List<TalentLanguage>? languages,
     int? dayRateMinor,
-    String availabilityStatus = 'available',
-    String currency = 'PKR',
+    String? availabilityStatus,
+    String? currency,
     String? ageRange,
     String? genderIdentity,
     int? heightCm,
@@ -391,6 +411,7 @@ class AuthController extends ChangeNotifier {
     required String publicId,
     String? title,
     String? category,
+    String? fileId,
     int? durationSeconds,
     String? status,
     bool? isCover,
@@ -400,6 +421,7 @@ class AuthController extends ChangeNotifier {
       publicId: publicId,
       title: title,
       category: category,
+      fileId: fileId,
       durationSeconds: durationSeconds,
       status: status,
       isCover: isCover,

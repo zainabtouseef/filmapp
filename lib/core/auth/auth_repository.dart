@@ -194,6 +194,7 @@ class AuthRepository {
     required String? cityId,
     String visibility = 'public',
     String? websiteUrl,
+    Map<String, dynamic>? socialLinks,
     String? avatarFileId,
     String? coverFileId,
   }) async {
@@ -203,6 +204,7 @@ class AuthRepository {
         'bio': bio,
         if (cityId != null) 'city_id': cityId,
         if (websiteUrl != null) 'website_url': websiteUrl,
+        if (socialLinks != null) 'social_links': socialLinks,
         'profile_visibility': visibility,
         if (avatarFileId != null) 'avatar_file_id': avatarFileId,
         if (coverFileId != null) 'cover_file_id': coverFileId,
@@ -222,10 +224,10 @@ class AuthRepository {
 
   Future<TalentProfile> updateTalentProfile({
     required String screenName,
-    required List<TalentLanguage> languages,
+    List<TalentLanguage>? languages,
     int? dayRateMinor,
-    String availabilityStatus = 'available',
-    String currency = 'PKR',
+    String? availabilityStatus,
+    String? currency,
     String? ageRange,
     String? genderIdentity,
     int? heightCm,
@@ -245,8 +247,8 @@ class AuthRepository {
       '/talent/profile',
       body: {
         'screen_name': screenName,
-        'availability_status': availabilityStatus,
-        'currency': currency,
+        if (availabilityStatus != null) 'availability_status': availabilityStatus,
+        if (currency != null) 'currency': currency,
         if (dayRateMinor != null) 'day_rate_minor': dayRateMinor,
         if (ageRange != null) 'age_range': ageRange,
         if (genderIdentity != null) 'gender_identity': genderIdentity,
@@ -262,7 +264,8 @@ class AuthRepository {
         if (training != null) 'training': training,
         if (representation != null) 'representation': representation,
         if (socialLinks != null) 'social_links': socialLinks,
-        'languages': languages.map((item) => item.toJson()).toList(),
+        if (languages != null)
+          'languages': languages.map((item) => item.toJson()).toList(),
       },
     );
     final data = response['data'] as Map<String, dynamic>;
@@ -432,6 +435,7 @@ class AuthRepository {
     required String publicId,
     String? title,
     String? category,
+    String? fileId,
     int? durationSeconds,
     String? status,
     bool? isCover,
@@ -442,6 +446,7 @@ class AuthRepository {
       body: {
         if (title != null) 'title': title,
         if (category != null) 'category': category,
+        if (fileId != null) 'file_id': fileId,
         if (durationSeconds != null) 'duration_seconds': durationSeconds,
         if (status != null) 'status': status,
         if (isCover != null) 'is_cover': isCover,

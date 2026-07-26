@@ -17,6 +17,7 @@ from app.models.identity import User, UserRole
 from app.models.marketplace import (
     MarketplaceListing,
     ModelProfile,
+    PortfolioItem,
     TalentProfile,
     UserProfile,
 )
@@ -246,6 +247,32 @@ def _listing_for_profile(
     ).scalar_one_or_none()
 
 
+def _portfolio_media_payload(
+    profile_type: str,
+    profile_id: str,
+) -> list[dict[str, Any]]:
+    rows = db.session.execute(
+        select(PortfolioItem)
+        .where(
+            PortfolioItem.profile_type == profile_type,
+            PortfolioItem.profile_id == profile_id,
+            PortfolioItem.status == "published",
+            PortfolioItem.moderation_status == "approved",
+        )
+        .order_by(PortfolioItem.is_cover.desc(), PortfolioItem.sort_order.asc())
+    ).scalars()
+    return [
+        {
+            "file": _file_payload(row.file),
+            "sort_order": row.sort_order,
+            "is_cover": row.is_cover,
+            "caption": row.title,
+        }
+        for row in rows
+        if row.file is not None
+    ]
+
+
 def _with_listing(
     item: dict[str, Any],
     listing_type: str,
@@ -254,15 +281,16 @@ def _with_listing(
     listing = _listing_for_profile(listing_type, profile_id)
     item["listing_id"] = listing.public_id if listing else None
     if listing:
-        item["media"] = [
-            {
-                "file": _file_payload(row.file),
-                "sort_order": row.sort_order,
-                "is_cover": row.is_cover,
-                "caption": row.caption,
-            }
-            for row in listing.media
-        ]
+        if listing.media:
+            item["media"] = [
+                {
+                    "file": _file_payload(row.file),
+                    "sort_order": row.sort_order,
+                    "is_cover": row.is_cover,
+                    "caption": row.caption,
+                }
+                for row in listing.media
+            ]
         item["rate_from_minor"] = listing.price_from_minor
         item["currency"] = listing.currency
         item["rate_label"] = _minor_money_label(
@@ -306,7 +334,7 @@ def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
         "rating_average": int(profile.rating_average) if profile else 0,
         "available": item.availability_status == "available",
         "tags": _talent_tags(item),
-        "media": [],
+        "media": _portfolio_media_payload("talent", item.public_id),
         "resume_file": _file_payload(item.resume_file),
         "route": "/director/discovery/actor",
         "source": {"table": "talent_profiles"},
@@ -382,7 +410,8 @@ def _model_discovery_item(item: ModelProfile) -> dict[str, Any]:
         "rating_average": int(profile.rating_average) if profile else 0,
         "available": item.public_visibility,
         "tags": categories or _talent_tags(item.talent_profile),
-        "media": [],
+        "media": _portfolio_media_payload("model", item.public_id),
+        "resume_file": _file_payload(item.talent_profile.resume_file),
         "route": "/director/discovery/model",
         "source": {"table": "model_profiles"},
     }
@@ -497,7 +526,10 @@ def _location_discovery_item(item: LocationProperty) -> dict[str, Any]:
         "rating_average": item.rating_average,
         "available": item.status in {"published", "active", "available"},
         "tags": [tag for tag in tags if tag],
-        "media": [],
+        # Falls back to the owner's general portfolio gallery; _with_listing
+        # below overrides with this specific property's published photos
+        # when that property has its own listing media.
+        "media": _portfolio_media_payload("location", item.owner.public_id),
         "route": "/director/discovery/location",
         "source": {"table": "location_properties"},
     }
@@ -610,7 +642,7 @@ def _equipment_discovery_item(item: EquipmentProviderProfile) -> dict[str, Any]:
         "rating_average": item.rating_average,
         "available": item.verification_status in {"approved", "verified", "active"},
         "tags": _split_tags(item.service_categories) or _split_tags(item.coverage),
-        "media": [],
+        "media": _portfolio_media_payload("equipment", item.public_id),
         "route": "/director/discovery/equipment",
         "source": {"table": "equipment_provider_profiles"},
     }

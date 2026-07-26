@@ -109,6 +109,24 @@ const _locationMenuEntries = <LocationOwnerMenuEntry>[
     label: 'Property Insights',
     icon: Icons.analytics_outlined,
   ),
+  (
+    route: LocationOwnerRoutes.profile,
+    screenId: 'LO-11',
+    label: 'Owner Profile',
+    icon: Icons.badge_outlined,
+  ),
+  (
+    route: LocationOwnerRoutes.portfolio,
+    screenId: 'LO-12',
+    label: 'Portfolio',
+    icon: Icons.photo_library_outlined,
+  ),
+  (
+    route: LocationOwnerRoutes.opportunities,
+    screenId: 'LO-13',
+    label: 'Opportunities',
+    icon: Icons.explore_outlined,
+  ),
 ];
 
 const _locationBottomIndexOverrides = {
@@ -118,6 +136,9 @@ const _locationBottomIndexOverrides = {
   LocationOwnerRoutes.checkIn: 4,
   LocationOwnerRoutes.checkOut: 4,
   LocationOwnerRoutes.performance: 4,
+  LocationOwnerRoutes.profile: 4,
+  LocationOwnerRoutes.portfolio: 4,
+  LocationOwnerRoutes.opportunities: 4,
 };
 
 class LocationOwnerShell extends StatelessWidget {
@@ -305,6 +326,9 @@ class _LocationRouteHeading extends StatelessWidget {
       LocationOwnerRoutes.checkOut => 'Return · damage claims · evidence',
       LocationOwnerRoutes.earnings => 'Payments · receipts · payout status',
       LocationOwnerRoutes.performance => 'Portfolio · booking health',
+      LocationOwnerRoutes.profile => 'Public identity · bio · social links',
+      LocationOwnerRoutes.portfolio => 'Photos · videos · edit anytime',
+      LocationOwnerRoutes.opportunities => 'Open requests · applications',
       _ => 'Location owner workspace',
     };
   }

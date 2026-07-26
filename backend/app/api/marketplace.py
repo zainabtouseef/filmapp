@@ -17,6 +17,7 @@ from app.models.identity import Role
 from app.models.kyc import KycSubmission
 from app.models.marketplace import (
     City,
+    CreditEntry,
     ListingMedia,
     MarketplaceListing,
     ModelProfile,
@@ -28,7 +29,7 @@ from app.models.marketplace import (
     TalentProfile,
     UserProfile,
 )
-from app.models.operations import LocationProperty
+from app.models.operations import EquipmentProviderProfile, LocationProperty
 from app.responses import success
 from app.services.local_storage import public_url_for
 
@@ -75,6 +76,7 @@ def _profile_payload(profile: UserProfile | None) -> dict[str, Any]:
             "bio": None,
             "city": None,
             "website_url": None,
+            "social_links": {},
             "profile_visibility": "private",
             "rating_average": "0.00",
             "review_count": 0,
@@ -85,6 +87,9 @@ def _profile_payload(profile: UserProfile | None) -> dict[str, Any]:
         "bio": profile.bio,
         "city": _city_payload(profile.city),
         "website_url": profile.website_url,
+        "social_links": (
+            json.loads(profile.social_links_json) if profile.social_links_json else {}
+        ),
         "profile_visibility": profile.profile_visibility,
         "rating_average": f"{Decimal(profile.rating_average):.2f}",
         "review_count": profile.review_count,
@@ -179,6 +184,22 @@ def _portfolio_payload(item: PortfolioItem) -> dict[str, Any]:
         "is_cover": item.is_cover,
         "sort_order": item.sort_order,
         "moderation_status": item.moderation_status,
+    }
+
+
+def _credit_payload(item: CreditEntry) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "profile_type": item.profile_type,
+        "profile_id": item.profile_id,
+        "title": item.title,
+        "production_name": item.production_name,
+        "role_label": item.role_label,
+        "year": item.year,
+        "description": item.description,
+        "cover_file": _file_payload(item.cover_file),
+        "sort_order": item.sort_order,
+        "created_at": item.created_at.isoformat(),
     }
 
 
@@ -351,10 +372,32 @@ def _model_profile_for_user(user_id: object) -> ModelProfile:
     return profile
 
 
-def _profile_public_id_for_type(profile_type: str, user_id: object) -> str:
+def _equipment_profile_for_user(user_id: object) -> EquipmentProviderProfile:
+    profile = db.session.execute(
+        select(EquipmentProviderProfile).where(
+            EquipmentProviderProfile.user_id == user_id
+        )
+    ).scalar_one_or_none()
+    if profile is None:
+        raise APIError(
+            "marketplace.profile_required",
+            "Create an equipment provider profile before using portfolio features.",
+            status=409,
+        )
+    return profile
+
+
+def _profile_public_id_for_type(profile_type: str, user: Any) -> str:
     if profile_type == "model":
-        return _model_profile_for_user(user_id).public_id
-    return _talent_profile_for_user(user_id).public_id
+        return _model_profile_for_user(user.id).public_id
+    if profile_type == "equipment":
+        return _equipment_profile_for_user(user.id).public_id
+    if profile_type in ("location", "crew"):
+        # Location owners can have multiple properties, and crew members have
+        # no dedicated profile row at all, so both use a general "owner"
+        # identity keyed off the user itself rather than a profile row.
+        return str(user.public_id)
+    return _talent_profile_for_user(user.id).public_id
 
 
 def _owned_ready_file(public_id: str | None, user_id: object, field: str) -> FileAsset:
@@ -528,6 +571,15 @@ def update_my_profile() -> Response:
     profile.city_id = city.id if city else None
     profile.website_url = str(payload.get("website_url", "")).strip()[:255] or None
     profile.profile_visibility = visibility
+    if "social_links" in payload:
+        social_links = payload.get("social_links")
+        if not isinstance(social_links, dict):
+            raise _field_error("social_links", "Social links must be an object.")
+        if len(social_links) > 16:
+            raise _field_error(
+                "social_links", "Social links supports up to 16 entries."
+            )
+        profile.social_links_json = json.dumps(social_links) if social_links else None
     if "avatar_file_id" in payload:
         raw_avatar_id = str(payload.get("avatar_file_id") or "").strip()
         profile.avatar_file_id = (
@@ -655,13 +707,16 @@ def update_talent_profile() -> ResponseReturnValue:
     return jsonify(success({"talent_profile": _talent_payload(profile)}))
 
 
+_PORTFOLIO_PROFILE_TYPES = {"talent", "model", "location", "equipment", "crew"}
+
+
 @marketplace_blueprint.get("/portfolio")
 def portfolio_items() -> Response:
     user = _current_user()
     profile_type = request.args.get("profile_type", "talent")
-    if profile_type not in {"talent", "model"}:
-        raise _field_error("profile_type", "Only talent or model portfolio is enabled.")
-    profile_id = _profile_public_id_for_type(profile_type, user.id)
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported portfolio profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
     rows = db.session.execute(
         select(PortfolioItem)
         .where(
@@ -679,9 +734,9 @@ def create_portfolio_item() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     profile_type = str(payload.get("profile_type", "talent")).strip()
-    if profile_type not in {"talent", "model"}:
-        raise _field_error("profile_type", "Only talent or model portfolio is enabled.")
-    profile_id = _profile_public_id_for_type(profile_type, user.id)
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported portfolio profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
     title = str(payload.get("title", "")).strip()
     if len(title) < 2:
         raise _field_error("title", "Portfolio title is required.")
@@ -699,6 +754,31 @@ def create_portfolio_item() -> ResponseReturnValue:
     status = str(payload.get("status", "published")).strip()
     if status not in {"draft", "published"}:
         raise _field_error("status", "Status must be draft or published.")
+    media_kind = (
+        "image"
+        if file.mime_type.startswith("image/")
+        else "video"
+        if file.mime_type.startswith("video/")
+        else None
+    )
+    if media_kind is None:
+        raise _field_error("file_id", "Portfolio items must be an image or video file.")
+    existing_kind_count = db.session.execute(
+        select(func.count())
+        .select_from(PortfolioItem)
+        .join(FileAsset, PortfolioItem.file_id == FileAsset.id)
+        .where(
+            PortfolioItem.owner_user_id == user.id,
+            PortfolioItem.profile_type == profile_type,
+            PortfolioItem.profile_id == profile_id,
+            FileAsset.mime_type.like(f"{media_kind}/%"),
+        )
+    ).scalar_one()
+    if existing_kind_count >= 3:
+        raise _field_error(
+            "file_id",
+            f"You already have 3 {media_kind}s. Remove one to add another.",
+        )
     item = PortfolioItem(
         owner_user_id=user.id,
         profile_type=profile_type,
@@ -753,6 +833,136 @@ def update_portfolio_item(public_id: str) -> Response:
 def delete_portfolio_item(public_id: str) -> Response:
     user = _current_user()
     item = _portfolio_item_for_user(public_id, user.id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify(success({"deleted": True}))
+
+
+_CREDIT_CAP = 20
+
+
+def _credit_entry_for_user(public_id: str, user_id: object) -> CreditEntry:
+    item = db.session.execute(
+        select(CreditEntry).where(
+            CreditEntry.public_id == public_id,
+            CreditEntry.owner_user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise APIError("credits.not_found", "Credit entry was not found.", status=404)
+    return item
+
+
+@marketplace_blueprint.get("/credits")
+def credit_entries() -> Response:
+    user = _current_user()
+    profile_type = request.args.get("profile_type", "talent")
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported credits profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
+    rows = db.session.execute(
+        select(CreditEntry)
+        .where(
+            CreditEntry.owner_user_id == user.id,
+            CreditEntry.profile_type == profile_type,
+            CreditEntry.profile_id == profile_id,
+        )
+        .order_by(CreditEntry.sort_order.asc(), CreditEntry.created_at.desc())
+    ).scalars()
+    return jsonify(success({"items": [_credit_payload(item) for item in rows]}))
+
+
+@marketplace_blueprint.post("/credits")
+def create_credit_entry() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    profile_type = str(payload.get("profile_type", "talent")).strip()
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported credits profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
+    title = str(payload.get("title", "")).strip()
+    if len(title) < 2:
+        raise _field_error("title", "Credit title is required.")
+    production_name = str(payload.get("production_name", "")).strip()
+    if len(production_name) < 2:
+        raise _field_error("production_name", "Production name is required.")
+    cover_file = None
+    raw_cover_id = str(payload.get("cover_file_id", "")).strip()
+    if raw_cover_id:
+        cover_file = _owned_ready_file(raw_cover_id, user.id, "cover_file_id")
+        if not cover_file.mime_type.startswith("image/"):
+            raise _field_error("cover_file_id", "Cover must be an image file.")
+    existing_count = db.session.execute(
+        select(func.count())
+        .select_from(CreditEntry)
+        .where(
+            CreditEntry.owner_user_id == user.id,
+            CreditEntry.profile_type == profile_type,
+            CreditEntry.profile_id == profile_id,
+        )
+    ).scalar_one()
+    if existing_count >= _CREDIT_CAP:
+        raise _field_error(
+            "title",
+            f"You already have {_CREDIT_CAP} credits. Remove one to add another.",
+        )
+    item = CreditEntry(
+        owner_user_id=user.id,
+        profile_type=profile_type,
+        profile_id=profile_id,
+        title=title[:180],
+        production_name=production_name[:180],
+        role_label=str(payload.get("role_label", "")).strip()[:180] or None,
+        year=_optional_int(payload.get("year"), "year"),
+        description=str(payload.get("description", "")).strip()[:2000] or None,
+        cover_file_id=cover_file.id if cover_file else None,
+        sort_order=_optional_int(payload.get("sort_order"), "sort_order") or 100,
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(success({"item": _credit_payload(item)})), 201
+
+
+@marketplace_blueprint.patch("/credits/<public_id>")
+def update_credit_entry(public_id: str) -> Response:
+    user = _current_user()
+    payload = _json_body()
+    item = _credit_entry_for_user(public_id, user.id)
+    if "title" in payload:
+        title = str(payload.get("title", "")).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Credit title is required.")
+        item.title = title[:180]
+    if "production_name" in payload:
+        production_name = str(payload.get("production_name", "")).strip()
+        if len(production_name) < 2:
+            raise _field_error("production_name", "Production name is required.")
+        item.production_name = production_name[:180]
+    if "role_label" in payload:
+        item.role_label = str(payload.get("role_label", "")).strip()[:180] or None
+    if "year" in payload:
+        item.year = _optional_int(payload.get("year"), "year")
+    if "description" in payload:
+        item.description = str(payload.get("description", "")).strip()[:2000] or None
+    if "sort_order" in payload:
+        item.sort_order = _optional_int(payload.get("sort_order"), "sort_order") or 100
+    if "cover_file_id" in payload:
+        raw_cover_id = str(payload.get("cover_file_id", "")).strip()
+        if raw_cover_id:
+            cover_file = _owned_ready_file(raw_cover_id, user.id, "cover_file_id")
+            if not cover_file.mime_type.startswith("image/"):
+                raise _field_error("cover_file_id", "Cover must be an image file.")
+            item.cover_file_id = cover_file.id
+        else:
+            item.cover_file_id = None
+    db.session.commit()
+    return jsonify(success({"item": _credit_payload(item)}))
+
+
+@marketplace_blueprint.delete("/credits/<public_id>")
+def delete_credit_entry(public_id: str) -> Response:
+    user = _current_user()
+    item = _credit_entry_for_user(public_id, user.id)
     db.session.delete(item)
     db.session.commit()
     return jsonify(success({"deleted": True}))

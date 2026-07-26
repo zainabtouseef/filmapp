@@ -27,6 +27,7 @@ class UserProfile {
   final String? bio;
   final ProfileCity? city;
   final String? websiteUrl;
+  final Map<String, dynamic> socialLinks;
   final String visibility;
   final double ratingAverage;
   final int reviewCount;
@@ -37,6 +38,7 @@ class UserProfile {
     required this.bio,
     required this.city,
     required this.websiteUrl,
+    this.socialLinks = const {},
     required this.visibility,
     required this.ratingAverage,
     required this.reviewCount,
@@ -52,8 +54,13 @@ class UserProfile {
       bio: json['bio'] as String?,
       city: city == null ? null : ProfileCity.fromJson(city),
       websiteUrl: json['website_url'] as String?,
+      socialLinks: Map<String, dynamic>.from(
+        json['social_links'] as Map? ?? const {},
+      ),
       visibility: json['profile_visibility'] as String? ?? 'private',
-      ratingAverage: (json['rating_average'] as num?)?.toDouble() ?? 0,
+      // Backend sends this as a formatted decimal string (e.g. "0.00") to
+      // avoid float precision issues, not a JSON number.
+      ratingAverage: double.tryParse(json['rating_average']?.toString() ?? '') ?? 0,
       reviewCount: json['review_count'] as int? ?? 0,
       avatarFile: avatar == null ? null : UploadedFile.fromJson(avatar),
       coverFile: cover == null ? null : UploadedFile.fromJson(cover),

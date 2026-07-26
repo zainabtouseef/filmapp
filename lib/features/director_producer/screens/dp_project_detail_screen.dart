@@ -11,6 +11,8 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/open_url.dart';
+import '../../../core/opportunities/opportunities_controller.dart';
+import '../../../core/opportunities/opportunities_models.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/projects/project_models.dart';
@@ -19,6 +21,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart'
     show EntityAvatar, AvatarStack;
+import '../../../shared/scheduling/meeting_negotiation_panel.dart';
 import '../models/dp_booking.dart';
 import '../models/dp_contract.dart';
 import '../models/dp_payment.dart';
@@ -56,6 +59,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
     'Budget & Costs',
     'Shortlists',
     'Casting',
+    'Applications',
     'Bookings',
     'Contracts',
     'Payments',
@@ -84,6 +88,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
     final bookingsController = BookingsScope.maybeOf(context);
     final contractsController = ContractsScope.maybeOf(context);
     final castingController = CastingScope.maybeOf(context);
+    final opportunitiesController = OpportunitiesScope.maybeOf(context);
     final paymentsController = PaymentsScope.maybeOf(context);
     if (projects == null) {
       throw Exception('Projects scope is missing.');
@@ -140,6 +145,11 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
         : await castingController
             .directorApplications(project.publicId)
             .catchError((_) => <CastingApplication>[]);
+    final opportunityApplications = opportunitiesController == null
+        ? <OpportunityApplication>[]
+        : await opportunitiesController
+            .directorApplications(project.publicId)
+            .catchError((_) => <OpportunityApplication>[]);
 
     return _ProjectHubData(
       project: _toDpProject(
@@ -155,6 +165,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
       contracts: contracts,
       payments: payments,
       castingApplications: castingApplications,
+      opportunityApplications: opportunityApplications,
     );
   }
 
@@ -231,6 +242,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
               contracts: data.contracts,
               payments: data.payments,
               castingApplications: data.castingApplications,
+              opportunityApplications: data.opportunityApplications,
             ),
           ],
         );
@@ -376,6 +388,7 @@ class _ProjectHubData {
   final List<DpContract> contracts;
   final List<DpPayment> payments;
   final List<CastingApplication> castingApplications;
+  final List<OpportunityApplication> opportunityApplications;
 
   const _ProjectHubData({
     required this.project,
@@ -384,6 +397,7 @@ class _ProjectHubData {
     required this.contracts,
     required this.payments,
     required this.castingApplications,
+    required this.opportunityApplications,
   });
 }
 
@@ -586,6 +600,7 @@ class _ProjectTabBody extends StatelessWidget {
   final List<DpContract> contracts;
   final List<DpPayment> payments;
   final List<CastingApplication> castingApplications;
+  final List<OpportunityApplication> opportunityApplications;
 
   const _ProjectTabBody({
     required this.tab,
@@ -595,6 +610,7 @@ class _ProjectTabBody extends StatelessWidget {
     required this.contracts,
     required this.payments,
     required this.castingApplications,
+    required this.opportunityApplications,
   });
 
   @override
@@ -609,6 +625,8 @@ class _ProjectTabBody extends StatelessWidget {
         _BudgetTab(project: project, bookings: bookings, contracts: contracts),
       'Shortlists' => DPProjectScopedShortlists(project: project),
       'Casting' => _CastingApplicationsTab(applications: castingApplications),
+      'Applications' =>
+        _OpportunityApplicationsTab(applications: opportunityApplications),
       'Bookings' => _BookingsTab(bookings: bookings),
       'Contracts' => _ContractsTab(project: project, contracts: contracts),
       'Payments' => _PaymentsTab(payments: payments),
@@ -868,6 +886,27 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
                             'projectId': rows[index].role.project.publicId,
                           },
                         ),
+                onProposeMeeting: ({
+                  required meetingAt,
+                  location,
+                  onlineUrl,
+                  instructions,
+                  contact,
+                  message,
+                }) =>
+                    _proposeMeeting(
+                  rows[index],
+                  meetingAt: meetingAt,
+                  location: location,
+                  onlineUrl: onlineUrl,
+                  instructions: instructions,
+                  contact: contact,
+                  message: message,
+                ),
+                onAcceptMeeting: (roundId) =>
+                    _acceptMeeting(rows[index], roundId),
+                onDeclineMeeting: (roundId, reason) =>
+                    _declineMeeting(rows[index], roundId, reason),
               ),
               if (index != rows.length - 1) const SizedBox(height: 10),
             ],
@@ -919,6 +958,89 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
         if (index >= 0) _rows[index] = updated;
       });
       dpSnack(context, 'Application updated to ${updated.statusLabel}');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  void _replaceRow(CastingApplication updated) {
+    final index = _rows.indexWhere((item) => item.publicId == updated.publicId);
+    if (index >= 0) setState(() => _rows[index] = updated);
+  }
+
+  Future<void> _proposeMeeting(
+    CastingApplication application, {
+    required DateTime meetingAt,
+    String? location,
+    String? onlineUrl,
+    String? instructions,
+    String? contact,
+    String? message,
+  }) async {
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await casting.proposeDirectorMeeting(
+        application.publicId,
+        {
+          'meeting_at': meetingAt.toUtc().toIso8601String(),
+          if (location != null) 'location': location,
+          if (onlineUrl != null) 'online_url': onlineUrl,
+          if (instructions != null) 'instructions': instructions,
+          if (contact != null) 'contact': contact,
+          if (message != null) 'message': message,
+        },
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Meeting proposal sent');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<void> _acceptMeeting(
+    CastingApplication application,
+    String roundId,
+  ) async {
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated =
+          await casting.acceptDirectorMeetingRound(application.publicId, roundId);
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Meeting confirmed');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<void> _declineMeeting(
+    CastingApplication application,
+    String roundId,
+    String? reason,
+  ) async {
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await casting.declineDirectorMeetingRound(
+        application.publicId,
+        roundId,
+        reason: reason,
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Meeting proposal declined');
     } on ApiException catch (error) {
       if (mounted) dpSnack(context, error.message);
     } finally {
@@ -1089,12 +1211,22 @@ class _CastingApplicationsTabState extends State<_CastingApplicationsTab> {
   }
 }
 
-class _DirectorCastingApplicationCard extends StatelessWidget {
+class _DirectorCastingApplicationCard extends StatefulWidget {
   final CastingApplication application;
   final bool working;
   final ValueChanged<String> onStatus;
   final VoidCallback onMessage;
   final VoidCallback? onSendOffer;
+  final Future<void> Function({
+    required DateTime meetingAt,
+    String? location,
+    String? onlineUrl,
+    String? instructions,
+    String? contact,
+    String? message,
+  }) onProposeMeeting;
+  final Future<void> Function(String roundId) onAcceptMeeting;
+  final Future<void> Function(String roundId, String? reason) onDeclineMeeting;
 
   const _DirectorCastingApplicationCard({
     required this.application,
@@ -1102,7 +1234,22 @@ class _DirectorCastingApplicationCard extends StatelessWidget {
     required this.onStatus,
     required this.onMessage,
     required this.onSendOffer,
+    required this.onProposeMeeting,
+    required this.onAcceptMeeting,
+    required this.onDeclineMeeting,
   });
+
+  @override
+  State<_DirectorCastingApplicationCard> createState() =>
+      _DirectorCastingApplicationCardState();
+}
+
+class _DirectorCastingApplicationCardState
+    extends State<_DirectorCastingApplicationCard> {
+  bool _meetingExpanded = false;
+
+  CastingApplication get application => widget.application;
+  bool get working => widget.working;
 
   @override
   Widget build(BuildContext context) {
@@ -1163,7 +1310,7 @@ class _DirectorCastingApplicationCard extends StatelessWidget {
               PopupMenuButton<String>(
                 tooltip: 'Update application',
                 enabled: !working && statusOptions.isNotEmpty,
-                onSelected: onStatus,
+                onSelected: widget.onStatus,
                 itemBuilder: (_) => [
                   for (final option in statusOptions)
                     PopupMenuItem(
@@ -1217,17 +1364,29 @@ class _DirectorCastingApplicationCard extends StatelessWidget {
                   icon: Icons.chat_bubble_outline_rounded,
                   label: 'Message',
                   compact: true,
-                  onTap: working ? null : onMessage,
+                  onTap: working ? null : widget.onMessage,
                 ),
               ),
-              if (onSendOffer != null)
+              SizedBox(
+                width: 154,
+                child: CoreSecondaryButton(
+                  icon: Icons.event_available_outlined,
+                  label: application.status == 'callback'
+                      ? 'Callback'
+                      : 'Audition meeting',
+                  compact: true,
+                  onTap: () =>
+                      setState(() => _meetingExpanded = !_meetingExpanded),
+                ),
+              ),
+              if (widget.onSendOffer != null)
                 SizedBox(
                   width: 190,
                   child: CorePrimaryButton(
                     icon: Icons.send_outlined,
                     label: 'Send booking offer',
                     compact: true,
-                    onTap: working ? null : onSendOffer,
+                    onTap: working ? null : widget.onSendOffer,
                   ),
                 ),
               if (selfTape != null)
@@ -1253,6 +1412,19 @@ class _DirectorCastingApplicationCard extends StatelessWidget {
                 ),
             ],
           ),
+          if (_meetingExpanded) ...[
+            const SizedBox(height: 12),
+            MeetingNegotiationPanel(
+              thread: application.meetingThread,
+              meetingLabel:
+                  application.status == 'callback' ? 'Callback' : 'Audition',
+              currentUserId: AuthScope.maybeOf(context)?.user?.publicId ?? '',
+              working: working,
+              onPropose: widget.onProposeMeeting,
+              onAccept: widget.onAcceptMeeting,
+              onDecline: widget.onDeclineMeeting,
+            ),
+          ],
         ],
       ),
     );
@@ -1297,6 +1469,576 @@ class _DirectorCastingApplicationCard extends StatelessWidget {
         ],
       'callback' || 'offer_received' => const [
           ('selected', 'Select actor'),
+          ('rejected', 'Reject application'),
+        ],
+      _ => const [],
+    };
+  }
+}
+
+String _meetingLabelForCategory(String category) {
+  return switch (category) {
+    'model' => 'Meeting',
+    'location' => 'Site Visit',
+    'equipment' => 'Viewing',
+    'crew' => 'Interview',
+    _ => 'Meeting',
+  };
+}
+
+String _meetingKindForCategory(String category) {
+  return switch (category) {
+    'model' => 'meeting',
+    'location' => 'site_visit',
+    'equipment' => 'viewing',
+    'crew' => 'interview',
+    _ => 'meeting',
+  };
+}
+
+class _OpportunityApplicationsTab extends StatefulWidget {
+  final List<OpportunityApplication> applications;
+
+  const _OpportunityApplicationsTab({required this.applications});
+
+  @override
+  State<_OpportunityApplicationsTab> createState() =>
+      _OpportunityApplicationsTabState();
+}
+
+class _OpportunityApplicationsTabState
+    extends State<_OpportunityApplicationsTab> {
+  late List<OpportunityApplication> _rows = [...widget.applications];
+  String _filter = 'All';
+  String? _workingId;
+
+  @override
+  void didUpdateWidget(covariant _OpportunityApplicationsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.applications != widget.applications) {
+      _rows = [...widget.applications];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _rows.where(_matchesFilter).toList();
+    return DPSectionCard(
+      title: 'Applications',
+      icon: Icons.assignment_ind_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final filter in const [
+                  'All',
+                  'New',
+                  'Shortlisted',
+                  'Meetings',
+                  'Selected',
+                  'Closed',
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: DpDotChip(
+                      label: filter,
+                      active: _filter == filter,
+                      onTap: () => setState(() => _filter = filter),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (rows.isEmpty)
+            const CoreEmptyState(
+              icon: Icons.assignment_ind_outlined,
+              title: 'No applications',
+              message:
+                  'Applications appear here when providers apply to an open requirement on this project.',
+            )
+          else
+            for (var index = 0; index < rows.length; index++) ...[
+              _DirectorOpportunityApplicationCard(
+                application: rows[index],
+                working: _workingId == rows[index].publicId,
+                onStatus: (status) => _updateStatus(rows[index], status),
+                onProposeMeeting: ({
+                  required meetingAt,
+                  location,
+                  onlineUrl,
+                  instructions,
+                  contact,
+                  message,
+                }) =>
+                    _proposeMeeting(
+                  rows[index],
+                  meetingAt: meetingAt,
+                  location: location,
+                  onlineUrl: onlineUrl,
+                  instructions: instructions,
+                  contact: contact,
+                  message: message,
+                ),
+                onAcceptMeeting: (roundId) =>
+                    _acceptMeeting(rows[index], roundId),
+                onDeclineMeeting: (roundId, reason) =>
+                    _declineMeeting(rows[index], roundId, reason),
+              ),
+              if (index != rows.length - 1) const SizedBox(height: 10),
+            ],
+        ],
+      ),
+    );
+  }
+
+  bool _matchesFilter(OpportunityApplication item) {
+    return switch (_filter) {
+      'New' => const {'submitted', 'viewed'}.contains(item.status),
+      'Shortlisted' => item.status == 'shortlisted',
+      'Meetings' => item.status == 'meeting_requested',
+      'Selected' => item.status == 'selected',
+      'Closed' => const {'rejected', 'withdrawn'}.contains(item.status),
+      _ => true,
+    };
+  }
+
+  Future<void> _updateStatus(
+    OpportunityApplication application,
+    String status,
+  ) async {
+    Map<String, dynamic> body = {'status': status};
+    if (status == 'meeting_requested') {
+      final details = await _meetingRequestDialog(application.role.category);
+      if (details == null || !mounted) return;
+      body = {...body, ...details};
+    } else if (status == 'rejected') {
+      final reason = await _rejectionDialog();
+      if (reason == null || !mounted) return;
+      body['note'] = reason;
+    }
+    final opportunities = OpportunitiesScope.maybeOf(context);
+    if (opportunities == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await opportunities.updateDirectorApplication(
+        application.publicId,
+        body,
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Application updated to ${updated.statusLabel}');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  void _replaceRow(OpportunityApplication updated) {
+    final index =
+        _rows.indexWhere((item) => item.publicId == updated.publicId);
+    if (index >= 0) setState(() => _rows[index] = updated);
+  }
+
+  Future<void> _proposeMeeting(
+    OpportunityApplication application, {
+    required DateTime meetingAt,
+    String? location,
+    String? onlineUrl,
+    String? instructions,
+    String? contact,
+    String? message,
+  }) async {
+    final opportunities = OpportunitiesScope.maybeOf(context);
+    if (opportunities == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await opportunities.proposeDirectorMeeting(
+        application.publicId,
+        {
+          'meeting_at': meetingAt.toUtc().toIso8601String(),
+          if (location != null) 'location': location,
+          if (onlineUrl != null) 'online_url': onlineUrl,
+          if (instructions != null) 'instructions': instructions,
+          if (contact != null) 'contact': contact,
+          if (message != null) 'message': message,
+        },
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Meeting proposal sent');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<void> _acceptMeeting(
+    OpportunityApplication application,
+    String roundId,
+  ) async {
+    final opportunities = OpportunitiesScope.maybeOf(context);
+    if (opportunities == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await opportunities.acceptDirectorMeetingRound(
+        application.publicId,
+        roundId,
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Meeting confirmed');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<void> _declineMeeting(
+    OpportunityApplication application,
+    String roundId,
+    String? reason,
+  ) async {
+    final opportunities = OpportunitiesScope.maybeOf(context);
+    if (opportunities == null) return;
+    setState(() => _workingId = application.publicId);
+    try {
+      final updated = await opportunities.declineDirectorMeetingRound(
+        application.publicId,
+        roundId,
+        reason: reason,
+      );
+      if (!mounted) return;
+      _replaceRow(updated);
+      dpSnack(context, 'Meeting proposal declined');
+    } on ApiException catch (error) {
+      if (mounted) dpSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _workingId = null);
+    }
+  }
+
+  Future<Map<String, dynamic>?> _meetingRequestDialog(String category) async {
+    final date = TextEditingController();
+    final location = TextEditingController();
+    final onlineUrl = TextEditingController();
+    final instructions = TextEditingController();
+    final contact = TextEditingController();
+    final label = _meetingLabelForCategory(category);
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Schedule $label'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CoreTextField(
+                controller: date,
+                label: 'Date and time (ISO)',
+                icon: Icons.schedule_outlined,
+                keyboardType: TextInputType.datetime,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: location,
+                label: 'Location',
+                icon: Icons.location_on_outlined,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: onlineUrl,
+                label: 'Online meeting link',
+                icon: Icons.link_outlined,
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: instructions,
+                label: 'Instructions',
+                icon: Icons.assignment_outlined,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: contact,
+                label: 'Contact details',
+                icon: Icons.contact_mail_outlined,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = DateTime.tryParse(date.text.trim());
+              if (parsed == null) {
+                dpSnack(context, 'Enter a valid ISO date and time');
+                return;
+              }
+              Navigator.pop(
+                dialogContext,
+                {
+                  'meeting_at': parsed.toUtc().toIso8601String(),
+                  if (location.text.trim().isNotEmpty)
+                    'meeting_location': location.text.trim(),
+                  if (onlineUrl.text.trim().isNotEmpty)
+                    'meeting_online_url': onlineUrl.text.trim(),
+                  if (instructions.text.trim().isNotEmpty)
+                    'meeting_instructions': instructions.text.trim(),
+                  if (contact.text.trim().isNotEmpty)
+                    'meeting_contact': contact.text.trim(),
+                  'meeting_kind': _meetingKindForCategory(category),
+                },
+              );
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+    date.dispose();
+    location.dispose();
+    onlineUrl.dispose();
+    instructions.dispose();
+    contact.dispose();
+    return result;
+  }
+
+  Future<String?> _rejectionDialog() async {
+    final reason = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Close application'),
+        content: CoreTextField(
+          controller: reason,
+          label: 'Applicant-facing reason',
+          icon: Icons.notes_outlined,
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (reason.text.trim().isEmpty) {
+                dpSnack(context, 'Add a short reason for the applicant');
+                return;
+              }
+              Navigator.pop(dialogContext, reason.text.trim());
+            },
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+    reason.dispose();
+    return result;
+  }
+}
+
+class _DirectorOpportunityApplicationCard extends StatefulWidget {
+  final OpportunityApplication application;
+  final bool working;
+  final ValueChanged<String> onStatus;
+  final Future<void> Function({
+    required DateTime meetingAt,
+    String? location,
+    String? onlineUrl,
+    String? instructions,
+    String? contact,
+    String? message,
+  }) onProposeMeeting;
+  final Future<void> Function(String roundId) onAcceptMeeting;
+  final Future<void> Function(String roundId, String? reason) onDeclineMeeting;
+
+  const _DirectorOpportunityApplicationCard({
+    required this.application,
+    required this.working,
+    required this.onStatus,
+    required this.onProposeMeeting,
+    required this.onAcceptMeeting,
+    required this.onDeclineMeeting,
+  });
+
+  @override
+  State<_DirectorOpportunityApplicationCard> createState() =>
+      _DirectorOpportunityApplicationCardState();
+}
+
+class _DirectorOpportunityApplicationCardState
+    extends State<_DirectorOpportunityApplicationCard> {
+  bool _meetingExpanded = false;
+
+  OpportunityApplication get application => widget.application;
+  bool get working => widget.working;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final statusOptions =
+        _statusOptions(application.status, application.role.category);
+    final meetingLabel = _meetingLabelForCategory(application.role.category);
+    return DPGlassCard(
+      selected: const {
+        'submitted',
+        'viewed',
+        'meeting_requested',
+      }.contains(application.status),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              EntityAvatar(
+                label: application.applicant.displayName,
+                size: 44,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      application.applicant.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      application.role.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              DPStatusChip(
+                label: application.statusLabel,
+                tone: _tone(application.status),
+              ),
+              const SizedBox(width: 6),
+              PopupMenuButton<String>(
+                tooltip: 'Update application',
+                enabled: !working && statusOptions.isNotEmpty,
+                onSelected: widget.onStatus,
+                itemBuilder: (_) => [
+                  for (final option in statusOptions)
+                    PopupMenuItem(
+                      value: option.$1,
+                      child: Text(option.$2),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if ((application.coverNote ?? '').isNotEmpty)
+            Text(
+              application.coverNote!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: colors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              DPStatusChip(
+                label: '${application.attachmentFiles.length} attachment(s)',
+                tone: DpTone.info,
+              ),
+              if (application.meeting?.confirmedAt != null)
+                DPStatusChip(
+                  label: '$meetingLabel confirmed',
+                  tone: DpTone.success,
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: 154,
+                child: CoreSecondaryButton(
+                  icon: Icons.event_available_outlined,
+                  label: meetingLabel,
+                  compact: true,
+                  onTap: () =>
+                      setState(() => _meetingExpanded = !_meetingExpanded),
+                ),
+              ),
+            ],
+          ),
+          if (_meetingExpanded) ...[
+            const SizedBox(height: 12),
+            MeetingNegotiationPanel(
+              thread: application.meetingThread,
+              meetingLabel: meetingLabel,
+              currentUserId: AuthScope.maybeOf(context)?.user?.publicId ?? '',
+              working: working,
+              onPropose: widget.onProposeMeeting,
+              onAccept: widget.onAcceptMeeting,
+              onDecline: widget.onDeclineMeeting,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  DpTone _tone(String status) {
+    return switch (status) {
+      'selected' => DpTone.success,
+      'rejected' || 'withdrawn' => DpTone.danger,
+      'shortlisted' || 'meeting_requested' => DpTone.warning,
+      _ => DpTone.neutral,
+    };
+  }
+
+  List<(String, String)> _statusOptions(String status, String category) {
+    final meetingLabel = _meetingLabelForCategory(category);
+    return switch (status) {
+      'submitted' || 'viewed' => [
+          ('shortlisted', 'Shortlist'),
+          ('meeting_requested', 'Schedule $meetingLabel'),
+          ('selected', 'Select applicant'),
+          ('rejected', 'Reject application'),
+        ],
+      'shortlisted' => [
+          ('meeting_requested', 'Schedule $meetingLabel'),
+          ('selected', 'Select applicant'),
+          ('rejected', 'Reject application'),
+        ],
+      'meeting_requested' => const [
+          ('selected', 'Select applicant'),
           ('rejected', 'Reject application'),
         ],
       _ => const [],

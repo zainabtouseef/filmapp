@@ -379,6 +379,20 @@ def _equipment_item_for_user(public_id: str, user: User) -> EquipmentItem:
 
 
 def _sync_equipment_listing(profile: EquipmentProviderProfile) -> None:
+    # Resolve the rate lookup before creating/adding a new listing row: once
+    # an incomplete (title-less) listing is added to the session, this
+    # SELECT would trigger an autoflush of it and violate the NOT NULL
+    # constraint on `title`.
+    rate_item = db.session.execute(
+        select(EquipmentItem)
+        .where(
+            EquipmentItem.provider_profile_id == profile.id,
+            EquipmentItem.status.in_(["available", "published", "active"]),
+            EquipmentItem.day_rate_minor.is_not(None),
+        )
+        .order_by(EquipmentItem.day_rate_minor.asc())
+        .limit(1)
+    ).scalar_one_or_none()
     listing = db.session.execute(
         select(MarketplaceListing).where(
             MarketplaceListing.owner_user_id == profile.user_id,
@@ -396,16 +410,6 @@ def _sync_equipment_listing(profile: EquipmentProviderProfile) -> None:
             visibility="public",
         )
         db.session.add(listing)
-    rate_item = db.session.execute(
-        select(EquipmentItem)
-        .where(
-            EquipmentItem.provider_profile_id == profile.id,
-            EquipmentItem.status.in_(["available", "published", "active"]),
-            EquipmentItem.day_rate_minor.is_not(None),
-        )
-        .order_by(EquipmentItem.day_rate_minor.asc())
-        .limit(1)
-    ).scalar_one_or_none()
     listing.title = profile.name[:180]
     listing.summary = (
         profile.bio

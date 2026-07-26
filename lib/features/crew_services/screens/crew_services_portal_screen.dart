@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
 import '../routes/crew_services_routes.dart';
 import '../widgets/crew_services_shell.dart';
 import 'cr01_crew_dashboard_screen.dart';
@@ -9,6 +10,7 @@ import 'cr04_availability_calendar_screen.dart';
 import 'cr05_requests_negotiation_screen.dart';
 import 'cr06_contracts_payments_screen.dart';
 import 'cr07_ratings_work_history_screen.dart';
+import 'cr08_opportunities_screen.dart';
 
 class CrewServicesPortalScreen extends StatelessWidget {
   final String routeName;
@@ -40,6 +42,11 @@ class CrewServicesPortalScreen extends StatelessWidget {
         ),
       CrewServicesRoutes.contracts => const CR06ContractsPaymentsScreen(),
       CrewServicesRoutes.ratings => const CR07RatingsWorkHistoryScreen(),
+      CrewServicesRoutes.opportunities => const CR08OpportunitiesScreen(),
+      CrewServicesRoutes.opportunityApplicationDetail =>
+        OpportunityApplicationDetailScreen(
+          applicationId: arguments is String ? arguments as String : null,
+        ),
       _ => const CR01CrewDashboardScreen(),
     };
   }

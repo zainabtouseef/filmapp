@@ -56,6 +56,7 @@ from app.models.kyc import KycDocument, KycSubmission, VerificationEvent
 from app.models.marketplace import (
     City,
     Country,
+    CreditEntry,
     ListingMedia,
     MarketplaceListing,
     ModelCampaignCategory,
@@ -92,6 +93,10 @@ from app.models.operations import (
     SafetyCheckIn,
     SafetyCheckItem,
 )
+from app.models.opportunities import (
+    RequirementApplication,
+    RequirementApplicationStatusEvent,
+)
 from app.models.payments import (
     BookingFeeSnapshot,
     FeeRule,
@@ -113,6 +118,7 @@ from app.models.projects import (
     RequirementSkill,
     Skill,
 )
+from app.models.scheduling import MeetingRound, MeetingThread
 from app.models.specialist import (
     AgencyCommission,
     AgencyInvitation,
@@ -189,6 +195,7 @@ __all__ = [
     "Conversation",
     "ConversationMember",
     "Country",
+    "CreditEntry",
     "DamageClaim",
     "DamageClaimEvidence",
     "Dispute",
@@ -229,6 +236,8 @@ __all__ = [
     "LocationRule",
     "LocationSpace",
     "MarketplaceListing",
+    "MeetingRound",
+    "MeetingThread",
     "Message",
     "MessageAttachment",
     "ModelCampaignCategory",
@@ -264,6 +273,8 @@ __all__ = [
     "ReleaseHandoverItem",
     "ReleaseWindow",
     "Report",
+    "RequirementApplication",
+    "RequirementApplicationStatusEvent",
     "RequirementSkill",
     "Review",
     "ReviewDimension",

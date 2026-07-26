@@ -12,6 +12,7 @@ from app.api.health import health_blueprint
 from app.api.insurance import insurance_blueprint
 from app.api.marketplace import marketplace_blueprint
 from app.api.operations import operations_blueprint
+from app.api.opportunities import opportunities_blueprint
 from app.api.payments import payments_blueprint
 from app.api.projects import projects_blueprint
 from app.api.specialist import specialist_blueprint
@@ -28,6 +29,7 @@ api_v1.register_blueprint(marketplace_blueprint)
 api_v1.register_blueprint(projects_blueprint)
 api_v1.register_blueprint(bookings_blueprint)
 api_v1.register_blueprint(casting_blueprint)
+api_v1.register_blueprint(opportunities_blueprint)
 api_v1.register_blueprint(contracts_blueprint)
 api_v1.register_blueprint(director_blueprint)
 api_v1.register_blueprint(payments_blueprint)

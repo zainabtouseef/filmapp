@@ -11,6 +11,11 @@ class LocationOwnerRoutes {
   static const checkOut = '/location-owner/check-out';
   static const earnings = '/location-owner/earnings';
   static const performance = '/location-owner/performance';
+  static const profile = '/location-owner/profile';
+  static const portfolio = '/location-owner/portfolio';
+  static const opportunities = '/location-owner/opportunities';
+  static const opportunityApplicationDetail =
+      '/location-owner/opportunities/application';
 
   static const primaryNav = [
     home,
@@ -30,6 +35,10 @@ class LocationOwnerRoutes {
     checkOut,
     earnings,
     performance,
+    profile,
+    portfolio,
+    opportunities,
+    opportunityApplicationDetail,
   ];
 
   static String titleFor(String route) {
@@ -44,6 +53,10 @@ class LocationOwnerRoutes {
       checkOut => 'Check-Out & Claims',
       earnings => 'Earnings',
       performance => 'Property Insights',
+      profile => 'Owner Profile',
+      portfolio => 'Portfolio',
+      opportunities => 'Opportunities',
+      opportunityApplicationDetail => 'Application Details',
       _ => 'Location Owner',
     };
   }
@@ -60,6 +73,10 @@ class LocationOwnerRoutes {
       checkOut => 'LO-08',
       earnings => 'LO-09',
       performance => 'LO-10',
+      profile => 'LO-11',
+      portfolio => 'LO-12',
+      opportunities => 'LO-13',
+      opportunityApplicationDetail => 'LO-14',
       _ => 'LO',
     };
   }

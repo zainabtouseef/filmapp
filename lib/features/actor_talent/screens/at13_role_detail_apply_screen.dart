@@ -352,6 +352,18 @@ class _RoleHero extends StatelessWidget {
               label: 'Application deadline',
               value: actorCastingDate(role.applicationDueAt),
             ),
+            if (role.quantity > 1)
+              ActorInfoRow(
+                icon: Icons.groups_outlined,
+                label: 'Positions',
+                value: '${role.quantity}',
+              ),
+            if (role.verifiedOnly)
+              ActorInfoRow(
+                icon: Icons.verified_user_outlined,
+                label: 'Visibility',
+                value: 'Verified profiles only',
+              ),
           ],
         ),
       ),
@@ -405,6 +417,15 @@ class _RoleBrief extends StatelessWidget {
               label: 'Instructions',
               value: role.instructions!,
             ),
+          ],
+          if (role.requiredDocuments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            for (final document in role.requiredDocuments)
+              ActorInfoRow(
+                icon: Icons.description_outlined,
+                label: 'Required document',
+                value: document,
+              ),
           ],
           if (role.sidesFile != null) ...[
             const SizedBox(height: 10),

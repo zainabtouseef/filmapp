@@ -33,6 +33,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   late final TextEditingController credits;
   late final TextEditingController training;
   late final TextEditingController instagram;
+  late final TextEditingController tiktok;
   late final TextEditingController followers;
   late final TextEditingController website;
   late final TextEditingController workHistory;
@@ -75,6 +76,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     credits = TextEditingController();
     training = TextEditingController();
     instagram = TextEditingController();
+    tiktok = TextEditingController();
     followers = TextEditingController();
     website = TextEditingController();
     workHistory = TextEditingController();
@@ -109,6 +111,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     credits.dispose();
     training.dispose();
     instagram.dispose();
+    tiktok.dispose();
     followers.dispose();
     website.dispose();
     workHistory.dispose();
@@ -363,7 +366,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
           const SizedBox(height: 10),
           ActorCollapsibleSection(
             title: 'Social & Representation',
-            subtitle: 'Instagram, followers, agency',
+            subtitle: 'Instagram, TikTok, followers, agency',
             icon: Icons.apartment_outlined,
             tone: ActorTone.purple,
             child: Column(
@@ -381,13 +384,20 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: CoreTextField(
-                        controller: followers,
-                        label: 'Followers',
-                        icon: Icons.people_alt_outlined,
+                        controller: tiktok,
+                        label: 'TikTok',
+                        icon: Icons.music_note_rounded,
                         onChanged: (_) => setState(() {}),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                CoreTextField(
+                  controller: followers,
+                  label: 'Followers',
+                  icon: Icons.people_alt_outlined,
+                  onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 10),
                 CoreTextField(
@@ -450,6 +460,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
         city: city.text,
         languages: languages.text,
         instagram: instagram.text,
+        tiktok: tiktok.text,
         followers: followers.text,
         workHistory: workHistory.text,
         ageRange: ageRange.text,
@@ -740,6 +751,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             : profile.bio ?? '';
         instagram.text = talent.socialLinks['instagram']?.toString() ??
             _bioValue(profile.bio, 'Instagram');
+        tiktok.text = talent.socialLinks['tiktok']?.toString() ?? '';
         followers.text = talent.socialLinks['followers']?.toString() ??
             _bioValue(profile.bio, 'Followers');
         agency.text = talent.representation['agency_name']?.toString() ??
@@ -1132,6 +1144,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     credits.clear();
     training.clear();
     instagram.clear();
+    tiktok.clear();
     followers.clear();
     website.clear();
     workHistory.clear();
@@ -1255,6 +1268,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
   Map<String, dynamic> _socialLinksForBackend() {
     return {
       if (instagram.text.trim().isNotEmpty) 'instagram': instagram.text.trim(),
+      if (tiktok.text.trim().isNotEmpty) 'tiktok': tiktok.text.trim(),
       if (followers.text.trim().isNotEmpty) 'followers': followers.text.trim(),
     };
   }
@@ -1266,6 +1280,7 @@ class _ProfileSummary extends StatelessWidget {
   final String city;
   final String languages;
   final String instagram;
+  final String tiktok;
   final String followers;
   final String workHistory;
   final String ageRange;
@@ -1278,6 +1293,7 @@ class _ProfileSummary extends StatelessWidget {
     required this.city,
     required this.languages,
     required this.instagram,
+    required this.tiktok,
     required this.followers,
     required this.workHistory,
     required this.ageRange,
@@ -1343,6 +1359,11 @@ class _ProfileSummary extends StatelessWidget {
                         value: instagram.isEmpty
                             ? 'Not connected'
                             : '$instagram • ${followers.isEmpty ? 'followers not set' : followers}',
+                      ),
+                      ActorInfoRow(
+                        icon: Icons.music_note_rounded,
+                        label: 'TikTok',
+                        value: tiktok.isEmpty ? 'Not connected' : tiktok,
                       ),
                       ActorInfoRow(
                         icon: Icons.history_edu_outlined,
@@ -1413,6 +1434,11 @@ class _ProfileSummary extends StatelessWidget {
             value: instagram.isEmpty
                 ? 'Not connected'
                 : '$instagram • ${followers.isEmpty ? 'followers not set' : followers}',
+          ),
+          ActorInfoRow(
+            icon: Icons.music_note_rounded,
+            label: 'TikTok',
+            value: tiktok.isEmpty ? 'Not connected' : tiktok,
           ),
           ActorInfoRow(
             icon: Icons.history_edu_outlined,

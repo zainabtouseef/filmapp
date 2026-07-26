@@ -33,6 +33,8 @@ class _DPRequirementBuilderScreenState
   final _summary = TextEditingController();
   final _budgetMin = TextEditingController();
   final _budgetMax = TextEditingController();
+  final _quantity = TextEditingController(text: '1');
+  final _requiredDocuments = TextEditingController();
   final _roleType = TextEditingController();
   final _workLocation = TextEditingController();
   final _deadline = TextEditingController();
@@ -43,6 +45,7 @@ class _DPRequirementBuilderScreenState
   final _contactEmail = TextEditingController();
   String _category = 'Roles';
   String _auditionMode = 'self_tape';
+  String _visibility = 'all';
   Future<List<ProjectRequirement>>? _requirementsFuture;
   bool _started = false;
   bool _saving = false;
@@ -66,6 +69,8 @@ class _DPRequirementBuilderScreenState
     _summary.dispose();
     _budgetMin.dispose();
     _budgetMax.dispose();
+    _quantity.dispose();
+    _requiredDocuments.dispose();
     _roleType.dispose();
     _workLocation.dispose();
     _deadline.dispose();
@@ -153,6 +158,40 @@ class _DPRequirementBuilderScreenState
                 label: 'Maximum fee (PKR)',
                 icon: Icons.savings_outlined,
                 keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _quantity,
+                label: 'Positions needed',
+                icon: Icons.groups_outlined,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _requiredDocuments,
+                label: 'Required documents (comma separated)',
+                icon: Icons.description_outlined,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final option in const {
+                      'all': 'Show to all profiles',
+                      'verified_only': 'Verified profiles only',
+                    }.entries)
+                      ChoiceChip(
+                        label: Text(option.value),
+                        selected: _visibility == option.key,
+                        onSelected: (_) =>
+                            setState(() => _visibility = option.key),
+                      ),
+                  ],
+                ),
               ),
               if (_backendCategory(_category) == 'talent') ...[
                 const SizedBox(height: 12),
@@ -344,6 +383,9 @@ class _DPRequirementBuilderScreenState
         summary: _summary.text.trim(),
         budgetMinMinor: _parseMinor(_budgetMin.text),
         budgetMaxMinor: _parseMinor(_budgetMax.text),
+        visibility: _visibility,
+        quantity: int.tryParse(_quantity.text.trim()) ?? 1,
+        requiredDocuments: _commaValues(_requiredDocuments.text),
       );
       if (_backendCategory(_category) == 'talent') {
         if (casting == null) {
@@ -442,7 +484,8 @@ class _DPRequirementBuilderScreenState
 
   String _backendCategory(String value) {
     return switch (value) {
-      'Roles' || 'Models' => 'talent',
+      'Roles' => 'talent',
+      'Models' => 'model',
       'Locations' => 'location',
       'Media & Equipment' => 'equipment',
       'Crew' => 'crew',

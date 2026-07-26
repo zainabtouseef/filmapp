@@ -250,7 +250,7 @@ def test_portfolio_media_validation_update_and_direct_listing_media(
     assert talent.status_code == 200, talent.text
 
     bad_profile_type = client.get(
-        "/api/v1/portfolio?profile_type=crew", headers=headers
+        "/api/v1/portfolio?profile_type=not_a_real_type", headers=headers
     )
     assert bad_profile_type.status_code == 422
 

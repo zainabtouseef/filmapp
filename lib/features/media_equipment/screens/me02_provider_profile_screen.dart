@@ -1,10 +1,14 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../widgets/media_equipment_components.dart';
@@ -19,6 +23,7 @@ class ME02ProviderProfileScreen extends StatefulWidget {
 
 class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
   Future<_ProfileData>? _dataFuture;
+  bool _uploadingAvatar = false;
 
   @override
   void didChangeDependencies() {
@@ -29,14 +34,63 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
 
   void _reload() {
     final operations = OperationsScope.maybeOf(context);
-    if (operations == null) return;
-    _dataFuture = _load(operations);
+    final auth = AuthScope.maybeOf(context);
+    if (operations == null || auth == null) return;
+    _dataFuture = _load(operations, auth);
   }
 
-  Future<_ProfileData> _load(OperationsController operations) async {
+  Future<_ProfileData> _load(
+    OperationsController operations,
+    AuthController auth,
+  ) async {
     final profile = await operations.equipmentProfile(force: true);
     final items = await operations.equipmentItems(force: true);
-    return _ProfileData(profile: profile, items: items);
+    final userProfile = await auth.myProfile();
+    return _ProfileData(profile: profile, items: items, userProfile: userProfile);
+  }
+
+  Future<void> _pickAvatar() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) return;
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+      withData: true,
+    );
+    final item = result?.files.single;
+    final bytes = item?.bytes;
+    if (item == null || bytes == null) return;
+    setState(() => _uploadingAvatar = true);
+    try {
+      final uploaded = await auth.uploadFile(
+        purpose: 'profile_media',
+        file: PickedFileData(
+          name: item.name,
+          mimeType: switch (item.extension?.toLowerCase()) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            _ => 'image/jpeg',
+          },
+          bytes: bytes,
+        ),
+      );
+      final current = await auth.myProfile();
+      await auth.updateMyProfile(
+        bio: current.bio ?? '',
+        cityId: current.city?.publicId,
+        visibility: 'public',
+        websiteUrl: current.websiteUrl,
+        socialLinks: current.socialLinks,
+        avatarFileId: uploaded.publicId,
+      );
+      if (!mounted) return;
+      setState(_reload);
+      mediaSnack(context, 'Provider photo updated');
+    } catch (error) {
+      if (mounted) mediaSnack(context, 'Could not upload photo: $error');
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
   }
 
   @override
@@ -71,7 +125,7 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
             message:
                 'Directors need a verified business name, service coverage, equipment categories, and operating terms.',
             actionLabel: 'Create provider profile',
-            onAction: () => _showEditor(),
+            onAction: () => _showEditor(userProfile: data.userProfile),
           );
         }
         return Column(
@@ -84,18 +138,42 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                 left: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        color: context.appColors.softSurface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: context.appColors.border),
-                      ),
-                      child: Icon(
-                        Icons.video_camera_back_outlined,
-                        color: context.appColors.goldDark,
-                        size: 54,
+                    GestureDetector(
+                      onTap: _uploadingAvatar ? null : _pickAvatar,
+                      child: Container(
+                        width: double.infinity,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: context.appColors.softSurface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: context.appColors.border),
+                          image: data.userProfile.avatarFile?.publicUrl == null
+                              ? null
+                              : DecorationImage(
+                                  image: NetworkImage(
+                                    data.userProfile.avatarFile!.publicUrl!,
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                        child: _uploadingAvatar
+                            ? Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: context.appColors.goldDark,
+                                  ),
+                                ),
+                              )
+                            : data.userProfile.avatarFile == null
+                                ? Icon(
+                                    Icons.add_photo_alternate_outlined,
+                                    color: context.appColors.goldDark,
+                                    size: 54,
+                                  )
+                                : null,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -160,6 +238,20 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                           : profile.serviceCategories,
                     ),
                     MediaInfoRow(
+                      icon: Icons.alternate_email_rounded,
+                      label: 'Instagram',
+                      value: data.userProfile.socialLinks['instagram']
+                              ?.toString() ??
+                          'Not connected',
+                    ),
+                    MediaInfoRow(
+                      icon: Icons.music_note_rounded,
+                      label: 'TikTok',
+                      value: data.userProfile.socialLinks['tiktok']
+                              ?.toString() ??
+                          'Not connected',
+                    ),
+                    MediaInfoRow(
                       icon: Icons.inventory_2_outlined,
                       label: 'Inventory',
                       value: '${data.items.length} registered assets',
@@ -176,7 +268,10 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                       icon: Icons.edit_outlined,
                       label: 'Edit provider profile',
                       compact: true,
-                      onTap: () => _showEditor(profile),
+                      onTap: () => _showEditor(
+                        profile: profile,
+                        userProfile: data.userProfile,
+                      ),
                     ),
                   ],
                 ),
@@ -239,12 +334,21 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
     );
   }
 
-  void _showEditor([EquipmentProfileDto? profile]) {
+  void _showEditor({
+    EquipmentProfileDto? profile,
+    required UserProfile userProfile,
+  }) {
     final name = TextEditingController(text: profile?.name ?? '');
     final coverage = TextEditingController(text: profile?.coverage ?? '');
     final categories =
         TextEditingController(text: profile?.serviceCategories ?? '');
     final bio = TextEditingController(text: profile?.bio ?? '');
+    final instagram = TextEditingController(
+      text: userProfile.socialLinks['instagram']?.toString() ?? '',
+    );
+    final tiktok = TextEditingController(
+      text: userProfile.socialLinks['tiktok']?.toString() ?? '',
+    );
     var providerType = profile?.providerType ?? 'rental_house';
     var visibility = profile?.visibility ?? 'public';
     showMediaSheet(
@@ -306,6 +410,26 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                 icon: Icons.notes_outlined,
                 maxLines: 4,
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: CoreTextField(
+                      controller: instagram,
+                      label: 'Instagram',
+                      icon: Icons.alternate_email_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CoreTextField(
+                      controller: tiktok,
+                      label: 'TikTok',
+                      icon: Icons.music_note_rounded,
+                    ),
+                  ),
+                ],
+              ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Public in Director discovery'),
@@ -331,7 +455,8 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                     return;
                   }
                   final operations = OperationsScope.maybeOf(context);
-                  if (operations == null) return;
+                  final auth = AuthScope.maybeOf(context);
+                  if (operations == null || auth == null) return;
                   try {
                     await operations.upsertEquipmentProfile(
                       name: name.text.trim(),
@@ -340,6 +465,18 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                       serviceCategories: categories.text.trim(),
                       bio: bio.text.trim(),
                       visibility: visibility,
+                    );
+                    await auth.updateMyProfile(
+                      bio: userProfile.bio ?? '',
+                      cityId: userProfile.city?.publicId,
+                      visibility: 'public',
+                      websiteUrl: userProfile.websiteUrl,
+                      socialLinks: {
+                        if (instagram.text.trim().isNotEmpty)
+                          'instagram': instagram.text.trim(),
+                        if (tiktok.text.trim().isNotEmpty)
+                          'tiktok': tiktok.text.trim(),
+                      },
                     );
                     if (!mounted || !context.mounted) return;
                     Navigator.pop(context);
@@ -361,6 +498,8 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
       coverage.dispose();
       categories.dispose();
       bio.dispose();
+      instagram.dispose();
+      tiktok.dispose();
     });
   }
 }
@@ -408,10 +547,12 @@ class _InventoryPreview extends StatelessWidget {
 class _ProfileData {
   final EquipmentProfileDto? profile;
   final List<EquipmentItemDto> items;
+  final UserProfile userProfile;
 
   const _ProfileData({
     required this.profile,
     required this.items,
+    required this.userProfile,
   });
 }
 

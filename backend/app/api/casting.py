@@ -9,7 +9,12 @@ from sqlalchemy import func, or_, select
 
 from app.api.auth import _current_user, _json_body
 from app.api.bookings import _user_payload
-from app.api.marketplace import _field_error, _file_payload, _owned_ready_file
+from app.api.marketplace import (
+    _field_error,
+    _file_payload,
+    _has_approved_kyc_for_role,
+    _owned_ready_file,
+)
 from app.api.operations import _parse_datetime
 from app.api.projects import _project_for_user
 from app.errors import APIError
@@ -31,9 +36,19 @@ from app.models.marketplace import (
     UserProfile,
 )
 from app.models.projects import Project, ProjectRequirement
+from app.models.scheduling import MeetingRound
 from app.responses import success
 from app.security import as_utc
 from app.services.notifications import notify_user
+from app.services.scheduling import (
+    accept_round,
+    decline_round,
+    get_or_create_thread,
+    propose_round,
+    round_for_public_id,
+    thread_for_subject,
+    thread_payload,
+)
 
 casting_blueprint = Blueprint("casting", __name__)
 
@@ -104,6 +119,10 @@ def _require_actor(user: User) -> None:
             "An actor/talent role is required.",
             status=403,
         )
+
+
+def _actor_is_verified(user: User) -> bool:
+    return _has_approved_kyc_for_role(user.id, "actor_talent")
 
 
 def _require_director(user: User) -> None:
@@ -245,6 +264,14 @@ def _role_payload(
             requirement.end_date.isoformat() if requirement.end_date else None
         ),
         "status": requirement.status,
+        "category": requirement.category,
+        "visibility": requirement.visibility,
+        "quantity": requirement.quantity,
+        "required_documents": (
+            json.loads(requirement.required_documents_json)
+            if requirement.required_documents_json
+            else []
+        ),
         "skills": [
             {
                 "public_id": row.skill.public_id,
@@ -322,6 +349,9 @@ def _application_payload(item: CastingApplication) -> dict[str, Any]:
             "at": item.callback_at.isoformat() if item.callback_at else None,
             "details": item.callback_details,
         },
+        "meeting_thread": thread_payload(
+            thread_for_subject("casting_application", item.public_id)
+        ),
         "rejection_reason": item.rejection_reason,
         "status_events": [_status_event_payload(row) for row in item.status_events],
         "created_at": item.created_at.isoformat(),
@@ -438,6 +468,22 @@ def _set_status(
     )
 
 
+def _apply_meeting_snapshot(
+    application: CastingApplication, round_: MeetingRound
+) -> None:
+    """Sync the accepted round onto the legacy flat display columns."""
+    if round_.meeting_kind == "callback":
+        application.callback_at = round_.meeting_at
+        application.callback_details = round_.instructions
+    else:
+        application.audition_at = round_.meeting_at
+        application.audition_location = round_.location
+        application.audition_online_url = round_.online_url
+        application.audition_instructions = round_.instructions
+        application.audition_contact = round_.contact
+    application.audition_confirmed_at = utc_now()
+
+
 def _validate_portfolio_ids(user: User, raw_ids: Any) -> list[str]:
     if raw_ids is None or raw_ids == "":
         return []
@@ -545,6 +591,8 @@ def list_casting_roles() -> Response:
             ),
         )
     )
+    if not _actor_is_verified(user):
+        query = query.where(ProjectRequirement.visibility != "verified_only")
     search = request.args.get("q", "").strip()
     if search:
         pattern = f"%{search}%"
@@ -722,6 +770,12 @@ def create_casting_application(public_id: str) -> ResponseReturnValue:
     _require_actor(user)
     role = _role_or_404(public_id)
     _ensure_role_accepting(role)
+    if role.visibility == "verified_only" and not _actor_is_verified(user):
+        raise APIError(
+            "casting.verified_only",
+            "This role is only open to verified profiles.",
+            status=403,
+        )
     existing = db.session.execute(
         select(CastingApplication).where(
             CastingApplication.requirement_id == role.id,
@@ -870,6 +924,105 @@ def confirm_casting_audition(public_id: str) -> Response:
         category="casting",
         title=f"Audition confirmed: {application.requirement.title}",
         body=f"{application.talent_profile.screen_name} confirmed attendance.",
+        route_name="/director/projects/:id",
+        route_params={
+            "projectId": application.requirement.project.public_id,
+            "tab": "casting",
+        },
+    )
+    db.session.commit()
+    return jsonify(success({"application": _application_payload(application)}))
+
+
+@casting_blueprint.get("/casting/applications/<public_id>/meetings")
+def list_casting_meetings(public_id: str) -> Response:
+    user = _current_user()
+    _require_actor(user)
+    application = _actor_application(public_id, user)
+    thread = thread_for_subject("casting_application", application.public_id)
+    return jsonify(success({"thread": thread_payload(thread)}))
+
+
+@casting_blueprint.post("/casting/applications/<public_id>/meetings/propose")
+def propose_casting_meeting(public_id: str) -> ResponseReturnValue:
+    user = _current_user()
+    _require_actor(user)
+    application = _actor_application(public_id, user)
+    payload = _json_body()
+    thread = get_or_create_thread("casting_application", application.public_id)
+    propose_round(
+        thread,
+        user,
+        meeting_at=_parse_datetime(payload.get("meeting_at"), "meeting_at"),
+        location=str(payload.get("location", "")).strip()[:255] or None,
+        online_url=str(payload.get("online_url", "")).strip()[:255] or None,
+        instructions=str(payload.get("instructions", "")).strip()[:4000] or None,
+        contact=str(payload.get("contact", "")).strip()[:255] or None,
+        meeting_kind=str(payload.get("meeting_kind", "")).strip()[:32] or None,
+        message=str(payload.get("message", "")).strip()[:2000] or None,
+    )
+    notify_user(
+        application.requirement.project.owner_user_id,
+        category="casting",
+        title=f"New meeting proposal: {application.requirement.title}",
+        body=f"{application.talent_profile.screen_name} proposed a new meeting time.",
+        route_name="/director/projects/:id",
+        route_params={
+            "projectId": application.requirement.project.public_id,
+            "tab": "casting",
+        },
+    )
+    db.session.commit()
+    return jsonify(success({"application": _application_payload(application)})), 201
+
+
+@casting_blueprint.post(
+    "/casting/applications/<public_id>/meetings/rounds/<round_public_id>/accept"
+)
+def accept_casting_meeting(public_id: str, round_public_id: str) -> Response:
+    user = _current_user()
+    _require_actor(user)
+    application = _actor_application(public_id, user)
+    round_ = round_for_public_id(
+        "casting_application", application.public_id, round_public_id
+    )
+    accept_round(round_, user)
+    _apply_meeting_snapshot(application, round_)
+    notify_user(
+        application.requirement.project.owner_user_id,
+        category="casting",
+        title=f"Meeting confirmed: {application.requirement.title}",
+        body=f"{application.talent_profile.screen_name} accepted the meeting time.",
+        route_name="/director/projects/:id",
+        route_params={
+            "projectId": application.requirement.project.public_id,
+            "tab": "casting",
+        },
+    )
+    db.session.commit()
+    return jsonify(success({"application": _application_payload(application)}))
+
+
+@casting_blueprint.post(
+    "/casting/applications/<public_id>/meetings/rounds/<round_public_id>/decline"
+)
+def decline_casting_meeting(public_id: str, round_public_id: str) -> Response:
+    user = _current_user()
+    _require_actor(user)
+    application = _actor_application(public_id, user)
+    round_ = round_for_public_id(
+        "casting_application", application.public_id, round_public_id
+    )
+    payload = _json_body()
+    decline_round(round_, user, str(payload.get("reason", "")).strip() or None)
+    notify_user(
+        application.requirement.project.owner_user_id,
+        category="casting",
+        title=f"Meeting time declined: {application.requirement.title}",
+        body=(
+            f"{application.talent_profile.screen_name} declined "
+            "the proposed meeting time."
+        ),
         route_name="/director/projects/:id",
         route_params={
             "projectId": application.requirement.project.public_id,
@@ -1071,12 +1224,125 @@ def update_director_casting_application(public_id: str) -> Response:
                 attribute,
                 _parse_datetime(payload[key], key) if payload.get(key) else None,
             )
+    if (
+        "status" in payload
+        and status in {"audition_requested", "self_tape_requested", "callback"}
+        and thread_for_subject("casting_application", application.public_id) is None
+    ):
+        thread = get_or_create_thread("casting_application", application.public_id)
+        meeting_at = application.audition_at or application.audition_due_at
+        if meeting_at is not None:
+            propose_round(
+                thread,
+                user,
+                meeting_at=meeting_at,
+                location=application.audition_location,
+                online_url=application.audition_online_url,
+                instructions=(
+                    application.callback_details
+                    if status == "callback"
+                    else application.audition_instructions
+                ),
+                contact=application.audition_contact,
+                meeting_kind=("callback" if status == "callback" else "audition"),
+                message=str(payload.get("note", "")).strip() or None,
+            )
     db.session.flush()
     notify_user(
         application.actor_user_id,
         category="casting",
         title=f"Application update: {application.requirement.title}",
         body=f"Your status is now {application.status.replace('_', ' ')}.",
+        route_name="/talent/applications/:id",
+        route_params={"id": application.public_id},
+    )
+    db.session.commit()
+    return jsonify(success({"application": _application_payload(application)}))
+
+
+@casting_blueprint.get("/director/casting-applications/<public_id>/meetings")
+def list_director_casting_meetings(public_id: str) -> Response:
+    user = _current_user()
+    _require_director(user)
+    application = _director_application(public_id, user)
+    thread = thread_for_subject("casting_application", application.public_id)
+    return jsonify(success({"thread": thread_payload(thread)}))
+
+
+@casting_blueprint.post("/director/casting-applications/<public_id>/meetings/propose")
+def propose_director_casting_meeting(public_id: str) -> ResponseReturnValue:
+    user = _current_user()
+    _require_director(user)
+    application = _director_application(public_id, user)
+    payload = _json_body()
+    thread = get_or_create_thread("casting_application", application.public_id)
+    propose_round(
+        thread,
+        user,
+        meeting_at=_parse_datetime(payload.get("meeting_at"), "meeting_at"),
+        location=str(payload.get("location", "")).strip()[:255] or None,
+        online_url=str(payload.get("online_url", "")).strip()[:255] or None,
+        instructions=str(payload.get("instructions", "")).strip()[:4000] or None,
+        contact=str(payload.get("contact", "")).strip()[:255] or None,
+        meeting_kind=str(payload.get("meeting_kind", "")).strip()[:32] or None,
+        message=str(payload.get("message", "")).strip()[:2000] or None,
+    )
+    notify_user(
+        application.actor_user_id,
+        category="casting",
+        title=f"New meeting proposal: {application.requirement.title}",
+        body=f"{application.requirement.project.title} proposed a new meeting time.",
+        route_name="/talent/applications/:id",
+        route_params={"id": application.public_id},
+    )
+    db.session.commit()
+    return jsonify(success({"application": _application_payload(application)})), 201
+
+
+@casting_blueprint.post(
+    "/director/casting-applications/<public_id>/meetings/rounds/<round_public_id>/accept"
+)
+def accept_director_casting_meeting(public_id: str, round_public_id: str) -> Response:
+    user = _current_user()
+    _require_director(user)
+    application = _director_application(public_id, user)
+    round_ = round_for_public_id(
+        "casting_application", application.public_id, round_public_id
+    )
+    accept_round(round_, user)
+    _apply_meeting_snapshot(application, round_)
+    notify_user(
+        application.actor_user_id,
+        category="casting",
+        title=f"Meeting confirmed: {application.requirement.title}",
+        body=f"{application.requirement.project.title} accepted the meeting time.",
+        route_name="/talent/applications/:id",
+        route_params={"id": application.public_id},
+    )
+    db.session.commit()
+    return jsonify(success({"application": _application_payload(application)}))
+
+
+@casting_blueprint.post(
+    "/director/casting-applications/<public_id>/meetings/rounds/<round_public_id>/decline"
+)
+def decline_director_casting_meeting(public_id: str, round_public_id: str) -> Response:
+    user = _current_user()
+    _require_director(user)
+    application = _director_application(public_id, user)
+    round_ = round_for_public_id(
+        "casting_application", application.public_id, round_public_id
+    )
+    payload = _json_body()
+    decline_round(round_, user, str(payload.get("reason", "")).strip() or None)
+    notify_user(
+        application.actor_user_id,
+        category="casting",
+        title=f"Meeting time declined: {application.requirement.title}",
+        body=(
+            f"{application.requirement.project.title} declined "
+            "the proposed meeting time."
+        ),
         route_name="/talent/applications/:id",
         route_params={"id": application.public_id},
     )

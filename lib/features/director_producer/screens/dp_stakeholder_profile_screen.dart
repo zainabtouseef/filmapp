@@ -566,7 +566,7 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        if (item.kind == 'actor') ...[
+        if (item.kind == 'actor' || item.kind == 'model') ...[
           _ResumeSection(resumeFile: item.resumeFile),
           const SizedBox(height: 12),
         ],
@@ -671,6 +671,8 @@ class _LiveGallerySection extends StatelessWidget {
               _PhotoTile(
                 label: item.caption ?? item.file?.originalName ?? 'Media',
                 imageUrl: item.file?.publicUrl,
+                isVideo:
+                    item.file?.mimeType.startsWith('video/') ?? false,
               ),
           ],
         ),
@@ -773,38 +775,66 @@ class _ProfileSection extends StatelessWidget {
 class _PhotoTile extends StatelessWidget {
   final String label;
   final String? imageUrl;
+  final bool isVideo;
 
-  const _PhotoTile({required this.label, this.imageUrl});
+  const _PhotoTile({
+    required this.label,
+    this.imageUrl,
+    this.isVideo = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      width: 96,
-      height: 96,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: colors.goldGradient,
-        border: Border.all(color: colors.border),
-        image: imageUrl == null
-            ? null
-            : DecorationImage(
-                image: NetworkImage(imageUrl!),
-                fit: BoxFit.cover,
-                onError: (_, __) {},
+    final url = imageUrl;
+    return GestureDetector(
+      onTap: url == null ? null : () => openUrlInNewTab(url),
+      child: Container(
+        width: 96,
+        height: 96,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: colors.goldGradient,
+          border: Border.all(color: colors.border),
+          image: url == null || isVideo
+              ? null
+              : DecorationImage(
+                  image: NetworkImage(url),
+                  fit: BoxFit.cover,
+                  onError: (_, __) {},
+                ),
+        ),
+        child: Stack(
+          children: [
+            if (isVideo)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
               ),
-      ),
-      child: Align(
-        alignment: Alignment.bottomLeft,
-        child: Text(
-          label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.caption.copyWith(
-            color: colors.onGold,
-            fontWeight: FontWeight.w800,
-          ),
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.onGold,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

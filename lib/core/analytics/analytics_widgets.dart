@@ -25,10 +25,18 @@ class PersonalDashboardKpiStrip extends StatefulWidget {
 
 class _PersonalDashboardKpiStripState extends State<PersonalDashboardKpiStrip> {
   late Future<PersonalDashboardDto> _future;
+  bool _started = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // `personalDashboard(force: true)` calls notifyListeners() on
+    // AnalyticsController when it resolves, and this widget depends on
+    // AnalyticsScope (an InheritedNotifier) — fetching unconditionally here
+    // would re-trigger didChangeDependencies on every resolution, causing
+    // an unbounded fetch loop. Fetch once per mount instead.
+    if (_started) return;
+    _started = true;
     final analytics = AnalyticsScope.maybeOf(context);
     _future = analytics == null
         ? Future.error(StateError('AnalyticsScope missing'))

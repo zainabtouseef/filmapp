@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
 import '../routes/media_equipment_routes.dart';
 import '../widgets/media_equipment_shell.dart';
 import 'me01_provider_dashboard_screen.dart';
@@ -12,6 +13,8 @@ import 'me07_booking_requests_screen.dart';
 import 'me08_handover_checklist_screen.dart';
 import 'me09_return_checklist_screen.dart';
 import 'me10_earnings_ratings_screen.dart';
+import 'me11_provider_portfolio_screen.dart';
+import 'me12_opportunities_screen.dart';
 
 class MediaEquipmentPortalScreen extends StatelessWidget {
   final String routeName;
@@ -47,6 +50,12 @@ class MediaEquipmentPortalScreen extends StatelessWidget {
       MediaEquipmentRoutes.handover => const ME08HandoverChecklistScreen(),
       MediaEquipmentRoutes.returns => const ME09ReturnChecklistScreen(),
       MediaEquipmentRoutes.earnings => const ME10EarningsRatingsScreen(),
+      MediaEquipmentRoutes.portfolio => const ME11ProviderPortfolioScreen(),
+      MediaEquipmentRoutes.opportunities => const ME12OpportunitiesScreen(),
+      MediaEquipmentRoutes.opportunityApplicationDetail =>
+        OpportunityApplicationDetailScreen(
+          applicationId: arguments is String ? arguments as String : null,
+        ),
       _ => const ME01ProviderDashboardScreen(),
     };
   }

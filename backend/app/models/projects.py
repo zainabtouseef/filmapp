@@ -139,6 +139,9 @@ class ProjectRequirement(EntityMixin, Base):
     candidate_count_cache: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
+    visibility: Mapped[str] = mapped_column(String(32), nullable=False, default="all")
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    required_documents_json: Mapped[str | None] = mapped_column(Text)
 
     project: Mapped[Project] = relationship(back_populates="requirements")
     skills: Mapped[list[RequirementSkill]] = relationship(

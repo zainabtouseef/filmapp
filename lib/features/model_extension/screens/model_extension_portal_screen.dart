@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../routes/model_extension_routes.dart';
@@ -8,6 +9,8 @@ import 'md02_usage_rights_screen.dart';
 import 'md03_portfolio_categories_screen.dart';
 import 'md04_rate_by_usage_screen.dart';
 import 'md05_brand_safety_screen.dart';
+import 'md06_model_profile_screen.dart';
+import 'md07_opportunities_screen.dart';
 
 const _modelBottomDestinations = [
   CineBottomNavDestination(label: 'Categories', icon: Icons.category_outlined),
@@ -49,6 +52,18 @@ const _modelMenuEntries = <ActorShellMenuEntry>[
     label: 'Brand Safety',
     icon: Icons.shield_outlined,
   ),
+  (
+    route: ModelExtensionRoutes.profile,
+    screenId: 'MD-06',
+    label: 'Model Profile',
+    icon: Icons.badge_outlined,
+  ),
+  (
+    route: ModelExtensionRoutes.opportunities,
+    screenId: 'MD-07',
+    label: 'Opportunities',
+    icon: Icons.explore_outlined,
+  ),
 ];
 
 class ModelExtensionPortalScreen extends StatelessWidget {
@@ -80,7 +95,7 @@ class ModelExtensionPortalScreen extends StatelessWidget {
           'Campaign fit, usage rights, portfolio and brand safety',
       workspaceSearchHint: 'Search campaign settings and usage rights...',
       workspaceSearchRoute: ModelExtensionRoutes.usageRights,
-      workspaceProfileRoute: ModelExtensionRoutes.categories,
+      workspaceProfileRoute: ModelExtensionRoutes.profile,
       workspaceIcon: Icons.style_outlined,
       workspaceEyebrow: _modelEyebrow,
       child: _screenFor(routeName),
@@ -94,6 +109,12 @@ class ModelExtensionPortalScreen extends StatelessWidget {
       ModelExtensionRoutes.portfolio => const MD03PortfolioCategoriesScreen(),
       ModelExtensionRoutes.rateByUsage => const MD04RateByUsageScreen(),
       ModelExtensionRoutes.brandSafety => const MD05BrandSafetyScreen(),
+      ModelExtensionRoutes.profile => const MD06ModelProfileScreen(),
+      ModelExtensionRoutes.opportunities => const MD07OpportunitiesScreen(),
+      ModelExtensionRoutes.opportunityApplicationDetail =>
+        OpportunityApplicationDetailScreen(
+          applicationId: arguments is String ? arguments as String : null,
+        ),
       _ => const MD01CampaignCategoriesScreen(),
     };
   }
@@ -106,6 +127,8 @@ String _modelEyebrow(String route) {
     ModelExtensionRoutes.portfolio => 'Portfolio · categories · visibility',
     ModelExtensionRoutes.rateByUsage => 'Commercial rates · usage scope',
     ModelExtensionRoutes.brandSafety => 'Boundaries · restrictions · review',
+    ModelExtensionRoutes.profile => 'Public identity · photos · CV · social',
+    ModelExtensionRoutes.opportunities => 'Casting calls · applications',
     _ => 'Model campaign workspace',
   };
 }

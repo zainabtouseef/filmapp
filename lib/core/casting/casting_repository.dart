@@ -1,4 +1,5 @@
 import '../network/api_client.dart';
+import '../scheduling/meeting_models.dart';
 import 'casting_models.dart';
 
 class CastingRepository {
@@ -196,6 +197,109 @@ class CastingRepository {
   ) async {
     final response =
         await _client.post('/casting/applications/$publicId/$action');
+    final data = response['data'] as Map<String, dynamic>;
+    return CastingApplication.fromJson(
+      data['application'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<MeetingThread?> meetings(String applicationId) async {
+    final response =
+        await _client.get('/casting/applications/$applicationId/meetings');
+    final data = response['data'] as Map<String, dynamic>;
+    return MeetingThread.fromJsonOrNull(
+      data['thread'] as Map<String, dynamic>?,
+    );
+  }
+
+  Future<CastingApplication> proposeMeeting(
+    String applicationId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.post(
+      '/casting/applications/$applicationId/meetings/propose',
+      body: body,
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return CastingApplication.fromJson(
+      data['application'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<CastingApplication> acceptMeetingRound(
+    String applicationId,
+    String roundId,
+  ) async {
+    final response = await _client.post(
+      '/casting/applications/$applicationId/meetings/rounds/$roundId/accept',
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return CastingApplication.fromJson(
+      data['application'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<CastingApplication> declineMeetingRound(
+    String applicationId,
+    String roundId, {
+    String? reason,
+  }) async {
+    final response = await _client.post(
+      '/casting/applications/$applicationId/meetings/rounds/$roundId/decline',
+      body: {if (reason != null) 'reason': reason},
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return CastingApplication.fromJson(
+      data['application'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<MeetingThread?> directorMeetings(String applicationId) async {
+    final response = await _client.get(
+      '/director/casting-applications/$applicationId/meetings',
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return MeetingThread.fromJsonOrNull(
+      data['thread'] as Map<String, dynamic>?,
+    );
+  }
+
+  Future<CastingApplication> proposeDirectorMeeting(
+    String applicationId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.post(
+      '/director/casting-applications/$applicationId/meetings/propose',
+      body: body,
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return CastingApplication.fromJson(
+      data['application'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<CastingApplication> acceptDirectorMeetingRound(
+    String applicationId,
+    String roundId,
+  ) async {
+    final response = await _client.post(
+      '/director/casting-applications/$applicationId/meetings/rounds/$roundId/accept',
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return CastingApplication.fromJson(
+      data['application'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<CastingApplication> declineDirectorMeetingRound(
+    String applicationId,
+    String roundId, {
+    String? reason,
+  }) async {
+    final response = await _client.post(
+      '/director/casting-applications/$applicationId/meetings/rounds/$roundId/decline',
+      body: {if (reason != null) 'reason': reason},
+    );
     final data = response['data'] as Map<String, dynamic>;
     return CastingApplication.fromJson(
       data['application'] as Map<String, dynamic>,

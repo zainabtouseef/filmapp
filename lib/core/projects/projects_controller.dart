@@ -75,6 +75,9 @@ class ProjectsController extends ChangeNotifier {
     String? startDate,
     String? endDate,
     List<String> skillIds = const [],
+    String visibility = 'all',
+    int quantity = 1,
+    List<String> requiredDocuments = const [],
   }) {
     return _repository.createRequirement(
       projectId: projectId,
@@ -87,6 +90,9 @@ class ProjectsController extends ChangeNotifier {
       startDate: startDate,
       endDate: endDate,
       skillIds: skillIds,
+      visibility: visibility,
+      quantity: quantity,
+      requiredDocuments: requiredDocuments,
     );
   }
 

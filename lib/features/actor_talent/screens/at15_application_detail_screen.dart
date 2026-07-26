@@ -13,6 +13,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/scheduling/meeting_negotiation_panel.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_casting_widgets.dart';
@@ -88,14 +89,47 @@ class _AT15ApplicationDetailScreenState
               left: Column(
                 children: [
                   _ApplicationSummary(application: application),
-                  const SizedBox(height: 12),
-                  _AuditionPanel(
-                    application: application,
-                    working: _working,
-                    uploadProgress: _uploadProgress,
-                    onConfirm: () => _confirmAudition(application),
-                    onUpload: () => _uploadSelfTape(application),
-                  ),
+                  if (application.isAudition ||
+                      application.meetingThread != null) ...[
+                    const SizedBox(height: 12),
+                    MeetingNegotiationPanel(
+                      thread: application.meetingThread,
+                      meetingLabel:
+                          application.status == 'callback' ? 'Callback' : 'Audition',
+                      currentUserId: application.actorId,
+                      working: _working,
+                      onPropose: ({
+                        required meetingAt,
+                        location,
+                        onlineUrl,
+                        instructions,
+                        contact,
+                        message,
+                      }) =>
+                          _proposeMeeting(
+                        application,
+                        meetingAt: meetingAt,
+                        location: location,
+                        onlineUrl: onlineUrl,
+                        instructions: instructions,
+                        contact: contact,
+                        message: message,
+                      ),
+                      onAccept: (roundId) => _acceptMeeting(application, roundId),
+                      onDecline: (roundId, reason) =>
+                          _declineMeeting(application, roundId, reason),
+                    ),
+                  ],
+                  if (application.status == 'self_tape_requested' ||
+                      application.selfTapeFile != null) ...[
+                    const SizedBox(height: 12),
+                    _SelfTapePanel(
+                      application: application,
+                      working: _working,
+                      uploadProgress: _uploadProgress,
+                      onUpload: () => _uploadSelfTape(application),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   _StatusTimeline(application: application),
                 ],
@@ -189,14 +223,72 @@ class _AT15ApplicationDetailScreenState
     }
   }
 
-  Future<void> _confirmAudition(CastingApplication application) async {
+  Future<void> _proposeMeeting(
+    CastingApplication application, {
+    required DateTime meetingAt,
+    String? location,
+    String? onlineUrl,
+    String? instructions,
+    String? contact,
+    String? message,
+  }) async {
     final casting = CastingScope.maybeOf(context);
     if (casting == null) return;
     setState(() => _working = true);
     try {
-      await casting.confirmAudition(application.publicId);
+      await casting.proposeMeeting(application.publicId, {
+        'meeting_at': meetingAt.toUtc().toIso8601String(),
+        if (location != null) 'location': location,
+        if (onlineUrl != null) 'online_url': onlineUrl,
+        if (instructions != null) 'instructions': instructions,
+        if (contact != null) 'contact': contact,
+        if (message != null) 'message': message,
+      });
       if (!mounted) return;
-      actorSnack(context, 'Audition attendance confirmed');
+      actorSnack(context, 'Meeting proposal sent');
+      _reload();
+    } on ApiException catch (error) {
+      if (mounted) actorSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _acceptMeeting(
+    CastingApplication application,
+    String roundId,
+  ) async {
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _working = true);
+    try {
+      await casting.acceptMeetingRound(application.publicId, roundId);
+      if (!mounted) return;
+      actorSnack(context, 'Meeting confirmed');
+      _reload();
+    } on ApiException catch (error) {
+      if (mounted) actorSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _declineMeeting(
+    CastingApplication application,
+    String roundId,
+    String? reason,
+  ) async {
+    final casting = CastingScope.maybeOf(context);
+    if (casting == null) return;
+    setState(() => _working = true);
+    try {
+      await casting.declineMeetingRound(
+        application.publicId,
+        roundId,
+        reason: reason,
+      );
+      if (!mounted) return;
+      actorSnack(context, 'Meeting proposal declined');
       _reload();
     } on ApiException catch (error) {
       if (mounted) actorSnack(context, error.message);
@@ -443,97 +535,45 @@ class _ApplicationSummary extends StatelessWidget {
   }
 }
 
-class _AuditionPanel extends StatelessWidget {
+class _SelfTapePanel extends StatelessWidget {
   final CastingApplication application;
   final bool working;
   final double? uploadProgress;
-  final VoidCallback onConfirm;
   final VoidCallback onUpload;
 
-  const _AuditionPanel({
+  const _SelfTapePanel({
     required this.application,
     required this.working,
     required this.uploadProgress,
-    required this.onConfirm,
     required this.onUpload,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (!application.isAudition) return const SizedBox.shrink();
-    final audition = application.audition;
     return ActorSectionCard(
-      title: application.status == 'callback' ? 'Callback' : 'Audition',
+      title: 'Self-Tape',
       icon: Icons.video_camera_front_outlined,
       tone: ActorTone.blue,
-      selected: audition.confirmedAt == null,
+      selected: application.selfTapeFile == null,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActorInfoRow(
-            icon: Icons.schedule_outlined,
-            label: 'Date and time',
-            value: actorCastingDate(
-              application.status == 'callback'
-                  ? application.callbackAt
-                  : audition.at ?? audition.dueAt,
-            ),
-          ),
-          ActorInfoRow(
-            icon: Icons.location_on_outlined,
-            label: 'Location',
-            value: audition.location ??
-                audition.onlineUrl ??
-                'See production instructions',
-          ),
-          ActorInfoRow(
-            icon: Icons.assignment_outlined,
-            label: 'Instructions',
-            value: application.status == 'callback'
-                ? application.callbackDetails ?? 'No callback notes'
-                : audition.instructions ?? 'No additional instructions',
-          ),
-          if (audition.onlineUrl?.isNotEmpty == true)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => openUrlInNewTab(audition.onlineUrl!),
-                icon: const Icon(Icons.open_in_new_rounded),
-                label: const Text('Open online audition'),
-              ),
-            ),
-          const SizedBox(height: 8),
-          if (audition.confirmedAt == null)
-            CorePrimaryButton(
-              icon: Icons.event_available_outlined,
-              label: 'Confirm attendance',
-              loading: working && uploadProgress == null,
-              onTap: working ? null : onConfirm,
+          if (uploadProgress != null) ...[
+            LinearProgressIndicator(value: uploadProgress),
+            const SizedBox(height: 6),
+            Text('${(uploadProgress! * 100).round()}% uploaded'),
+          ] else if (application.selfTapeFile == null)
+            CoreSecondaryButton(
+              icon: Icons.upload_rounded,
+              label: 'Upload self-tape',
+              onTap: working ? null : onUpload,
             )
           else
-            const InlineNotice(
-              message: 'Attendance confirmed',
+            InlineNotice(
+              message:
+                  'Self-tape submitted: ${application.selfTapeFile!.originalName}',
               tone: CoreStatusTone.success,
             ),
-          if (application.status == 'self_tape_requested' ||
-              application.selfTapeFile != null) ...[
-            const SizedBox(height: 10),
-            if (uploadProgress != null) ...[
-              LinearProgressIndicator(value: uploadProgress),
-              const SizedBox(height: 6),
-              Text('${(uploadProgress! * 100).round()}% uploaded'),
-            ] else if (application.selfTapeFile == null)
-              CoreSecondaryButton(
-                icon: Icons.upload_rounded,
-                label: 'Upload self-tape',
-                onTap: working ? null : onUpload,
-              )
-            else
-              InlineNotice(
-                message:
-                    'Self-tape submitted: ${application.selfTapeFile!.originalName}',
-                tone: CoreStatusTone.success,
-              ),
-          ],
         ],
       ),
     );

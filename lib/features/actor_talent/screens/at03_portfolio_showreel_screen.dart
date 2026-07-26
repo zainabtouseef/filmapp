@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -7,13 +5,27 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/open_url.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
-import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/credits/past_roles_section.dart';
 import '../widgets/actor_talent_components.dart';
 
+const _maxPerKind = 3;
+
+enum _SlotKind {
+  image,
+  video;
+
+  String get label => this == _SlotKind.image ? 'Photo' : 'Video';
+}
+
 /// AT-03 Portfolio & Showreel Manager
+///
+/// Deliberately simple: exactly 3 photo slots and 3 video slots, each a
+/// single tap to add / replace / remove — mirrors the profile photo and CV
+/// upload pattern from AT-02 rather than a general-purpose media library.
 class AT03PortfolioShowreelScreen extends StatefulWidget {
   const AT03PortfolioShowreelScreen({super.key});
 
@@ -24,28 +36,9 @@ class AT03PortfolioShowreelScreen extends StatefulWidget {
 
 class _AT03PortfolioShowreelScreenState
     extends State<AT03PortfolioShowreelScreen> {
-  String query = '';
-  String filter = 'All';
   Future<List<MarketplacePortfolioItem>>? _itemsFuture;
   bool _started = false;
-  bool _uploading = false;
-  String? _busyItemId;
-
-  static const _portfolioCategories = [
-    'All',
-    'Headshots',
-    'Full-length',
-    'Editorial',
-    'On-set',
-    'Dramas',
-    'Films / Movies',
-    'TVCs / Ads',
-    'Music Videos',
-    'Web Series',
-    'Theatre',
-    'Modeling / Fashion',
-    'Self-tapes / Intro',
-  ];
+  String? _busySlotKey;
 
   @override
   void didChangeDependencies() {
@@ -73,203 +66,159 @@ class _AT03PortfolioShowreelScreenState
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ActorSearchFilterBar(
-          query: query,
-          onQueryChanged: (value) => setState(() => query = value),
-          filters: _portfolioCategories,
-          selectedFilter: filter,
-          onFilterChanged: (value) => setState(() => filter = value),
+        ActorSectionCard(
+          title: 'Portfolio',
+          icon: Icons.video_library_outlined,
+          child: _buildPortfolioBody(context),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Media Library',
-          icon: Icons.video_library_outlined,
-          actionText: _uploading ? 'Uploading...' : 'Upload',
-          onActionTap: _uploading ? null : _uploadMedia,
-          child: FutureBuilder<List<MarketplacePortfolioItem>>(
-            future: _itemsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const _PortfolioLoadingState();
-              }
-              if (snapshot.hasError) {
-                return _PortfolioError(
-                  message: _friendlyError(snapshot.error),
-                  onRetry: _reload,
-                );
-              }
-              final items = _filterRemoteItems(snapshot.data ?? const []);
-              if (items.isEmpty) {
-                return CoreEmptyState(
-                  icon: Icons.collections_outlined,
-                  title: 'No media found',
-                  message: query.trim().isEmpty && filter == 'All'
-                      ? 'Upload a headshot, reel, ad, or voice sample to start your live portfolio.'
-                      : 'Change the filter or upload a new clip.',
-                );
-              }
-              return ActorResponsiveGrid(
-                minWidth: 230,
-                children: [
-                  for (final item in items)
-                    _PortfolioCard(
-                      title: item.title,
-                      category: _normalizePortfolioCategory(
-                        item.displayCategory,
-                      ),
-                      duration: item.durationLabel,
-                      status: item.displayStatus,
-                      imageUrl: item.thumbnailFile?.downloadUrl ??
-                          item.file?.downloadUrl ??
-                          '',
-                      cover: item.isCover,
-                      isImage: item.isImage,
-                      busy: _busyItemId == item.publicId,
-                      onPreview: () => _showPreview(
-                        title: item.title,
-                        category: _normalizePortfolioCategory(
-                          item.displayCategory,
-                        ),
-                        duration: item.durationLabel,
-                        imageUrl: item.thumbnailFile?.downloadUrl ??
-                            item.file?.downloadUrl ??
-                            '',
-                        isImage: item.isImage,
-                      ),
-                      onCover: () => _setCover(item),
-                      onMoveUp: () => _moveItem(item, -10),
-                      onMoveDown: () => _moveItem(item, 10),
-                      onDelete: () => _deleteItem(item),
-                    ),
-                ],
-              );
-            },
-          ),
+        const PastRolesSection(
+          profileType: 'talent',
+          sectionTitle: 'Past Roles',
+          emptyMessage:
+              'Add your past roles — productions, characters and a cover photo.',
         ),
       ],
     );
   }
 
-  List<MarketplacePortfolioItem> _filterRemoteItems(
-    List<MarketplacePortfolioItem> items,
-  ) {
-    return items.where((item) {
-      final category = _normalizePortfolioCategory(item.displayCategory);
-      final haystack = '${item.title} $category'.toLowerCase();
-      final matchQuery =
-          query.trim().isEmpty || haystack.contains(query.toLowerCase());
-      final matchFilter = filter == 'All' || category == filter;
-      return matchQuery && matchFilter;
-    }).toList();
+  Widget _buildPortfolioBody(BuildContext context) {
+    return FutureBuilder<List<MarketplacePortfolioItem>>(
+      future: _itemsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _PortfolioLoadingState();
+        }
+        if (snapshot.hasError) {
+          return _PortfolioError(
+            message: _friendlyError(snapshot.error),
+            onRetry: _reload,
+          );
+        }
+        final items = List<MarketplacePortfolioItem>.from(
+          snapshot.data ?? const [],
+        )..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+        final images = items.where((item) => item.isImage).toList();
+        final videos = items.where((item) => !item.isImage).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add up to 3 photos and 3 videos. Directors see these on your public profile.',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: context.appColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _SlotSectionLabel(label: 'Photos', count: images.length),
+            const SizedBox(height: 8),
+            _SlotRow(
+              kind: _SlotKind.image,
+              items: images,
+              busySlotKey: _busySlotKey,
+              onAdd: (index) => _addSlot(_SlotKind.image, index),
+              onReplace: (item, index) =>
+                  _replaceSlot(_SlotKind.image, item, index),
+              onRemove: (item, index) =>
+                  _removeSlot(_SlotKind.image, item, index),
+            ),
+            const SizedBox(height: 18),
+            _SlotSectionLabel(label: 'Videos', count: videos.length),
+            const SizedBox(height: 8),
+            _SlotRow(
+              kind: _SlotKind.video,
+              items: videos,
+              busySlotKey: _busySlotKey,
+              onAdd: (index) => _addSlot(_SlotKind.video, index),
+              onReplace: (item, index) =>
+                  _replaceSlot(_SlotKind.video, item, index),
+              onRemove: (item, index) =>
+                  _removeSlot(_SlotKind.video, item, index),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  Future<void> _uploadMedia() async {
+  Future<void> _addSlot(_SlotKind kind, int index) async {
     final controller = AuthScope.maybeOf(context);
     if (controller == null) {
       actorSnack(context, 'Sign in to upload portfolio media');
       return;
     }
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'mp4'],
-      withData: true,
-    );
-    final picked = result?.files.single;
-    final bytes = picked?.bytes;
-    if (picked == null || bytes == null) return;
-
-    final mimeType = _mimeTypeFor(picked);
-    final title = _titleFor(picked.name);
-    final category = _categoryFor(picked, mimeType);
-    setState(() => _uploading = true);
+    final picked = await _pickFile(kind);
+    if (picked == null) return;
+    final slotKey = '${kind.name}-$index';
+    setState(() => _busySlotKey = slotKey);
     try {
       final uploaded = await controller.uploadFile(
         purpose: 'profile_media',
-        file: PickedFileData(
-          name: picked.name,
-          mimeType: mimeType,
-          bytes: bytes,
-        ),
+        file: picked,
       );
-      await _createPortfolioItemWhenReady(
+      await _createWhenReady(
         controller: controller,
-        title: title,
-        category: category,
+        kind: kind,
+        index: index,
         fileId: uploaded.publicId,
       );
       if (!mounted) return;
-      actorSnack(context, '$title added to your live portfolio');
+      actorSnack(context, '${kind.label} added to your portfolio');
       _reload();
     } on ApiException catch (error) {
       if (!mounted) return;
       actorSnack(context, _friendlyError(error));
     } finally {
-      if (mounted) setState(() => _uploading = false);
+      if (mounted) setState(() => _busySlotKey = null);
     }
   }
 
-  Future<void> _createPortfolioItemWhenReady({
-    required AuthController controller,
-    required String title,
-    required String category,
-    required String fileId,
-  }) async {
-    ApiException? lastError;
-    for (var attempt = 0; attempt < 6; attempt += 1) {
-      try {
-        await controller.createPortfolioItem(
-          title: title,
-          category: category,
-          fileId: fileId,
-          sortOrder: 100,
-        );
-        return;
-      } on ApiException catch (error) {
-        lastError = error;
-        final waitingForScan = error.fields.containsKey('file_id') ||
-            error.message.toLowerCase().contains('clean') ||
-            error.message.toLowerCase().contains('ready');
-        if (!waitingForScan || attempt == 5) rethrow;
-        await Future<void>.delayed(const Duration(seconds: 1));
-      }
+  Future<void> _replaceSlot(
+    _SlotKind kind,
+    MarketplacePortfolioItem item,
+    int index,
+  ) async {
+    final controller = AuthScope.maybeOf(context);
+    if (controller == null) return;
+    final picked = await _pickFile(kind);
+    if (picked == null) return;
+    final slotKey = '${kind.name}-$index';
+    setState(() => _busySlotKey = slotKey);
+    try {
+      final uploaded = await controller.uploadFile(
+        purpose: 'profile_media',
+        file: picked,
+      );
+      await controller.updatePortfolioItem(
+        publicId: item.publicId,
+        fileId: uploaded.publicId,
+        title: picked.name,
+      );
+      if (!mounted) return;
+      actorSnack(context, '${kind.label} replaced');
+      _reload();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      actorSnack(context, _friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _busySlotKey = null);
     }
-    throw lastError ??
-        const ApiException(
-          code: 'portfolio.create_failed',
-          message: 'Portfolio media could not be added.',
-        );
   }
 
-  Future<void> _setCover(MarketplacePortfolioItem item) async {
-    await _mutateItem(
-      item,
-      () => AuthScope.of(context).updatePortfolioItem(
-        publicId: item.publicId,
-        isCover: true,
-      ),
-      '${item.title} is now public cover',
-    );
-  }
-
-  Future<void> _moveItem(MarketplacePortfolioItem item, int delta) async {
-    await _mutateItem(
-      item,
-      () => AuthScope.of(context).updatePortfolioItem(
-        publicId: item.publicId,
-        sortOrder: item.sortOrder + delta,
-      ),
-      'Portfolio order updated',
-    );
-  }
-
-  Future<void> _deleteItem(MarketplacePortfolioItem item) async {
+  Future<void> _removeSlot(
+    _SlotKind kind,
+    MarketplacePortfolioItem item,
+    int index,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Remove portfolio item?'),
+        title: Text('Remove ${kind.label.toLowerCase()}?'),
         content: Text(
-          '${item.title} will be removed from your public portfolio. The uploaded source file is not deleted.',
+          '${item.title} will be removed from your public portfolio.',
         ),
         actions: [
           TextButton(
@@ -284,127 +233,77 @@ class _AT03PortfolioShowreelScreenState
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _mutateItem(
-      item,
-      () => AuthScope.of(context).deletePortfolioItem(item.publicId),
-      '${item.title} removed from portfolio',
-    );
-  }
-
-  Future<void> _mutateItem(
-    MarketplacePortfolioItem item,
-    Future<void> Function() action,
-    String successMessage,
-  ) async {
-    setState(() => _busyItemId = item.publicId);
+    final controller = AuthScope.maybeOf(context);
+    if (controller == null) return;
+    final slotKey = '${kind.name}-$index';
+    setState(() => _busySlotKey = slotKey);
     try {
-      await action();
+      await controller.deletePortfolioItem(item.publicId);
       if (!mounted) return;
-      actorSnack(context, successMessage);
+      actorSnack(context, '${kind.label} removed');
       _reload();
     } on ApiException catch (error) {
       if (!mounted) return;
       actorSnack(context, _friendlyError(error));
     } finally {
-      if (mounted) setState(() => _busyItemId = null);
+      if (mounted) setState(() => _busySlotKey = null);
     }
   }
 
-  void _showPreview({
-    required String title,
-    required String category,
-    required String duration,
-    required String imageUrl,
-    required bool isImage,
-  }) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ActorMediaFrame(
-                imageUrl: imageUrl,
-                title: title,
-                badge: duration,
-                fallbackIcon: isImage
-                    ? Icons.photo_camera_back_outlined
-                    : Icons.movie_creation_outlined,
-                aspectRatio: category == 'Headshots' ? 4 / 5 : 16 / 10,
-              ),
-              const SizedBox(height: 12),
-              CoreSecondaryButton(
-                icon: Icons.close_rounded,
-                label: 'Close',
-                compact: true,
-                onTap: () => Navigator.pop(dialogContext),
-              ),
-            ],
-          ),
-        ),
-      ),
+  Future<void> _createWhenReady({
+    required AuthController controller,
+    required _SlotKind kind,
+    required int index,
+    required String fileId,
+  }) async {
+    ApiException? lastError;
+    for (var attempt = 0; attempt < 6; attempt += 1) {
+      try {
+        await controller.createPortfolioItem(
+          title: '${kind.label} ${index + 1}',
+          category: kind.name,
+          fileId: fileId,
+          sortOrder: (index + 1) * 10,
+        );
+        return;
+      } on ApiException catch (error) {
+        lastError = error;
+        final waitingForScan = error.fields.containsKey('file_id') &&
+            (error.message.toLowerCase().contains('clean') ||
+                error.message.toLowerCase().contains('ready'));
+        if (!waitingForScan || attempt == 5) rethrow;
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    }
+    throw lastError ??
+        const ApiException(
+          code: 'portfolio.create_failed',
+          message: 'Portfolio media could not be added.',
+        );
+  }
+
+  Future<PickedFileData?> _pickFile(_SlotKind kind) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: kind == _SlotKind.image
+          ? const ['jpg', 'jpeg', 'png', 'webp']
+          : const ['mp4'],
+      withData: true,
     );
-  }
-
-  String _mimeTypeFor(PlatformFile file) {
-    final extension = (file.extension ?? '').toLowerCase();
-    return switch (extension) {
-      'jpg' || 'jpeg' => 'image/jpeg',
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      'mp4' => 'video/mp4',
-      _ => 'application/octet-stream',
-    };
-  }
-
-  String _categoryFor(PlatformFile file, String mimeType) {
-    final name = file.name.toLowerCase();
-    if (mimeType.startsWith('image/')) {
-      if (name.contains('full')) return 'Full-length';
-      if (name.contains('editorial')) return 'Editorial';
-      if (name.contains('onset') || name.contains('on-set')) return 'On-set';
-      return 'Headshots';
-    }
-    if (name.contains('drama')) return 'Dramas';
-    if (name.contains('film') || name.contains('movie')) {
-      return 'Films / Movies';
-    }
-    if (name.contains('tvc') || name.contains('ad')) return 'TVCs / Ads';
-    if (name.contains('music')) return 'Music Videos';
-    if (name.contains('web')) return 'Web Series';
-    if (name.contains('theatre') || name.contains('theater')) return 'Theatre';
-    if (name.contains('model') || name.contains('fashion')) {
-      return 'Modeling / Fashion';
-    }
-    return 'Self-tapes / Intro';
-  }
-
-  String _normalizePortfolioCategory(String category) {
-    final lower = category.toLowerCase();
-    if (lower == 'headshot' || lower == 'headshots') return 'Headshots';
-    if (lower == 'showreel' ||
-        lower == 'self-intro' ||
-        lower == 'self intro' ||
-        lower == 'self-tape') {
-      return 'Self-tapes / Intro';
-    }
-    if (lower == 'drama clips' || lower == 'drama') return 'Dramas';
-    if (lower == 'ads' || lower == 'ad' || lower == 'tvc') {
-      return 'TVCs / Ads';
-    }
-    if (lower == 'voice samples') return 'Self-tapes / Intro';
-    return category;
-  }
-
-  String _titleFor(String filename) {
-    final withoutExtension = filename.replaceFirst(RegExp(r'\.[^.]+$'), '');
-    final cleaned = withoutExtension.replaceAll(RegExp(r'[_-]+'), ' ').trim();
-    if (cleaned.length >= 2) return cleaned;
-    return 'Portfolio media';
+    final item = result?.files.single;
+    final bytes = item?.bytes;
+    if (item == null || bytes == null) return null;
+    return PickedFileData(
+      name: item.name,
+      mimeType: kind == _SlotKind.image
+          ? switch (item.extension?.toLowerCase()) {
+              'png' => 'image/png',
+              'webp' => 'image/webp',
+              _ => 'image/jpeg',
+            }
+          : 'video/mp4',
+      bytes: bytes,
+    );
   }
 
   String _friendlyError(Object? error) {
@@ -413,8 +312,8 @@ class _AT03PortfolioShowreelScreenState
         'auth.required' ||
         'auth.invalid_token' =>
           'Sign in to manage portfolio media.',
-        'validation.invalid' =>
-          'Complete your talent profile before adding portfolio media.',
+        'validation.invalid' => error.fields['file_id']?.join(' ') ??
+            'Complete your talent profile before adding portfolio media.',
         'network.offline' =>
           'Portfolio media is unavailable offline. Check your connection and retry.',
         _ => 'Could not load portfolio media. Try again.',
@@ -424,140 +323,184 @@ class _AT03PortfolioShowreelScreenState
   }
 }
 
-class _PortfolioCard extends StatelessWidget {
-  final String title;
-  final String category;
-  final String duration;
-  final String status;
-  final String imageUrl;
-  final bool cover;
-  final bool isImage;
-  final bool busy;
-  final VoidCallback onPreview;
-  final VoidCallback onCover;
-  final VoidCallback? onMoveUp;
-  final VoidCallback? onMoveDown;
-  final VoidCallback? onDelete;
+class _SlotSectionLabel extends StatelessWidget {
+  final String label;
+  final int count;
 
-  const _PortfolioCard({
-    required this.title,
-    required this.category,
-    required this.duration,
-    required this.status,
-    required this.imageUrl,
-    required this.cover,
-    required this.isImage,
-    required this.onPreview,
-    required this.onCover,
-    this.busy = false,
-    this.onMoveUp,
-    this.onMoveDown,
-    this.onDelete,
+  const _SlotSectionLabel({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Text(
+      '$label ($count/$_maxPerKind)',
+      style: AppTextStyles.cardLabel.copyWith(
+        color: colors.textPrimary,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+class _SlotRow extends StatelessWidget {
+  final _SlotKind kind;
+  final List<MarketplacePortfolioItem> items;
+  final String? busySlotKey;
+  final void Function(int index) onAdd;
+  final void Function(MarketplacePortfolioItem item, int index) onReplace;
+  final void Function(MarketplacePortfolioItem item, int index) onRemove;
+
+  const _SlotRow({
+    required this.kind,
+    required this.items,
+    required this.busySlotKey,
+    required this.onAdd,
+    required this.onReplace,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var index = 0; index < _maxPerKind; index += 1) ...[
+          if (index > 0) const SizedBox(width: 10),
+          Expanded(
+            child: _SlotTile(
+              kind: kind,
+              index: index,
+              item: index < items.length ? items[index] : null,
+              busy: busySlotKey == '${kind.name}-$index',
+              onAdd: () => onAdd(index),
+              onReplace: () => onReplace(items[index], index),
+              onRemove: () => onRemove(items[index], index),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SlotTile extends StatelessWidget {
+  final _SlotKind kind;
+  final int index;
+  final MarketplacePortfolioItem? item;
+  final bool busy;
+  final VoidCallback onAdd;
+  final VoidCallback onReplace;
+  final VoidCallback onRemove;
+
+  const _SlotTile({
+    required this.kind,
+    required this.index,
+    required this.item,
+    required this.busy,
+    required this.onAdd,
+    required this.onReplace,
+    required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Opacity(
-      opacity: busy ? 0.62 : 1,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ActorMediaFrame(
-            imageUrl: imageUrl,
-            title: title,
-            badge: duration,
-            fallbackIcon: isImage
-                ? Icons.photo_camera_back_outlined
-                : Icons.movie_creation_outlined,
-            aspectRatio: category == 'Headshots' ? 4 / 5 : 16 / 10,
-            compact: true,
+    final current = item;
+    final filled = current != null;
+    final imageUrl =
+        current?.thumbnailFile?.publicUrl ?? current?.file?.publicUrl;
+    return GestureDetector(
+      onTap: busy
+          ? null
+          : filled
+              ? () => _showSlotActions(context)
+              : onAdd,
+      child: AspectRatio(
+        aspectRatio: kind == _SlotKind.image ? 3 / 4 : 16 / 10,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: colors.softSurface,
+            border: Border.all(color: colors.border),
+            image: filled && kind == _SlotKind.image && imageUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w900,
+          child: busy
+              ? const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                ),
-              ),
-              if (cover) StatusChip(label: 'Cover', color: colors.goldMid),
-            ],
+                )
+              : !filled
+                  ? Icon(
+                      kind == _SlotKind.image
+                          ? Icons.add_a_photo_outlined
+                          : Icons.video_call_outlined,
+                      color: colors.goldDark,
+                      size: 22,
+                    )
+                  : kind == _SlotKind.video
+                      ? Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        )
+                      : null,
+        ),
+      ),
+    );
+  }
+
+  void _showSlotActions(BuildContext context) {
+    final current = item;
+    if (current == null) return;
+    final url = current.file?.publicUrl;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('${kind.label} ${index + 1}'),
+        content: Text(current.title),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
           ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              StatusChip(label: category, color: colors.infoBlue),
-              StatusChip(
-                label: status,
-                color: status == 'Public' ? colors.success : colors.goldMid,
-              ),
-              StatusChip(label: 'Watermarked', color: colors.infoPurple),
-            ],
-          ),
-          const SizedBox(height: 9),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.visibility_outlined,
-                  label: 'Preview',
-                  compact: true,
-                  onTap: busy ? null : onPreview,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: cover
-                      ? Icons.check_circle_outline
-                      : Icons.star_outline_rounded,
-                  label: cover ? 'Current cover' : 'Set cover',
-                  compact: true,
-                  loading: busy,
-                  onTap: busy || cover ? null : onCover,
-                ),
-              ),
-            ],
-          ),
-          if (onMoveUp != null || onMoveDown != null || onDelete != null) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (onMoveUp != null)
-                  CoreSecondaryButton(
-                    icon: Icons.keyboard_arrow_up_rounded,
-                    label: 'Up',
-                    compact: true,
-                    onTap: busy ? null : onMoveUp,
-                  ),
-                if (onMoveDown != null)
-                  CoreSecondaryButton(
-                    icon: Icons.keyboard_arrow_down_rounded,
-                    label: 'Down',
-                    compact: true,
-                    onTap: busy ? null : onMoveDown,
-                  ),
-                if (onDelete != null)
-                  CoreSecondaryButton(
-                    icon: Icons.delete_outline_rounded,
-                    label: 'Remove',
-                    compact: true,
-                    onTap: busy ? null : onDelete,
-                  ),
-              ],
+          if (url != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                openUrlInNewTab(url);
+              },
+              child: const Text('View'),
             ),
-          ],
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onRemove();
+            },
+            child: const Text('Remove'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onReplace();
+            },
+            child: const Text('Replace'),
+          ),
         ],
       ),
     );

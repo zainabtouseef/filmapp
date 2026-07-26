@@ -87,6 +87,9 @@ class ProjectsRepository {
     String? endDate,
     String status = 'open',
     List<String> skillIds = const [],
+    String visibility = 'all',
+    int quantity = 1,
+    List<String> requiredDocuments = const [],
   }) async {
     final response = await _client.post(
       '/projects/$projectId/requirements',
@@ -102,6 +105,9 @@ class ProjectsRepository {
         if (endDate != null && endDate.isNotEmpty) 'end_date': endDate,
         'status': status,
         if (skillIds.isNotEmpty) 'skills': skillIds,
+        'visibility': visibility,
+        'quantity': quantity,
+        if (requiredDocuments.isNotEmpty) 'required_documents': requiredDocuments,
       },
     );
     final data = response['data'] as Map<String, dynamic>;

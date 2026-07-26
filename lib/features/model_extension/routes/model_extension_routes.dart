@@ -6,6 +6,10 @@ class ModelExtensionRoutes {
   static const portfolio = '/model/portfolio-categories';
   static const rateByUsage = '/model/rate-by-usage';
   static const brandSafety = '/model/brand-safety';
+  static const profile = '/model/profile';
+  static const opportunities = '/model/opportunities';
+  static const opportunityApplicationDetail =
+      '/model/opportunities/application';
 
   static const primaryNav = [
     categories,
@@ -21,6 +25,9 @@ class ModelExtensionRoutes {
     portfolio,
     rateByUsage,
     brandSafety,
+    profile,
+    opportunities,
+    opportunityApplicationDetail,
   ];
 
   static String titleFor(String route) {
@@ -30,6 +37,9 @@ class ModelExtensionRoutes {
       portfolio => 'Portfolio Categories',
       rateByUsage => 'Rate by Usage',
       brandSafety => 'Brand Safety',
+      profile => 'Model Profile',
+      opportunities => 'Opportunities',
+      opportunityApplicationDetail => 'Application Details',
       _ => 'Model Extension',
     };
   }
@@ -41,6 +51,9 @@ class ModelExtensionRoutes {
       portfolio => 'MD-03',
       rateByUsage => 'MD-04',
       brandSafety => 'MD-05',
+      profile => 'MD-06',
+      opportunities => 'MD-07',
+      opportunityApplicationDetail => 'MD-08',
       _ => 'MD',
     };
   }

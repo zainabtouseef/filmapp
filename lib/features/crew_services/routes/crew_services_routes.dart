@@ -8,6 +8,8 @@ class CrewServicesRoutes {
   static const requests = '/crew/requests';
   static const contracts = '/crew/contracts-payments';
   static const ratings = '/crew/ratings';
+  static const opportunities = '/crew/opportunities';
+  static const opportunityApplicationDetail = '/crew/opportunities/application';
 
   static const primaryNav = [
     home,
@@ -25,6 +27,8 @@ class CrewServicesRoutes {
     requests,
     contracts,
     ratings,
+    opportunities,
+    opportunityApplicationDetail,
   ];
 
   static String titleFor(String route) {
@@ -36,6 +40,8 @@ class CrewServicesRoutes {
       requests => 'Requests & Negotiation',
       contracts => 'Contracts & Payments',
       ratings => 'Ratings & Work History',
+      opportunities => 'Opportunities',
+      opportunityApplicationDetail => 'Application Details',
       _ => 'Crew Services',
     };
   }
@@ -49,6 +55,8 @@ class CrewServicesRoutes {
       requests => 'CR-05',
       contracts => 'CR-06',
       ratings => 'CR-07',
+      opportunities => 'CR-08',
+      opportunityApplicationDetail => 'CR-09',
       _ => 'CR',
     };
   }

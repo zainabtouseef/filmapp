@@ -8,6 +8,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -71,6 +72,7 @@ class UserProfile(EntityMixin, Base):
         ForeignKey("files.id", ondelete="SET NULL")
     )
     website_url: Mapped[str | None] = mapped_column(String(255))
+    social_links_json: Mapped[str | None] = mapped_column(Text)
     profile_visibility: Mapped[str] = mapped_column(
         String(32), nullable=False, default="private"
     )
@@ -228,6 +230,52 @@ class PortfolioItem(EntityMixin, Base):
     )
     thumbnail_file: Mapped[FileAsset | None] = relationship(
         foreign_keys="PortfolioItem.thumbnail_file_id",
+        lazy="joined",
+    )
+
+
+class CreditEntry(EntityMixin, Base):
+    """A past production credit ("played the hero in X") — kept as a
+    separate table from PortfolioItem so its cover image doesn't compete
+    with the 3-photo showreel cap, which counts by file mime-type across
+    all PortfolioItem categories for a profile."""
+
+    __tablename__ = "credit_entries"
+    __table_args__ = (
+        Index(
+            "ix_credit_entries_owner_profile",
+            "owner_user_id",
+            "profile_type",
+            "profile_id",
+            "sort_order",
+        ),
+    )
+
+    public_id: Mapped[str] = mapped_column(
+        String(40),
+        unique=True,
+        nullable=False,
+        default=lambda: make_public_id("CRED"),
+    )
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    profile_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    profile_id: Mapped[str] = mapped_column(String(40), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    production_name: Mapped[str] = mapped_column(String(180), nullable=False)
+    role_label: Mapped[str | None] = mapped_column(String(180))
+    year: Mapped[int | None] = mapped_column(Integer)
+    description: Mapped[str | None] = mapped_column(Text)
+    cover_file_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("files.id", ondelete="SET NULL")
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+
+    owner: Mapped[User] = relationship(lazy="joined")
+    cover_file: Mapped[FileAsset | None] = relationship(
+        foreign_keys="CreditEntry.cover_file_id",
         lazy="joined",
     )
 

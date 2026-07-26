@@ -85,6 +85,18 @@ const mediaEquipmentMenuEntries = <MediaEquipmentMenuEntry>[
     label: 'Earnings & Ratings',
     icon: Icons.account_balance_wallet_outlined,
   ),
+  (
+    route: MediaEquipmentRoutes.portfolio,
+    screenId: 'ME-11',
+    label: 'Portfolio',
+    icon: Icons.photo_library_outlined,
+  ),
+  (
+    route: MediaEquipmentRoutes.opportunities,
+    screenId: 'ME-12',
+    label: 'Opportunities',
+    icon: Icons.explore_outlined,
+  ),
 ];
 
 const _bottomDestinations = [
@@ -112,6 +124,8 @@ const _bottomIndexOverrides = {
   MediaEquipmentRoutes.handover: 4,
   MediaEquipmentRoutes.returns: 4,
   MediaEquipmentRoutes.earnings: 4,
+  MediaEquipmentRoutes.portfolio: 4,
+  MediaEquipmentRoutes.opportunities: 4,
 };
 
 class MediaEquipmentShell extends StatefulWidget {
@@ -291,6 +305,8 @@ class _EquipmentRouteHeading extends StatelessWidget {
       MediaEquipmentRoutes.handover => 'Serials · accessories · signatures',
       MediaEquipmentRoutes.returns => 'Condition · evidence · damage claims',
       MediaEquipmentRoutes.earnings => 'Payouts · ledger · service quality',
+      MediaEquipmentRoutes.portfolio => 'Photos · videos · edit anytime',
+      MediaEquipmentRoutes.opportunities => 'Open requests · applications',
       _ => 'Media equipment workspace',
     };
   }

@@ -37,6 +37,7 @@ PROJECT_STATUSES = {"draft", "active", "paused", "completed", "archived"}
 PROJECT_VISIBILITIES = {"private", "project_members"}
 REQUIREMENT_CATEGORIES = {
     "talent",
+    "model",
     "crew",
     "location",
     "equipment",
@@ -45,6 +46,7 @@ REQUIREMENT_CATEGORIES = {
     "distribution",
 }
 REQUIREMENT_STATUSES = {"draft", "open", "paused", "filled", "closed", "archived"}
+REQUIREMENT_VISIBILITIES = {"all", "verified_only"}
 PROJECT_FILE_FOLDERS = {"briefs", "scripts", "contracts", "references", "deliverables"}
 PROJECT_ROOM_ITEM_TYPES = {"note", "decision", "activity", "milestone"}
 
@@ -176,6 +178,13 @@ def _requirement_payload(item: ProjectRequirement) -> dict[str, Any]:
         "end_date": item.end_date.isoformat() if item.end_date else None,
         "status": item.status,
         "candidate_count_cache": item.candidate_count_cache,
+        "visibility": item.visibility,
+        "quantity": item.quantity,
+        "required_documents": (
+            json.loads(item.required_documents_json)
+            if item.required_documents_json
+            else []
+        ),
         "skills": [_requirement_skill_payload(row) for row in item.skills],
         "created_at": item.created_at.isoformat(),
     }
@@ -427,6 +436,28 @@ def _apply_requirement_payload(
         if status not in REQUIREMENT_STATUSES:
             raise _field_error("status", "Unsupported requirement status.")
         requirement.status = status
+    if "visibility" in payload:
+        visibility = str(payload.get("visibility", "all")).strip()
+        if visibility not in REQUIREMENT_VISIBILITIES:
+            raise _field_error("visibility", "Unsupported requirement visibility.")
+        requirement.visibility = visibility
+    if "quantity" in payload:
+        quantity = _optional_int(payload.get("quantity"), "quantity") or 1
+        if quantity < 1:
+            raise _field_error("quantity", "Quantity must be at least 1.")
+        requirement.quantity = quantity
+    if "required_documents" in payload:
+        documents = payload.get("required_documents")
+        if not isinstance(documents, list):
+            raise _field_error(
+                "required_documents", "Required documents must be a list."
+            )
+        cleaned = [str(item).strip()[:120] for item in documents if str(item).strip()]
+        if len(cleaned) > 10:
+            raise _field_error(
+                "required_documents", "Supports up to 10 required documents."
+            )
+        requirement.required_documents_json = json.dumps(cleaned) if cleaned else None
 
 
 @projects_blueprint.get("/skills")
