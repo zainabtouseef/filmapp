@@ -1492,10 +1492,15 @@ def marketplace_listings() -> Response:
 def marketplace_listing_detail(public_id: str) -> Response:
     listing = db.session.execute(
         select(MarketplaceListing).where(
-            MarketplaceListing.public_id == public_id,
+            (
+                (MarketplaceListing.public_id == public_id)
+                | (MarketplaceListing.profile_entity_id == public_id)
+            ),
             MarketplaceListing.visibility == "public",
             MarketplaceListing.moderation_status == "approved",
         )
+        .order_by(MarketplaceListing.published_at.desc())
+        .limit(1)
     ).scalar_one_or_none()
     if listing is None:
         raise APIError(

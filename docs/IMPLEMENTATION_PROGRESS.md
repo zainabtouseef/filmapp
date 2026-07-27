@@ -1694,3 +1694,18 @@
   - Production `/api/v1/public/cinema` returns 8 items.
   - Production `/api/v1/health/ready` returns `ok`.
   - Deployed `main.dart.js` contains the `marketplace.not_found` provider fallback path.
+
+### 2026-07-27 — Public profile id resolver fix
+
+- Issue observed:
+  - Public Talent/Profile detail could still show `Director discovery item was not found` when the UI had a provider profile id instead of the listing id, or vice versa.
+- Fix:
+  - `GET /api/v1/marketplace/listings/<id>` now resolves public approved listings by either `MarketplaceListing.public_id` or `MarketplaceListing.profile_entity_id`.
+  - This makes public profile detail tolerant of both listing ids like `DEMO-LST-INF-001` and provider ids like `DEMO-TAL-INF-001`.
+- Deployment:
+  - Backend source synced and Docker image `cineconnect-prod-api:latest` rebuilt.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated.
+- Verification:
+  - `python3 -m py_compile backend/app/api/marketplace.py` passes.
+  - Production lookup works for listing/profile id pairs including `DEMO-LST-INF-001` ↔ `DEMO-TAL-INF-001` and `LST-E02AE717D82E` ↔ `DEMO-TAL-009`.
+  - Production `/api/v1/health/ready` returns `ok`.
