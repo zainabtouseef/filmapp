@@ -260,7 +260,10 @@ class _DPMarketplaceDiscoveryScreenState
                                 ? GeneralPublicRoutes.profile
                                 : DirectorProducerRoutes.profile,
                             arguments: {
-                              'candidateId': candidate.profileId,
+                              'candidateId': widget.publicBuyerMode
+                                  ? candidate.marketplaceListingId ??
+                                      candidate.profileId
+                                  : candidate.profileId,
                               'type': candidate.category,
                               if (!widget.publicBuyerMode)
                                 'projectId': _projectId,

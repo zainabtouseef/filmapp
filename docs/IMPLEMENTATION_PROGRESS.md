@@ -1675,3 +1675,22 @@
   - Production `/api/v1/health/ready` returns database and Redis `ok`.
   - Production `/api/v1/public/cinema` returns 8 items with both `trailer` and `ost` kinds.
   - Deployed `main.dart.js` contains the YouTube embed player path and `CINECONNECT CINEMA`.
+
+### 2026-07-27 — Public Cinema/profile wiring fix
+
+- Issue observed:
+  - General Public Cinema showed `Project service is not available in this session.`
+  - Some General Public profile opens showed `Marketplace listing was not found.`
+- Fix:
+  - Mounted `ProjectsScope` globally in `CineConnectApp`, not only inside the Director portal, so public/customer pages can call project and cinema APIs.
+  - Public marketplace profile navigation now prefers the `marketplaceListingId` when available.
+  - Stakeholder profile loading now falls back from missing marketplace listing detail to provider-specific Director discovery detail when the id is an actor/model/influencer provider id.
+- Deployment:
+  - No backend changes were required.
+  - Flutter web rebuilt and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production `/api/v1/public/cinema` returns 8 items.
+  - Production `/api/v1/health/ready` returns `ok`.
+  - Deployed `main.dart.js` contains the `marketplace.not_found` provider fallback path.

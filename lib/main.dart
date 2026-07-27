@@ -16,6 +16,7 @@ import 'core/network/api_client.dart';
 import 'core/operations/operations_controller.dart';
 import 'core/opportunities/opportunities_controller.dart';
 import 'core/payments/payments_controller.dart';
+import 'core/projects/projects_controller.dart';
 import 'core/specialist/specialist_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -56,6 +57,7 @@ class CineConnectApp extends StatelessWidget {
   final OpportunitiesController? opportunitiesController;
   final CreditsController? creditsController;
   final PaymentsController? paymentsController;
+  final ProjectsController? projectsController;
   final OperationsController? operationsController;
   final InsuranceController? insuranceController;
   final SpecialistController? specialistController;
@@ -75,6 +77,7 @@ class CineConnectApp extends StatelessWidget {
     this.opportunitiesController,
     this.creditsController,
     this.paymentsController,
+    this.projectsController,
     this.operationsController,
     this.insuranceController,
     this.specialistController,
@@ -146,26 +149,31 @@ class CineConnectApp extends StatelessWidget {
                     controller: contractsController ??
                         ContractsController.fromClient(
                             authController.apiClient),
-                    child: BookingsScope(
-                      controller: bookingsController ??
-                          BookingsController.fromClient(
+                    child: ProjectsScope(
+                      controller: projectsController ??
+                          ProjectsController.fromClient(
                               authController.apiClient),
-                      child: CastingScope(
-                        controller: castingController ??
-                            CastingController.fromClient(
-                              authController.apiClient,
-                            ),
-                        child: OpportunitiesScope(
-                          controller: opportunitiesController ??
-                              OpportunitiesController.fromClient(
+                      child: BookingsScope(
+                        controller: bookingsController ??
+                            BookingsController.fromClient(
+                                authController.apiClient),
+                        child: CastingScope(
+                          controller: castingController ??
+                              CastingController.fromClient(
                                 authController.apiClient,
                               ),
-                          child: CreditsScope(
-                            controller: creditsController ??
-                                CreditsController.fromClient(
+                          child: OpportunitiesScope(
+                            controller: opportunitiesController ??
+                                OpportunitiesController.fromClient(
                                   authController.apiClient,
                                 ),
-                            child: app,
+                            child: CreditsScope(
+                              controller: creditsController ??
+                                  CreditsController.fromClient(
+                                    authController.apiClient,
+                                  ),
+                              child: app,
+                            ),
                           ),
                         ),
                       ),

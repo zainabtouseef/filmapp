@@ -66,7 +66,15 @@ class _DPStakeholderProfileScreenState
         publicId: directorRoute.publicId,
       );
     }
-    return auth.marketplaceListing(id);
+    try {
+      return await auth.marketplaceListing(id);
+    } on ApiException catch (error) {
+      final fallbackKind = _kindFromProfileType(widget.profileType);
+      if (error.code == 'marketplace.not_found' && fallbackKind != null) {
+        return auth.directorDiscoveryItem(kind: fallbackKind, publicId: id);
+      }
+      rethrow;
+    }
   }
 
   void _retry() {
@@ -243,6 +251,16 @@ class _DPStakeholderProfileScreenState
     }
     return 'Live stakeholder details are unavailable right now.';
   }
+}
+
+String? _kindFromProfileType(String? value) {
+  final normalized = (value ?? '').toLowerCase();
+  if (normalized.contains('influencer')) return 'influencer';
+  if (normalized.contains('model')) return 'model';
+  if (normalized.contains('actor') || normalized.contains('talent')) {
+    return 'actor';
+  }
+  return null;
 }
 
 class _DirectorDiscoveryRoute {
