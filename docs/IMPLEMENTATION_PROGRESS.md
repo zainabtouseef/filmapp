@@ -1709,3 +1709,20 @@
   - `python3 -m py_compile backend/app/api/marketplace.py` passes.
   - Production lookup works for listing/profile id pairs including `DEMO-LST-INF-001` ↔ `DEMO-TAL-INF-001` and `LST-E02AE717D82E` ↔ `DEMO-TAL-009`.
   - Production `/api/v1/health/ready` returns `ok`.
+
+### 2026-07-27 — General Public marketplace source fix
+
+- Issue observed:
+  - General Public profile opens could still fail because public browse cards were loaded from Director discovery instead of public marketplace listings.
+- Fix:
+  - `DPMarketplaceDiscoveryScreen` now uses `/marketplace/listings` when `publicBuyerMode` is true.
+  - Public category mapping is now explicit: Actors → `actor`, Models → `model`, Influencers → `influencer`, Locations → `location`, Media & Equipment → `equipment`, Agencies → `agency`.
+  - Director portal discovery still uses Director discovery, so Director-specific provider DTOs remain intact.
+- Deployment:
+  - No backend changes required.
+  - Flutter web rebuilt and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production marketplace list endpoints return listing ids for actor/influencer/model.
+  - Deployed `main.dart.js` contains `/marketplace/listings`.

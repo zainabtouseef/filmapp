@@ -78,8 +78,27 @@ class _DPMarketplaceDiscoveryScreenState
         message: 'Sign in to load the live marketplace.',
       );
     }
+    if (widget.publicBuyerMode) {
+      final listings = await auth.marketplaceListings(
+        type: _publicListingType(_category),
+        query: _search.text.trim(),
+      );
+      return listings.map((item) => item.toCandidate()).toList();
+    }
     final discovery = await auth.directorDiscovery(category: _category);
     return discovery.items.map((item) => item.toCandidate()).toList();
+  }
+
+  String? _publicListingType(String category) {
+    return switch (category) {
+      'Actors' => 'actor',
+      'Models' => 'model',
+      'Influencers' => 'influencer',
+      'Locations' => 'location',
+      'Media & Equipment' => 'equipment',
+      'Agencies' => 'agency',
+      _ => null,
+    };
   }
 
   bool _categoryHasLiveFeed(String category) {
