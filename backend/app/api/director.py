@@ -1503,6 +1503,27 @@ def _director_discovery_facets(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _director_discovery_detail(kind: str, public_id: str) -> dict[str, Any]:
     kind_key = kind.strip().lower().replace("-", "_")
+    listing = db.session.execute(
+        select(MarketplaceListing).where(
+            MarketplaceListing.public_id == public_id,
+            MarketplaceListing.visibility == "public",
+            MarketplaceListing.moderation_status == "approved",
+        )
+    ).scalar_one_or_none()
+    if listing is not None:
+        public_id = listing.profile_entity_id
+        if kind_key == "actor" and listing.listing_type == "talent":
+            kind_key = "actor"
+        elif listing.listing_type in {
+            "actor",
+            "model",
+            "influencer",
+            "location",
+            "equipment",
+            "agency",
+            "distribution",
+        }:
+            kind_key = listing.listing_type
     if kind_key == "location":
         row = db.session.execute(
             select(LocationProperty).where(LocationProperty.public_id == public_id)

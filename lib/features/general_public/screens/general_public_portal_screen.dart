@@ -84,6 +84,7 @@ class GeneralPublicPortalScreen extends StatelessWidget {
       GeneralPublicRoutes.profile => DPStakeholderProfileScreen(
           candidateId: id,
           profileType: category,
+          publicBuyerMode: true,
         ),
       GeneralPublicRoutes.bookingRequest => DPBookingRequestFormScreen(
           candidateId: id,

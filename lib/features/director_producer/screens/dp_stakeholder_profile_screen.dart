@@ -21,12 +21,14 @@ class DPStakeholderProfileScreen extends StatefulWidget {
   final String? candidateId;
   final String? profileType;
   final String? projectId;
+  final bool publicBuyerMode;
 
   const DPStakeholderProfileScreen({
     super.key,
     this.candidateId,
     this.profileType,
     this.projectId,
+    this.publicBuyerMode = false,
   });
 
   @override
@@ -59,12 +61,23 @@ class _DPStakeholderProfileScreenState
         message: 'Sign in to load the live stakeholder profile.',
       );
     }
+    if (widget.publicBuyerMode) {
+      final publicId = _DirectorDiscoveryRoute.tryParse(id)?.publicId ?? id;
+      return auth.marketplaceListing(publicId);
+    }
     final directorRoute = _DirectorDiscoveryRoute.tryParse(id);
     if (directorRoute != null) {
-      return auth.directorDiscoveryItem(
-        kind: directorRoute.kind,
-        publicId: directorRoute.publicId,
-      );
+      try {
+        return await auth.directorDiscoveryItem(
+          kind: directorRoute.kind,
+          publicId: directorRoute.publicId,
+        );
+      } on ApiException catch (error) {
+        if (error.code == 'director.discovery_not_found') {
+          return auth.marketplaceListing(directorRoute.publicId);
+        }
+        rethrow;
+      }
     }
     try {
       return await auth.marketplaceListing(id);

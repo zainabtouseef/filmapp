@@ -1726,3 +1726,23 @@
   - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
   - Production marketplace list endpoints return listing ids for actor/influencer/model.
   - Deployed `main.dart.js` contains `/marketplace/listings`.
+
+### 2026-07-27 — General Public stale profile route fix
+
+- Issue observed:
+  - General Public profile detail could still show `Director discovery item was not found` after deployment when Chrome/Flutter web had an older route id such as `director:influencer:DEMO-LST-INF-001`.
+- Fix:
+  - `DPStakeholderProfileScreen` now has explicit `publicBuyerMode`.
+  - General Public profile detail always resolves public-buyer routes through `/marketplace/listings/<id>` first, even when the incoming route still has a `director:<kind>:<id>` prefix.
+  - Backend Director discovery detail now also accepts approved marketplace listing ids and maps them to the provider profile id, so stale frontend bundles and bookmarked public profile links do not break.
+- Deployment:
+  - Backend source synced and Docker image `cineconnect-prod-api:latest` rebuilt.
+  - `cineconnect-api`, `cineconnect-worker`, and `cineconnect-scheduler` recreated.
+  - Flutter web rebuilt and synced to `/var/www/cineconnect/web`.
+- Verification:
+  - `python3 -m py_compile backend/app/api/director.py` passes.
+  - `flutter analyze` passes.
+  - `flutter build web --release --dart-define=CINECONNECT_API_BASE_URL=https://cine.nalexustechnologies.com/api/v1` passes.
+  - Production API returns 200 for `/marketplace/listings/DEMO-LST-INF-001`, `/marketplace/listings/DEMO-TAL-INF-001`, `/director/discovery/influencer/DEMO-LST-INF-001`, and `/director/discovery/influencer/DEMO-TAL-INF-001`.
+  - Chrome verification after clearing only CineConnect service-worker/cache shows `#/public/profile/director:influencer:DEMO-LST-INF-001` and `#/public/profile/director:influencer:DEMO-TAL-INF-001` both loading the live Ayesha Khan Studio profile instead of the error card.
+  - Normal General Public Browse loads marketplace-backed cards including Ayesha Khan Studio and Ayaan Malik.
