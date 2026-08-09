@@ -416,7 +416,8 @@ class CoreRoutes {
             if (segments.length > 2) 'tab': segments[2],
           },
         ),
-      'profile' when segments.length >= 3 => _DirectorDeepLink(
+      'profile' when segments.length >= 3 && _isRealId(segments[2]) =>
+        _DirectorDeepLink(
           DirectorProducerRoutes.profile,
           arguments: {
             'type': segments[1],
@@ -425,7 +426,8 @@ class CoreRoutes {
             'id': segments[2],
           },
         ),
-      'booking' when segments.length >= 2 => _DirectorDeepLink(
+      'booking' when segments.length >= 2 && _isRealId(segments[1]) =>
+        _DirectorDeepLink(
           DirectorProducerRoutes.bookingRequest,
           arguments: {
             'candidateId': segments[1],
@@ -460,7 +462,12 @@ class CoreRoutes {
         const _GeneralPublicDeepLink(GeneralPublicRoutes.contracts),
       'payments' => const _GeneralPublicDeepLink(GeneralPublicRoutes.payments),
       'account' => const _GeneralPublicDeepLink(GeneralPublicRoutes.account),
-      'profile' when segments.length >= 3 => _GeneralPublicDeepLink(
+      'profile'
+          when segments.length >= 3 &&
+              _isRealId(
+                segments.length > 3 ? segments[3] : segments[2],
+              ) =>
+        _GeneralPublicDeepLink(
           GeneralPublicRoutes.profile,
           arguments: {
             if (segments.length > 3) 'type': segments[2],
@@ -469,7 +476,8 @@ class CoreRoutes {
             'id': segments.length > 3 ? segments[3] : segments[2],
           },
         ),
-      'booking' when segments.length >= 3 => _GeneralPublicDeepLink(
+      'booking' when segments.length >= 3 && _isRealId(segments[2]) =>
+        _GeneralPublicDeepLink(
           GeneralPublicRoutes.bookingRequest,
           arguments: {
             'candidateId': segments[2],
@@ -566,6 +574,13 @@ class CoreRoutes {
     if (name == null || !name.startsWith('/')) return const [];
     return Uri.tryParse(name)?.pathSegments ?? const [];
   }
+
+  /// Guards deep-link id segments against the literal `:id` placeholder —
+  /// reachable when a browser reloads a URL that mirrors an in-app route
+  /// constant like `/talent/applications/:id` (the constant is used as a
+  /// fixed route name for `Navigator.pushNamed`, with the real id carried
+  /// via `arguments`, which don't survive a reload).
+  static bool _isRealId(String value) => value.isNotEmpty && value != ':id';
 }
 
 class _DirectorDeepLink {
