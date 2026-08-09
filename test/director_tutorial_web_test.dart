@@ -40,6 +40,24 @@ void main() {
     expect(script, contains('expectedTextPattern: "Project created"'));
   });
 
+  test('two-stage requirement actions are handled once per click', () {
+    expect(
+      RegExp(
+        r'addEventListener\("click", handleTargetPointer',
+      ).allMatches(script).length,
+      1,
+    );
+    expect(
+      script,
+      isNot(contains('addEventListener("pointerup", handleTargetPointer')),
+    );
+    expect(
+      script,
+      isNot(contains('targetItem.node.addEventListener')),
+    );
+    expect(script, contains('state.targetRetryCount < 40'));
+  });
+
   test('navigation targets adapt to bottom navigation and desktop sidebar', () {
     expect(script, contains('const SIDEBAR_BREAKPOINT_PX = 1200'));
     expect(script, contains('function currentNavigationMode()'));
@@ -97,7 +115,7 @@ void main() {
       styles,
       isNot(contains('linear-gradient(160deg, #ffffff 0%, #f7f8fa 100%)')),
     );
-    expect(index, contains('director_tutorial.css?v=20260809-29'));
-    expect(index, contains('director_tutorial.js?v=20260809-29'));
+    expect(index, contains('director_tutorial.css?v=20260809-30'));
+    expect(index, contains('director_tutorial.js?v=20260809-30'));
   });
 }

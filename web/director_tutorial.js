@@ -1443,7 +1443,6 @@
     });
     document.addEventListener("cineconnect-session-identity", syncIdentity);
     document.addEventListener("keydown", handleKeyboard, true);
-    document.addEventListener("pointerup", handleTargetPointer, true);
     document.addEventListener("click", handleTargetPointer, true);
     document.addEventListener("input", handleTargetInput, true);
     document.addEventListener("scroll", restartTargetGeometry, true);
@@ -1679,7 +1678,6 @@
     state.geometrySignature = "";
     state.geometryStableFrames = 0;
     document.querySelectorAll('[data-cc-guide-target="true"]').forEach((node) => {
-      node.removeEventListener("click", handleTargetPointer, true);
       node.removeAttribute("data-cc-guide-target");
       node.removeAttribute("data-cc-guide-success");
     });
@@ -2068,7 +2066,7 @@
         actionStatus.textContent = state.awaitingCompletion
           ? completionStatus(step)
           : `Waiting for the exact “${step.actionLabel}” control`;
-        if (state.targetRetryCount < 6) {
+        if (state.targetRetryCount < 40) {
           state.targetRetryCount += 1;
           clearTimeout(state.actionTimer);
           state.actionTimer = setTimeout(() => renderSpotlight(step), 180);
@@ -2103,7 +2101,6 @@
       targetItem.outline = outline;
       positionTargetOutline(targetItem);
       targetItem.node.setAttribute("data-cc-guide-target", "true");
-      targetItem.node.addEventListener("click", handleTargetPointer, true);
     });
 
     updateScrimMask(rects);
@@ -2114,6 +2111,8 @@
       mission.textContent = step.completionInstruction;
     } else if (step.action === "input" && targets.length > 1) {
       mission.textContent = `Complete all ${targets.length} highlighted fields.`;
+    } else {
+      mission.textContent = step.actionLabel || step.doThis;
     }
     actionStatus.textContent = state.targetIsGate
       ? "Open the required section first"
@@ -2147,10 +2146,10 @@
     const step = currentRenderedStep();
     if (step.action !== "click" && !state.targetIsGate) return;
     if (root && root.contains(event.target)) return;
-    const isDirectTargetEvent = Boolean(
-      event.currentTarget &&
-      event.currentTarget.getAttribute &&
-      event.currentTarget.getAttribute("data-cc-guide-target") === "true"
+    const eventTarget = event.target;
+    const isDirectTargetEvent = state.currentTargets.some((targetItem) =>
+      targetItem.node === eventTarget ||
+      Boolean(targetItem.node && targetItem.node.contains && targetItem.node.contains(eventTarget))
     );
     const isInsideCurrentTarget = isDirectTargetEvent || state.currentRects.some((rect) =>
       pointIsInsideRect(event.clientX, event.clientY, rect)
