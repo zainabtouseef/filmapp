@@ -49,6 +49,8 @@ class AuthUser {
     return roles.isEmpty ? null : roles.first;
   }
 
+  bool hasRole(String code) => roles.any((role) => role.code == code);
+
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     final roles = (json['roles'] as List<dynamic>? ?? [])
         .map((item) => AuthRole.fromJson(item as Map<String, dynamic>))

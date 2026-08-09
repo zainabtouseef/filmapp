@@ -64,7 +64,8 @@ void main() {
 
     test('skip() ends the tour immediately and runs onFinished', () {
       var finished = false;
-      controller.start(steps, tourId: 'demo', onFinished: () => finished = true);
+      controller.start(steps,
+          tourId: 'demo', onFinished: () => finished = true);
       controller.skip();
       expect(controller.isActive, isFalse);
       expect(finished, isTrue);
@@ -137,11 +138,94 @@ void main() {
         expect(find.text('other'), findsOneWidget);
       },
     );
+
+    testWidgets('consecutive steps on one route do not push duplicate pages', (
+      tester,
+    ) async {
+      var otherBuilds = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          initialRoute: '/home',
+          routes: {
+            '/home': (_) => const Scaffold(body: Text('home')),
+            '/other': (_) {
+              otherBuilds++;
+              return const Scaffold(body: Text('other'));
+            },
+          },
+        ),
+      );
+
+      controller.start(
+        const [
+          TourStep(
+            id: 'other-one',
+            targetId: 'target.other',
+            badge: '1 / 2',
+            title: 'Other one',
+            description: 'First lesson on this page.',
+            routeName: '/other',
+          ),
+          TourStep(
+            id: 'other-two',
+            targetId: 'target.other',
+            badge: '2 / 2',
+            title: 'Other two',
+            description: 'Second lesson on this page.',
+            routeName: '/other',
+          ),
+        ],
+        tourId: 'same-route-demo',
+      );
+      await tester.pumpAndSettle();
+      expect(otherBuilds, 1);
+
+      controller.next();
+      await tester.pumpAndSettle();
+
+      expect(otherBuilds, 1);
+      expect(find.text('other'), findsOneWidget);
+    });
+
+    testWidgets('replaceRoutes keeps a full walkthrough off the page stack', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          routes: {
+            '/': (_) => const Scaffold(body: Text('home')),
+            '/other': (_) => const Scaffold(body: Text('other')),
+          },
+        ),
+      );
+
+      controller.start(
+        const [
+          TourStep(
+            id: 'replace-route',
+            targetId: 'target.other',
+            badge: '1 / 1',
+            title: 'Other',
+            description: 'Replace the current walkthrough page.',
+            routeName: '/other',
+          ),
+        ],
+        tourId: 'replacement-demo',
+        replaceRoutes: true,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('other'), findsOneWidget);
+      expect(navigatorKey.currentState!.canPop(), isFalse);
+    });
   });
 
   group('TourScope', () {
     testWidgets('of(context) resolves the nearest controller', (tester) async {
-      final controller = TourController(navigatorKey: GlobalKey<NavigatorState>());
+      final controller =
+          TourController(navigatorKey: GlobalKey<NavigatorState>());
       late TourController resolved;
       await tester.pumpWidget(
         TourScope(

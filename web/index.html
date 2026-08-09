@@ -31,6 +31,8 @@
 
   <title>cineconnect</title>
   <link rel="manifest" href="manifest.json">
+  <script src="director_tutorial_bootstrap.js?v=20260809-24"></script>
+  <link rel="stylesheet" href="director_tutorial.css?v=20260809-24">
 </head>
 <body>
   <!--
@@ -41,6 +43,24 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    {{flutter_js}}
+    {{flutter_build_config}}
+
+    // Flutter's generated service-worker version changes with every build.
+    // Reuse it for the app bundle URL so browsers cannot keep running an
+    // earlier deployment after the server has been updated.
+    const buildVersion = {{flutter_service_worker_version}};
+    for (const build of _flutter.buildConfig.builds) {
+      if (build.mainJsPath) {
+        build.mainJsPath = `${build.mainJsPath}?v=${buildVersion}`;
+      }
+    }
+
+    _flutter.loader.load({
+      serviceWorkerSettings: { serviceWorkerVersion: buildVersion },
+    });
+  </script>
+  <script src="director_tutorial.js?v=20260809-24" defer></script>
 </body>
 </html>

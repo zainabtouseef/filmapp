@@ -20,6 +20,8 @@ class TourController extends ChangeNotifier {
   int _index = -1;
   String? _tourId;
   VoidCallback? _onFinished;
+  String? _lastSyncedRoute;
+  bool _replaceRoutes = false;
 
   bool get isActive => _index >= 0 && _index < _steps.length;
   TourStep? get currentStep => isActive ? _steps[_index] : null;
@@ -60,12 +62,19 @@ class TourController extends ChangeNotifier {
     return offset & size;
   }
 
-  void start(List<TourStep> steps, {required String tourId, VoidCallback? onFinished}) {
+  void start(
+    List<TourStep> steps, {
+    required String tourId,
+    VoidCallback? onFinished,
+    bool replaceRoutes = false,
+  }) {
     if (steps.isEmpty) return;
     _steps = steps;
     _tourId = tourId;
     _index = 0;
     _onFinished = onFinished;
+    _lastSyncedRoute = null;
+    _replaceRoutes = replaceRoutes;
     notifyListeners();
     _syncRoute();
   }
@@ -95,6 +104,8 @@ class TourController extends ChangeNotifier {
     _steps = const [];
     _index = -1;
     _tourId = null;
+    _lastSyncedRoute = null;
+    _replaceRoutes = false;
     final callback = _onFinished;
     _onFinished = null;
     notifyListeners();
@@ -111,11 +122,20 @@ class TourController extends ChangeNotifier {
     final step = currentStep;
     final routeName = step?.routeName;
     if (routeName == null) return;
+    if (_lastSyncedRoute == routeName) return;
     final navContext = navigatorKey.currentContext;
     if (navContext == null) return;
     final currentRoute = ModalRoute.of(navContext)?.settings.name;
-    if (currentRoute == routeName) return;
-    Navigator.of(navContext).pushNamed(routeName);
+    if (currentRoute == routeName) {
+      _lastSyncedRoute = routeName;
+      return;
+    }
+    _lastSyncedRoute = routeName;
+    if (_replaceRoutes) {
+      Navigator.of(navContext).pushReplacementNamed(routeName);
+    } else {
+      Navigator.of(navContext).pushNamed(routeName);
+    }
   }
 }
 

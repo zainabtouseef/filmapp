@@ -1,12 +1,42 @@
 import 'package:flutter/material.dart';
 
+import '../../../features/director_producer/routes/director_producer_routes.dart';
+import '../../../features/director_producer/widgets/dp_full_walkthrough_steps.dart';
+import '../../../features/director_producer/widgets/dp_tour_steps.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/auth_models.dart';
 import '../../auth/role_mapper.dart';
 import '../../theme/app_color_scheme.dart';
+import '../../theme/app_radius.dart';
 import '../../theme/app_text_styles.dart';
+import '../../tour/tour_controller.dart';
+import '../../tour/tour_preferences_store.dart';
 import '../core_routes.dart';
 import '../widgets/core_widgets.dart';
+
+// dpTourSteps assumes its targets are already mounted on the DP console
+// (see dp_tour_steps.dart) — this screen isn't wrapped in DPShell, so route
+// there first and let SpotlightOverlay pick up the targets once it mounts.
+void _startDirectorProducerTour(BuildContext context) {
+  Navigator.pushNamed(context, DirectorProducerRoutes.home);
+  TourScope.of(context).start(
+    dpTourSteps,
+    tourId: dpTourId,
+    onFinished: () => const TourPreferencesStore().markSeen(dpTourId),
+  );
+}
+
+void _startFullWalkthrough(BuildContext context) {
+  TourScope.of(context).start(
+    dpFullWalkthroughSteps,
+    tourId: dpFullWalkthroughTourId,
+    replaceRoutes: true,
+    onFinished: () {
+      const TourPreferencesStore().markSeen(dpFullWalkthroughTourId);
+      CoreRoutes.navigatorKey.currentState?.pushNamed(CoreRoutes.profileRoles);
+    },
+  );
+}
 
 class ProfileRoleSwitcherScreen extends StatelessWidget {
   const ProfileRoleSwitcherScreen({super.key});
@@ -79,6 +109,7 @@ class _RoleSwitcherContent extends StatelessWidget {
     final auth = AuthScope.of(context);
     final user = auth.user;
     final roles = user?.roles ?? const <AuthRole>[];
+    final hasDirectorProducerRole = user?.hasRole('director_producer') ?? false;
 
     return CoreGlassCard(
       padding: const EdgeInsets.all(18),
@@ -120,6 +151,13 @@ class _RoleSwitcherContent extends StatelessWidget {
               ),
             ],
           ),
+          if (hasDirectorProducerRole) ...[
+            const SizedBox(height: 14),
+            _DirectorProducerTutorials(
+              onQuickTour: () => _startDirectorProducerTour(context),
+              onFullWalkthrough: () => _startFullWalkthrough(context),
+            ),
+          ],
           const SizedBox(height: 14),
           if (roles.isEmpty)
             const CoreEmptyState(
@@ -137,6 +175,211 @@ class _RoleSwitcherContent extends StatelessWidget {
             onTap: () => Navigator.pushNamed(context, CoreRoutes.roleSelection),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DirectorProducerTutorials extends StatelessWidget {
+  final VoidCallback onQuickTour;
+  final VoidCallback onFullWalkthrough;
+
+  const _DirectorProducerTutorials({
+    required this.onQuickTour,
+    required this.onFullWalkthrough,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.softSurface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: colors.borderMuted),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: colors.goldGradient,
+                  boxShadow: [
+                    BoxShadow(color: colors.goldGlow, blurRadius: 14),
+                  ],
+                ),
+                child: Icon(
+                  Icons.school_outlined,
+                  color: colors.onGold,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Director / Producer Tutorials',
+                      style: AppTextStyles.label.copyWith(
+                        color: colors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose a quick orientation or learn the complete Director / Producer workflow.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final quick = _TutorialChoice(
+                icon: Icons.bolt_outlined,
+                title: 'Quick Walkthrough',
+                subtitle: '8 key actions · about 2 min',
+                onTap: onQuickTour,
+              );
+              final detailed = _TutorialChoice(
+                icon: Icons.menu_book_outlined,
+                title: 'Full Director Walkthrough',
+                subtitle: 'Create project to final report · 69 steps',
+                featured: true,
+                onTap: onFullWalkthrough,
+              );
+
+              if (constraints.maxWidth < 680) {
+                return Column(
+                  children: [
+                    quick,
+                    const SizedBox(height: 10),
+                    detailed,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: quick),
+                  const SizedBox(width: 12),
+                  Expanded(child: detailed),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TutorialChoice extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool featured;
+  final VoidCallback onTap;
+
+  const _TutorialChoice({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.featured = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final foreground = featured ? colors.onGold : colors.textPrimary;
+    final secondary =
+        featured ? colors.onGold.withValues(alpha: 0.72) : colors.textSecondary;
+
+    return Semantics(
+      button: true,
+      label: '$title. $subtitle',
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: featured ? null : colors.elevatedSurface,
+            gradient: featured ? colors.goldGradient : null,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: featured ? colors.goldDark : colors.border,
+            ),
+            boxShadow: featured
+                ? [BoxShadow(color: colors.goldGlow, blurRadius: 18)]
+                : null,
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 72),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, color: foreground, size: 23),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.label.copyWith(
+                              color: foreground,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption.copyWith(
+                              color: secondary,
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: foreground,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
