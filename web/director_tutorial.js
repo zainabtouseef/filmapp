@@ -1,12 +1,13 @@
 (function () {
   "use strict";
 
-  const GUIDE_VERSION = "6";
+  const GUIDE_VERSION = "8";
   const IDENTITY_KEY = "cineconnect.session_identity";
   const ROUTE_SESSION_KEY = "cineconnect.director_route_session";
   const STORAGE_PREFIX = `cineconnect.director_guide.v${GUIDE_VERSION}.`;
   const DIRECTOR_ROLE = "director_producer";
   const AUTO_START_DELAY_MS = 1500;
+  const SIDEBAR_BREAKPOINT_PX = 1200;
 
   const icon = (name) => {
     const paths = {
@@ -586,6 +587,12 @@
       actionLabel: "Tap Productions",
       targetLabels: ["Productions"],
       expectedHash: "#/director/projects",
+      desktop: {
+        doThis: "Select Projects from the left sidebar.",
+        routeLabel: "Sidebar > Projects",
+        actionLabel: "Open Projects",
+        targetLabels: ["Projects"],
+      },
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -643,6 +650,9 @@
       action: "click",
       actionLabel: "Add production cities",
       targetLabels: ["City / cities + Add city"],
+      waitForTextCycle: "Add a city",
+      requireTargetTextChange: true,
+      waitingInstruction: "Choose a city from the sheet. The guide will continue after the city is added.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -758,6 +768,9 @@
       action: "click",
       actionLabel: `Add ${label}`,
       targetLabels: [label],
+      completionTargetLabels: ["Save requirement"],
+      completionInstruction: `Complete the ${label} requirement, then tap Save requirement.`,
+      completionDismissedPattern: "Save requirement",
     }));
   });
 
@@ -781,7 +794,8 @@
       action: "click",
       actionLabel: "Create Project",
       targetLabels: ["Create Project"],
-      expectedHash: "#/director/projects",
+      expectedTextPattern: "Project created",
+      waitingInstruction: "Creating the project… The next step starts only after the project is saved successfully.",
     })
   );
 
@@ -818,6 +832,7 @@
         actionLabel: "Open one Profile",
         targetLabels: ["Profile"],
         multipleTargets: true,
+        expectedHashPrefix: "#/director/profile",
       }),
       workflowStep({
         chapter: "2 · Hire the project",
@@ -830,6 +845,8 @@
         targetLabels: ["Request"],
         multipleTargets: true,
         expectedHash: "#/director/booking-request",
+        prepareRoute: "#/director/marketplace",
+        preserveRoutePrefixes: ["#/director/profile"],
       }),
       workflowStep({
         chapter: "2 · Hire the project",
@@ -841,6 +858,9 @@
         action: "click",
         actionLabel: "Send the booking request",
         targetLabels: ["Send Request", "Submit Request", "Send booking request"],
+        expectedHash: "#/director/bargaining",
+        outcomeTimeoutMs: 90000,
+        waitingInstruction: "Sending the request… The guide will continue only after CineConnect confirms it.",
       })
     );
   });
@@ -857,6 +877,12 @@
       actionLabel: "Open Deals",
       targetLabels: ["Deals"],
       expectedHash: "#/director/bargaining",
+      desktop: {
+        doThis: "Select Bargaining from the left sidebar.",
+        routeLabel: "Sidebar > Bargaining",
+        actionLabel: "Open Bargaining",
+        targetLabels: ["Bargaining"],
+      },
     }),
     workflowStep({
       chapter: "3 · Close the deal",
@@ -868,6 +894,13 @@
       action: "click",
       actionLabel: "Open More",
       targetLabels: ["More"],
+      desktop: {
+        doThis: "Select Contracts from the left sidebar.",
+        routeLabel: "Sidebar > Contracts",
+        actionLabel: "Open Contracts",
+        targetLabels: ["Contracts"],
+        expectedHash: "#/director/contracts",
+      },
     }),
     workflowStep({
       chapter: "3 · Close the deal",
@@ -879,6 +912,16 @@
       actionLabel: "Open Contracts",
       targetLabels: ["Contracts"],
       expectedHash: "#/director/contracts",
+      desktop: {
+        doThis: "Review the Contracts workspace, then tap Next.",
+        prepareRoute: "#/director/contracts",
+        routeLabel: "Contracts workspace",
+        action: "manual",
+        actionLabel: "Continue",
+        targetLabels: [],
+        gateLabels: null,
+        expectedHash: null,
+      },
     }),
     workflowStep({
       chapter: "4 · Run production",
@@ -890,6 +933,13 @@
       action: "click",
       actionLabel: "Open More",
       targetLabels: ["More"],
+      desktop: {
+        doThis: "Select Payments from the left sidebar.",
+        routeLabel: "Sidebar > Payments",
+        actionLabel: "Open Payments",
+        targetLabels: ["Payments"],
+        expectedHash: "#/director/payments",
+      },
     }),
     workflowStep({
       chapter: "4 · Run production",
@@ -901,6 +951,16 @@
       actionLabel: "Open Payments",
       targetLabels: ["Payments"],
       expectedHash: "#/director/payments",
+      desktop: {
+        doThis: "Review payment milestones and proofs, then tap Next.",
+        prepareRoute: "#/director/payments",
+        routeLabel: "Payments workspace",
+        action: "manual",
+        actionLabel: "Continue",
+        targetLabels: [],
+        gateLabels: null,
+        expectedHash: null,
+      },
     }),
     workflowStep({
       chapter: "4 · Run production",
@@ -912,6 +972,13 @@
       action: "click",
       actionLabel: "Open More",
       targetLabels: ["More"],
+      desktop: {
+        doThis: "Select Schedule from the left sidebar.",
+        routeLabel: "Sidebar > Schedule",
+        actionLabel: "Open Schedule",
+        targetLabels: ["Schedule"],
+        expectedHash: "#/director/schedule",
+      },
     }),
     workflowStep({
       chapter: "4 · Run production",
@@ -923,6 +990,16 @@
       actionLabel: "Open Schedule",
       targetLabels: ["Schedule"],
       expectedHash: "#/director/schedule",
+      desktop: {
+        doThis: "Review the live production schedule, then tap Next.",
+        prepareRoute: "#/director/schedule",
+        routeLabel: "Schedule workspace",
+        action: "manual",
+        actionLabel: "Continue",
+        targetLabels: [],
+        gateLabels: null,
+        expectedHash: null,
+      },
     }),
     workflowStep({
       chapter: "4 · Run production",
@@ -934,6 +1011,13 @@
       action: "click",
       actionLabel: "Open More",
       targetLabels: ["More"],
+      desktop: {
+        doThis: "Select Room from the left sidebar.",
+        routeLabel: "Sidebar > Room",
+        actionLabel: "Open Room",
+        targetLabels: ["Room"],
+        expectedHash: "#/director/room",
+      },
     }),
     workflowStep({
       chapter: "4 · Run production",
@@ -945,6 +1029,16 @@
       actionLabel: "Open Room",
       targetLabels: ["Room"],
       expectedHash: "#/director/room",
+      desktop: {
+        doThis: "Review the Project Room workflow, then tap Next.",
+        prepareRoute: "#/director/room",
+        routeLabel: "Project Room workspace",
+        action: "manual",
+        actionLabel: "Continue",
+        targetLabels: [],
+        gateLabels: null,
+        expectedHash: null,
+      },
     }),
     workflowStep({
       chapter: "5 · Review & report",
@@ -956,6 +1050,13 @@
       action: "click",
       actionLabel: "Open More",
       targetLabels: ["More"],
+      desktop: {
+        doThis: "Select Reports from the left sidebar.",
+        routeLabel: "Sidebar > Reports",
+        actionLabel: "Open Reports",
+        targetLabels: ["Reports"],
+        expectedHash: "#/director/reports",
+      },
     }),
     workflowStep({
       chapter: "5 · Review & report",
@@ -967,6 +1068,16 @@
       actionLabel: "Open Reports",
       targetLabels: ["Reports"],
       expectedHash: "#/director/reports",
+      desktop: {
+        doThis: "Review project reporting and exports, then tap Next.",
+        prepareRoute: "#/director/reports",
+        routeLabel: "Reports workspace",
+        action: "manual",
+        actionLabel: "Continue",
+        targetLabels: [],
+        gateLabels: null,
+        expectedHash: null,
+      },
     }),
     workflowStep({
       chapter: "5 · Review & report",
@@ -978,6 +1089,13 @@
       action: "click",
       actionLabel: "Open More",
       targetLabels: ["More"],
+      desktop: {
+        doThis: "Select Accounts from the left sidebar.",
+        routeLabel: "Sidebar > Accounts",
+        actionLabel: "Open Accounts",
+        targetLabels: ["Accounts"],
+        expectedHash: "#/director/accounts",
+      },
     }),
     workflowStep({
       chapter: "5 · Review & report",
@@ -988,6 +1106,17 @@
       action: "click",
       actionLabel: "Open Accounts",
       targetLabels: ["Accounts"],
+      expectedHash: "#/director/accounts",
+      desktop: {
+        doThis: "Review profile and verification details, then tap Next.",
+        prepareRoute: "#/director/accounts",
+        routeLabel: "Accounts workspace",
+        action: "manual",
+        actionLabel: "Continue",
+        targetLabels: [],
+        gateLabels: null,
+        expectedHash: null,
+      },
     }),
     workflowStep({
       chapter: "Complete",
@@ -1020,9 +1149,6 @@
       step.gateLabels = ["More"];
     }
 
-    if (step.chapter === "2 · Hire the project" && step.title.startsWith("Request the selected")) {
-      step.prepareRoute = "#/director/marketplace";
-    }
   });
 
   steps.splice(0, steps.length, ...workflowSteps);
@@ -1050,6 +1176,10 @@
     scrollAttempted: false,
     actionPending: false,
     actionTimer: null,
+    outcomeCycleObserved: false,
+    outcomeBaselineTargetText: "",
+    renderedStep: null,
+    navigationMode: null,
   };
 
   let root;
@@ -1278,10 +1408,10 @@
     window.addEventListener("hashchange", () => {
       setTimeout(() => {
         if (state.open) {
-          const step = steps[state.index];
-          if (state.actionPending && step.expectedHash && window.location.hash === step.expectedHash) {
+          const step = currentRenderedStep();
+          if (state.actionPending && actionOutcomeReached(step)) {
             completeCurrentAction();
-          } else {
+          } else if (!state.actionPending) {
             renderSpotlight(step);
           }
         }
@@ -1311,8 +1441,28 @@
 
   function goToRoute(step) {
     const route = step.prepareRoute || step.route;
-    if (!route || window.location.hash === route) return;
+    if (!route || window.location.hash === route || shouldPreserveCurrentRoute(step)) return;
     window.location.hash = route;
+  }
+
+  function currentNavigationMode() {
+    return innerWidth >= SIDEBAR_BREAKPOINT_PX ? "desktop" : "compact";
+  }
+
+  function stepForCurrentLayout(step) {
+    const variant = currentNavigationMode() === "desktop" ? step.desktop : step.compact;
+    return variant ? Object.assign({}, step, variant) : step;
+  }
+
+  function currentRenderedStep() {
+    return state.renderedStep || stepForCurrentLayout(steps[state.index]);
+  }
+
+  function shouldPreserveCurrentRoute(step) {
+    const prefixes = Array.isArray(step.preserveRoutePrefixes)
+      ? step.preserveRoutePrefixes
+      : [];
+    return prefixes.some((prefix) => window.location.hash.startsWith(prefix));
   }
 
   function enableFlutterSemantics() {
@@ -1331,6 +1481,19 @@
     }
   }
 
+  function semanticNodeText(node) {
+    return [
+      node && node.getAttribute && node.getAttribute("aria-label"),
+      node && node.getAttribute && node.getAttribute("placeholder"),
+      node && node.textContent,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
   function semanticTargets(labels, multipleTargets) {
     if (!Array.isArray(labels) || labels.length === 0) return [];
     const normalizedLabels = labels.map((label) => String(label).replace(/\s+/g, " ").trim().toLowerCase());
@@ -1344,16 +1507,7 @@
 
     nodes.forEach((node) => {
       if (root && root.contains(node)) return;
-      const text = [
-        node.getAttribute && node.getAttribute("aria-label"),
-        node.getAttribute && node.getAttribute("placeholder"),
-        node.textContent,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase();
+      const text = semanticNodeText(node);
       if (!text) return;
 
       const exactLabel = normalizedLabels.find((label) => text === label);
@@ -1371,14 +1525,26 @@
 
       const area = rawRect.width * rawRect.height;
       const isExact = Boolean(exactLabel);
+      const role = String(node.getAttribute && node.getAttribute("role") || "").toLowerCase();
+      const tagName = String(node.tagName || "").toLowerCase();
+      const isActionable =
+        role === "button" ||
+        role === "link" ||
+        ["button", "input", "textarea", "select", "a"].includes(tagName) ||
+        Boolean(node.getAttribute && node.getAttribute("tabindex"));
       // Never outline a broad Flutter container as a button fallback. Exact
-      // semantics always win; contained matches must still be button-sized.
+      // semantics win, and actual controls rank ahead of labels/headings.
       if (!isExact && area / viewportArea > 0.16) return;
       candidates.push({
         node,
         label: containedLabel,
         exact: isExact,
-        score: (isExact ? 0 : 1000000) + area + Math.max(0, text.length - containedLabel.length) * 60,
+        actionable: isActionable,
+        score:
+          (isExact ? 0 : 1000000) +
+          (isActionable ? 0 : 500000) +
+          area +
+          Math.max(0, text.length - containedLabel.length) * 60,
         rect: {
           left: Math.max(0, rawRect.left),
           top: Math.max(0, rawRect.top),
@@ -1442,7 +1608,12 @@
     state.layoutTimer = setTimeout(() => {
       if (state.open && !state.actionPending) {
         state.scrollAttempted = false;
-        renderSpotlight(steps[state.index]);
+        const nextMode = currentNavigationMode();
+        if (state.navigationMode !== nextMode) {
+          renderStep(true);
+        } else {
+          renderSpotlight(currentRenderedStep());
+        }
       }
     }, 140);
   }
@@ -1514,18 +1685,85 @@
       : "bottom-center";
   }
 
-  function hasCompletionEvidence(step) {
-    if (!step.completionReadyPattern) return true;
-    const pattern = String(step.completionReadyPattern).toLowerCase();
+  function pageHasText(patternValue) {
+    if (!patternValue) return false;
+    const pattern = String(patternValue).toLowerCase();
     return Array.from(document.querySelectorAll("[aria-label], flt-semantics, [role]"))
       .some((node) => {
         if (root && root.contains(node)) return false;
-        const text = `${node.getAttribute && node.getAttribute("aria-label") || ""} ${node.textContent || ""}`
-          .replace(/\s+/g, " ")
-          .trim()
-          .toLowerCase();
-        return text.includes(pattern);
+        return semanticNodeText(node).includes(pattern);
       });
+  }
+
+  function hasCompletionEvidence(step) {
+    return !step.completionReadyPattern || pageHasText(step.completionReadyPattern);
+  }
+
+  function hasDeferredOutcome(step) {
+    return Boolean(
+      step.expectedHash ||
+      step.expectedHashPrefix ||
+      step.expectedTextPattern ||
+      step.waitForTextCycle ||
+      step.completionDismissedPattern
+    );
+  }
+
+  function actionOutcomeReached(step) {
+    if (step.expectedHash && window.location.hash !== step.expectedHash) return false;
+    if (step.expectedHashPrefix && !window.location.hash.startsWith(step.expectedHashPrefix)) return false;
+    if (step.expectedTextPattern && !pageHasText(step.expectedTextPattern)) return false;
+
+    const cyclePattern = step.completionDismissedPattern || step.waitForTextCycle;
+    if (cyclePattern) {
+      const patternIsVisible = pageHasText(cyclePattern);
+      if (!state.outcomeCycleObserved) {
+        if (patternIsVisible) state.outcomeCycleObserved = true;
+        return false;
+      }
+      if (patternIsVisible) return false;
+    }
+    if (step.requireTargetTextChange) {
+      const refreshedTarget = semanticTargets(step.targetLabels, false)[0];
+      const refreshedText = refreshedTarget ? semanticNodeText(refreshedTarget.node) : "";
+      if (!refreshedText || refreshedText === state.outcomeBaselineTargetText) return false;
+    }
+    return hasDeferredOutcome(step);
+  }
+
+  function beginActionOutcomeWait(step) {
+    state.actionPending = true;
+    state.outcomeCycleObserved = Boolean(
+      step.completionDismissedPattern && pageHasText(step.completionDismissedPattern)
+    );
+    state.outcomeBaselineTargetText = step.requireTargetTextChange && state.currentTargets.length
+      ? semanticNodeText(state.currentTargets[0].node)
+      : "";
+    card.dataset.actionState = "working";
+    actionStatus.textContent = step.waitingInstruction || "Waiting for CineConnect to confirm the action…";
+    if (step.waitingInstruction) mission.textContent = step.waitingInstruction;
+    waitForActionOutcome(step, Date.now());
+  }
+
+  function waitForActionOutcome(step, startedAt) {
+    clearTimeout(state.actionTimer);
+    if (!state.open || !state.actionPending || state.renderedStep !== step) return;
+    if (actionOutcomeReached(step)) {
+      completeCurrentAction();
+      return;
+    }
+
+    const timeoutMs = Number(step.outcomeTimeoutMs) || 45000;
+    if (Date.now() - startedAt >= timeoutMs) {
+      state.actionPending = false;
+      card.dataset.actionState = "waiting";
+      actionStatus.textContent = "The action was not confirmed. Complete it or use Skip step.";
+      mission.textContent = step.completionInstruction || step.doThis || step.actionLabel;
+      state.targetRetryCount = 0;
+      renderSpotlight(step);
+      return;
+    }
+    state.actionTimer = setTimeout(() => waitForActionOutcome(step, startedAt), 140);
   }
 
   function liveTargetRect(node) {
@@ -1636,7 +1874,7 @@
       card.style.transform = "translate(-50%, -50%)";
       if (step.action !== "manual") {
         actionStatus.textContent = state.awaitingCompletion
-          ? "Select both dates, then tap Done"
+          ? completionStatus(step)
           : `Waiting for the exact “${step.actionLabel}” control`;
         if (state.targetRetryCount < 6) {
           state.targetRetryCount += 1;
@@ -1690,7 +1928,7 @@
       : step.action === "input"
       ? (targets.length > 1 ? `0 of ${targets.length} fields completed` : "Waiting for your input")
       : state.awaitingCompletion
-      ? "Select both dates, then tap Done"
+      ? completionStatus(step)
       : (step.multipleTargets ? "Choose one highlighted button" : "Click the highlighted button");
     state.geometryFrame = requestAnimationFrame(() => {
       placeCoachMark(state.currentRect);
@@ -1704,10 +1942,17 @@
     );
   }
 
+  function completionStatus(step) {
+    const label = Array.isArray(step.completionTargetLabels) && step.completionTargetLabels.length
+      ? step.completionTargetLabels[0]
+      : "the highlighted confirmation";
+    return `Complete the task, then tap ${label}`;
+  }
+
   function handleTargetPointer(event) {
     if (!state.open || state.actionPending) return;
     restartTargetGeometry();
-    const step = steps[state.index];
+    const step = currentRenderedStep();
     if (step.action !== "click" && !state.targetIsGate) return;
     if (root && root.contains(event.target)) return;
     const isDirectTargetEvent = Boolean(
@@ -1754,31 +1999,21 @@
       return;
     }
 
+    if (hasDeferredOutcome(step)) {
+      beginActionOutcomeWait(step);
+      return;
+    }
+
     state.actionPending = true;
-    actionStatus.textContent = step.expectedHash ? "Opening…" : "Action completed";
+    actionStatus.textContent = "Action completed";
     card.dataset.actionState = "working";
-    if (!step.expectedHash || window.location.hash === step.expectedHash) {
-      completeCurrentAction();
-      return;
-    }
-
-    waitForExpectedRoute(step.expectedHash, Date.now());
-  }
-
-  function waitForExpectedRoute(expectedHash, startedAt) {
-    clearTimeout(state.actionTimer);
-    if (!state.open || !state.actionPending) return;
-    if (window.location.hash === expectedHash || Date.now() - startedAt >= 2200) {
-      completeCurrentAction();
-      return;
-    }
-    state.actionTimer = setTimeout(() => waitForExpectedRoute(expectedHash, startedAt), 120);
+    completeCurrentAction();
   }
 
   function handleTargetInput(event) {
     if (!state.open || state.actionPending) return;
     restartTargetGeometry();
-    const step = steps[state.index];
+    const step = currentRenderedStep();
     if (step.action !== "input" || (root && root.contains(event.target))) return;
     const inputRect = event.target && typeof event.target.getBoundingClientRect === "function"
       ? event.target.getBoundingClientRect()
@@ -1854,11 +2089,20 @@
   }
 
   function renderStep(navigate) {
-    const step = steps[state.index];
+    const step = stepForCurrentLayout(steps[state.index]);
+    state.renderedStep = step;
+    state.navigationMode = currentNavigationMode();
     const desiredRoute = step.prepareRoute || step.route;
-    const willNavigate = Boolean(navigate && desiredRoute && window.location.hash !== desiredRoute);
+    const willNavigate = Boolean(
+      navigate &&
+      desiredRoute &&
+      window.location.hash !== desiredRoute &&
+      !shouldPreserveCurrentRoute(step)
+    );
     clearTimeout(state.actionTimer);
     state.actionPending = false;
+    state.outcomeCycleObserved = false;
+    state.outcomeBaselineTargetText = "";
     state.awaitingCompletion = false;
     state.targetRetryCount = 0;
     state.scrollAttempted = false;
@@ -1930,7 +2174,7 @@
     document.documentElement.style.setProperty("--cc-guide-open", "1");
     enableFlutterSemantics();
     renderStep(true);
-    setTimeout(() => state.open && renderSpotlight(steps[state.index]), 260);
+    setTimeout(() => state.open && renderSpotlight(currentRenderedStep()), 260);
     saveProgress(isAutomatic ? "started" : "started");
   }
 
@@ -1972,11 +2216,12 @@
   }
 
   function move(delta, skipped) {
-    if (delta > 0 && steps[state.index].complete) {
+    const step = currentRenderedStep();
+    if (delta > 0 && step.complete) {
       completeGuide();
       return;
     }
-    if (delta > 0 && steps[state.index].action !== "manual" && !state.actionPending && !skipped) {
+    if (delta > 0 && step.action !== "manual" && !state.actionPending && !skipped) {
       showToast("Use the highlighted control, or choose Skip step.");
       return;
     }

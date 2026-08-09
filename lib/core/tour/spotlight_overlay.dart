@@ -1,10 +1,10 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../theme/app_breakpoints.dart';
-import '../theme/app_color_scheme.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_text_styles.dart';
 import 'tour_controller.dart';
@@ -18,8 +18,8 @@ import 'tour_models.dart';
 ///
 /// The scrim/glow/pill deliberately use fixed dark-theme colors regardless
 /// of the app's own light/dark mode (matching the source design), since
-/// they're tour "chrome" sitting on top of the app rather than app content;
-/// the tooltip card itself stays theme-aware so it reads as native UI.
+/// they're translucent tour "chrome" sitting on top of the app rather than
+/// opaque app content.
 class SpotlightOverlay extends StatefulWidget {
   const SpotlightOverlay({super.key});
 
@@ -87,8 +87,8 @@ class _SpotlightOverlayState extends State<SpotlightOverlay>
       _ticker?.stop();
       return;
     }
-    final dtSeconds =
-        (elapsed - _lastElapsed).inMicroseconds / Duration.microsecondsPerSecond;
+    final dtSeconds = (elapsed - _lastElapsed).inMicroseconds /
+        Duration.microsecondsPerSecond;
     _lastElapsed = elapsed;
 
     final step = controller.currentStep!;
@@ -107,8 +107,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay>
     }
 
     _pulsePhase = (elapsed.inMilliseconds % 1600) / 1600;
-    final sinceStep =
-        (elapsed - _stepChangedAt).inMilliseconds / 220.0;
+    final sinceStep = (elapsed - _stepChangedAt).inMilliseconds / 220.0;
     _tooltipProgress = sinceStep.clamp(0.0, 1.0);
 
     if (mounted) setState(() {});
@@ -134,7 +133,7 @@ class _SpotlightOverlayState extends State<SpotlightOverlay>
 
 // Fixed dark "tour chrome" palette — deliberately independent of the app's
 // light/dark theme (see class doc on [SpotlightOverlay]).
-const _pillBackground = Color(0xFF16181D);
+const _pillBackground = Color(0xD416181D);
 const _chromeGold = Color(0xFFE0AB45);
 const _chromeGoldDeep = Color(0xFFC88A1E);
 const _chromeOnGold = Color(0xFF201404);
@@ -369,59 +368,69 @@ class _TooltipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-      decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: _chromeGold, width: 1.4),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: colors.isLight ? 0.22 : 0.6),
-            blurRadius: 26,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_chromeGold, _chromeGoldDeep],
+    final radius = BorderRadius.circular(AppRadius.lg);
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xD62A303B), Color(0xBC0D1118)],
+            ),
+            borderRadius: radius,
+            border: Border.all(color: _chromeGold, width: 1.4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.48),
+                blurRadius: 30,
+                offset: const Offset(0, 16),
               ),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              step.badge,
-              style: AppTextStyles.micro.copyWith(
-                color: _chromeOnGold,
-                letterSpacing: 0.6,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_chromeGold, _chromeGoldDeep],
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  step.badge,
+                  style: AppTextStyles.micro.copyWith(
+                    color: _chromeOnGold,
+                    letterSpacing: 0.6,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 10),
+              Text(
+                step.title,
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                step.description,
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            step.title,
-            style: AppTextStyles.cardTitle.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            step.description,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -440,52 +449,60 @@ class _BottomPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pill = Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      constraints: BoxConstraints(maxWidth: mobile ? double.infinity : 380),
-      decoration: BoxDecoration(
-        color: _pillBackground,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+    final radius = BorderRadius.circular(AppRadius.pill);
+    final pill = ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          constraints: BoxConstraints(maxWidth: mobile ? double.infinity : 380),
+          decoration: BoxDecoration(
+            color: _pillBackground,
+            borderRadius: radius,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.45),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: mobile ? MainAxisSize.max : MainAxisSize.min,
-        children: [
-          _PillIconButton(
-            icon: Icons.close_rounded,
-            tooltip: 'Skip tour',
-            onTap: controller.skip,
-          ),
-          _PillIconButton(
-            icon: Icons.chevron_left_rounded,
-            tooltip: 'Back',
-            onTap: controller.isFirstStep ? null : controller.back,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Center(
-              child: Text(
-                '${controller.currentIndex + 1} / ${controller.stepCount}',
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: _chromeGold,
-                  fontWeight: FontWeight.w800,
+          child: Row(
+            mainAxisSize: mobile ? MainAxisSize.max : MainAxisSize.min,
+            children: [
+              _PillIconButton(
+                icon: Icons.close_rounded,
+                tooltip: 'Skip tour',
+                onTap: controller.skip,
+              ),
+              _PillIconButton(
+                icon: Icons.chevron_left_rounded,
+                tooltip: 'Back',
+                onTap: controller.isFirstStep ? null : controller.back,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '${controller.currentIndex + 1} / ${controller.stepCount}',
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: _chromeGold,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 6),
+              _PillActionButton(
+                label: controller.isLastStep ? 'Done' : 'Next',
+                onTap: controller.next,
+              ),
+            ],
           ),
-          const SizedBox(width: 6),
-          _PillActionButton(
-            label: controller.isLastStep ? 'Done' : 'Next',
-            onTap: controller.next,
-          ),
-        ],
+        ),
       ),
     );
 
@@ -517,6 +534,7 @@ class _PillIconButton extends StatelessWidget {
       child: InkResponse(
         onTap: onTap,
         radius: 22,
+        splashFactory: InkRipple.splashFactory,
         child: Padding(
           padding: const EdgeInsets.all(9),
           child: Icon(
@@ -541,6 +559,7 @@ class _PillActionButton extends StatelessWidget {
     return InkResponse(
       onTap: onTap,
       radius: 28,
+      splashFactory: InkRipple.splashFactory,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
