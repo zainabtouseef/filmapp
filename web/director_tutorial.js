@@ -665,7 +665,13 @@
       targetLabels: ["Start Select a date range End Select a date range"],
       completionTargetLabels: ["Done"],
       completionReadyPattern: "days selected",
-      completionInstruction: "Select a start date and an end date, then tap Done.",
+      completionFlow: "date-range",
+      keepInteractionScopeBright: true,
+      interactionScopePattern: "Done",
+      completionInstruction: "Choose the start date, then the end date, then tap Done.",
+      startDateInstruction: "Choose the start date.",
+      endDateInstruction: "Now choose the end date.",
+      doneDateInstruction: "Date range selected. Tap Done.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -771,6 +777,8 @@
       completionTargetLabels: ["Save requirement"],
       completionInstruction: `Complete the ${label} requirement, then tap Save requirement.`,
       completionDismissedPattern: "Save requirement",
+      keepInteractionScopeBright: true,
+      interactionScopePattern: "Add requirement",
     }));
   });
 
@@ -1177,11 +1185,14 @@
     lastToken: null,
     lastFocused: null,
     currentRect: null,
+    currentDisplayRect: null,
     currentRects: [],
     currentTargets: [],
+    interactionScopeTarget: null,
     completedInputKeys: new Set(),
     targetIsGate: false,
     awaitingCompletion: false,
+    completionPhase: null,
     targetRetryCount: 0,
     geometryFrame: null,
     geometrySignature: "",
@@ -1660,6 +1671,12 @@
     // Actionable missions intentionally use semantic controls only. This keeps
     // the border attached to the real Flutter button at every screen size.
     const isCompletionTarget = Boolean(state.awaitingCompletion && step.completionTargetLabels);
+    const isChoosingDateRange = Boolean(
+      isCompletionTarget &&
+      step.completionFlow === "date-range" &&
+      state.completionPhase !== "done"
+    );
+    if (isChoosingDateRange) return [];
     const labels = isCompletionTarget ? step.completionTargetLabels : step.targetLabels;
     const directTargets = semanticTargets(
       labels,
@@ -1689,8 +1706,10 @@
     }
     updateScrimMask([]);
     state.currentRect = null;
+    state.currentDisplayRect = null;
     state.currentRects = [];
     state.currentTargets = [];
+    state.interactionScopeTarget = null;
     state.targetIsGate = false;
   }
 
@@ -1716,6 +1735,64 @@
     const right = Math.max(...rects.map((rect) => rect.left + rect.width));
     const bottom = Math.max(...rects.map((rect) => rect.top + rect.height));
     return { left, top, width: right - left, height: bottom - top, radius: 16 };
+  }
+
+  function inflateViewportRect(rect, padding) {
+    const left = Math.max(0, rect.left - padding);
+    const top = Math.max(0, rect.top - padding);
+    const right = Math.min(innerWidth, rect.left + rect.width + padding);
+    const bottom = Math.min(innerHeight, rect.top + rect.height + padding);
+    return {
+      left,
+      top,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top),
+      radius: 22,
+    };
+  }
+
+  function resolveInteractionScope(step) {
+    if (!state.awaitingCompletion || !step.keepInteractionScopeBright) return null;
+    const pattern = String(step.interactionScopePattern || "").toLowerCase();
+    if (!pattern) return null;
+    const viewportArea = Math.max(1, innerWidth * innerHeight);
+    const semantics = Array.from(document.querySelectorAll("flt-semantics"))
+      .filter((node) => !(root && root.contains(node)));
+
+    const groups = semantics.flatMap((node) => {
+      if (String(node.getAttribute("role") || "").toLowerCase() !== "group") return [];
+      if (!semanticNodeText(node).includes(pattern)) return [];
+      const rect = liveTargetRect(node);
+      if (!rect) return [];
+      const areaRatio = rect.width * rect.height / viewportArea;
+      if (areaRatio < 0.08 || areaRatio > 0.92) return [];
+      return [{ node, rect: inflateViewportRect(rect, 8), score: areaRatio }];
+    });
+    groups.sort((a, b) => b.score - a.score);
+    if (groups.length) return groups[0];
+
+    // Flutter date pickers may expose the modal as a full-screen semantics
+    // root instead of role=dialog/group. Build the scope from its visible
+    // child controls so the calendar itself stays bright without lighting
+    // the entire page.
+    const inferred = semantics.flatMap((container) => {
+      if (!semanticNodeText(container).includes(pattern)) return [];
+      const childRects = Array.from(container.querySelectorAll("flt-semantics"))
+        .flatMap((node) => {
+          const rect = liveTargetRect(node);
+          if (!rect) return [];
+          const areaRatio = rect.width * rect.height / viewportArea;
+          if (areaRatio > 0.88) return [];
+          return [rect];
+        });
+      if (childRects.length < 4) return [];
+      const rect = inflateViewportRect(unionRect(childRects), 10);
+      const areaRatio = rect.width * rect.height / viewportArea;
+      if (areaRatio < 0.08 || areaRatio > 0.92) return [];
+      return [{ node: null, rect, score: areaRatio }];
+    });
+    inferred.sort((a, b) => b.score - a.score);
+    return inferred[0] || null;
   }
 
   function updateScrimMask(rects) {
@@ -1751,7 +1828,15 @@
   function placeCoachMark(rect) {
     const margin = 12;
     const gap = 18;
-    const cardWidth = card.offsetWidth || Math.min(286, innerWidth - margin * 2);
+    const baseCardWidth = Math.min(340, innerWidth - margin * 2);
+    const leftSideWidth = Math.max(0, rect.left - gap - margin);
+    const rightSideWidth = Math.max(0, innerWidth - (rect.left + rect.width) - gap - margin);
+    const availableSideWidth = Math.max(leftSideWidth, rightSideWidth);
+    const fittedCardWidth = availableSideWidth >= 220
+      ? Math.min(baseCardWidth, availableSideWidth)
+      : baseCardWidth;
+    card.style.width = `${fittedCardWidth}px`;
+    const cardWidth = card.offsetWidth || fittedCardWidth;
     const cardHeight = card.offsetHeight || 110;
     const controlsRect = controls ? controls.getBoundingClientRect() : null;
     const playerAtTop = controls && controls.dataset.placement === "top-center";
@@ -1823,7 +1908,10 @@
     const targetNearBottom = Boolean(
       rect && rect.top + rect.height / 2 > innerHeight * 0.68
     );
-    controls.dataset.placement = targetNearBottom
+    const bottomPlayerWouldOverlap = Boolean(
+      rect && rect.top + rect.height > innerHeight - 92 && rect.top > 84
+    );
+    controls.dataset.placement = targetNearBottom || bottomPlayerWouldOverlap
       ? "top-center"
       : "bottom-center";
   }
@@ -1992,7 +2080,7 @@
   }
 
   function trackTargetGeometry() {
-    if (!state.open || !state.currentTargets.length) return;
+    if (!state.open || (!state.currentTargets.length && !state.interactionScopeTarget)) return;
     const visibleTargets = [];
     let needsResolve = false;
     state.currentTargets.forEach((targetItem) => {
@@ -2007,19 +2095,33 @@
       visibleTargets.push(targetItem);
     });
 
-    if (visibleTargets.length) {
+    const step = currentRenderedStep();
+    let scopeTarget = state.interactionScopeTarget;
+    if (scopeTarget) {
+      scopeTarget = scopeTarget.node
+        ? Object.assign({}, scopeTarget, { rect: liveTargetRect(scopeTarget.node) })
+        : resolveInteractionScope(step);
+      if (!scopeTarget || !scopeTarget.rect) {
+        scopeTarget = resolveInteractionScope(step);
+      }
+      state.interactionScopeTarget = scopeTarget;
+    }
+
+    if (visibleTargets.length || scopeTarget) {
       state.currentRects = visibleTargets.map((targetItem) => targetItem.rect);
-      state.currentRect = unionRect(state.currentRects);
-      updateScrimMask(state.currentRects);
-      const geometrySignature = state.currentRects
+      state.currentRect = state.currentRects.length ? unionRect(state.currentRects) : null;
+      const displayRects = scopeTarget ? [scopeTarget.rect] : state.currentRects;
+      state.currentDisplayRect = unionRect(displayRects);
+      updateScrimMask(displayRects);
+      const geometrySignature = [...state.currentRects, ...displayRects]
         .map((rect) => [rect.left, rect.top, rect.width, rect.height].map(Math.round).join(":"))
         .join("|");
       const signature = `${geometrySignature}|card:${Math.round(card.offsetWidth)}:${Math.round(card.offsetHeight)}|player:${controls.dataset.placement}`;
       if (signature !== state.geometrySignature) {
         state.geometrySignature = signature;
         state.geometryStableFrames = 0;
-        placeControls(state.currentRect);
-        placeCoachMark(state.currentRect);
+        placeControls(state.currentDisplayRect);
+        placeCoachMark(state.currentDisplayRect);
       } else {
         state.geometryStableFrames += 1;
       }
@@ -2036,7 +2138,11 @@
   }
 
   function restartTargetGeometry() {
-    if (!state.open || !state.currentTargets.length || state.geometryFrame) return;
+    if (
+      !state.open ||
+      (!state.currentTargets.length && !state.interactionScopeTarget) ||
+      state.geometryFrame
+    ) return;
     state.geometryStableFrames = 0;
     state.geometryFrame = requestAnimationFrame(trackTargetGeometry);
   }
@@ -2048,14 +2154,19 @@
       targetItem.key = `${targetItem.label || "target"}:${index}`;
     });
     const rects = targets.map((target) => target.rect);
+    const scopeTarget = step.action === "manual" ? null : resolveInteractionScope(step);
+    const displayRects = scopeTarget ? [scopeTarget.rect] : rects;
     state.currentTargets = targets;
     state.currentRects = rects;
     state.currentRect = rects.length ? unionRect(rects) : null;
+    state.interactionScopeTarget = scopeTarget;
+    state.currentDisplayRect = displayRects.length ? unionRect(displayRects) : null;
     state.targetIsGate = targets.some((target) => target.isGate);
-    placeControls(state.currentRect);
-    if (!rects.length || step.action === "manual") {
+    placeControls(state.currentDisplayRect);
+    if (!displayRects.length || step.action === "manual") {
       scrim.dataset.spotlight = "false";
       targetTag.dataset.visible = "false";
+      card.style.width = "";
       card.dataset.placement = "center";
       card.style.left = "50%";
       card.style.top = "calc(50% - 42px)";
@@ -2064,7 +2175,7 @@
       card.style.transform = "translate(-50%, -50%)";
       if (step.action !== "manual") {
         actionStatus.textContent = state.awaitingCompletion
-          ? completionStatus(step)
+          ? completionStatusForPhase(step)
           : `Waiting for the exact “${step.actionLabel}” control`;
         if (state.targetRetryCount < 40) {
           state.targetRetryCount += 1;
@@ -2075,7 +2186,18 @@
       return;
     }
 
-    if (!state.scrollAttempted) {
+    const scopeOnlyIsExpected = Boolean(
+      step.completionFlow === "date-range" &&
+      state.awaitingCompletion &&
+      state.completionPhase !== "done"
+    );
+    if (!rects.length && !scopeOnlyIsExpected && state.targetRetryCount < 40) {
+      state.targetRetryCount += 1;
+      clearTimeout(state.actionTimer);
+      state.actionTimer = setTimeout(() => renderSpotlight(step), 180);
+    }
+
+    if (targets.length && !state.scrollAttempted) {
       const rawRects = targets.map((targetItem) => targetItem.node.getBoundingClientRect());
       const rawTop = Math.min(...rawRects.map((rect) => rect.top));
       const rawBottom = Math.max(...rawRects.map((rect) => rect.bottom));
@@ -2103,9 +2225,11 @@
       targetItem.node.setAttribute("data-cc-guide-target", "true");
     });
 
-    updateScrimMask(rects);
+    updateScrimMask(displayRects);
     targetTag.dataset.visible = "false";
-    if (state.targetIsGate) {
+    if (step.completionFlow === "date-range" && state.awaitingCompletion) {
+      mission.textContent = dateRangeInstruction(step);
+    } else if (state.targetIsGate) {
       mission.textContent = "Open the highlighted section first.";
     } else if (state.awaitingCompletion && step.completionInstruction) {
       mission.textContent = step.completionInstruction;
@@ -2119,10 +2243,10 @@
       : step.action === "input"
       ? (targets.length > 1 ? `0 of ${targets.length} fields completed` : "Waiting for your input")
       : state.awaitingCompletion
-      ? completionStatus(step)
+      ? completionStatusForPhase(step)
       : (step.multipleTargets ? "Choose one highlighted button" : "Click the highlighted button");
     state.geometryFrame = requestAnimationFrame(() => {
-      placeCoachMark(state.currentRect);
+      placeCoachMark(state.currentDisplayRect);
       trackTargetGeometry();
     });
   }
@@ -2140,12 +2264,99 @@
     return `Complete the task, then tap ${label}`;
   }
 
+  function dateRangeInstruction(step) {
+    if (state.completionPhase === "end") {
+      return step.endDateInstruction || "Now choose the end date.";
+    }
+    if (state.completionPhase === "done") {
+      return step.doneDateInstruction || "Date range selected. Tap Done.";
+    }
+    return step.startDateInstruction || "Choose the start date.";
+  }
+
+  function completionStatusForPhase(step) {
+    if (step.completionFlow !== "date-range") return completionStatus(step);
+    if (state.completionPhase === "end") return "Waiting for the end date";
+    if (state.completionPhase === "done") return "Tap Done to confirm the date range";
+    return "Waiting for the start date";
+  }
+
+  function calendarDateControlAtEvent(event) {
+    const matchesDateButton = (node) => {
+      if (!node || !node.getAttribute) return false;
+      if (String(node.getAttribute("role") || "").toLowerCase() !== "button") return false;
+      const values = semanticNodeText(node).match(/\d{1,2}/g) || [];
+      if (!values.length || values.length > 2) return false;
+      if (values.some((value) => value !== values[0])) return false;
+      const day = Number(values[0]);
+      return day >= 1 && day <= 31;
+    };
+    let node = event.target;
+    while (node && node !== document) {
+      if (matchesDateButton(node)) return node;
+      node = node.parentElement;
+    }
+    return Array.from(document.querySelectorAll('flt-semantics[role="button"]'))
+      .find((candidate) => {
+        if (!matchesDateButton(candidate)) return false;
+        const rect = liveTargetRect(candidate);
+        return rect && pointIsInsideRect(event.clientX, event.clientY, rect);
+      }) || null;
+  }
+
+  function handleDateRangeSelection(event, step) {
+    if (
+      step.completionFlow !== "date-range" ||
+      !state.awaitingCompletion ||
+      !["start", "end"].includes(state.completionPhase) ||
+      !state.currentDisplayRect ||
+      !pointIsInsideRect(event.clientX, event.clientY, state.currentDisplayRect) ||
+      !calendarDateControlAtEvent(event)
+    ) return false;
+
+    if (state.completionPhase === "start") {
+      state.completionPhase = "end";
+      mission.textContent = dateRangeInstruction(step);
+      actionStatus.textContent = completionStatusForPhase(step);
+      clearTimeout(state.actionTimer);
+      state.actionTimer = setTimeout(() => renderSpotlight(step), 160);
+      return true;
+    }
+
+    state.actionPending = true;
+    mission.textContent = "Confirming the selected date range…";
+    actionStatus.textContent = "Waiting for both dates";
+    waitForDateRangeReady(step, Date.now());
+    return true;
+  }
+
+  function waitForDateRangeReady(step, startedAt) {
+    clearTimeout(state.actionTimer);
+    if (!state.open || !state.actionPending || state.renderedStep !== step) return;
+    if (hasCompletionEvidence(step)) {
+      state.actionPending = false;
+      state.completionPhase = "done";
+      renderSpotlight(step);
+      return;
+    }
+    if (Date.now() - startedAt >= 10000) {
+      state.actionPending = false;
+      state.completionPhase = "end";
+      mission.textContent = step.endDateInstruction || "Now choose the end date.";
+      actionStatus.textContent = "Choose a valid end date";
+      renderSpotlight(step);
+      return;
+    }
+    state.actionTimer = setTimeout(() => waitForDateRangeReady(step, startedAt), 120);
+  }
+
   function handleTargetPointer(event) {
     if (!state.open || state.actionPending) return;
     restartTargetGeometry();
     const step = currentRenderedStep();
     if (step.action !== "click" && !state.targetIsGate) return;
     if (root && root.contains(event.target)) return;
+    if (handleDateRangeSelection(event, step)) return;
     const eventTarget = event.target;
     const isDirectTargetEvent = state.currentTargets.some((targetItem) =>
       targetItem.node === eventTarget ||
@@ -2175,6 +2386,7 @@
 
     if (step.completionTargetLabels && !state.awaitingCompletion) {
       state.awaitingCompletion = true;
+      state.completionPhase = step.completionFlow === "date-range" ? "start" : null;
       mission.textContent = step.completionInstruction || "Complete every required selection, then confirm.";
       actionStatus.textContent = "Waiting for the complete selection";
       clearTimeout(state.actionTimer);
@@ -2296,6 +2508,7 @@
     state.outcomeBaselineTargetText = "";
     state.outcomeBaselineTargetRect = null;
     state.awaitingCompletion = false;
+    state.completionPhase = null;
     state.targetRetryCount = 0;
     state.scrollAttempted = false;
     state.completedInputKeys = new Set();

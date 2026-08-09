@@ -58,6 +58,26 @@ void main() {
     expect(script, contains('state.targetRetryCount < 40'));
   });
 
+  test('requirement forms keep the full modal bright and unobstructed', () {
+    expect(script, contains('keepInteractionScopeBright: true'));
+    expect(script, contains('interactionScopePattern: "Add requirement"'));
+    expect(script, contains('function resolveInteractionScope(step)'));
+    expect(script, contains('const displayRects = scopeTarget'));
+    expect(script, contains(r'card.style.width = `${fittedCardWidth}px`'));
+  });
+
+  test('date range guidance follows start then end then Done', () {
+    expect(script, contains('completionFlow: "date-range"'));
+    expect(script, contains('startDateInstruction: "Choose the start date."'));
+    expect(script, contains('endDateInstruction: "Now choose the end date."'));
+    expect(
+      script,
+      contains('doneDateInstruction: "Date range selected. Tap Done."'),
+    );
+    expect(script, contains('function handleDateRangeSelection(event, step)'));
+    expect(script, contains('function waitForDateRangeReady(step, startedAt)'));
+  });
+
   test('navigation targets adapt to bottom navigation and desktop sidebar', () {
     expect(script, contains('const SIDEBAR_BREAKPOINT_PX = 1200'));
     expect(script, contains('function currentNavigationMode()'));
@@ -96,7 +116,7 @@ void main() {
     expect(script, contains('<svg class="cc-guide-scrim"'));
     expect(script, contains('function updateScrimMask(rects)'));
     expect(script, contains('holes.replaceChildren()'));
-    expect(script, contains('updateScrimMask(state.currentRects)'));
+    expect(script, contains('updateScrimMask(displayRects)'));
     expect(styles, contains('.cc-guide-scrim-fill'));
     expect(styles, isNot(contains('0 0 0 9999px')));
   });
@@ -115,7 +135,7 @@ void main() {
       styles,
       isNot(contains('linear-gradient(160deg, #ffffff 0%, #f7f8fa 100%)')),
     );
-    expect(index, contains('director_tutorial.css?v=20260809-30'));
-    expect(index, contains('director_tutorial.js?v=20260809-30'));
+    expect(index, contains('director_tutorial.css?v=20260809-31'));
+    expect(index, contains('director_tutorial.js?v=20260809-31'));
   });
 }
