@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/tour/tour_target.dart';
 
 /// Floating rounded bottom navigation bar with an elevated center Create button.
 class CineBottomNav extends StatelessWidget {
@@ -35,10 +36,23 @@ class CineBottomNavDestination {
   final IconData icon;
   final String label;
 
+  /// Optional route this destination navigates to. When set, the rendered
+  /// item is wrapped in a `TourTarget(id: 'nav:<route>')` so a spotlight
+  /// tour can highlight it — the same id convention used by the sidebar
+  /// (`DPShell._DPSidebar` and friends) and `FloatingPortalMenuOverlay`,
+  /// so one tour step lights up whichever of the three is on screen.
+  final String? route;
+
   const CineBottomNavDestination({
     required this.icon,
     required this.label,
+    this.route,
   });
+}
+
+Widget _tourWrap(String? route, Widget child) {
+  if (route == null) return child;
+  return TourTarget(id: 'nav:$route', child: child);
 }
 
 const _defaultBottomNavDestinations = [
@@ -139,44 +153,56 @@ class PremiumBottomNavBar extends StatelessWidget {
                         child: Row(
                           children: [
                             Expanded(
-                              child: BottomNavItem(
-                                icon: destinations[0].icon,
-                                label: destinations[0].label,
-                                active: currentIndex == 0,
-                                onTap: () => onTap?.call(0),
-                                wide: wide,
-                                dense: compactCenter,
+                              child: _tourWrap(
+                                destinations[0].route,
+                                BottomNavItem(
+                                  icon: destinations[0].icon,
+                                  label: destinations[0].label,
+                                  active: currentIndex == 0,
+                                  onTap: () => onTap?.call(0),
+                                  wide: wide,
+                                  dense: compactCenter,
+                                ),
                               ),
                             ),
                             Expanded(
-                              child: BottomNavItem(
-                                icon: destinations[1].icon,
-                                label: destinations[1].label,
-                                active: currentIndex == 1,
-                                onTap: () => onTap?.call(1),
-                                wide: wide,
-                                dense: compactCenter,
+                              child: _tourWrap(
+                                destinations[1].route,
+                                BottomNavItem(
+                                  icon: destinations[1].icon,
+                                  label: destinations[1].label,
+                                  active: currentIndex == 1,
+                                  onTap: () => onTap?.call(1),
+                                  wide: wide,
+                                  dense: compactCenter,
+                                ),
                               ),
                             ),
                             SizedBox(width: centerGap),
                             Expanded(
-                              child: BottomNavItem(
-                                icon: destinations[3].icon,
-                                label: destinations[3].label,
-                                active: currentIndex == 3,
-                                onTap: () => onTap?.call(3),
-                                wide: wide,
-                                dense: compactCenter,
+                              child: _tourWrap(
+                                destinations[3].route,
+                                BottomNavItem(
+                                  icon: destinations[3].icon,
+                                  label: destinations[3].label,
+                                  active: currentIndex == 3,
+                                  onTap: () => onTap?.call(3),
+                                  wide: wide,
+                                  dense: compactCenter,
+                                ),
                               ),
                             ),
                             Expanded(
-                              child: BottomNavItem(
-                                icon: destinations[4].icon,
-                                label: destinations[4].label,
-                                active: currentIndex == 4,
-                                onTap: () => onTap?.call(4),
-                                wide: wide,
-                                dense: compactCenter,
+                              child: _tourWrap(
+                                destinations[4].route,
+                                BottomNavItem(
+                                  icon: destinations[4].icon,
+                                  label: destinations[4].label,
+                                  active: currentIndex == 4,
+                                  onTap: () => onTap?.call(4),
+                                  wide: wide,
+                                  dense: compactCenter,
+                                ),
                               ),
                             ),
                           ],
@@ -207,14 +233,17 @@ class PremiumBottomNavBar extends StatelessWidget {
           ),
           Positioned(
             top: 0,
-            child: CenterNavButton(
-              active: currentIndex == 2,
-              size: createSize,
-              wide: wide,
-              icon: destinations[2].icon,
-              label: destinations[2].label,
-              compact: compactCenter,
-              onTap: () => onTap?.call(2),
+            child: _tourWrap(
+              destinations[2].route,
+              CenterNavButton(
+                active: currentIndex == 2,
+                size: createSize,
+                wide: wide,
+                icon: destinations[2].icon,
+                label: destinations[2].label,
+                compact: compactCenter,
+                onTap: () => onTap?.call(2),
+              ),
             ),
           ),
         ],

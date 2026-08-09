@@ -4,6 +4,9 @@ import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/nav_tour_builder.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -12,6 +15,16 @@ import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../models/role_portal_models.dart';
+
+void _startPortalNavTour(BuildContext context, RolePortalSpec portal) {
+  TourScope.of(context).start(
+    buildNavTourSteps([
+      for (final item in portal.navItems)
+        NavTourEntry(label: item.label, route: item.route),
+    ]),
+    tourId: 'role_portal.${portal.id}',
+  );
+}
 
 class RolePortalShell extends StatelessWidget {
   final RolePortalSpec portal;
@@ -143,6 +156,12 @@ class _PortalTopBar extends StatelessWidget {
           if (!compact) ...[
             const SizedBox(width: 10),
             _PortalIconButton(
+              icon: Icons.explore_outlined,
+              tooltip: 'Take the tour',
+              onTap: () => _startPortalNavTour(context, portal),
+            ),
+            const SizedBox(width: 10),
+            _PortalIconButton(
               icon: Icons.notifications_none_rounded,
               tooltip: 'Notifications',
               onTap: () => Navigator.pushNamed(context, '/notifications'),
@@ -270,37 +289,41 @@ class _PortalNavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-        decoration: BoxDecoration(
-          gradient:
-              active ? colors.activeChipGradient : colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: active ? colors.goldMid : colors.border),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              item.icon,
-              color: active ? colors.goldDark : colors.iconMuted,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                item.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.cardLabel.copyWith(
-                  color: active ? colors.textPrimary : colors.textSecondary,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+    return TourTarget(
+      id: 'nav:${item.route}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          decoration: BoxDecoration(
+            gradient: active
+                ? colors.activeChipGradient
+                : colors.inactiveChipGradient,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: active ? colors.goldMid : colors.border),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                item.icon,
+                color: active ? colors.goldDark : colors.iconMuted,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: active ? colors.textPrimary : colors.textSecondary,
+                    fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -330,13 +353,21 @@ class _PortalBottomNav extends StatelessWidget {
     }
     final destinations = [
       CineBottomNavDestination(
-          label: navItems[0].label, icon: navItems[0].icon),
+          label: navItems[0].label,
+          icon: navItems[0].icon,
+          route: navItems[0].route),
       CineBottomNavDestination(
-          label: navItems[1].label, icon: navItems[1].icon),
+          label: navItems[1].label,
+          icon: navItems[1].icon,
+          route: navItems[1].route),
       CineBottomNavDestination(
-          label: navItems[2].label, icon: navItems[2].icon),
+          label: navItems[2].label,
+          icon: navItems[2].icon,
+          route: navItems[2].route),
       CineBottomNavDestination(
-          label: navItems[3].label, icon: navItems[3].icon),
+          label: navItems[3].label,
+          icon: navItems[3].icon,
+          route: navItems[3].route),
       const CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
     ];
     return CineBottomNav(

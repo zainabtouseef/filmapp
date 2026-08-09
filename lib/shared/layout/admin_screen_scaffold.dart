@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_breakpoints.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/tour/tour_controller.dart';
 import '../widgets/cinematic_backdrop.dart';
 import 'admin_section_header.dart';
 import 'kyc_status_banner.dart';
@@ -86,6 +87,38 @@ class AdminScreenScaffold extends StatefulWidget {
 
 class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
   bool _menuOpen = false;
+  TourController? _tourController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = TourScope.maybeOf(context);
+    if (!identical(controller, _tourController)) {
+      _tourController?.removeListener(_syncMenuWithTour);
+      _tourController = controller;
+      _tourController?.addListener(_syncMenuWithTour);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tourController?.removeListener(_syncMenuWithTour);
+    super.dispose();
+  }
+
+  /// A spotlight tour step targeting a nav item (`nav:<route>`) needs that
+  /// item on screen to highlight it. On mobile, sidebar nav items only
+  /// exist inside the "more" floating menu, which is normally closed — so
+  /// the tour opens it automatically while such a step is active, and lets
+  /// it close again once the tour moves past nav steps. Desktop's sidebar
+  /// is always visible, so this is a no-op there.
+  void _syncMenuWithTour() {
+    final step = _tourController?.currentStep;
+    final needsMenu = step != null && step.targetId.startsWith('nav:');
+    if (needsMenu != _menuOpen) {
+      setState(() => _menuOpen = needsMenu);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

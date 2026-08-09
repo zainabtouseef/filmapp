@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/tour/tour_target.dart';
 import '../widgets/glass_card.dart';
 
 class FloatingPortalMenuItem {
@@ -268,12 +269,15 @@ class _FloatingPortalMenuPanel extends StatelessWidget {
                           ),
                           child: SizedBox(
                             width: contentWidth,
-                            child: _FloatingPortalMenuCard(
-                              item: item,
-                              active: active,
-                              open: open,
-                              index: index,
-                              onTap: () => onRouteTap(item.route),
+                            child: TourTarget(
+                              id: 'nav:${item.route}',
+                              child: _FloatingPortalMenuCard(
+                                item: item,
+                                active: active,
+                                open: open,
+                                index: index,
+                                onTap: () => onRouteTap(item.route),
+                              ),
                             ),
                           ),
                         );

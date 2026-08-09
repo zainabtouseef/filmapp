@@ -7,6 +7,9 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/nav_tour_builder.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -16,6 +19,16 @@ import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/media_equipment_routes.dart';
+
+void _startEquipmentTour(BuildContext context) {
+  TourScope.of(context).start(
+    buildNavTourSteps([
+      for (final item in mediaEquipmentMenuEntries)
+        NavTourEntry(label: item.label, route: item.route),
+    ]),
+    tourId: 'media_equipment',
+  );
+}
 
 typedef MediaEquipmentMenuEntry = ({
   String route,
@@ -100,12 +113,25 @@ const mediaEquipmentMenuEntries = <MediaEquipmentMenuEntry>[
 ];
 
 const _bottomDestinations = [
-  CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
-  CineBottomNavDestination(label: 'Inventory', icon: Icons.videocam_outlined),
-  CineBottomNavDestination(label: 'Requests', icon: Icons.inbox_outlined),
+  CineBottomNavDestination(
+    label: 'Home',
+    icon: Icons.home_outlined,
+    route: MediaEquipmentRoutes.home,
+  ),
+  CineBottomNavDestination(
+    label: 'Inventory',
+    icon: Icons.videocam_outlined,
+    route: MediaEquipmentRoutes.inventory,
+  ),
+  CineBottomNavDestination(
+    label: 'Requests',
+    icon: Icons.inbox_outlined,
+    route: MediaEquipmentRoutes.requests,
+  ),
   CineBottomNavDestination(
     label: 'Calendar',
     icon: Icons.calendar_month_outlined,
+    route: MediaEquipmentRoutes.availability,
   ),
   CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
 ];
@@ -373,6 +399,12 @@ class _EquipmentTopBar extends StatelessWidget {
           if (wide) ...[
             const SizedBox(width: 10),
             _TopIcon(
+              icon: Icons.explore_outlined,
+              tooltip: 'Take the tour',
+              onTap: () => _startEquipmentTour(context),
+            ),
+            const SizedBox(width: 10),
+            _TopIcon(
               icon: Icons.logout_rounded,
               tooltip: 'Logout',
               onTap: () => logoutToLogin(context),
@@ -566,7 +598,9 @@ class _EquipmentSidebar extends StatelessWidget {
                       final item = mediaEquipmentMenuEntries[index];
                       final active =
                           _equipmentRouteActive(currentRoute, item.route);
-                      return InkWell(
+                      return TourTarget(
+                        id: 'nav:${item.route}',
+                        child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () => onRouteTap(item.route),
                         child: AnimatedContainer(
@@ -621,6 +655,7 @@ class _EquipmentSidebar extends StatelessWidget {
                               ),
                             ],
                           ),
+                        ),
                         ),
                       );
                     },

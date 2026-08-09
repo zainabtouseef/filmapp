@@ -52,6 +52,10 @@ import 'widgets/auth_split_scaffold.dart';
 class CoreRoutes {
   CoreRoutes._();
 
+  /// Shared with `TourController` so a spotlight tour step can navigate to
+  /// its target's screen without needing a `BuildContext` of its own.
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   static const splash = '/';
   static const onboarding = '/onboarding';
   static const roleSelection = '/roles';

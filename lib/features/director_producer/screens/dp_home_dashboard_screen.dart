@@ -7,6 +7,9 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_preferences_store.dart';
+import '../../../core/tour/tour_target.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dashboard/dp_command_header.dart';
 import '../widgets/dashboard/dp_deal_pipeline.dart';
@@ -17,6 +20,7 @@ import '../widgets/dashboard/dp_pulse_strip.dart';
 import '../widgets/dashboard/dp_today_timeline.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
+import '../widgets/dp_tour_steps.dart';
 
 /// The Director/Producer command dashboard — a compact, cinematic
 /// production-management console. Mobile gets a single scrolling
@@ -31,11 +35,29 @@ class DPHomeDashboardScreen extends StatefulWidget {
 
 class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   Future<DirectorDashboard>? _future;
+  bool _autoTourChecked = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
+    _maybeAutoStartTour();
+  }
+
+  void _maybeAutoStartTour() {
+    if (_autoTourChecked) return;
+    _autoTourChecked = true;
+    const store = TourPreferencesStore();
+    store.hasSeenTour(dpTourId).then((seen) {
+      if (seen || !mounted) return;
+      final controller = TourScope.maybeOf(context);
+      if (controller == null || controller.isActive) return;
+      controller.start(
+        dpTourSteps,
+        tourId: dpTourId,
+        onFinished: () => store.markSeen(dpTourId),
+      );
+    });
   }
 
   Future<DirectorDashboard> _load() async {
@@ -108,25 +130,34 @@ class _ApplicationsShortcutSection extends StatelessWidget {
         spacing: 10,
         runSpacing: 10,
         children: [
-          FilledButton.icon(
-            icon: const Icon(Icons.assignment_ind_outlined),
-            label: const Text('Review project applications'),
-            onPressed: () =>
-                Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-          ),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.video_camera_front_outlined),
-            label: const Text('Create audition requirements'),
-            onPressed: () => Navigator.pushNamed(
-              context,
-              DirectorProducerRoutes.projects,
+          TourTarget(
+            id: 'dp.reviewApplications',
+            child: FilledButton.icon(
+              icon: const Icon(Icons.assignment_ind_outlined),
+              label: const Text('Review project applications'),
+              onPressed: () => Navigator.pushNamed(
+                  context, DirectorProducerRoutes.projects),
             ),
           ),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.travel_explore_outlined),
-            label: const Text('Find providers'),
-            onPressed: () => Navigator.pushNamed(
-                context, DirectorProducerRoutes.marketplace),
+          TourTarget(
+            id: 'dp.createAudition',
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.video_camera_front_outlined),
+              label: const Text('Create audition requirements'),
+              onPressed: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.projects,
+              ),
+            ),
+          ),
+          TourTarget(
+            id: 'dp.findProviders',
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.travel_explore_outlined),
+              label: const Text('Find providers'),
+              onPressed: () => Navigator.pushNamed(
+                  context, DirectorProducerRoutes.marketplace),
+            ),
           ),
         ],
       ),
@@ -200,12 +231,16 @@ class _PrioritySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DPSectionCard(
-      title: 'Needs your attention · ${dashboard.priorityActions.length}',
-      icon: Icons.priority_high_rounded,
-      actionText: 'View all',
-      onActionTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),
-      child: DPPriorityActions(items: dashboard.priorityActions),
+    return TourTarget(
+      id: 'dp.needsAttention',
+      child: DPSectionCard(
+        title: 'Needs your attention · ${dashboard.priorityActions.length}',
+        icon: Icons.priority_high_rounded,
+        actionText: 'View all',
+        onActionTap: () =>
+            Navigator.pushNamed(context, CoreRoutes.notifications),
+        child: DPPriorityActions(items: dashboard.priorityActions),
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/director/director_dashboard_models.dart';
 import '../../../../core/theme/app_color_scheme.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/tour/tour_target.dart';
 import '../../../../shared/formatters/cine_format.dart';
 import '../../routes/director_producer_routes.dart';
 import '../dp_glass_card.dart';
@@ -120,12 +121,15 @@ class _HeroCard extends StatelessWidget {
                       AppTextStyles.heroSerifNumber.copyWith(color: budgetInk),
                 ),
                 const SizedBox(height: 12),
-                DPHolographicButton(
-                  label: 'New Project',
-                  icon: Icons.add_rounded,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    DirectorProducerRoutes.createProject,
+                TourTarget(
+                  id: 'dp.newProject',
+                  child: DPHolographicButton(
+                    label: 'New Project',
+                    icon: Icons.add_rounded,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      DirectorProducerRoutes.createProject,
+                    ),
                   ),
                 ),
               ],

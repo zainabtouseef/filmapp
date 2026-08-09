@@ -8,6 +8,9 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/nav_tour_builder.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -20,6 +23,16 @@ import '../routes/location_owner_routes.dart';
 import 'location_owner_components.dart';
 import 'location_owner_live.dart';
 
+void _startLocationOwnerTour(BuildContext context) {
+  TourScope.of(context).start(
+    buildNavTourSteps([
+      for (final item in _locationMenuEntries)
+        NavTourEntry(label: item.label, route: item.route),
+    ]),
+    tourId: 'location_owner',
+  );
+}
+
 typedef LocationOwnerMenuEntry = ({
   String route,
   String screenId,
@@ -28,15 +41,25 @@ typedef LocationOwnerMenuEntry = ({
 });
 
 const _locationBottomDestinations = [
-  CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
-  CineBottomNavDestination(label: 'Requests', icon: Icons.inbox_outlined),
+  CineBottomNavDestination(
+    label: 'Home',
+    icon: Icons.home_outlined,
+    route: LocationOwnerRoutes.home,
+  ),
+  CineBottomNavDestination(
+    label: 'Requests',
+    icon: Icons.inbox_outlined,
+    route: LocationOwnerRoutes.requests,
+  ),
   CineBottomNavDestination(
     label: 'Calendar',
     icon: Icons.calendar_month_outlined,
+    route: LocationOwnerRoutes.calendar,
   ),
   CineBottomNavDestination(
     label: 'Earnings',
     icon: Icons.account_balance_wallet_outlined,
+    route: LocationOwnerRoutes.earnings,
   ),
   CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
 ];
@@ -385,6 +408,12 @@ class _LocationWorkspaceTopBar extends StatelessWidget {
           if (wide) ...[
             const SizedBox(width: 10),
             _LocationTopIcon(
+              icon: Icons.explore_outlined,
+              tooltip: 'Take the tour',
+              onTap: () => _startLocationOwnerTour(context),
+            ),
+            const SizedBox(width: 10),
+            _LocationTopIcon(
               icon: Icons.logout_rounded,
               tooltip: 'Logout',
               onTap: () => logoutToLogin(context),
@@ -671,7 +700,9 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
                       final item = _locationMenuEntries[index];
                       final selected =
                           _locationRouteActive(currentRoute, item.route);
-                      return InkWell(
+                      return TourTarget(
+                        id: 'nav:${item.route}',
+                        child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () => onRouteTap(item.route),
                         child: AnimatedContainer(
@@ -727,6 +758,7 @@ class _LocationWorkspaceSidebar extends StatelessWidget {
                               ),
                             ],
                           ),
+                        ),
                         ),
                       );
                     },

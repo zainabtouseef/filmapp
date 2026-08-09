@@ -7,6 +7,9 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/nav_tour_builder.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -17,6 +20,45 @@ import '../../../shared/widgets/cinematic_backdrop.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/actor_talent_routes.dart';
+
+/// Zips a parallel `navRoutes`/`navDestinations` pair (the shape every
+/// actor-family shell variant uses) into destinations carrying their real
+/// route, so the shared bottom nav can register `TourTarget`s for them.
+List<CineBottomNavDestination> _withRoutes(
+  List<CineBottomNavDestination> destinations,
+  List<String> routes,
+) {
+  return [
+    for (var i = 0; i < destinations.length; i++)
+      CineBottomNavDestination(
+        icon: destinations[i].icon,
+        label: destinations[i].label,
+        route: i < routes.length ? routes[i] : destinations[i].route,
+      ),
+  ];
+}
+
+String _tourIdFor(String portalLabel) {
+  return 'actor_family.${portalLabel.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '_')}';
+}
+
+void _startActorNavTour(
+  BuildContext context, {
+  required String tourId,
+  required List<String> navRoutes,
+  required List<CineBottomNavDestination> navDestinations,
+  required List<ActorShellMenuEntry> menuEntries,
+}) {
+  final seen = <String>{};
+  final entries = <NavTourEntry>[
+    for (var i = 0; i < navDestinations.length && i < navRoutes.length; i++)
+      if (seen.add(navRoutes[i]))
+        NavTourEntry(label: navDestinations[i].label, route: navRoutes[i]),
+    for (final item in menuEntries)
+      if (seen.add(item.route)) NavTourEntry(label: item.label, route: item.route),
+  ];
+  TourScope.of(context).start(buildNavTourSteps(entries), tourId: tourId);
+}
 
 typedef ActorShellMenuEntry = ({
   String route,
@@ -174,6 +216,36 @@ class ActorTalentShell extends StatefulWidget {
 
 class _ActorTalentShellState extends State<ActorTalentShell> {
   bool _menuOpen = false;
+  TourController? _tourController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = TourScope.maybeOf(context);
+    if (!identical(controller, _tourController)) {
+      _tourController?.removeListener(_syncMenuWithTour);
+      _tourController = controller;
+      _tourController?.addListener(_syncMenuWithTour);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tourController?.removeListener(_syncMenuWithTour);
+    super.dispose();
+  }
+
+  // See `AdminScreenScaffold._syncMenuWithTour` — same reasoning: the
+  // simple (non-workspace) actor layout also keeps every nav item behind
+  // its own "more" menu on top of a bottom nav, so a nav-targeting tour
+  // step needs the menu opened to be visible.
+  void _syncMenuWithTour() {
+    final step = _tourController?.currentStep;
+    final needsMenu = step != null && step.targetId.startsWith('nav:');
+    if (needsMenu != _menuOpen) {
+      setState(() => _menuOpen = needsMenu);
+    }
+  }
 
   void _openMenu() {
     setState(() => _menuOpen = true);
@@ -250,7 +322,8 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
                 CineBottomNav(
                   currentIndex: _bottomIndex(widget.routeName),
                   compactCenter: true,
-                  destinations: widget.navDestinations,
+                  destinations:
+                      _withRoutes(widget.navDestinations, widget.navRoutes),
                   onTap: (index) {
                     final target = widget.navRoutes[index];
                     _closeMenu();
@@ -345,6 +418,13 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
         searchHint: workspaceSearchHint,
         searchRoute: workspaceSearchRoute,
         profileRoute: workspaceProfileRoute,
+        onTourTap: () => _startActorNavTour(
+          context,
+          tourId: _tourIdFor(portalLabel),
+          navRoutes: navRoutes,
+          navDestinations: navDestinations,
+          menuEntries: menuEntries,
+        ),
       ),
       sideNavBuilder: (context, currentRoute, onRouteTap) =>
           _ActorWorkspaceSidebar(
@@ -493,6 +573,7 @@ class _ActorWorkspaceTopBar extends StatelessWidget {
   final String searchHint;
   final String searchRoute;
   final String profileRoute;
+  final VoidCallback onTourTap;
 
   const _ActorWorkspaceTopBar({
     required this.wide,
@@ -501,6 +582,7 @@ class _ActorWorkspaceTopBar extends StatelessWidget {
     required this.searchHint,
     required this.searchRoute,
     required this.profileRoute,
+    required this.onTourTap,
   });
 
   @override
@@ -551,6 +633,12 @@ class _ActorWorkspaceTopBar extends StatelessWidget {
           SizedBox(width: compact ? 8 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
           if (wide) ...[
+            const SizedBox(width: 10),
+            _ActorTopIcon(
+              icon: Icons.explore_outlined,
+              tooltip: 'Take the tour',
+              onTap: onTourTap,
+            ),
             const SizedBox(width: 10),
             _ActorTopIcon(
               icon: Icons.logout_rounded,
@@ -843,7 +931,9 @@ class _ActorWorkspaceSidebar extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final item = menuEntries[index];
                   final active = _actorRouteActive(currentRoute, item.route);
-                  return InkWell(
+                  return TourTarget(
+                    id: 'nav:${item.route}',
+                    child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () => onRouteTap(item.route),
                     child: AnimatedContainer(
@@ -896,6 +986,7 @@ class _ActorWorkspaceSidebar extends StatelessWidget {
                         ],
                       ),
                     ),
+                    ),
                   );
                 },
               ),
@@ -930,7 +1021,7 @@ class _ActorWorkspaceBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return CineBottomNav(
       currentIndex: _currentIndex,
-      destinations: navDestinations,
+      destinations: _withRoutes(navDestinations, navRoutes),
       compactCenter: true,
       onTap: (index) {
         if (index < navRoutes.length) onRouteTap(navRoutes[index]);

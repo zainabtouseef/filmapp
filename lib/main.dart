@@ -20,6 +20,8 @@ import 'core/projects/projects_controller.dart';
 import 'core/specialist/specialist_controller.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/tour/spotlight_overlay.dart';
+import 'core/tour/tour_controller.dart';
 import 'core/trust_safety/trust_safety_controller.dart';
 
 Future<void> main() async {
@@ -90,37 +92,66 @@ class CineConnectApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final app = ThemeControllerProvider(
-      controller: controller,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) {
-          final isDark = controller.isDarkMode;
+    final tourController = TourController(navigatorKey: CoreRoutes.navigatorKey);
 
-          SystemChrome.setSystemUIOverlayStyle(
-            SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
-              statusBarIconBrightness:
-                  isDark ? Brightness.light : Brightness.dark,
-              systemNavigationBarColor:
-                  isDark ? const Color(0xFF171817) : const Color(0xFFF8F5EF),
-              systemNavigationBarIconBrightness:
-                  isDark ? Brightness.light : Brightness.dark,
-            ),
-          );
+    final app = TourScope(
+      controller: tourController,
+      child: ThemeControllerProvider(
+        controller: controller,
+        child: AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) {
+            final isDark = controller.isDarkMode;
 
-          return MaterialApp(
-            title: 'CineConnect',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
-            themeMode: controller.themeMode,
-            themeAnimationDuration: Duration.zero,
-            home: homeOverride,
-            initialRoute: homeOverride == null ? initialRoute : null,
-            onGenerateRoute: CoreRoutes.onGenerateRoute,
-          );
-        },
+            SystemChrome.setSystemUIOverlayStyle(
+              SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+                systemNavigationBarColor:
+                    isDark ? const Color(0xFF171817) : const Color(0xFFF8F5EF),
+                systemNavigationBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+              ),
+            );
+
+            return MaterialApp(
+              title: 'CineConnect',
+              debugShowCheckedModeBanner: false,
+              navigatorKey: CoreRoutes.navigatorKey,
+              theme: AppTheme.light,
+              darkTheme: AppTheme.dark,
+              themeMode: controller.themeMode,
+              themeAnimationDuration: Duration.zero,
+              home: homeOverride,
+              initialRoute: homeOverride == null ? initialRoute : null,
+              onGenerateRoute: CoreRoutes.onGenerateRoute,
+              // `builder`'s content sits above the app's own Navigator, so
+              // it has no Overlay/Material ancestor of its own yet — both
+              // are required by SpotlightOverlay's Tooltip/InkResponse
+              // controls, so it gets its own self-contained pair here
+              // rather than crashing at runtime (a gap `flutter analyze`
+              // can't catch; only caught by actually pumping the widget).
+              builder: (context, child) => Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (context) => Material(
+                      type: MaterialType.transparency,
+                      child: Stack(
+                        children: [
+                          if (child != null) child,
+                          const Positioned.fill(
+                            child: SpotlightOverlay(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
 

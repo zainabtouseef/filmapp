@@ -7,6 +7,9 @@ import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_preferences_store.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -17,6 +20,15 @@ import '../../../shared/widgets/glass_card.dart';
 import '../routes/director_producer_routes.dart';
 import 'dp_layout_helpers.dart';
 import 'dp_status_chip.dart';
+import 'dp_tour_steps.dart';
+
+void startDpTour(BuildContext context) {
+  TourScope.of(context).start(
+    dpTourSteps,
+    tourId: dpTourId,
+    onFinished: () => const TourPreferencesStore().markSeen(dpTourId),
+  );
+}
 
 class DPShell extends StatelessWidget {
   final String title;
@@ -227,6 +239,12 @@ class _DPTopBar extends StatelessWidget {
           SizedBox(width: compact ? 8 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
           if (wide) ...[
+            const SizedBox(width: 10),
+            _DPTopIcon(
+              icon: Icons.explore_outlined,
+              tooltip: 'Take the tour',
+              onTap: () => startDpTour(context),
+            ),
             const SizedBox(width: 10),
             _DPTopIcon(
               icon: Icons.logout_rounded,
@@ -514,7 +532,9 @@ class _DPSidebar extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final item = DPShell.navItems[index];
                   final active = _active(currentRoute, item.route);
-                  return GestureDetector(
+                  return TourTarget(
+                    id: 'nav:${item.route}',
+                    child: GestureDetector(
                     onTap: () => onRouteTap(item.route),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -555,6 +575,7 @@ class _DPSidebar extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   );
                 },
