@@ -7,8 +7,6 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/tour/tour_controller.dart';
-import '../../../core/tour/tour_preferences_store.dart';
 import '../../../core/tour/tour_target.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dashboard/dp_command_header.dart';
@@ -20,7 +18,6 @@ import '../widgets/dashboard/dp_pulse_strip.dart';
 import '../widgets/dashboard/dp_today_timeline.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
-import '../widgets/dp_tour_steps.dart';
 
 /// The Director/Producer command dashboard — a compact, cinematic
 /// production-management console. Mobile gets a single scrolling
@@ -35,29 +32,11 @@ class DPHomeDashboardScreen extends StatefulWidget {
 
 class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   Future<DirectorDashboard>? _future;
-  bool _autoTourChecked = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
-    _maybeAutoStartTour();
-  }
-
-  void _maybeAutoStartTour() {
-    if (_autoTourChecked) return;
-    _autoTourChecked = true;
-    const store = TourPreferencesStore();
-    store.hasSeenTour(dpTourId).then((seen) {
-      if (seen || !mounted) return;
-      final controller = TourScope.maybeOf(context);
-      if (controller == null || controller.isActive) return;
-      controller.start(
-        dpTourSteps,
-        tourId: dpTourId,
-        onFinished: () => store.markSeen(dpTourId),
-      );
-    });
   }
 
   Future<DirectorDashboard> _load() async {

@@ -1206,14 +1206,14 @@
             <div class="cc-guide-route-note">${icon("route")}<span></span></div>
           </div>
         </section>
-        <nav class="cc-guide-controls cc-guide-footer" data-placement="bottom-left" aria-label="Tutorial controls">
+        <nav class="cc-guide-controls cc-guide-footer" data-placement="bottom-center" aria-label="Tutorial controls">
+          <button class="cc-guide-button cc-guide-button-secondary cc-guide-explore" type="button" aria-label="Pause tutorial" title="Pause tutorial">
+            ${icon("close")}<span class="cc-guide-control-label">Pause</span>
+          </button>
           <button class="cc-guide-button cc-guide-back" type="button" aria-label="Previous tutorial step" title="Previous step">
             ${icon("arrowLeft")}<span class="cc-guide-control-label">Back</span>
           </button>
           <span class="cc-guide-dock-count" aria-label="Tutorial progress">1 / ${steps.length}</span>
-          <button class="cc-guide-button cc-guide-button-secondary cc-guide-explore" type="button" aria-label="Pause tutorial" title="Pause tutorial">
-            ${icon("pause")}<span class="cc-guide-control-label">Pause</span>
-          </button>
           <span class="cc-guide-action-status" role="status" aria-live="polite">Click the highlighted control</span>
           <button class="cc-guide-button cc-guide-button-secondary cc-guide-skip" type="button" aria-label="Skip this tutorial step" title="Skip step">
             ${icon("skipForward")}<span class="cc-guide-control-label">Skip</span>
@@ -1460,31 +1460,17 @@
     const gap = 18;
     const cardWidth = card.offsetWidth || Math.min(286, innerWidth - margin * 2);
     const cardHeight = card.offsetHeight || 110;
-    if (card.dataset.actionMode === "true" && controls) {
-      const controlsRect = controls.getBoundingClientRect();
-      const dockPlacement = controls.dataset.placement || "bottom-right";
-      const stackGap = 8;
-      let left = controlsRect.left;
-      let top = controlsRect.bottom + stackGap;
-      if (dockPlacement.endsWith("right")) left = controlsRect.right - cardWidth;
-      if (dockPlacement.startsWith("bottom")) top = controlsRect.top - cardHeight - stackGap;
-      if (dockPlacement === "bottom-center") {
-        left = innerWidth / 2 - cardWidth / 2;
-        top = controlsRect.top - cardHeight - stackGap;
-      }
-      left = Math.max(margin, Math.min(innerWidth - cardWidth - margin, left));
-      top = Math.max(margin, Math.min(innerHeight - cardHeight - margin, top));
-      card.dataset.placement = `hud-${dockPlacement}`;
-      card.style.left = `${left}px`;
-      card.style.top = `${top}px`;
-      card.style.right = "auto";
-      card.style.bottom = "auto";
-      card.style.transform = "none";
-      return;
-    }
+    const controlsRect = controls ? controls.getBoundingClientRect() : null;
+    const playerAtTop = controls && controls.dataset.placement === "top-center";
+    const availableTop = playerAtTop && controlsRect
+      ? controlsRect.bottom + 12
+      : margin;
+    const availableBottom = !playerAtTop && controlsRect
+      ? controlsRect.top - 12
+      : innerHeight - margin;
     const spaces = {
-      bottom: innerHeight - (rect.top + rect.height),
-      top: rect.top,
+      bottom: availableBottom - (rect.top + rect.height),
+      top: rect.top - availableTop,
       right: innerWidth - (rect.left + rect.width),
       left: rect.left,
     };
@@ -1509,7 +1495,7 @@
     }
 
     left = Math.max(margin, Math.min(innerWidth - cardWidth - margin, left));
-    top = Math.max(margin, Math.min(innerHeight - cardHeight - margin, top));
+    top = Math.max(availableTop, Math.min(availableBottom - cardHeight, top));
     card.dataset.placement = placement;
     card.style.left = `${left}px`;
     card.style.top = `${top}px`;
@@ -1520,13 +1506,12 @@
 
   function placeControls(rect) {
     if (!controls) return;
-    if (!rect) {
-      controls.dataset.placement = "bottom-center";
-      return;
-    }
-    const targetIsLeft = rect.left + rect.width / 2 <= innerWidth / 2;
-    const targetIsTop = rect.top + rect.height / 2 <= innerHeight / 2;
-    controls.dataset.placement = `${targetIsTop ? "bottom" : "top"}-${targetIsLeft ? "right" : "left"}`;
+    const targetNearBottom = Boolean(
+      rect && rect.top + rect.height / 2 > innerHeight * 0.68
+    );
+    controls.dataset.placement = targetNearBottom
+      ? "top-center"
+      : "bottom-center";
   }
 
   function hasCompletionEvidence(step) {
@@ -1645,7 +1630,7 @@
       targetTag.dataset.visible = "false";
       card.dataset.placement = "center";
       card.style.left = "50%";
-      card.style.top = "50%";
+      card.style.top = "calc(50% - 42px)";
       card.style.right = "auto";
       card.style.bottom = "auto";
       card.style.transform = "translate(-50%, -50%)";
@@ -1901,10 +1886,10 @@
     routeNote.textContent = step.routeLabel;
     backButton.disabled = state.index === 0;
     const nextText = nextButton.querySelector("span");
-    nextText.textContent = step.complete ? "Finish" : "Start";
+    nextText.textContent = step.complete ? "Done" : "Next";
     nextButton.setAttribute(
       "aria-label",
-      step.complete ? "Finish director tutorial" : "Start interactive director tutorial"
+      step.complete ? "Finish director tutorial" : "Next tutorial step"
     );
     const needsAction = step.action !== "manual";
     card.dataset.actionMode = needsAction ? "true" : "false";
