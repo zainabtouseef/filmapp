@@ -6,6 +6,9 @@ void main() {
   final script = File('web/director_tutorial.js').readAsStringSync();
   final styles = File('web/director_tutorial.css').readAsStringSync();
   final index = File('web/index.html').readAsStringSync();
+  final shell = File(
+    'lib/features/director_producer/widgets/dp_shell.dart',
+  ).readAsStringSync();
 
   test('hiring loop waits for real routes and preserves the reviewed profile',
       () {
@@ -24,6 +27,12 @@ void main() {
   test('modal and project steps wait for confirmed completion', () {
     expect(script, contains('waitForTextCycle: "Add a city"'));
     expect(script, contains('requireTargetTextChange: true'));
+    expect(script, contains('function semanticOutcomeTarget(step)'));
+    expect(script, contains('state.outcomeBaselineTargetRect'));
+    expect(
+      script,
+      contains('split(/\\s*\\+\\s*/)'),
+    );
     expect(
       script,
       contains('completionDismissedPattern: "Save requirement"'),
@@ -39,6 +48,12 @@ void main() {
     expect(script, contains('targetLabels: ["Projects"]'));
     expect(script, contains('targetLabels: ["Deals"]'));
     expect(script, contains('targetLabels: ["Bargaining"]'));
+    expect(script, contains('rectMatchesTargetRegion(rect, region)'));
+    expect(script, contains('region === "bottom-nav"'));
+    expect(script, contains('region === "side-nav"'));
+    expect(script, contains('region === "floating-menu"'));
+    expect(script, contains('compactLandmarks >= 2'));
+    expect(script, contains('sideLandmarks >= 3'));
     for (final destination in [
       'Contracts',
       'Payments',
@@ -49,6 +64,30 @@ void main() {
     ]) {
       expect(script, contains('routeLabel: "Sidebar > $destination"'));
     }
+    expect(
+      shell,
+      contains('route: DirectorProducerRoutes.console'),
+    );
+    expect(
+      shell,
+      contains('currentRoute == DirectorProducerRoutes.console'),
+    );
+  });
+
+  test('every selectable target gets a real bright mask hole', () {
+    expect(script, contains('<svg class="cc-guide-scrim"'));
+    expect(script, contains('function updateScrimMask(rects)'));
+    expect(script, contains('holes.replaceChildren()'));
+    expect(script, contains('updateScrimMask(state.currentRects)'));
+    expect(styles, contains('.cc-guide-scrim-fill'));
+    expect(styles, isNot(contains('0 0 0 9999px')));
+  });
+
+  test('coach cards are measured and placed outside action targets', () {
+    expect(script, contains('function placeCoachMark(rect)'));
+    expect(script, contains('targetOverlap * 100000'));
+    expect(script, contains('card.dataset.overlapsTarget'));
+    expect(script, contains('card.offsetHeight'));
   });
 
   test('walkthrough surfaces use glass styling and cache-busted assets', () {
@@ -58,7 +97,7 @@ void main() {
       styles,
       isNot(contains('linear-gradient(160deg, #ffffff 0%, #f7f8fa 100%)')),
     );
-    expect(index, contains('director_tutorial.css?v=20260809-27'));
-    expect(index, contains('director_tutorial.js?v=20260809-27'));
+    expect(index, contains('director_tutorial.css?v=20260809-29'));
+    expect(index, contains('director_tutorial.js?v=20260809-29'));
   });
 }

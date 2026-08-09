@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const GUIDE_VERSION = "8";
+  const GUIDE_VERSION = "9";
   const IDENTITY_KEY = "cineconnect.session_identity";
   const ROUTE_SESSION_KEY = "cineconnect.director_route_session";
   const STORAGE_PREFIX = `cineconnect.director_guide.v${GUIDE_VERSION}.`;
@@ -1147,8 +1147,22 @@
     if (step.routeLabel && step.routeLabel.startsWith("More >")) {
       step.prepareRoute = "#/console";
       step.gateLabels = ["More"];
+      step.targetRegion = "floating-menu";
+      step.gateTargetRegion = "bottom-nav";
     }
 
+    if (
+      step.routeLabel &&
+      step.routeLabel.startsWith("Console >") &&
+      Array.isArray(step.targetLabels) &&
+      step.targetLabels.some((label) => ["Productions", "Deals", "More"].includes(label))
+    ) {
+      step.targetRegion = "bottom-nav";
+    }
+
+    if (step.desktop && step.desktop.routeLabel && step.desktop.routeLabel.startsWith("Sidebar >")) {
+      step.desktop.targetRegion = "side-nav";
+    }
   });
 
   steps.splice(0, steps.length, ...workflowSteps);
@@ -1178,6 +1192,7 @@
     actionTimer: null,
     outcomeCycleObserved: false,
     outcomeBaselineTargetText: "",
+    outcomeBaselineTargetRect: null,
     renderedStep: null,
     navigationMode: null,
   };
@@ -1306,7 +1321,15 @@
         </button>
       </div>
       <div class="cc-guide-layer" data-open="false">
-        <div class="cc-guide-scrim"></div>
+        <svg class="cc-guide-scrim" data-spotlight="false" aria-hidden="true" preserveAspectRatio="none">
+          <defs>
+            <mask id="cc-guide-spotlight-mask" maskUnits="userSpaceOnUse">
+              <rect class="cc-guide-mask-base" fill="white"></rect>
+              <g class="cc-guide-mask-holes"></g>
+            </mask>
+          </defs>
+          <rect class="cc-guide-scrim-fill" mask="url(#cc-guide-spotlight-mask)"></rect>
+        </svg>
         <div class="cc-guide-spotlight" aria-hidden="true"></div>
         <div class="cc-guide-target-tag" aria-hidden="true">Click here</div>
         <section class="cc-guide-card" role="dialog" aria-modal="false" aria-labelledby="cc-guide-title" aria-describedby="cc-guide-mission-copy">
@@ -1446,6 +1469,42 @@
   }
 
   function currentNavigationMode() {
+    const nodes = Array.from(
+      document.querySelectorAll('flt-semantics, [aria-label], [role="button"], button')
+    );
+    const visibleExactRects = (label) => {
+      const normalized = String(label).toLowerCase();
+      return nodes.flatMap((node) => {
+        if (root && root.contains(node)) return [];
+        if (semanticNodeText(node) !== normalized) return [];
+        const rect = node.getBoundingClientRect();
+        if (
+          rect.width < 20 ||
+          rect.height < 20 ||
+          rect.bottom <= 0 ||
+          rect.right <= 0 ||
+          rect.top >= innerHeight ||
+          rect.left >= innerWidth
+        ) return [];
+        return [rect];
+      });
+    };
+
+    // Prefer what Flutter is actually rendering over a width guess. Browser
+    // side panels, zoom, and embedded previews can make window breakpoints
+    // disagree with the LayoutBuilder constraints used by the app shell.
+    const compactLandmarks = ["Productions", "Find", "Deals", "More"]
+      .filter((label) => visibleExactRects(label).some((rect) => rect.top >= innerHeight * 0.68))
+      .length;
+    if (compactLandmarks >= 2) return "compact";
+
+    const sideLandmarks = [
+      "Projects", "Discover", "Shortlist", "Bargaining", "Contracts",
+      "Payments", "Schedule", "Accounts", "Room", "Reports",
+    ].filter((label) => visibleExactRects(label).some((rect) => rect.left < Math.min(330, innerWidth * 0.3)))
+      .length;
+    if (sideLandmarks >= 3) return "desktop";
+
     return innerWidth >= SIDEBAR_BREAKPOINT_PX ? "desktop" : "compact";
   }
 
@@ -1494,7 +1553,23 @@
       .toLowerCase();
   }
 
-  function semanticTargets(labels, multipleTargets) {
+  function rectMatchesTargetRegion(rect, region) {
+    if (!region) return true;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    if (region === "bottom-nav") return centerY >= innerHeight * 0.68;
+    if (region === "side-nav") {
+      return centerX <= Math.min(330, innerWidth * 0.3) && centerY < innerHeight * 0.96;
+    }
+    if (region === "floating-menu") {
+      return currentNavigationMode() === "compact" &&
+        centerX <= Math.min(350, innerWidth * 0.68) &&
+        centerY < innerHeight * 0.86;
+    }
+    return true;
+  }
+
+  function semanticTargets(labels, multipleTargets, targetRegion) {
     if (!Array.isArray(labels) || labels.length === 0) return [];
     const normalizedLabels = labels.map((label) => String(label).replace(/\s+/g, " ").trim().toLowerCase());
     const nodes = Array.from(
@@ -1532,8 +1607,17 @@
         role === "link" ||
         ["button", "input", "textarea", "select", "a"].includes(tagName) ||
         Boolean(node.getAttribute && node.getAttribute("tabindex"));
-      // Never outline a broad Flutter container as a button fallback. Exact
-      // semantics win, and actual controls rank ahead of labels/headings.
+      const clippedRect = {
+        left: Math.max(0, rawRect.left),
+        top: Math.max(0, rawRect.top),
+        width: Math.min(innerWidth - Math.max(0, rawRect.left), rawRect.width),
+        height: Math.min(innerHeight - Math.max(0, rawRect.top), rawRect.height),
+        radius: 14,
+      };
+      if (!rectMatchesTargetRegion(clippedRect, targetRegion)) return;
+      // Never outline a broad Flutter container as a label fallback. Real
+      // actionable semantics rank ahead of headings and summary panels even
+      // when those panels happen to repeat the exact same words.
       if (!isExact && area / viewportArea > 0.16) return;
       candidates.push({
         node,
@@ -1541,32 +1625,36 @@
         exact: isExact,
         actionable: isActionable,
         score:
-          (isExact ? 0 : 1000000) +
-          (isActionable ? 0 : 500000) +
+          (isActionable ? 0 : 600000) +
+          (isExact ? 0 : 240000) +
           area +
           Math.max(0, text.length - containedLabel.length) * 60,
-        rect: {
-          left: Math.max(0, rawRect.left),
-          top: Math.max(0, rawRect.top),
-          width: Math.min(innerWidth - Math.max(0, rawRect.left), rawRect.width),
-          height: Math.min(innerHeight - Math.max(0, rawRect.top), rawRect.height),
-          radius: 14,
-        },
+        rect: clippedRect,
       });
     });
 
     candidates.sort((a, b) => a.score - b.score);
     if (!multipleTargets) return candidates.length ? [candidates[0]] : [];
 
-    const exactCandidates = candidates.filter((candidate) => candidate.exact);
-    const source = exactCandidates.length ? exactCandidates : candidates;
     const seen = new Set();
-    return source.filter((candidate) => {
+    const unique = candidates.filter((candidate) => {
       const key = `${Math.round(candidate.rect.left)}:${Math.round(candidate.rect.top)}:${Math.round(candidate.rect.width)}:${Math.round(candidate.rect.height)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    }).slice(0, 12);
+    });
+
+    // When a step lists several different choices/fields, keep the best
+    // visible control for every label. When it lists one repeated action
+    // (for example several Profile buttons), keep every actionable match.
+    if (normalizedLabels.length > 1) {
+      return normalizedLabels.flatMap((label) => {
+        const matches = unique.filter((candidate) => candidate.label === label);
+        return matches.length ? [matches[0]] : [];
+      }).slice(0, 16);
+    }
+    const actionable = unique.filter((candidate) => candidate.actionable);
+    return (actionable.length ? actionable : unique).slice(0, 16);
   }
 
   function resolveTargets(step) {
@@ -1574,10 +1662,15 @@
     // the border attached to the real Flutter button at every screen size.
     const isCompletionTarget = Boolean(state.awaitingCompletion && step.completionTargetLabels);
     const labels = isCompletionTarget ? step.completionTargetLabels : step.targetLabels;
-    const directTargets = semanticTargets(labels, isCompletionTarget ? false : Boolean(step.multipleTargets));
+    const directTargets = semanticTargets(
+      labels,
+      isCompletionTarget ? false : Boolean(step.multipleTargets),
+      isCompletionTarget ? step.completionTargetRegion : step.targetRegion
+    );
     if (directTargets.length) return directTargets;
     if (isCompletionTarget) return [];
-    return semanticTargets(step.gateLabels, false).map((targetItem) => Object.assign(targetItem, { isGate: true }));
+    return semanticTargets(step.gateLabels, false, step.gateTargetRegion)
+      .map((targetItem) => Object.assign(targetItem, { isGate: true }));
   }
 
   function clearTargetHighlights() {
@@ -1596,6 +1689,7 @@
       spotlight.dataset.success = "false";
       spotlight.dataset.secondary = "false";
     }
+    updateScrimMask([]);
     state.currentRect = null;
     state.currentRects = [];
     state.currentTargets = [];
@@ -1626,6 +1720,36 @@
     return { left, top, width: right - left, height: bottom - top, radius: 16 };
   }
 
+  function updateScrimMask(rects) {
+    if (!scrim) return;
+    const maskBase = scrim.querySelector(".cc-guide-mask-base");
+    const scrimFill = scrim.querySelector(".cc-guide-scrim-fill");
+    const holes = scrim.querySelector(".cc-guide-mask-holes");
+    if (!maskBase || !scrimFill || !holes) return;
+    const width = Math.max(1, innerWidth);
+    const height = Math.max(1, innerHeight);
+    scrim.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    [maskBase, scrimFill].forEach((node) => {
+      node.setAttribute("x", "0");
+      node.setAttribute("y", "0");
+      node.setAttribute("width", String(width));
+      node.setAttribute("height", String(height));
+    });
+    holes.replaceChildren();
+    rects.forEach((rect) => {
+      const pad = 6;
+      const hole = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      hole.setAttribute("x", String(Math.max(0, rect.left - pad)));
+      hole.setAttribute("y", String(Math.max(0, rect.top - pad)));
+      hole.setAttribute("width", String(Math.min(width, rect.width + pad * 2)));
+      hole.setAttribute("height", String(Math.min(height, rect.height + pad * 2)));
+      hole.setAttribute("rx", String(rect.radius || 14));
+      hole.setAttribute("fill", "black");
+      holes.appendChild(hole);
+    });
+    scrim.dataset.spotlight = rects.length ? "true" : "false";
+  }
+
   function placeCoachMark(rect) {
     const margin = 12;
     const gap = 18;
@@ -1639,37 +1763,58 @@
     const availableBottom = !playerAtTop && controlsRect
       ? controlsRect.top - 12
       : innerHeight - margin;
-    const spaces = {
-      bottom: availableBottom - (rect.top + rect.height),
-      top: rect.top - availableTop,
-      right: innerWidth - (rect.left + rect.width),
-      left: rect.left,
+    const maxLeft = Math.max(margin, innerWidth - cardWidth - margin);
+    const maxTop = Math.max(availableTop, availableBottom - cardHeight);
+    const clampLeft = (value) => Math.max(margin, Math.min(maxLeft, value));
+    const clampTop = (value) => Math.max(availableTop, Math.min(maxTop, value));
+    const targetBounds = {
+      left: rect.left - 10,
+      top: rect.top - 10,
+      width: rect.width + 20,
+      height: rect.height + 20,
     };
+    const overlapArea = (a, b) => {
+      if (!a || !b) return 0;
+      const width = Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left));
+      const height = Math.max(0, Math.min(a.top + a.height, b.top + b.height) - Math.max(a.top, b.top));
+      return width * height;
+    };
+    const targetCenterX = rect.left + rect.width / 2;
+    const targetCenterY = rect.top + rect.height / 2;
+    const candidates = [
+      { placement: "top", left: targetCenterX - cardWidth / 2, top: rect.top - cardHeight - gap },
+      { placement: "bottom", left: targetCenterX - cardWidth / 2, top: rect.top + rect.height + gap },
+      { placement: "left", left: rect.left - cardWidth - gap, top: targetCenterY - cardHeight / 2 },
+      { placement: "right", left: rect.left + rect.width + gap, top: targetCenterY - cardHeight / 2 },
+      { placement: "top-left", left: margin, top: availableTop },
+      { placement: "top-right", left: maxLeft, top: availableTop },
+      { placement: "bottom-left", left: margin, top: maxTop },
+      { placement: "bottom-right", left: maxLeft, top: maxTop },
+    ].map((candidate, index) => {
+      const left = clampLeft(candidate.left);
+      const top = clampTop(candidate.top);
+      const cardRect = { left, top, width: cardWidth, height: cardHeight };
+      const targetOverlap = overlapArea(cardRect, targetBounds);
+      const controlsOverlap = overlapArea(cardRect, controlsRect);
+      const distance = Math.hypot(
+        left + cardWidth / 2 - targetCenterX,
+        top + cardHeight / 2 - targetCenterY
+      );
+      return {
+        ...candidate,
+        left,
+        top,
+        targetOverlap,
+        score: targetOverlap * 100000 + controlsOverlap * 100000 + distance + index,
+      };
+    });
+    candidates.sort((a, b) => a.score - b.score);
+    const best = candidates[0];
 
-    let placement = "bottom";
-    if (spaces.bottom >= cardHeight + gap + margin) placement = "bottom";
-    else if (spaces.top >= cardHeight + gap + margin) placement = "top";
-    else if (spaces.right >= cardWidth + gap + margin) placement = "right";
-    else if (spaces.left >= cardWidth + gap + margin) placement = "left";
-    else placement = spaces.top > spaces.bottom ? "top" : "bottom";
-
-    let left = rect.left + rect.width / 2 - cardWidth / 2;
-    let top = rect.top + rect.height + gap;
-    if (placement === "top") top = rect.top - cardHeight - gap;
-    if (placement === "right") {
-      left = rect.left + rect.width + gap;
-      top = rect.top + rect.height / 2 - cardHeight / 2;
-    }
-    if (placement === "left") {
-      left = rect.left - cardWidth - gap;
-      top = rect.top + rect.height / 2 - cardHeight / 2;
-    }
-
-    left = Math.max(margin, Math.min(innerWidth - cardWidth - margin, left));
-    top = Math.max(availableTop, Math.min(availableBottom - cardHeight, top));
-    card.dataset.placement = placement;
-    card.style.left = `${left}px`;
-    card.style.top = `${top}px`;
+    card.dataset.placement = best.placement;
+    card.dataset.overlapsTarget = best.targetOverlap > 0 ? "true" : "false";
+    card.style.left = `${best.left}px`;
+    card.style.top = `${best.top}px`;
     card.style.right = "auto";
     card.style.bottom = "auto";
     card.style.transform = "none";
@@ -1724,11 +1869,53 @@
       if (patternIsVisible) return false;
     }
     if (step.requireTargetTextChange) {
-      const refreshedTarget = semanticTargets(step.targetLabels, false)[0];
+      const refreshedTarget = semanticOutcomeTarget(step);
       const refreshedText = refreshedTarget ? semanticNodeText(refreshedTarget.node) : "";
       if (!refreshedText || refreshedText === state.outcomeBaselineTargetText) return false;
     }
     return hasDeferredOutcome(step);
+  }
+
+  function semanticOutcomeTarget(step) {
+    const direct = semanticTargets(
+      step.outcomeTargetLabels || step.targetLabels,
+      false,
+      step.targetRegion
+    )[0];
+    if (direct) return direct;
+
+    // Some controls add the selected value inside their semantics label.
+    // Example: "City / cities + Add city" becomes
+    // "City / cities Islamabad Add city". Match the stable chunks around
+    // that inserted value so completion can still be confirmed reliably.
+    const chunks = (step.outcomeTargetLabels || step.targetLabels || [])
+      .flatMap((label) => String(label).toLowerCase().split(/\s*\+\s*/))
+      .map((chunk) => chunk.replace(/\s+/g, " ").trim())
+      .filter((chunk) => chunk.length >= 3);
+    if (chunks.length < 2) return null;
+
+    const baselineRect = state.outcomeBaselineTargetRect;
+    const candidates = Array.from(
+      document.querySelectorAll(
+        'flt-semantics, [aria-label], [role="button"], button, input, textarea, select'
+      )
+    ).flatMap((node) => {
+      if (root && root.contains(node)) return [];
+      const text = semanticNodeText(node);
+      if (!chunks.every((chunk) => text.includes(chunk))) return [];
+      const rect = liveTargetRect(node);
+      if (!rect || !rectMatchesTargetRegion(rect, step.targetRegion)) return [];
+      const area = rect.width * rect.height;
+      const distance = baselineRect
+        ? Math.hypot(
+            rect.left + rect.width / 2 - (baselineRect.left + baselineRect.width / 2),
+            rect.top + rect.height / 2 - (baselineRect.top + baselineRect.height / 2)
+          )
+        : 0;
+      return [{ node, rect, score: area + distance * 200 }];
+    });
+    candidates.sort((a, b) => a.score - b.score);
+    return candidates[0] || null;
   }
 
   function beginActionOutcomeWait(step) {
@@ -1739,6 +1926,9 @@
     state.outcomeBaselineTargetText = step.requireTargetTextChange && state.currentTargets.length
       ? semanticNodeText(state.currentTargets[0].node)
       : "";
+    state.outcomeBaselineTargetRect = step.requireTargetTextChange && state.currentTargets.length
+      ? Object.assign({}, state.currentTargets[0].rect)
+      : null;
     card.dataset.actionState = "working";
     actionStatus.textContent = step.waitingInstruction || "Waiting for CineConnect to confirm the action…";
     if (step.waitingInstruction) mission.textContent = step.waitingInstruction;
@@ -1822,9 +2012,11 @@
     if (visibleTargets.length) {
       state.currentRects = visibleTargets.map((targetItem) => targetItem.rect);
       state.currentRect = unionRect(state.currentRects);
-      const signature = state.currentRects
+      updateScrimMask(state.currentRects);
+      const geometrySignature = state.currentRects
         .map((rect) => [rect.left, rect.top, rect.width, rect.height].map(Math.round).join(":"))
         .join("|");
+      const signature = `${geometrySignature}|card:${Math.round(card.offsetWidth)}:${Math.round(card.offsetHeight)}|player:${controls.dataset.placement}`;
       if (signature !== state.geometrySignature) {
         state.geometrySignature = signature;
         state.geometryStableFrames = 0;
@@ -1914,7 +2106,7 @@
       targetItem.node.addEventListener("click", handleTargetPointer, true);
     });
 
-    scrim.dataset.spotlight = "true";
+    updateScrimMask(rects);
     targetTag.dataset.visible = "false";
     if (state.targetIsGate) {
       mission.textContent = "Open the highlighted section first.";
@@ -2103,6 +2295,7 @@
     state.actionPending = false;
     state.outcomeCycleObserved = false;
     state.outcomeBaselineTargetText = "";
+    state.outcomeBaselineTargetRect = null;
     state.awaitingCompletion = false;
     state.targetRetryCount = 0;
     state.scrollAttempted = false;

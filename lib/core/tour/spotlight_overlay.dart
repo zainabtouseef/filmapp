@@ -314,50 +314,113 @@ class _Tooltip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const margin = 16.0;
-    const gap = 14.0;
     final pillReserve = 92.0 + bottomInset;
     final width =
         mobile ? math.min(360.0, screenSize.width - margin * 2) : 340.0;
-    const estimatedHeight = 150.0;
-
-    double left;
-    double top;
-    final r = rect;
-    if (r == null) {
-      left = (screenSize.width - width) / 2;
-      top = (screenSize.height - pillReserve - estimatedHeight) / 2;
-    } else {
-      left = (r.center.dx - width / 2).clamp(
-        margin,
-        math.max(margin, screenSize.width - width - margin),
-      );
-      final spaceBelow = screenSize.height - pillReserve - r.bottom - gap;
-      final spaceAbove = r.top - gap;
-      top = (spaceBelow >= estimatedHeight || spaceBelow >= spaceAbove)
-          ? r.bottom + gap
-          : math.max(margin, r.top - gap - estimatedHeight);
-      top = top.clamp(
-        margin,
-        math.max(margin, screenSize.height - pillReserve - estimatedHeight),
-      );
-    }
 
     final opacity = Curves.easeOutCubic.transform(progress);
-    return Positioned(
-      left: left,
-      top: top,
-      width: width,
-      child: IgnorePointer(
-        ignoring: opacity < 0.99,
-        child: Opacity(
-          opacity: opacity,
-          child: Transform.translate(
-            offset: Offset(0, (1 - opacity) * 10),
-            child: _TooltipCard(step: step),
+    return Positioned.fill(
+      child: CustomSingleChildLayout(
+        delegate: _TooltipPositionDelegate(
+          target: rect,
+          width: width,
+          pillReserve: pillReserve,
+          margin: margin,
+        ),
+        child: IgnorePointer(
+          ignoring: opacity < 0.99,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.translate(
+              offset: Offset(0, (1 - opacity) * 10),
+              child: _TooltipCard(step: step),
+            ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _TooltipPositionDelegate extends SingleChildLayoutDelegate {
+  final Rect? target;
+  final double width;
+  final double pillReserve;
+  final double margin;
+
+  const _TooltipPositionDelegate({
+    required this.target,
+    required this.width,
+    required this.pillReserve,
+    required this.margin,
+  });
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    return BoxConstraints(
+      minWidth: width,
+      maxWidth: width,
+      maxHeight: math.max(80, constraints.maxHeight - pillReserve - margin * 2),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    const gap = 14.0;
+    final availableBottom = math.max(margin, size.height - pillReserve);
+    final maxLeft = math.max(margin, size.width - childSize.width - margin);
+    final maxTop = math.max(margin, availableBottom - childSize.height);
+    double clampLeft(double value) => value.clamp(margin, maxLeft).toDouble();
+    double clampTop(double value) => value.clamp(margin, maxTop).toDouble();
+
+    final rect = target;
+    if (rect == null) {
+      return Offset(
+        clampLeft((size.width - childSize.width) / 2),
+        clampTop((availableBottom - childSize.height) / 2),
+      );
+    }
+
+    final forbidden = rect.inflate(10);
+    final candidates = <Offset>[
+      Offset(rect.center.dx - childSize.width / 2,
+          rect.top - childSize.height - gap),
+      Offset(rect.center.dx - childSize.width / 2, rect.bottom + gap),
+      Offset(rect.left - childSize.width - gap,
+          rect.center.dy - childSize.height / 2),
+      Offset(rect.right + gap, rect.center.dy - childSize.height / 2),
+      Offset(margin, margin),
+      Offset(maxLeft, margin),
+      Offset(margin, maxTop),
+      Offset(maxLeft, maxTop),
+    ]
+        .map((offset) => Offset(
+              clampLeft(offset.dx),
+              clampTop(offset.dy),
+            ))
+        .toList();
+
+    double overlapArea(Offset offset) {
+      final cardRect = offset & childSize;
+      final overlap = cardRect.intersect(forbidden);
+      return overlap.isEmpty ? 0 : overlap.width * overlap.height;
+    }
+
+    candidates.sort((a, b) {
+      final aOverlap = overlapArea(a);
+      final bOverlap = overlapArea(b);
+      if (aOverlap != bOverlap) return aOverlap.compareTo(bOverlap);
+      return (a - rect.center).distance.compareTo((b - rect.center).distance);
+    });
+    return candidates.first;
+  }
+
+  @override
+  bool shouldRelayout(covariant _TooltipPositionDelegate oldDelegate) {
+    return oldDelegate.target != target ||
+        oldDelegate.width != width ||
+        oldDelegate.pillReserve != pillReserve ||
+        oldDelegate.margin != margin;
   }
 }
 

@@ -185,8 +185,20 @@
 .cc-guide-scrim {
   position: fixed;
   inset: 0;
-  background: transparent;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
+}
+
+.cc-guide-scrim-fill {
+  fill: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.cc-guide-scrim[data-spotlight="true"] .cc-guide-scrim-fill {
+  opacity: 1;
 }
 
 .cc-guide-spotlight {
@@ -194,8 +206,7 @@
   display: none;
   border: 3px solid var(--cc-guide-gold);
   border-radius: 18px;
-  box-shadow: 0 0 0 9999px rgba(3, 5, 8, 0.58),
-    0 0 0 7px rgba(242, 182, 50, 0.22),
+  box-shadow: 0 0 0 7px rgba(242, 182, 50, 0.22),
     0 12px 44px rgba(0, 0, 0, 0.36);
   pointer-events: none;
   transition: left 240ms ease, top 240ms ease, width 240ms ease,
@@ -208,8 +219,7 @@
 
 .cc-guide-spotlight[data-success="true"] {
   border-color: var(--cc-guide-success);
-  box-shadow: 0 0 0 9999px rgba(3, 5, 8, 0.5),
-    0 0 0 7px rgba(53, 199, 111, 0.25),
+  box-shadow: 0 0 0 7px rgba(53, 199, 111, 0.25),
     0 12px 44px rgba(0, 0, 0, 0.36);
 }
 
@@ -691,15 +701,13 @@
 .cc-guide-spotlight,
 .cc-guide-spotlight[data-secondary="true"] {
   border-width: 2.4px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6),
-    0 0 0 7px rgba(224, 171, 69, 0.24),
+  box-shadow: 0 0 0 7px rgba(224, 171, 69, 0.24),
     0 0 24px 7px rgba(224, 171, 69, 0.34);
 }
 
 .cc-guide-spotlight[data-success="true"],
 .cc-guide-spotlight[data-secondary="true"][data-success="true"] {
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.56),
-    0 0 0 7px rgba(53, 199, 111, 0.25),
+  box-shadow: 0 0 0 7px rgba(53, 199, 111, 0.25),
     0 0 24px 7px rgba(53, 199, 111, 0.28);
 }
 

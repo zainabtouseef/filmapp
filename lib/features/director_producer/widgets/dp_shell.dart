@@ -535,47 +535,49 @@ class _DPSidebar extends StatelessWidget {
                   return TourTarget(
                     id: 'nav:${item.route}',
                     child: GestureDetector(
-                    onTap: () => onRouteTap(item.route),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: active
-                            ? colors.activeChipGradient
-                            : colors.inactiveChipGradient,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: active ? colors.goldMid : colors.border,
+                      onTap: () => onRouteTap(item.route),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 11,
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            item.icon,
-                            color: active ? colors.goldDark : colors.iconMuted,
-                            size: 20,
+                        decoration: BoxDecoration(
+                          gradient: active
+                              ? colors.activeChipGradient
+                              : colors.inactiveChipGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: active ? colors.goldMid : colors.border,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              item.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.cardLabel.copyWith(
-                                color: active
-                                    ? colors.textPrimary
-                                    : colors.textSecondary,
-                                fontWeight:
-                                    active ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              item.icon,
+                              color:
+                                  active ? colors.goldDark : colors.iconMuted,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.cardLabel.copyWith(
+                                  color: active
+                                      ? colors.textPrimary
+                                      : colors.textSecondary,
+                                  fontWeight: active
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
                     ),
                   );
                 },
@@ -602,10 +604,26 @@ class _DPBottomNav extends StatelessWidget {
   });
 
   static const _destinations = [
-    CineBottomNavDestination(label: 'Console', icon: Icons.home_outlined),
-    CineBottomNavDestination(label: 'Productions', icon: Icons.movie_outlined),
-    CineBottomNavDestination(label: 'Find', icon: Icons.search_rounded),
-    CineBottomNavDestination(label: 'Deals', icon: Icons.handshake_outlined),
+    CineBottomNavDestination(
+      label: 'Console',
+      icon: Icons.home_outlined,
+      route: DirectorProducerRoutes.console,
+    ),
+    CineBottomNavDestination(
+      label: 'Productions',
+      icon: Icons.movie_outlined,
+      route: DirectorProducerRoutes.projects,
+    ),
+    CineBottomNavDestination(
+      label: 'Find',
+      icon: Icons.search_rounded,
+      route: DirectorProducerRoutes.marketplace,
+    ),
+    CineBottomNavDestination(
+      label: 'Deals',
+      icon: Icons.handshake_outlined,
+      route: DirectorProducerRoutes.bargaining,
+    ),
     CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
   ];
 
@@ -638,7 +656,10 @@ class _DPBottomNav extends StatelessWidget {
 
   int get _currentIndex {
     if (menuOpen) return 4;
-    if (_active(currentRoute, DirectorProducerRoutes.home)) return 0;
+    if (currentRoute == DirectorProducerRoutes.console ||
+        _active(currentRoute, DirectorProducerRoutes.home)) {
+      return 0;
+    }
     if (_active(currentRoute, DirectorProducerRoutes.projects)) return 1;
     if (_active(currentRoute, DirectorProducerRoutes.marketplace)) return 2;
     if (_active(currentRoute, DirectorProducerRoutes.bargaining)) return 3;

@@ -72,6 +72,9 @@ Future<TourController> _pumpDemo(
                   TourTarget(
                     id: 'demo.button',
                     child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        splashFactory: InkRipple.splashFactory,
+                      ),
                       onPressed: onButtonTap ?? () {},
                       child: const Text('Do the thing'),
                     ),
@@ -116,6 +119,24 @@ void main() {
     await _pumpDemo(tester, size: const Size(400, 800));
     expect(find.text('First step'), findsNothing);
     expect(find.byType(ElevatedButton), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the measured coach card stays outside its action target', (
+    tester,
+  ) async {
+    final controller = await _pumpDemo(tester, size: const Size(400, 800));
+    controller.start(_steps, tourId: 'demo');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final targetRect = tester.getRect(find.text('Do the thing'));
+    final card = find
+        .ancestor(of: find.text('First step'), matching: find.byType(ClipRRect))
+        .first;
+    final cardRect = tester.getRect(card);
+
+    expect(cardRect.intersect(targetRect).isEmpty, isTrue);
     expect(tester.takeException(), isNull);
   });
 
