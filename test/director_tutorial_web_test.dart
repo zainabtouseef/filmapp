@@ -21,7 +21,10 @@ void main() {
       contains('preserveRoutePrefixes: ["#/director/profile"]'),
     );
     expect(script, isNot(contains('Date.now() - startedAt >= 2200')));
-    expect(script, contains('waitForActionOutcome(step, Date.now())'));
+    expect(
+      script,
+      contains('setTimeout(() => waitForActionOutcome(step, startedAt), 60)'),
+    );
   });
 
   test('modal and project steps wait for confirmed completion', () {
@@ -38,6 +41,55 @@ void main() {
       contains('completionDismissedPattern: "Save requirement"'),
     );
     expect(script, contains('expectedTextPattern: "Project created"'));
+    expect(
+        script, contains('failureTextPatterns: ["Request validation failed"'));
+    expect(script, contains('function failCurrentAction(step, message)'));
+  });
+
+  test('multi-field input never completes from one broad editing rectangle',
+      () {
+    expect(script, contains('function requiredInputKeys(step)'));
+    expect(script, contains('function inputTargetForEvent(event, step)'));
+    expect(
+        script, contains('return overlaps.length === 1 ? overlaps[0] : null'));
+    expect(
+        script, contains('state.inputReady = completedCount >= requiredCount'));
+    expect(
+        script,
+        contains(
+            'document.addEventListener("focusout", handleTargetInputCommit'));
+    expect(
+      script,
+      isNot(contains(
+          'const requiredCount = step.multipleTargets ? state.currentTargets.length : 1')),
+    );
+  });
+
+  test('async actions show confirmation and clear stale target outlines', () {
+    expect(script, contains('const SUCCESS_CONFIRMATION_MS = 900'));
+    expect(script, contains('state.actionCompleting'));
+    expect(script, contains('Confirmed — continuing to the next step'));
+    expect(
+      script,
+      contains(
+          'if (state.actionPending && hasDeferredOutcome(step)) return []'),
+    );
+    expect(styles, contains('[data-action-state="success"] .cc-guide-mission'));
+  });
+
+  test('file uploads wait for a newly completed upload', () {
+    expect(script, contains('expectedTextCountIncrease: "Upload complete"'));
+    expect(script, contains('state.outcomeBaselineTextCount'));
+    expect(
+      shell,
+      isNot(contains('Upload complete')),
+      reason:
+          'The upload completion semantic belongs to the file row, not the shell.',
+    );
+    final wizard = File(
+      'lib/features/director_producer/screens/dp_create_project_wizard_screen.dart',
+    ).readAsStringSync();
+    expect(wizard, contains("label: 'Upload complete'"));
   });
 
   test('two-stage requirement actions are handled once per click', () {
@@ -64,6 +116,8 @@ void main() {
     expect(script, contains('function resolveInteractionScope(step)'));
     expect(script, contains('const displayRects = scopeTarget'));
     expect(script, contains(r'card.style.width = `${fittedCardWidth}px`'));
+    expect(script, contains('function visibleFormControlRects()'));
+    expect(script, contains('workAreaOverlap * 50000'));
   });
 
   test('date range guidance follows start then end then Done', () {
@@ -90,6 +144,7 @@ void main() {
     expect(script, contains('region === "bottom-nav"'));
     expect(script, contains('region === "side-nav"'));
     expect(script, contains('region === "floating-menu"'));
+    expect(script, contains('region === "marketplace-results"'));
     expect(script, contains('compactLandmarks >= 2'));
     expect(script, contains('sideLandmarks >= 3'));
     for (final destination in [
@@ -135,7 +190,7 @@ void main() {
       styles,
       isNot(contains('linear-gradient(160deg, #ffffff 0%, #f7f8fa 100%)')),
     );
-    expect(index, contains('director_tutorial.css?v=20260809-31'));
-    expect(index, contains('director_tutorial.js?v=20260809-31'));
+    expect(index, contains('director_tutorial.css?v=20260811-32'));
+    expect(index, contains('director_tutorial.js?v=20260811-32'));
   });
 }

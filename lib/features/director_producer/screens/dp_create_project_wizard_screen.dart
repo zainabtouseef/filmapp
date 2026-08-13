@@ -1603,8 +1603,14 @@ class _FileRow extends StatelessWidget {
                 ),
               ),
               if (done)
-                Icon(Icons.check_circle_rounded,
-                    size: 17, color: colors.success),
+                Semantics(
+                  label: 'Upload complete',
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    size: 17,
+                    color: colors.success,
+                  ),
+                ),
               IconButton(
                 visualDensity: VisualDensity.compact,
                 onPressed: onReplace,

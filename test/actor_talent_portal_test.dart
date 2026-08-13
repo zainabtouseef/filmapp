@@ -66,16 +66,22 @@ void main() {
     });
   }
 
-  testWidgets('mobile More opens the complete actor workspace menu',
+  testWidgets('mobile portal menu opens the complete actor workspace menu',
       (WidgetTester tester) async {
     setViewport(tester, size: const Size(390, 844));
 
     await tester.pumpWidget(actorApp(route: ActorTalentRoutes.dashboard));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('More'));
+    final menuButton = tester.widget<InkWell>(
+      find.descendant(
+        of: find.byTooltip('Menu'),
+        matching: find.byType(InkWell),
+      ),
+    );
+    menuButton.onTap!();
     await tester.pumpAndSettle();
 
-    expect(find.text('Casting Profile'), findsOneWidget);
+    expect(find.text('Portfolio'), findsWidgets);
     expect(find.text('Contracts'), findsOneWidget);
     expect(find.text('Reviews'), findsWidgets);
     expect(find.text('Safety & Support'), findsOneWidget);

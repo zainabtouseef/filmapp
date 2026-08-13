@@ -209,8 +209,7 @@
   box-shadow: 0 0 0 7px rgba(242, 182, 50, 0.22),
     0 12px 44px rgba(0, 0, 0, 0.36);
   pointer-events: none;
-  transition: left 240ms ease, top 240ms ease, width 240ms ease,
-    height 240ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .cc-guide-spotlight[data-visible="true"] {
@@ -300,6 +299,12 @@
   border-color: rgba(53, 199, 111, 0.85);
   box-shadow: 0 18px 54px rgba(0, 0, 0, 0.5),
     0 0 0 3px rgba(53, 199, 111, 0.18);
+}
+
+.cc-guide-card[data-action-state="error"] {
+  border-color: rgba(229, 92, 92, 0.92);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.5),
+    0 0 0 3px rgba(229, 92, 92, 0.18);
 }
 
 @keyframes cc-guide-enter {
@@ -654,7 +659,7 @@
 @media (min-width: 900px) {
   .cc-guide-launcher { bottom: 28px; }
   .cc-guide-launcher-dock { bottom: 28px; }
-  .cc-guide-card { width: 340px; }
+  .cc-guide-card { width: 300px; }
 }
 
 @media (max-width: 390px) {
@@ -728,8 +733,8 @@
 .cc-guide-card,
 .cc-guide-card[data-action-mode="true"] {
   z-index: 2;
-  width: min(340px, calc(100vw - 32px));
-  max-height: min(370px, calc(100dvh - 126px));
+  width: min(300px, calc(100vw - 32px));
+  max-height: min(310px, calc(100dvh - 126px));
   border: 1.4px solid rgba(224, 171, 69, 0.78);
   border-radius: 18px;
   overflow: hidden;
@@ -749,9 +754,16 @@
     0 1px 0 rgba(255, 255, 255, 0.16) inset;
 }
 
+.cc-guide-card[data-action-state="error"] {
+  border-color: rgba(229, 92, 92, 0.92);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.48),
+    0 0 0 3px rgba(229, 92, 92, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+
 .cc-guide-card-header,
 .cc-guide-card[data-action-mode="true"] .cc-guide-card-header {
-  padding: 16px 18px 0;
+  padding: 12px 14px 0;
   border-bottom: 0;
   display: block;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent);
@@ -783,10 +795,10 @@
 
 .cc-guide-title,
 .cc-guide-card[data-action-mode="true"] .cc-guide-title {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   display: block;
   color: #f8fafc;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.32;
   letter-spacing: -0.01em;
@@ -798,7 +810,7 @@
 
 .cc-guide-body,
 .cc-guide-card[data-action-mode="true"] .cc-guide-body {
-  padding: 7px 18px 17px;
+  padding: 6px 14px 13px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -808,15 +820,19 @@
   margin: 0;
   display: block;
   color: rgba(232, 237, 244, 0.76);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
 }
 
+.cc-guide-card[data-action-mode="true"] .cc-guide-description {
+  display: none;
+}
+
 .cc-guide-mission,
 .cc-guide-card[data-action-mode="true"] .cc-guide-mission {
-  margin-top: 12px;
-  padding: 10px 11px;
+  margin-top: 8px;
+  padding: 8px 9px;
   border: 1px solid rgba(242, 190, 78, 0.42);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(242, 182, 50, 0.17), rgba(255, 255, 255, 0.055));
@@ -833,9 +849,27 @@
 .cc-guide-card[data-action-mode="true"] .cc-guide-mission p {
   margin: 4px 0 0;
   color: #f8fafc;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.44;
+}
+
+.cc-guide-card[data-action-state="success"] .cc-guide-mission {
+  border-color: rgba(53, 199, 111, 0.7);
+  background: rgba(53, 199, 111, 0.16);
+}
+
+.cc-guide-card[data-action-state="success"] .cc-guide-mission-label {
+  color: #8ce7af;
+}
+
+.cc-guide-card[data-action-state="error"] .cc-guide-mission {
+  border-color: rgba(229, 92, 92, 0.7);
+  background: rgba(229, 92, 92, 0.14);
+}
+
+.cc-guide-card[data-action-state="error"] .cc-guide-mission-label {
+  color: #ffaaaa;
 }
 
 .cc-guide-details,
@@ -1014,8 +1048,8 @@
 @media (max-width: 480px) {
   .cc-guide-card,
   .cc-guide-card[data-action-mode="true"] {
-    width: min(340px, calc(100vw - 24px));
-    max-height: min(340px, calc(100dvh - 122px));
+    width: min(300px, calc(100vw - 24px));
+    max-height: min(310px, calc(100dvh - 122px));
   }
 
   .cc-guide-card-header,
@@ -1058,7 +1092,7 @@
 @media (max-height: 520px) and (orientation: landscape) {
   .cc-guide-card,
   .cc-guide-card[data-action-mode="true"] {
-    width: min(340px, calc(100vw - 24px));
+    width: min(300px, calc(100vw - 24px));
     max-height: calc(100dvh - 92px);
   }
 

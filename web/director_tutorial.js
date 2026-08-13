@@ -1,12 +1,13 @@
 (function () {
   "use strict";
 
-  const GUIDE_VERSION = "9";
+  const GUIDE_VERSION = "10";
   const IDENTITY_KEY = "cineconnect.session_identity";
   const ROUTE_SESSION_KEY = "cineconnect.director_route_session";
   const STORAGE_PREFIX = `cineconnect.director_guide.v${GUIDE_VERSION}.`;
   const DIRECTOR_ROLE = "director_producer";
   const AUTO_START_DELAY_MS = 1500;
+  const SUCCESS_CONFIRMATION_MS = 900;
   const SIDEBAR_BREAKPOINT_PX = 1200;
 
   const icon = (name) => {
@@ -652,6 +653,8 @@
       targetLabels: ["City / cities + Add city"],
       waitForTextCycle: "Add a city",
       requireTargetTextChange: true,
+      keepInteractionScopeBright: true,
+      interactionScopePattern: "Add a city",
       waitingInstruction: "Choose a city from the sheet. The guide will continue after the city is added.",
     }),
     workflowStep({
@@ -708,21 +711,13 @@
       chapter: "1 · Create project",
       title: "Enter a team member",
       description: "Add the responsible producer or department head first.",
-      doThis: "Enter the team member name.",
+      doThis: "Enter the team member name, then tap Add.",
       routeLabel: "Project setup > Team member",
       action: "input",
-      actionLabel: "Enter a team member name",
+      actionLabel: "Enter a team member name, then add it",
       targetLabels: ["Team member name"],
-    }),
-    workflowStep({
-      chapter: "1 · Create project",
-      title: "Confirm the team member",
-      description: "Use Add so the person appears in the project summary.",
-      doThis: "Tap Add.",
-      routeLabel: "Project setup > Team",
-      action: "click",
-      actionLabel: "Add the team member",
-      targetLabels: ["Add"],
+      completionTargetLabels: ["Add"],
+      completionInstruction: "Team member name complete. Tap Add to confirm it.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -743,6 +738,9 @@
       action: "click",
       actionLabel: "Add a script from the device",
       targetLabels: ["Script vault Upload PDF, DOC, DOCX, or TXT. Scripts stay private to invited team members. No files attached yet Add script from device", "Add script from device"],
+      expectedTextCountIncrease: "Upload complete",
+      outcomeTimeoutMs: 90000,
+      waitingInstruction: "Uploading the selected file… The guide will confirm it when the upload is complete.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -803,6 +801,7 @@
       actionLabel: "Create Project",
       targetLabels: ["Create Project"],
       expectedTextPattern: "Project created",
+      failureTextPatterns: ["Request validation failed", "Could not create", "Sign in to create projects"],
       waitingInstruction: "Creating the project… The next step starts only after the project is saved successfully.",
     })
   );
@@ -840,6 +839,7 @@
         actionLabel: "Open one Profile",
         targetLabels: ["Profile"],
         multipleTargets: true,
+        targetRegion: "marketplace-results",
         expectedHashPrefix: "#/director/profile",
       }),
       workflowStep({
@@ -866,8 +866,15 @@
         action: "click",
         actionLabel: "Send the booking request",
         targetLabels: ["Send Request", "Submit Request", "Send booking request"],
-        expectedHash: "#/director/bargaining",
+        gateLabels: ["Next"],
+        expectedHashPrefix: "#/director/bargaining",
         outcomeTimeoutMs: 90000,
+        failureTextPatterns: [
+          "Could not send the booking request",
+          "Payment schedule must total 100%",
+          "Enter a valid fee before sending",
+          "Live booking service is unavailable",
+        ],
         waitingInstruction: "Sending the request… The guide will continue only after CineConnect confirms it.",
       })
     );
@@ -1190,6 +1197,7 @@
     currentTargets: [],
     interactionScopeTarget: null,
     completedInputKeys: new Set(),
+    inputReady: false,
     targetIsGate: false,
     awaitingCompletion: false,
     completionPhase: null,
@@ -1198,12 +1206,18 @@
     geometrySignature: "",
     geometryStableFrames: 0,
     layoutTimer: null,
+    mutationTimer: null,
     scrollAttempted: false,
     actionPending: false,
+    actionCompleting: false,
+    actionFailureMessage: "",
     actionTimer: null,
     outcomeCycleObserved: false,
     outcomeBaselineTargetText: "",
     outcomeBaselineTargetRect: null,
+    outcomeBaselineTextCount: 0,
+    failureBaselineCounts: new Map(),
+    failureCycleCleared: false,
     renderedStep: null,
     navigationMode: null,
   };
@@ -1235,6 +1249,8 @@
   let closeButton;
   let toast;
   let actionStatus;
+  let missionLabel;
+  let appMutationObserver;
 
   function readIdentity() {
     try {
@@ -1422,6 +1438,7 @@
     closeButton = root.querySelector(".cc-guide-close");
     toast = root.querySelector(".cc-guide-toast");
     actionStatus = root.querySelector(".cc-guide-action-status");
+    missionLabel = root.querySelector(".cc-guide-mission-label");
 
     launcher.addEventListener("click", () => {
       const stored = loadProgress();
@@ -1456,7 +1473,16 @@
     document.addEventListener("keydown", handleKeyboard, true);
     document.addEventListener("click", handleTargetPointer, true);
     document.addEventListener("input", handleTargetInput, true);
+    document.addEventListener("change", handleTargetInputCommit, true);
+    document.addEventListener("focusout", handleTargetInputCommit, true);
     document.addEventListener("scroll", restartTargetGeometry, true);
+    appMutationObserver = new MutationObserver(handleAppMutations);
+    appMutationObserver.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      characterData: true,
+    });
   }
 
   function handleKeyboard(event) {
@@ -1465,6 +1491,13 @@
       event.preventDefault();
       closeGuide(true);
       return;
+    }
+    if (event.key === "Enter") {
+      const step = currentRenderedStep();
+      if (step.action === "input" && state.inputReady && !step.completionTargetLabels) {
+        confirmInputStep(step);
+        return;
+      }
     }
     if (event.key === "ArrowLeft" && !event.metaKey && !event.ctrlKey) {
       event.preventDefault();
@@ -1576,6 +1609,11 @@
         centerX <= Math.min(350, innerWidth * 0.68) &&
         centerY < innerHeight * 0.86;
     }
+    if (region === "marketplace-results") {
+      const clearsDesktopSidebar = currentNavigationMode() !== "desktop" ||
+        centerX >= Math.min(390, innerWidth * 0.28);
+      return clearsDesktopSidebar && centerY >= innerHeight * 0.38;
+    }
     return true;
   }
 
@@ -1670,6 +1708,10 @@
   function resolveTargets(step) {
     // Actionable missions intentionally use semantic controls only. This keeps
     // the border attached to the real Flutter button at every screen size.
+    // Once an asynchronous action starts, its old button is no longer the
+    // current task. Hiding that stale outline also prevents it from drifting
+    // over a modal or a freshly-rendered confirmation screen.
+    if (state.actionPending && hasDeferredOutcome(step)) return [];
     const isCompletionTarget = Boolean(state.awaitingCompletion && step.completionTargetLabels);
     const isChoosingDateRange = Boolean(
       isCompletionTarget &&
@@ -1713,6 +1755,11 @@
     state.targetIsGate = false;
   }
 
+  function stableTargetKey(targetItem, index) {
+    const label = String(targetItem && targetItem.label || "").trim();
+    return label || `target:${index}`;
+  }
+
   function scheduleGuideRealign() {
     if (!state.open) return;
     clearTimeout(state.layoutTimer);
@@ -1726,7 +1773,38 @@
           renderSpotlight(currentRenderedStep());
         }
       }
-    }, 140);
+    }, 60);
+  }
+
+  function handleAppMutations(records) {
+    if (!state.open) return;
+    const hasAppMutation = records.some((record) => {
+      if (root && root.contains(record.target)) return false;
+      if (record.type === "attributes" && String(record.attributeName || "").startsWith("data-cc-guide")) {
+        return false;
+      }
+      return true;
+    });
+    if (!hasAppMutation) return;
+    clearTimeout(state.mutationTimer);
+    state.mutationTimer = setTimeout(() => {
+      if (!state.open) return;
+      const step = currentRenderedStep();
+      if (state.actionPending && hasDeferredOutcome(step)) {
+        const failureMessage = actionFailureMessage(step);
+        if (failureMessage) {
+          failCurrentAction(step, failureMessage);
+          return;
+        }
+        if (actionOutcomeReached(step)) {
+          completeCurrentAction();
+          return;
+        }
+        if (step.keepInteractionScopeBright) renderSpotlight(step);
+        return;
+      }
+      if (!state.actionPending) scheduleGuideRealign();
+    }, 36);
   }
 
   function unionRect(rects) {
@@ -1752,24 +1830,47 @@
   }
 
   function resolveInteractionScope(step) {
-    if (!state.awaitingCompletion || !step.keepInteractionScopeBright) return null;
+    const scopeIsActive = state.awaitingCompletion || state.actionPending ||
+      step.interactionScopeMode === "always";
+    if (!scopeIsActive || !step.keepInteractionScopeBright) return null;
     const pattern = String(step.interactionScopePattern || "").toLowerCase();
     if (!pattern) return null;
     const viewportArea = Math.max(1, innerWidth * innerHeight);
     const semantics = Array.from(document.querySelectorAll("flt-semantics"))
       .filter((node) => !(root && root.contains(node)));
 
-    const groups = semantics.flatMap((node) => {
-      if (String(node.getAttribute("role") || "").toLowerCase() !== "group") return [];
-      if (!semanticNodeText(node).includes(pattern)) return [];
-      const rect = liveTargetRect(node);
-      if (!rect) return [];
-      const areaRatio = rect.width * rect.height / viewportArea;
-      if (areaRatio < 0.08 || areaRatio > 0.92) return [];
-      return [{ node, rect: inflateViewportRect(rect, 8), score: areaRatio }];
-    });
-    groups.sort((a, b) => b.score - a.score);
-    if (groups.length) return groups[0];
+    // Flutter does not consistently expose bottom sheets as role=group. Walk
+    // upward from the modal title and choose the largest meaningful semantics
+    // ancestor containing several controls. This keeps the entire city picker,
+    // calendar, or requirement sheet readable instead of lighting only its
+    // heading while the coach card covers the fields.
+    const containers = [];
+    semantics
+      .filter((node) => semanticNodeText(node).includes(pattern))
+      .forEach((anchor) => {
+        let node = anchor;
+        while (node && node !== document.body) {
+          if (String(node.tagName || "").toLowerCase() === "flt-semantics") {
+            const rect = liveTargetRect(node);
+            if (rect) {
+              const areaRatio = rect.width * rect.height / viewportArea;
+              const controlCount = node.querySelectorAll(
+                'flt-semantics[role="button"], flt-semantics[role="textbox"], flt-semantics[role="combobox"]'
+              ).length;
+              if (areaRatio >= 0.08 && areaRatio <= 0.92 && controlCount >= 2) {
+                containers.push({
+                  node,
+                  rect: inflateViewportRect(rect, 8),
+                  score: areaRatio * 100 + Math.min(controlCount, 20),
+                });
+              }
+            }
+          }
+          node = node.parentElement;
+        }
+      });
+    containers.sort((a, b) => b.score - a.score);
+    if (containers.length) return containers[0];
 
     // Flutter date pickers may expose the modal as a full-screen semantics
     // root instead of role=dialog/group. Build the scope from its visible
@@ -1825,10 +1926,29 @@
     scrim.dataset.spotlight = rects.length ? "true" : "false";
   }
 
+  function visibleFormControlRects() {
+    const viewportArea = Math.max(1, innerWidth * innerHeight);
+    const nodes = Array.from(document.querySelectorAll(
+      'input, textarea, select, [contenteditable="true"], flt-semantics[role="textbox"], flt-semantics[role="combobox"], flt-semantics[role="spinbutton"]'
+    ));
+    const seen = new Set();
+    return nodes.flatMap((node) => {
+      if (root && root.contains(node)) return [];
+      const rect = liveTargetRect(node);
+      if (!rect || rect.width * rect.height / viewportArea > 0.18) return [];
+      const key = [rect.left, rect.top, rect.width, rect.height]
+        .map((value) => Math.round(value / 4) * 4)
+        .join(":");
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [inflateViewportRect(rect, 6)];
+    });
+  }
+
   function placeCoachMark(rect) {
     const margin = 12;
     const gap = 18;
-    const baseCardWidth = Math.min(340, innerWidth - margin * 2);
+    const baseCardWidth = Math.min(300, innerWidth - margin * 2);
     const leftSideWidth = Math.max(0, rect.left - gap - margin);
     const rightSideWidth = Math.max(0, innerWidth - (rect.left + rect.width) - gap - margin);
     const availableSideWidth = Math.max(leftSideWidth, rightSideWidth);
@@ -1856,6 +1976,7 @@
       width: rect.width + 20,
       height: rect.height + 20,
     };
+    const protectedWorkAreas = visibleFormControlRects();
     const overlapArea = (a, b) => {
       if (!a || !b) return 0;
       const width = Math.max(0, Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left));
@@ -1879,6 +2000,10 @@
       const cardRect = { left, top, width: cardWidth, height: cardHeight };
       const targetOverlap = overlapArea(cardRect, targetBounds);
       const controlsOverlap = overlapArea(cardRect, controlsRect);
+      const workAreaOverlap = protectedWorkAreas.reduce(
+        (total, workRect) => total + overlapArea(cardRect, workRect),
+        0
+      );
       const distance = Math.hypot(
         left + cardWidth / 2 - targetCenterX,
         top + cardHeight / 2 - targetCenterY
@@ -1888,7 +2013,12 @@
         left,
         top,
         targetOverlap,
-        score: targetOverlap * 100000 + controlsOverlap * 100000 + distance + index,
+        score:
+          targetOverlap * 100000 +
+          controlsOverlap * 100000 +
+          workAreaOverlap * 50000 +
+          distance +
+          index,
       };
     });
     candidates.sort((a, b) => a.score - b.score);
@@ -1926,6 +2056,15 @@
       });
   }
 
+  function pageTextCount(patternValue) {
+    if (!patternValue) return 0;
+    const pattern = String(patternValue).toLowerCase();
+    return Array.from(document.querySelectorAll("[aria-label], flt-semantics, [role]"))
+      .filter((node) => !(root && root.contains(node)))
+      .filter((node) => semanticNodeText(node).includes(pattern))
+      .length;
+  }
+
   function hasCompletionEvidence(step) {
     return !step.completionReadyPattern || pageHasText(step.completionReadyPattern);
   }
@@ -1935,15 +2074,40 @@
       step.expectedHash ||
       step.expectedHashPrefix ||
       step.expectedTextPattern ||
+      step.expectedTextCountIncrease ||
       step.waitForTextCycle ||
-      step.completionDismissedPattern
+      step.completionDismissedPattern ||
+      step.requireTargetTextChange
     );
   }
 
+  function normalizedHash(value) {
+    const withoutQuery = String(value || "").split(/[?#](?=[^/])/)[0];
+    return withoutQuery.length > 2 ? withoutQuery.replace(/\/+$/, "") : withoutQuery;
+  }
+
+  function actionFailureMessage(step) {
+    const patterns = Array.isArray(step.failureTextPatterns)
+      ? step.failureTextPatterns
+      : [];
+    const counts = patterns.map((pattern) => [pattern, pageTextCount(pattern)]);
+    if (counts.every(([, count]) => count === 0)) state.failureCycleCleared = true;
+    const match = counts.find(([pattern, count]) => {
+      if (count === 0) return false;
+      const baseline = state.failureBaselineCounts.get(pattern) || 0;
+      return baseline === 0 || state.failureCycleCleared || count > baseline;
+    });
+    return match ? `Not confirmed: ${match[0]}. Correct it and try again.` : "";
+  }
+
   function actionOutcomeReached(step) {
-    if (step.expectedHash && window.location.hash !== step.expectedHash) return false;
+    if (step.expectedHash && normalizedHash(window.location.hash) !== normalizedHash(step.expectedHash)) return false;
     if (step.expectedHashPrefix && !window.location.hash.startsWith(step.expectedHashPrefix)) return false;
     if (step.expectedTextPattern && !pageHasText(step.expectedTextPattern)) return false;
+    if (
+      step.expectedTextCountIncrease &&
+      pageTextCount(step.expectedTextCountIncrease) <= state.outcomeBaselineTextCount
+    ) return false;
 
     const cyclePattern = step.completionDismissedPattern || step.waitForTextCycle;
     if (cyclePattern) {
@@ -2006,6 +2170,8 @@
 
   function beginActionOutcomeWait(step) {
     state.actionPending = true;
+    state.actionCompleting = false;
+    state.actionFailureMessage = "";
     state.outcomeCycleObserved = Boolean(
       step.completionDismissedPattern && pageHasText(step.completionDismissedPattern)
     );
@@ -2015,15 +2181,30 @@
     state.outcomeBaselineTargetRect = step.requireTargetTextChange && state.currentTargets.length
       ? Object.assign({}, state.currentTargets[0].rect)
       : null;
+    state.outcomeBaselineTextCount = step.expectedTextCountIncrease
+      ? pageTextCount(step.expectedTextCountIncrease)
+      : 0;
+    state.failureBaselineCounts = new Map(
+      (step.failureTextPatterns || []).map((pattern) => [pattern, pageTextCount(pattern)])
+    );
+    state.failureCycleCleared = state.failureBaselineCounts.size === 0 ||
+      Array.from(state.failureBaselineCounts.values()).every((count) => count === 0);
     card.dataset.actionState = "working";
     actionStatus.textContent = step.waitingInstruction || "Waiting for CineConnect to confirm the action…";
     if (step.waitingInstruction) mission.textContent = step.waitingInstruction;
-    waitForActionOutcome(step, Date.now());
+    renderSpotlight(step);
+    const startedAt = Date.now();
+    state.actionTimer = setTimeout(() => waitForActionOutcome(step, startedAt), 60);
   }
 
   function waitForActionOutcome(step, startedAt) {
     clearTimeout(state.actionTimer);
     if (!state.open || !state.actionPending || state.renderedStep !== step) return;
+    const failureMessage = actionFailureMessage(step);
+    if (failureMessage) {
+      failCurrentAction(step, failureMessage);
+      return;
+    }
     if (actionOutcomeReached(step)) {
       completeCurrentAction();
       return;
@@ -2031,15 +2212,26 @@
 
     const timeoutMs = Number(step.outcomeTimeoutMs) || 45000;
     if (Date.now() - startedAt >= timeoutMs) {
-      state.actionPending = false;
-      card.dataset.actionState = "waiting";
-      actionStatus.textContent = "The action was not confirmed. Complete it or use Skip step.";
-      mission.textContent = step.completionInstruction || step.doThis || step.actionLabel;
-      state.targetRetryCount = 0;
-      renderSpotlight(step);
+      failCurrentAction(
+        step,
+        "The action was not confirmed. Check the form message, then try again or use Skip step."
+      );
       return;
     }
-    state.actionTimer = setTimeout(() => waitForActionOutcome(step, startedAt), 140);
+    state.actionTimer = setTimeout(() => waitForActionOutcome(step, startedAt), 90);
+  }
+
+  function failCurrentAction(step, message) {
+    clearTimeout(state.actionTimer);
+    state.actionPending = false;
+    state.actionCompleting = false;
+    state.actionFailureMessage = message;
+    state.targetRetryCount = 0;
+    card.dataset.actionState = "error";
+    renderSpotlight(step);
+    if (missionLabel) missionLabel.innerHTML = `${icon("target")} Needs attention`;
+    mission.textContent = message;
+    actionStatus.textContent = message;
   }
 
   function liveTargetRect(node) {
@@ -2151,8 +2343,21 @@
     clearTargetHighlights();
     const targets = step.action === "manual" ? [] : resolveTargets(step);
     targets.forEach((targetItem, index) => {
-      targetItem.key = `${targetItem.label || "target"}:${index}`;
+      targetItem.key = stableTargetKey(targetItem, index);
+      if (
+        step.action === "input" &&
+        !state.awaitingCompletion &&
+        requiredInputKeys(step).includes(targetItem.key) &&
+        semanticControlValue(targetItem.node, targetItem.label)
+      ) {
+        state.completedInputKeys.add(targetItem.key);
+      }
     });
+    if (step.action === "input") {
+      const requiredKeys = requiredInputKeys(step);
+      state.inputReady = requiredKeys.length > 0 &&
+        requiredKeys.every((key) => state.completedInputKeys.has(key));
+    }
     const rects = targets.map((target) => target.rect);
     const scopeTarget = step.action === "manual" ? null : resolveInteractionScope(step);
     const displayRects = scopeTarget ? [scopeTarget.rect] : rects;
@@ -2174,27 +2379,36 @@
       card.style.bottom = "auto";
       card.style.transform = "translate(-50%, -50%)";
       if (step.action !== "manual") {
-        actionStatus.textContent = state.awaitingCompletion
+        const workAreas = visibleFormControlRects();
+        if (workAreas.length) {
+          const workArea = unionRect(workAreas);
+          placeControls(workArea);
+          placeCoachMark(workArea);
+        }
+        actionStatus.textContent = state.actionPending
+          ? (step.waitingInstruction || "Waiting for confirmation")
+          : state.awaitingCompletion
           ? completionStatusForPhase(step)
           : `Waiting for the exact “${step.actionLabel}” control`;
-        if (state.targetRetryCount < 40) {
+        if (!state.actionPending && state.targetRetryCount < 40) {
           state.targetRetryCount += 1;
           clearTimeout(state.actionTimer);
-          state.actionTimer = setTimeout(() => renderSpotlight(step), 180);
+          state.actionTimer = setTimeout(() => renderSpotlight(step), 100);
         }
       }
       return;
     }
 
     const scopeOnlyIsExpected = Boolean(
-      step.completionFlow === "date-range" &&
-      state.awaitingCompletion &&
-      state.completionPhase !== "done"
+      (step.completionFlow === "date-range" &&
+        state.awaitingCompletion &&
+        state.completionPhase !== "done") ||
+      (state.actionPending && step.keepInteractionScopeBright)
     );
     if (!rects.length && !scopeOnlyIsExpected && state.targetRetryCount < 40) {
       state.targetRetryCount += 1;
       clearTimeout(state.actionTimer);
-      state.actionTimer = setTimeout(() => renderSpotlight(step), 180);
+      state.actionTimer = setTimeout(() => renderSpotlight(step), 100);
     }
 
     if (targets.length && !state.scrollAttempted) {
@@ -2207,7 +2421,7 @@
         state.scrollAttempted = true;
         targets[0].node.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
         clearTimeout(state.layoutTimer);
-        state.layoutTimer = setTimeout(() => state.open && renderSpotlight(step), 260);
+        state.layoutTimer = setTimeout(() => state.open && renderSpotlight(step), 120);
         return;
       }
     }
@@ -2219,15 +2433,22 @@
         outline.dataset.secondary = "true";
         layer.insertBefore(outline, targetTag);
       }
-      outline.dataset.success = "false";
+      outline.dataset.success = state.completedInputKeys.has(targetItem.key) ? "true" : "false";
       targetItem.outline = outline;
       positionTargetOutline(targetItem);
       targetItem.node.setAttribute("data-cc-guide-target", "true");
+      if (state.completedInputKeys.has(targetItem.key)) {
+        targetItem.node.setAttribute("data-cc-guide-success", "true");
+      }
     });
 
     updateScrimMask(displayRects);
     targetTag.dataset.visible = "false";
-    if (step.completionFlow === "date-range" && state.awaitingCompletion) {
+    if (state.actionFailureMessage) {
+      mission.textContent = state.actionFailureMessage;
+    } else if (state.actionPending) {
+      mission.textContent = step.waitingInstruction || "Waiting for CineConnect to confirm the action…";
+    } else if (step.completionFlow === "date-range" && state.awaitingCompletion) {
       mission.textContent = dateRangeInstruction(step);
     } else if (state.targetIsGate) {
       mission.textContent = "Open the highlighted section first.";
@@ -2238,12 +2459,20 @@
     } else {
       mission.textContent = step.actionLabel || step.doThis;
     }
-    actionStatus.textContent = state.targetIsGate
+    const requiredInputCount = requiredInputKeys(step).length;
+    const completedInputCount = completedInputCountForStep(step);
+    actionStatus.textContent = state.actionFailureMessage
+      ? state.actionFailureMessage
+      : state.actionPending
+      ? (step.waitingInstruction || "Waiting for confirmation")
+      : state.targetIsGate
       ? "Open the required section first"
-      : step.action === "input"
-      ? (targets.length > 1 ? `0 of ${targets.length} fields completed` : "Waiting for your input")
       : state.awaitingCompletion
       ? completionStatusForPhase(step)
+      : step.action === "input"
+      ? (requiredInputCount > 1
+          ? `${completedInputCount} of ${requiredInputCount} fields completed`
+          : "Waiting for your input")
       : (step.multipleTargets ? "Choose one highlighted button" : "Click the highlighted button");
     state.geometryFrame = requestAnimationFrame(() => {
       placeCoachMark(state.currentDisplayRect);
@@ -2354,8 +2583,23 @@
     if (!state.open || state.actionPending) return;
     restartTargetGeometry();
     const step = currentRenderedStep();
-    if (step.action !== "click" && !state.targetIsGate) return;
     if (root && root.contains(event.target)) return;
+    if (step.action === "input") {
+      const insideCurrentTarget = state.currentRects.some((rect) =>
+        pointIsInsideRect(event.clientX, event.clientY, rect)
+      );
+      if (state.awaitingCompletion && state.inputReady && insideCurrentTarget) {
+        confirmInputStep(step);
+        return;
+      }
+      if (
+        state.inputReady &&
+        !state.awaitingCompletion &&
+        !insideCurrentTarget
+      ) confirmInputStep(step);
+      return;
+    }
+    if (step.action !== "click" && !state.targetIsGate) return;
     if (handleDateRangeSelection(event, step)) return;
     const eventTarget = event.target;
     const isDirectTargetEvent = state.currentTargets.some((targetItem) =>
@@ -2372,6 +2616,10 @@
       }
       return;
     }
+
+    state.actionFailureMessage = "";
+    card.dataset.actionState = "waiting";
+    if (missionLabel) missionLabel.innerHTML = `${icon("target")} Do this now`;
 
     if (state.targetIsGate) {
       state.actionPending = true;
@@ -2413,70 +2661,168 @@
     completeCurrentAction();
   }
 
+  function requiredInputKeys(step) {
+    if (!step || step.action !== "input") return [];
+    const labels = Array.isArray(step.targetLabels) ? step.targetLabels : [];
+    if (!step.multipleTargets) {
+      return labels.length ? [String(labels[0]).replace(/\s+/g, " ").trim().toLowerCase()] : ["target:0"];
+    }
+    return labels.map((label) => String(label).replace(/\s+/g, " ").trim().toLowerCase());
+  }
+
+  function completedInputCountForStep(step) {
+    return requiredInputKeys(step).filter((key) => state.completedInputKeys.has(key)).length;
+  }
+
+  function semanticControlValue(node, label) {
+    if (!node) return "";
+    const candidates = [node];
+    if (typeof node.querySelectorAll === "function") {
+      candidates.push(...node.querySelectorAll('input, textarea, select, [contenteditable="true"]'));
+    }
+    for (const candidate of candidates) {
+      if ("value" in candidate && String(candidate.value == null ? "" : candidate.value).trim()) {
+        return String(candidate.value).trim();
+      }
+      for (const attribute of ["aria-valuetext", "aria-value", "data-value"]) {
+        const value = candidate.getAttribute && candidate.getAttribute(attribute);
+        if (value && String(value).trim()) return String(value).trim();
+      }
+    }
+    const normalizedLabel = String(label || "").toLowerCase();
+    const ownText = String(node.textContent || "").replace(/\s+/g, " ").trim();
+    if (ownText && ownText.toLowerCase() !== normalizedLabel) {
+      const withoutLabel = ownText.toLowerCase().startsWith(normalizedLabel)
+        ? ownText.slice(normalizedLabel.length).trim()
+        : "";
+      if (withoutLabel) return withoutLabel;
+    }
+    return "";
+  }
+
+  function inputTargetForEvent(event, step) {
+    const expectedKeys = requiredInputKeys(step);
+    const eventTarget = event.target;
+    const eventLabel = [
+      eventTarget && eventTarget.getAttribute && eventTarget.getAttribute("aria-label"),
+      eventTarget && eventTarget.getAttribute && eventTarget.getAttribute("placeholder"),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    const labelKey = expectedKeys.find((key) => eventLabel === key || eventLabel.startsWith(`${key} `));
+    if (labelKey) {
+      return state.currentTargets.find((targetItem) => targetItem.key === labelKey) || {
+        key: labelKey,
+        node: eventTarget,
+        outline: null,
+      };
+    }
+
+    const contained = state.currentTargets.filter((targetItem) =>
+      targetItem.node === eventTarget ||
+      Boolean(targetItem.node && targetItem.node.contains && targetItem.node.contains(eventTarget))
+    );
+    if (contained.length === 1) return contained[0];
+
+    // Flutter's hidden text-editing element can span a larger area than the
+    // semantics field. Geometry is only safe when exactly one guide target
+    // intersects it; treating every overlap as complete caused one keystroke
+    // to mark both budget fields and advance the tour.
+    const inputRect = eventTarget && typeof eventTarget.getBoundingClientRect === "function"
+      ? eventTarget.getBoundingClientRect()
+      : null;
+    const overlaps = state.currentTargets.filter((targetItem) => Boolean(
+      inputRect &&
+      inputRect.width > 0 &&
+      inputRect.height > 0 &&
+      inputRect.right > targetItem.rect.left &&
+      inputRect.left < targetItem.rect.left + targetItem.rect.width &&
+      inputRect.bottom > targetItem.rect.top &&
+      inputRect.top < targetItem.rect.top + targetItem.rect.height
+    ));
+    return overlaps.length === 1 ? overlaps[0] : null;
+  }
+
   function handleTargetInput(event) {
     if (!state.open || state.actionPending) return;
     restartTargetGeometry();
     const step = currentRenderedStep();
     if (step.action !== "input" || (root && root.contains(event.target))) return;
-    const inputRect = event.target && typeof event.target.getBoundingClientRect === "function"
-      ? event.target.getBoundingClientRect()
-      : null;
-    const eventLabel = `${event.target && event.target.getAttribute && event.target.getAttribute("aria-label") || ""} ${event.target && event.target.getAttribute && event.target.getAttribute("placeholder") || ""}`
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-    const matchingTargets = state.currentTargets.filter((targetItem) => {
-      if (eventLabel) return eventLabel === targetItem.label;
-      const nodeContainsInput = Boolean(
-        targetItem.node &&
-        (targetItem.node === event.target ||
-          (typeof targetItem.node.contains === "function" && targetItem.node.contains(event.target)))
-      );
-      const rectOverlapsInput = Boolean(
-        inputRect &&
-        inputRect.width > 0 &&
-        inputRect.height > 0 &&
-        inputRect.right > targetItem.rect.left &&
-        inputRect.left < targetItem.rect.left + targetItem.rect.width &&
-        inputRect.bottom > targetItem.rect.top &&
-        inputRect.top < targetItem.rect.top + targetItem.rect.height
-      );
-      return nodeContainsInput || rectOverlapsInput;
-    });
-    if (!matchingTargets.length) return;
+    const targetItem = inputTargetForEvent(event, step);
+    if (!targetItem) return;
 
-    const value = "value" in event.target
+    const eventValue = "value" in event.target
       ? String(event.target.value == null ? "" : event.target.value).trim()
       : String(event.target.textContent || "").trim();
-    matchingTargets.forEach((targetItem) => {
-      if (value) {
-        state.completedInputKeys.add(targetItem.key);
-        targetItem.node.setAttribute("data-cc-guide-success", "true");
-        if (targetItem.outline) targetItem.outline.dataset.success = "true";
-      } else {
-        state.completedInputKeys.delete(targetItem.key);
-        targetItem.node.removeAttribute("data-cc-guide-success");
-        if (targetItem.outline) targetItem.outline.dataset.success = "false";
-      }
-    });
+    const value = eventValue || semanticControlValue(targetItem.node, targetItem.key);
+    if (value) {
+      state.completedInputKeys.add(targetItem.key);
+      targetItem.node.setAttribute && targetItem.node.setAttribute("data-cc-guide-success", "true");
+      if (targetItem.outline) targetItem.outline.dataset.success = "true";
+    } else {
+      state.completedInputKeys.delete(targetItem.key);
+      targetItem.node.removeAttribute && targetItem.node.removeAttribute("data-cc-guide-success");
+      if (targetItem.outline) targetItem.outline.dataset.success = "false";
+    }
 
-    const requiredCount = step.multipleTargets ? state.currentTargets.length : 1;
-    const completedCount = state.currentTargets.filter((targetItem) =>
-      state.completedInputKeys.has(targetItem.key)
-    ).length;
-    if (completedCount < requiredCount) {
+    const requiredCount = requiredInputKeys(step).length;
+    const completedCount = completedInputCountForStep(step);
+    state.inputReady = completedCount >= requiredCount;
+    if (!state.inputReady) {
+      if (state.awaitingCompletion) {
+        state.awaitingCompletion = false;
+        state.targetRetryCount = 0;
+        setTimeout(() => state.open && renderSpotlight(step), 32);
+      }
       const remaining = requiredCount - completedCount;
       actionStatus.textContent = `${completedCount} of ${requiredCount} fields completed`;
       mission.textContent = `${completedCount} of ${requiredCount} complete — fill ${remaining} more ${remaining === 1 ? "field" : "fields"}.`;
       return;
     }
 
+    actionStatus.textContent = requiredCount > 1
+      ? `All ${requiredCount} fields completed`
+      : "Field completed";
+    mission.textContent = requiredCount > 1
+      ? `All ${requiredCount} fields are complete. Finish this field to continue.`
+      : "Field complete — continuing after you finish typing.";
+
+    if (step.completionTargetLabels) {
+      state.awaitingCompletion = true;
+      mission.textContent = step.completionInstruction || "Tap the highlighted control to confirm.";
+      actionStatus.textContent = completionStatus(step);
+      clearTimeout(state.actionTimer);
+      state.actionTimer = setTimeout(() => renderSpotlight(step), 60);
+    }
+  }
+
+  function handleTargetInputCommit(event) {
+    if (!state.open || state.actionPending || root && root.contains(event.target)) return;
+    const step = currentRenderedStep();
+    if (step.action !== "input" || !state.inputReady || step.completionTargetLabels) return;
+    clearTimeout(state.actionTimer);
+    state.actionTimer = setTimeout(() => {
+      if (!state.open || currentRenderedStep() !== step || !state.inputReady) return;
+      const activeTarget = state.currentTargets.some((targetItem) =>
+        targetItem.node === document.activeElement ||
+        Boolean(targetItem.node && targetItem.node.contains && targetItem.node.contains(document.activeElement))
+      );
+      if (!activeTarget) confirmInputStep(step);
+    }, 180);
+  }
+
+  function confirmInputStep(step) {
+    if (!state.open || state.actionPending || currentRenderedStep() !== step || !state.inputReady) return;
     state.actionPending = true;
     completeCurrentAction();
   }
 
   function completeCurrentAction() {
-    if (!state.open || !state.actionPending) return;
+    if (!state.open || !state.actionPending || state.actionCompleting) return;
+    state.actionCompleting = true;
     clearTimeout(state.actionTimer);
     root.querySelectorAll('.cc-guide-spotlight[data-visible="true"]').forEach((node) => {
       node.dataset.success = "true";
@@ -2485,10 +2831,12 @@
       node.setAttribute("data-cc-guide-success", "true");
     });
     card.dataset.actionState = "success";
-    actionStatus.textContent = "Completed";
+    if (missionLabel) missionLabel.innerHTML = `${icon("check")} Confirmed`;
+    mission.textContent = "✓ Confirmed — continuing to the next step…";
+    actionStatus.textContent = "Confirmed. Continuing to the next step.";
     targetTag.textContent = "Done";
     targetTag.dataset.success = "true";
-    state.actionTimer = setTimeout(() => move(1), 520);
+    state.actionTimer = setTimeout(() => move(1), SUCCESS_CONFIRMATION_MS);
   }
 
   function renderStep(navigate) {
@@ -2504,17 +2852,24 @@
     );
     clearTimeout(state.actionTimer);
     state.actionPending = false;
+    state.actionCompleting = false;
+    state.actionFailureMessage = "";
     state.outcomeCycleObserved = false;
     state.outcomeBaselineTargetText = "";
     state.outcomeBaselineTargetRect = null;
+    state.outcomeBaselineTextCount = 0;
+    state.failureBaselineCounts = new Map();
+    state.failureCycleCleared = false;
     state.awaitingCompletion = false;
     state.completionPhase = null;
     state.targetRetryCount = 0;
     state.scrollAttempted = false;
     state.completedInputKeys = new Set();
+    state.inputReady = false;
     clearTargetHighlights();
     targetTag.dataset.visible = "false";
     card.dataset.actionState = "waiting";
+    if (missionLabel) missionLabel.innerHTML = `${icon("target")} Do this now`;
     targetTag.dataset.success = "false";
     if (navigate) goToRoute(step);
     chapter.textContent = step.chapter;
@@ -2554,7 +2909,7 @@
     launcherProgress.textContent = String(state.index + 1);
     saveProgress(step.complete ? "started" : "started");
 
-    setTimeout(() => renderSpotlight(step), willNavigate ? 430 : 50);
+    setTimeout(() => renderSpotlight(step), willNavigate ? 220 : 32);
   }
 
   function escapeHtml(value) {
@@ -2579,7 +2934,7 @@
     document.documentElement.style.setProperty("--cc-guide-open", "1");
     enableFlutterSemantics();
     renderStep(true);
-    setTimeout(() => state.open && renderSpotlight(currentRenderedStep()), 260);
+    setTimeout(() => state.open && renderSpotlight(currentRenderedStep()), 120);
     saveProgress(isAutomatic ? "started" : "started");
   }
 
@@ -2588,7 +2943,9 @@
     state.open = false;
     clearTimeout(state.actionTimer);
     clearTimeout(state.layoutTimer);
+    clearTimeout(state.mutationTimer);
     state.actionPending = false;
+    state.actionCompleting = false;
     clearTargetHighlights();
     layer.dataset.open = "false";
     targetTag.dataset.visible = "false";
@@ -2607,7 +2964,9 @@
     state.open = false;
     clearTimeout(state.actionTimer);
     clearTimeout(state.layoutTimer);
+    clearTimeout(state.mutationTimer);
     state.actionPending = false;
+    state.actionCompleting = false;
     clearTargetHighlights();
     layer.dataset.open = "false";
     targetTag.dataset.visible = "false";
