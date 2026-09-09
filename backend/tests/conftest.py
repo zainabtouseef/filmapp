@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -21,6 +22,9 @@ def _compile_longtext_sqlite(_element: LONGTEXT, _compiler: Any, **_kwargs: Any)
 
 @pytest.fixture
 def app(tmp_path: Path) -> Flask:
+    if os.getenv("RUN_INTEGRATION_TESTS") == "1":
+        return create_app(TestConfig)
+
     class SQLiteTestConfig(TestConfig):
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{tmp_path / 'unit-tests.db'}"
         SQLALCHEMY_ENGINE_OPTIONS: ClassVar[dict[str, Any]] = {}
