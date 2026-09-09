@@ -5,6 +5,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -28,9 +29,16 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
   final _representative = TextEditingController();
   final _description = TextEditingController();
   final _billingDetails = TextEditingController();
+  final _website = TextEditingController();
+  final _instagram = TextEditingController();
+  final _linkedin = TextEditingController();
 
   SpecialistController? _specialist;
+  AuthController? _auth;
   BrandProfileDto? _profile;
+  UserProfile? _publicProfile;
+  List<ProfileCity> _cities = const [];
+  String? _cityId;
   String? _logoFileId;
   String? _logoFileName;
   String _logoUrl = '';
@@ -44,8 +52,13 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
-    if (specialist == null || identical(specialist, _specialist)) return;
+    final auth = AuthScope.maybeOf(context);
+    if (specialist == null ||
+        (identical(specialist, _specialist) && identical(auth, _auth))) {
+      return;
+    }
     _specialist = specialist;
+    _auth = auth;
     _load();
   }
 
@@ -56,10 +69,23 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
     });
     try {
       final profile = await _specialist!.brandProfile(force: true);
+      UserProfile? publicProfile;
+      List<ProfileCity> cities = const [];
+      if (_auth != null) {
+        final values = await Future.wait<Object>([
+          _auth!.myProfile(),
+          _auth!.cities(),
+        ]);
+        publicProfile = values[0] as UserProfile;
+        cities = values[1] as List<ProfileCity>;
+      }
       if (profile != null) _applyProfile(profile);
+      if (publicProfile != null) _applyPublicProfile(publicProfile);
       if (!mounted) return;
       setState(() {
         _profile = profile;
+        _publicProfile = publicProfile;
+        _cities = cities;
         _loaded = true;
       });
     } catch (error) {
@@ -78,6 +104,13 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
     _logoUrl = profile.logoUrl;
   }
 
+  void _applyPublicProfile(UserProfile profile) {
+    _website.text = profile.websiteUrl ?? '';
+    _instagram.text = '${profile.socialLinks['instagram'] ?? ''}';
+    _linkedin.text = '${profile.socialLinks['linkedin'] ?? ''}';
+    _cityId = profile.city?.publicId;
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -85,6 +118,9 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
     _representative.dispose();
     _description.dispose();
     _billingDetails.dispose();
+    _website.dispose();
+    _instagram.dispose();
+    _linkedin.dispose();
     super.dispose();
   }
 
@@ -177,6 +213,54 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
               maxLines: 4,
             ),
             const SizedBox(height: 10),
+            CoreTextField(
+              controller: _website,
+              label: 'Website',
+              icon: Icons.language_outlined,
+              keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              key: ValueKey(_cityId),
+              initialValue: _cityId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Primary city',
+                prefixIcon: Icon(Icons.location_city_outlined),
+              ),
+              items: [
+                for (final city in _cities)
+                  DropdownMenuItem(
+                    value: city.publicId,
+                    child: Text(
+                      city.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _cityId = value),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: CoreTextField(
+                    controller: _instagram,
+                    label: 'Instagram',
+                    icon: Icons.camera_alt_outlined,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: CoreTextField(
+                    controller: _linkedin,
+                    label: 'LinkedIn',
+                    icon: Icons.work_outline_rounded,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             UploadCard(
               title: _uploading ? 'Uploading logo...' : 'Brand logo',
               subtitle: _logoFileName ??
@@ -231,6 +315,16 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
                   value: _logoUrl.isEmpty && _logoFileId == null
                       ? 'Missing'
                       : 'Connected',
+                ),
+                BrandInfoRow(
+                  icon: Icons.email_outlined,
+                  label: 'Account email',
+                  value: _auth?.user?.email ?? 'Not available',
+                ),
+                BrandInfoRow(
+                  icon: Icons.location_city_outlined,
+                  label: 'Primary city',
+                  value: _publicProfile?.city?.name ?? 'Not set',
                 ),
                 const SizedBox(height: 10),
                 CoreSecondaryButton(
@@ -304,6 +398,10 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
                 _ReadinessRow(
                   label: 'Brand logo',
                   complete: _logoUrl.isNotEmpty || _logoFileId != null,
+                ),
+                _ReadinessRow(
+                  label: 'Website and city',
+                  complete: _website.text.trim().isNotEmpty && _cityId != null,
                 ),
               ],
             ),
@@ -380,10 +478,26 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
         if (_logoFileId != null) 'logo_file_id': _logoFileId,
       };
       final profile = await _saveWithMediaRetry(body);
+      UserProfile? publicProfile;
+      if (_auth != null) {
+        publicProfile = await _auth!.updateMyProfile(
+          bio: _description.text.trim(),
+          cityId: _cityId,
+          websiteUrl: _website.text.trim(),
+          socialLinks: {
+            if (_instagram.text.trim().isNotEmpty)
+              'instagram': _instagram.text.trim(),
+            if (_linkedin.text.trim().isNotEmpty)
+              'linkedin': _linkedin.text.trim(),
+          },
+        );
+      }
       if (!mounted) return;
       _applyProfile(profile);
+      if (publicProfile != null) _applyPublicProfile(publicProfile);
       setState(() {
         _profile = profile;
+        _publicProfile = publicProfile ?? _publicProfile;
         _logoFileId = null;
         _logoFileName = null;
         _billingDetails.clear();

@@ -21,19 +21,26 @@ class AuthController extends ChangeNotifier {
   final AuthRepository _repository;
   final ApiClient _client;
   final TokenStore _tokenStore;
+  final Duration _storageTimeout;
+  final Duration _sessionRefreshTimeout;
 
   AuthUser? _user;
   String? _refreshToken;
   bool _ready = false;
   String? _kycStatus;
+  Future<void>? _initialization;
 
   AuthController({
     required AuthRepository repository,
     required ApiClient client,
     required TokenStore tokenStore,
+    Duration storageTimeout = const Duration(seconds: 2),
+    Duration sessionRefreshTimeout = const Duration(seconds: 5),
   })  : _repository = repository,
         _client = client,
-        _tokenStore = tokenStore {
+        _tokenStore = tokenStore,
+        _storageTimeout = storageTimeout,
+        _sessionRefreshTimeout = sessionRefreshTimeout {
     _client.onUnauthorized = _handleUnauthorized;
   }
 
@@ -90,21 +97,38 @@ class AuthController extends ChangeNotifier {
     return RoleMapper.portalRouteForCode(roleCode ?? '') ?? '/portal/dashboard';
   }
 
-  Future<void> initialize() async {
-    final access = await _tokenStore.readAccessToken();
-    final refresh = await _tokenStore.readRefreshToken();
-    _client.accessToken = access;
-    _refreshToken = refresh;
-    if (refresh != null) {
-      try {
-        final session = await _repository.refresh(refresh);
-        await _acceptSession(session);
-      } on ApiException {
-        await clearSession();
+  Future<void> initialize() => _initialization ??= _initialize();
+
+  Future<void> _initialize() async {
+    try {
+      final tokens = await Future.wait<String?>([
+        _tokenStore.readAccessToken(),
+        _tokenStore.readRefreshToken(),
+      ]).timeout(_storageTimeout);
+      _client.accessToken = tokens[0];
+      _refreshToken = tokens[1];
+      final refresh = _refreshToken;
+      if (refresh != null) {
+        try {
+          final session = await _repository
+              .refresh(refresh)
+              .timeout(_sessionRefreshTimeout);
+          await _acceptSession(session);
+        } on ApiException {
+          await clearSession();
+        } on TimeoutException {
+          _resetSessionState();
+        }
       }
+    } catch (_) {
+      // Browser storage can be blocked or left in an unreadable state by
+      // Safari privacy settings. Treat that as a signed-out session instead
+      // of preventing Flutter from ever rendering its first frame.
+      _resetSessionState();
+    } finally {
+      _ready = true;
+      notifyListeners();
     }
-    _ready = true;
-    notifyListeners();
   }
 
   Future<Map<String, dynamic>> bootstrap() {
@@ -361,6 +385,32 @@ class AuthController extends ChangeNotifier {
     return _repository.shortlistBundle();
   }
 
+  Future<MarketplaceShortlist> createShortlist({
+    required String name,
+    String? projectId,
+    String? requirementId,
+  }) {
+    return _repository.createShortlist(
+      name: name,
+      projectId: projectId,
+      requirementId: requirementId,
+    );
+  }
+
+  Future<MarketplaceShortlistItem> addToProjectShortlist({
+    required String listingId,
+    required String projectId,
+    required String projectTitle,
+    String? requirementId,
+  }) {
+    return _repository.addToProjectShortlist(
+      listingId: listingId,
+      projectId: projectId,
+      projectTitle: projectTitle,
+      requirementId: requirementId,
+    );
+  }
+
   Future<void> deleteSavedSearch(String publicId) {
     return _repository.deleteSavedSearch(publicId);
   }
@@ -445,6 +495,10 @@ class AuthController extends ChangeNotifier {
     return DirectorRepository(_client).dashboard();
   }
 
+  Future<DirectorDashboard> brandProductionDashboard() {
+    return DirectorRepository(_client).brandDashboard();
+  }
+
   Future<DirectorSchedule> directorSchedule({String? projectId}) {
     return DirectorRepository(_client).schedule(projectId: projectId);
   }
@@ -454,6 +508,16 @@ class AuthController extends ChangeNotifier {
     String? query,
   }) {
     return DirectorRepository(_client).discovery(
+      category: category,
+      query: query,
+    );
+  }
+
+  Future<DirectorDiscoveryBundle> brandDiscovery({
+    String? category,
+    String? query,
+  }) {
+    return DirectorRepository(_client).brandDiscovery(
       category: category,
       query: query,
     );
@@ -469,12 +533,24 @@ class AuthController extends ChangeNotifier {
     );
   }
 
+  Future<DirectorDiscoveryItem> brandDiscoveryItem({
+    required String kind,
+    required String publicId,
+  }) {
+    return DirectorRepository(_client).brandDiscoveryItem(
+      kind: kind,
+      publicId: publicId,
+    );
+  }
+
   Future<void> clearSession() async {
-    _user = null;
-    _refreshToken = null;
-    _kycStatus = null;
-    _client.accessToken = null;
-    await _tokenStore.clear();
+    _resetSessionState();
+    try {
+      await _tokenStore.clear().timeout(_storageTimeout);
+    } catch (_) {
+      // The in-memory session is already cleared. Storage cleanup is best
+      // effort so a blocked browser store cannot freeze logout or startup.
+    }
     notifyListeners();
   }
 
@@ -482,13 +558,27 @@ class AuthController extends ChangeNotifier {
     _user = session.user;
     _refreshToken = session.tokens.refreshToken;
     _client.accessToken = session.tokens.accessToken;
-    await _tokenStore.save(
-      accessToken: session.tokens.accessToken,
-      refreshToken: session.tokens.refreshToken,
-    );
+    try {
+      await _tokenStore
+          .save(
+            accessToken: session.tokens.accessToken,
+            refreshToken: session.tokens.refreshToken,
+          )
+          .timeout(_storageTimeout);
+    } catch (_) {
+      // Keep the valid in-memory session usable even when persistence is
+      // unavailable; the user can sign in again after a browser restart.
+    }
     notifyListeners();
     // Fire-and-forget: don't hold up login/register/session-restore on this.
     unawaited(refreshKycStatus());
+  }
+
+  void _resetSessionState() {
+    _user = null;
+    _refreshToken = null;
+    _kycStatus = null;
+    _client.accessToken = null;
   }
 }
 

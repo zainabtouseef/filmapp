@@ -9,6 +9,7 @@ import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../../actor_talent/models/actor_talent_models.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 
@@ -301,6 +302,7 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
       ),
       right: _ProfileSummary(
         avatarUrl: avatarUrl,
+        coverUrl: coverUrl,
         stageName: stageName.text,
         city: city.text,
         instagram: instagram.text,
@@ -949,6 +951,7 @@ class _MD06ModelProfileScreenState extends State<MD06ModelProfileScreen> {
 
 class _ProfileSummary extends StatelessWidget {
   final String? avatarUrl;
+  final String? coverUrl;
   final String stageName;
   final String city;
   final String instagram;
@@ -960,6 +963,7 @@ class _ProfileSummary extends StatelessWidget {
 
   const _ProfileSummary({
     this.avatarUrl,
+    this.coverUrl,
     required this.stageName,
     required this.city,
     required this.instagram,
@@ -973,38 +977,40 @@ class _ProfileSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final profileName =
+        stageName.isEmpty ? 'Your professional name' : stageName;
+    final profileCity = city.isEmpty ? 'City not set' : city;
+    final pitch = bio.isEmpty
+        ? 'Describe your visual range, campaign strengths and the audience you help a brand reach.'
+        : bio;
+    final highlights = [
+      if (followers.isNotEmpty) '$followers followers',
+      if (instagram.isNotEmpty) instagram,
+      if (agency.isNotEmpty) agency,
+    ];
     return ActorSectionCard(
       title: 'Director & Brand-facing Profile',
       icon: Icons.visibility_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActorMediaFrame(
-            imageUrl: avatarUrl ?? '',
-            title: 'Public headshot',
-            badge: 'Draft',
-            fallbackIcon: Icons.person_outline_rounded,
-            aspectRatio: 4 / 5,
+          TalentProfileShowcase(
+            name: profileName,
+            role: 'Commercial model',
+            city: profileCity,
+            summary: pitch,
+            portraitUrl: avatarUrl,
+            coverUrl: coverUrl,
+            rateLabel: 'Usage quoted by brief',
+            highlights: highlights,
+            badge: 'Brand-facing preview',
           ),
           const SizedBox(height: 12),
           Text(
-            stageName.isEmpty ? 'Stage name' : stageName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.sectionHeading.copyWith(
-              color: colors.textPrimary,
-              fontSize: 18,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            city.isEmpty ? 'City not set' : city,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            'Profile strength',
             style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-              height: 1.25,
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 10),

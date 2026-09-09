@@ -316,7 +316,7 @@ class _Tooltip extends StatelessWidget {
     const margin = 16.0;
     final pillReserve = 92.0 + bottomInset;
     final width =
-        mobile ? math.min(360.0, screenSize.width - margin * 2) : 340.0;
+        mobile ? math.min(300.0, screenSize.width - margin * 2) : 280.0;
 
     final opacity = Curves.easeOutCubic.transform(progress);
     return Positioned.fill(
@@ -437,7 +437,7 @@ class _TooltipCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
@@ -471,24 +471,30 @@ class _TooltipCard extends StatelessWidget {
                   style: AppTextStyles.micro.copyWith(
                     color: _chromeOnGold,
                     letterSpacing: 0.6,
+                    fontSize: 9,
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 7),
               Text(
                 step.title,
                 style: AppTextStyles.cardTitle.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
-                  fontSize: 16,
+                  fontSize: 14,
+                  height: 1.2,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 step.description,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.smallMeta.copyWith(
                   color: Colors.white.withValues(alpha: 0.72),
                   fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                  height: 1.3,
                 ),
               ),
             ],

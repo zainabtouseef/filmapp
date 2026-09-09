@@ -35,6 +35,7 @@ class ProjectsController extends ChangeNotifier {
     String? endDate,
     int? estimatedBudgetMinor,
     String currency = 'PKR',
+    String status = 'active',
     String? coverFileId,
   }) async {
     final project = await _repository.createProject(
@@ -46,8 +47,47 @@ class ProjectsController extends ChangeNotifier {
       endDate: endDate,
       estimatedBudgetMinor: estimatedBudgetMinor,
       currency: currency,
+      status: status,
       coverFileId: coverFileId,
     );
+    await projects(force: true);
+    return project;
+  }
+
+  Future<Project> updateProject({
+    required String projectId,
+    String? title,
+    String? projectType,
+    String? description,
+    String? cityId,
+    String? startDate,
+    String? endDate,
+    int? estimatedBudgetMinor,
+    String? currency,
+    String? status,
+    String? visibility,
+    int? progressPercent,
+  }) async {
+    final project = await _repository.updateProject(
+      projectId: projectId,
+      title: title,
+      projectType: projectType,
+      description: description,
+      cityId: cityId,
+      startDate: startDate,
+      endDate: endDate,
+      estimatedBudgetMinor: estimatedBudgetMinor,
+      currency: currency,
+      status: status,
+      visibility: visibility,
+      progressPercent: progressPercent,
+    );
+    await projects(force: true);
+    return project;
+  }
+
+  Future<Project> duplicateProject(String projectId, {String? title}) async {
+    final project = await _repository.duplicateProject(projectId, title: title);
     await projects(force: true);
     return project;
   }

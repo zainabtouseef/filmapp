@@ -6,6 +6,7 @@ import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_controller.dart';
 import '../../../core/tour/tour_preferences_store.dart';
@@ -19,6 +20,7 @@ import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../routes/director_producer_routes.dart';
 import 'dp_layout_helpers.dart';
+import 'dp_full_walkthrough_steps.dart';
 import 'dp_status_chip.dart';
 import 'dp_tour_steps.dart';
 
@@ -27,6 +29,16 @@ void startDpTour(BuildContext context) {
     dpTourSteps,
     tourId: dpTourId,
     onFinished: () => const TourPreferencesStore().markSeen(dpTourId),
+  );
+}
+
+void startDpFullWalkthrough(BuildContext context) {
+  TourScope.of(context).start(
+    dpFullWalkthroughSteps,
+    tourId: dpFullWalkthroughTourId,
+    replaceRoutes: true,
+    onFinished: () =>
+        const TourPreferencesStore().markSeen(dpFullWalkthroughTourId),
   );
 }
 
@@ -47,6 +59,11 @@ class DPShell extends StatelessWidget {
   });
 
   static const navItems = [
+    DpNavItem(
+      label: 'CinePlanner',
+      icon: Icons.view_timeline_rounded,
+      route: DirectorProducerRoutes.cinePlanner,
+    ),
     DpNavItem(
       label: 'Console',
       icon: Icons.dashboard_customize_rounded,
@@ -108,20 +125,40 @@ class DPShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPublicBuyer =
         AuthScope.maybeOf(context)?.user?.primaryRole?.code == 'general_public';
-    final routedChild = showHeading
-        ? Column(
+    final showMobileDemo =
+        MediaQuery.sizeOf(context).width < AppBreakpoints.laptop;
+    final fillsAvailableHeight =
+        currentRoute == DirectorProducerRoutes.cinePlanner;
+    final routedChild = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showHeading || showMobileDemo)
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _DPRouteHeading(title: title, route: currentRoute),
-              const SizedBox(height: 14),
-              child,
+              if (showHeading)
+                Expanded(
+                  child: _DPRouteHeading(title: title, route: currentRoute),
+                )
+              else
+                const Spacer(),
+              if (showMobileDemo) ...[
+                if (showHeading) const SizedBox(width: 12),
+                _DPDemoLauncher(
+                  onTap: () => startDpFullWalkthrough(context),
+                ),
+              ],
             ],
-          )
-        : child;
+          ),
+        if (showHeading || showMobileDemo) const SizedBox(height: 14),
+        if (fillsAvailableHeight) Expanded(child: child) else child,
+      ],
+    );
     return AdminScreenScaffold(
       title: title,
       currentRoute: currentRoute,
       showHeading: false,
+      scrollBody: !fillsAvailableHeight,
       floatingActionBuilder: floatingActionBuilder,
       topBarBuilder: (context, wide, onMenuTap) => _DPTopBar(
         wide: wide,
@@ -157,6 +194,62 @@ class DPShell extends StatelessWidget {
   }
 }
 
+class _DPDemoLauncher extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _DPDemoLauncher({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Play the complete demo',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const ValueKey('dp-demo-launcher'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              gradient: colors.goldGradient,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.goldMid),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.goldGlow,
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.play_circle_outline_rounded,
+                  color: colors.onGold,
+                  size: 19,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  'Demo',
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.onGold,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _DPRouteHeading extends StatelessWidget {
   final String title;
   final String route;
@@ -186,6 +279,8 @@ class _DPRouteHeading extends StatelessWidget {
       DirectorProducerRoutes.accounts => 'Budgets · committed cost',
       DirectorProducerRoutes.room => 'Team room · decisions',
       DirectorProducerRoutes.reports => 'Exports · analytics',
+      DirectorProducerRoutes.cinePlanner =>
+        'Production intelligence · live plan',
       _ => 'Producer Console',
     };
   }

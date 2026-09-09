@@ -2,6 +2,10 @@ class BrandSponsorRoutes {
   BrandSponsorRoutes._();
 
   static const home = '/brand';
+  static const projects = '/brand/projects';
+  static const marketplace = '/brand/discover';
+  static const shortlists = '/brand/shortlists';
+  static const bookings = '/brand/requests';
   static const profile = '/brand/profile';
   static const composer = '/brand/opportunity-composer';
   static const applications = '/brand/applications';
@@ -11,13 +15,17 @@ class BrandSponsorRoutes {
 
   static const primaryNav = [
     home,
-    composer,
-    applications,
-    tracker,
+    projects,
+    marketplace,
+    bookings,
   ];
 
   static const allRoutes = [
     home,
+    projects,
+    marketplace,
+    shortlists,
+    bookings,
     profile,
     composer,
     applications,
@@ -29,6 +37,10 @@ class BrandSponsorRoutes {
   static String titleFor(String route) {
     return switch (route) {
       home => 'Brand Workspace',
+      projects => 'Projects & Campaigns',
+      marketplace => 'Production Marketplace',
+      shortlists => 'Project Shortlists',
+      bookings => 'Requests & Bookings',
       profile => 'Brand Profile',
       composer => 'Opportunities',
       applications => 'Applications',
@@ -42,6 +54,10 @@ class BrandSponsorRoutes {
   static String screenIdFor(String route) {
     return switch (route) {
       home => 'BR-01',
+      projects => 'BR-08',
+      marketplace => 'BR-09',
+      shortlists => 'BR-10',
+      bookings => 'BR-11',
       profile => 'BR-02',
       composer => 'BR-03',
       applications => 'BR-04',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,6 +10,7 @@ import 'core/auth/token_store.dart';
 import 'core/analytics/analytics_controller.dart';
 import 'core/bookings/bookings_controller.dart';
 import 'core/casting/casting_controller.dart';
+import 'core/cineplanner/cineplanner_controller.dart';
 import 'core/contracts/contracts_controller.dart';
 import 'core/core_ui/core_routes.dart';
 import 'core/credits/credits_controller.dart';
@@ -32,7 +35,9 @@ Future<void> main() async {
     client: apiClient,
     tokenStore: const TokenStore(),
   );
-  await authController.initialize();
+  // Never hold the first frame behind browser storage or a session-refresh
+  // request. The splash screen waits briefly for this same idempotent future.
+  unawaited(authController.initialize());
   runApp(
     CineConnectApp(
       controller: ThemeController(),
@@ -56,6 +61,7 @@ class CineConnectApp extends StatelessWidget {
   final BookingsController? bookingsController;
   final ContractsController? contractsController;
   final CastingController? castingController;
+  final CinePlannerController? cinePlannerController;
   final OpportunitiesController? opportunitiesController;
   final CreditsController? creditsController;
   final PaymentsController? paymentsController;
@@ -76,6 +82,7 @@ class CineConnectApp extends StatelessWidget {
     this.bookingsController,
     this.contractsController,
     this.castingController,
+    this.cinePlannerController,
     this.opportunitiesController,
     this.creditsController,
     this.paymentsController,
@@ -92,7 +99,8 @@ class CineConnectApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tourController = TourController(navigatorKey: CoreRoutes.navigatorKey);
+    final tourController =
+        TourController(navigatorKey: CoreRoutes.navigatorKey);
 
     final app = TourScope(
       controller: tourController,
@@ -125,6 +133,20 @@ class CineConnectApp extends StatelessWidget {
               themeAnimationDuration: Duration.zero,
               home: homeOverride,
               initialRoute: homeOverride == null ? initialRoute : null,
+              // Flutter's default initial-route generator expands a deep link
+              // such as `/admin/disputes/123` into `/`, `/admin`, and the
+              // requested route. In CineConnect that unnecessarily creates a
+              // hidden SplashScreen, which can restore a session and navigate
+              // underneath the requested workspace. Generate the requested
+              // route directly so browser refreshes and shared links are
+              // deterministic.
+              onGenerateInitialRoutes: homeOverride == null
+                  ? (routeName) => <Route<dynamic>>[
+                        CoreRoutes.onGenerateRoute(
+                          RouteSettings(name: routeName),
+                        ),
+                      ]
+                  : null,
               onGenerateRoute: CoreRoutes.onGenerateRoute,
               // `builder`'s content sits above the app's own Navigator, so
               // it has no Overlay/Material ancestor of its own yet — both
@@ -184,26 +206,32 @@ class CineConnectApp extends StatelessWidget {
                       controller: projectsController ??
                           ProjectsController.fromClient(
                               authController.apiClient),
-                      child: BookingsScope(
-                        controller: bookingsController ??
-                            BookingsController.fromClient(
-                                authController.apiClient),
-                        child: CastingScope(
-                          controller: castingController ??
-                              CastingController.fromClient(
-                                authController.apiClient,
-                              ),
-                          child: OpportunitiesScope(
-                            controller: opportunitiesController ??
-                                OpportunitiesController.fromClient(
+                      child: CinePlannerScope(
+                        controller: cinePlannerController ??
+                            CinePlannerController.fromClient(
+                              authController.apiClient,
+                            ),
+                        child: BookingsScope(
+                          controller: bookingsController ??
+                              BookingsController.fromClient(
+                                  authController.apiClient),
+                          child: CastingScope(
+                            controller: castingController ??
+                                CastingController.fromClient(
                                   authController.apiClient,
                                 ),
-                            child: CreditsScope(
-                              controller: creditsController ??
-                                  CreditsController.fromClient(
+                            child: OpportunitiesScope(
+                              controller: opportunitiesController ??
+                                  OpportunitiesController.fromClient(
                                     authController.apiClient,
                                   ),
-                              child: app,
+                              child: CreditsScope(
+                                controller: creditsController ??
+                                    CreditsController.fromClient(
+                                      authController.apiClient,
+                                    ),
+                                child: app,
+                              ),
                             ),
                           ),
                         ),

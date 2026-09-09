@@ -79,6 +79,8 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
                 const SizedBox(height: 14),
                 DPPulseStrip(summary: dashboard.summary),
                 const SizedBox(height: 14),
+                const _CinePlannerShortcutSection(),
+                const SizedBox(height: 14),
                 const _ApplicationsShortcutSection(),
                 const SizedBox(height: 14),
                 if (wide)
@@ -90,6 +92,43 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
           },
         );
       },
+    );
+  }
+}
+
+class _CinePlannerShortcutSection extends StatelessWidget {
+  const _CinePlannerShortcutSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'CinePlanner · Production Intelligence',
+      icon: Icons.view_timeline_rounded,
+      actionText: 'Open CinePlanner',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Break down screenplays, review AI results, schedule scenes, '
+              'resolve conflicts, control budget and issue call sheets.',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: () => Navigator.pushNamed(
+              context,
+              DirectorProducerRoutes.cinePlanner,
+            ),
+            icon: const Icon(Icons.movie_creation_outlined),
+            label: const Text('CinePlanner'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -114,8 +153,8 @@ class _ApplicationsShortcutSection extends StatelessWidget {
             child: FilledButton.icon(
               icon: const Icon(Icons.assignment_ind_outlined),
               label: const Text('Review project applications'),
-              onPressed: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.projects),
+              onPressed: () =>
+                  Navigator.pushNamed(context, DirectorProducerRoutes.projects),
             ),
           ),
           TourTarget(

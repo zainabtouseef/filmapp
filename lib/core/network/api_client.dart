@@ -7,6 +7,18 @@ import 'package:http/http.dart' as http;
 import 'api_config.dart';
 import 'api_exception.dart';
 
+class ApiDownload {
+  final List<int> bytes;
+  final String filename;
+  final String contentType;
+
+  const ApiDownload({
+    required this.bytes,
+    required this.filename,
+    required this.contentType,
+  });
+}
+
 class ApiClient {
   final http.Client _http;
   final String baseUrl;
@@ -57,6 +69,67 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(String path) {
     return _send('DELETE', path);
+  }
+
+  Future<ApiDownload> getBytes(
+    String path, {
+    String fallbackFilename = 'download',
+    bool isRetry = false,
+  }) async {
+    final request = http.Request('GET', _uriFor(path));
+    if (accessToken != null) {
+      request.headers[HttpHeaders.authorizationHeader] = 'Bearer $accessToken';
+    }
+    late final http.StreamedResponse streamed;
+    try {
+      streamed = await _http.send(request).timeout(const Duration(seconds: 60));
+    } on SocketException {
+      throw const ApiException(
+        code: 'network.offline',
+        message: 'Cannot reach CineConnect right now.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        code: 'network.timeout',
+        message: 'The download took too long. Please retry.',
+      );
+    }
+    if (streamed.statusCode == 401 && !isRetry && onUnauthorized != null) {
+      final refreshed = await _refreshAccessToken();
+      if (refreshed != null) {
+        return getBytes(
+          path,
+          fallbackFilename: fallbackFilename,
+          isRetry: true,
+        );
+      }
+    }
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      Map<String, dynamic>? decoded;
+      try {
+        decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      } on FormatException {
+        decoded = null;
+      }
+      final error = decoded?['error'] as Map<String, dynamic>?;
+      throw ApiException(
+        code: error?['code'] as String? ?? 'http.${response.statusCode}',
+        message: error?['message'] as String? ?? 'Download failed.',
+        statusCode: response.statusCode,
+        fields: _parseFields(error?['fields']),
+      );
+    }
+    final disposition = response.headers['content-disposition'];
+    final match = disposition == null
+        ? null
+        : RegExp(r'filename="?([^";]+)"?').firstMatch(disposition);
+    return ApiDownload(
+      bytes: response.bodyBytes,
+      filename: match?.group(1) ?? fallbackFilename,
+      contentType: response.headers[HttpHeaders.contentTypeHeader] ??
+          'application/octet-stream',
+    );
   }
 
   Future<Map<String, dynamic>> putBytes(

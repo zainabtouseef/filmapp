@@ -55,6 +55,7 @@ class AdminScreenScaffold extends StatefulWidget {
   final AdminFloatingMenuBuilder? floatingMenuBuilder;
   final AdminFloatingActionBuilder? floatingActionBuilder;
   final void Function(BuildContext context, String route) onRouteSelected;
+  final bool scrollBody;
 
   /// Set false to suppress the default centered [AdminScreenHeading] —
   /// used by screens (like the DP dashboard) that render their own
@@ -79,6 +80,7 @@ class AdminScreenScaffold extends StatefulWidget {
     this.floatingActionBuilder,
     this.showHeading = true,
     this.showKycStatusBanner = true,
+    this.scrollBody = true,
   });
 
   @override
@@ -178,25 +180,50 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                       AdminScreenHeading(title: widget.title),
                                 ),
                               Expanded(
-                                child: SingleChildScrollView(
-                                  padding: EdgeInsets.fromLTRB(
-                                    AppSpacing.pageHorizontal,
-                                    contentTopGap,
-                                    AppSpacing.pageHorizontal,
-                                    wide
-                                        ? 28
-                                        : reservedNavHeight +
-                                            MediaQuery.paddingOf(context)
-                                                .bottom +
-                                            32,
-                                  ),
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                        maxWidth:
-                                            AppBreakpoints.maxContentWidth),
-                                    child: widget.child,
-                                  ),
-                                ),
+                                child: widget.scrollBody
+                                    ? SingleChildScrollView(
+                                        padding: EdgeInsets.fromLTRB(
+                                          AppSpacing.pageHorizontal,
+                                          contentTopGap,
+                                          AppSpacing.pageHorizontal,
+                                          wide
+                                              ? 28
+                                              : reservedNavHeight +
+                                                  MediaQuery.paddingOf(context)
+                                                      .bottom +
+                                                  32,
+                                        ),
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth:
+                                                AppBreakpoints.maxContentWidth,
+                                          ),
+                                          child: widget.child,
+                                        ),
+                                      )
+                                    : Padding(
+                                        padding: EdgeInsets.fromLTRB(
+                                          AppSpacing.pageHorizontal,
+                                          contentTopGap,
+                                          AppSpacing.pageHorizontal,
+                                          wide
+                                              ? 28
+                                              : reservedNavHeight +
+                                                  MediaQuery.paddingOf(context)
+                                                      .bottom +
+                                                  32,
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.topCenter,
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: AppBreakpoints
+                                                  .maxContentWidth,
+                                            ),
+                                            child: widget.child,
+                                          ),
+                                        ),
+                                      ),
                               ),
                               if (!wide && widget.bottomNavBuilder != null)
                                 widget.bottomNavBuilder!(

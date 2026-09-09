@@ -247,6 +247,7 @@ class CoreRoutes {
       case DirectorProducerRoutes.accounts:
       case DirectorProducerRoutes.room:
       case DirectorProducerRoutes.reports:
+      case DirectorProducerRoutes.cinePlanner:
         page = DirectorProducerPortalScreen(
           routeName: routeSettings.name ?? DirectorProducerRoutes.home,
           arguments: routeSettings.arguments,

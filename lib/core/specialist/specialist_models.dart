@@ -305,13 +305,29 @@ class BrandTermDto {
       scope: json['scope'] as String? ?? '',
       exclusivity: json['exclusivity'] as String? ?? '',
       approvalRights: json['approval_rights'] as String? ?? '',
-      paymentSchedule: (json['payment_schedule'] as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .toList(),
+      paymentSchedule: _brandPaymentSchedule(json['payment_schedule']),
       status: json['status'] as String? ?? 'draft',
       version: (json['version'] as num?)?.toInt() ?? 1,
     );
   }
+}
+
+List<Map<String, dynamic>> _brandPaymentSchedule(Object? value) {
+  if (value is List<dynamic>) {
+    return value.whereType<Map<String, dynamic>>().toList();
+  }
+  if (value is Map<String, dynamic>) {
+    return value.entries
+        .where((entry) => entry.value is num)
+        .map(
+          (entry) => <String, dynamic>{
+            'key': entry.key,
+            'percent': entry.value,
+          },
+        )
+        .toList();
+  }
+  return const [];
 }
 
 class BrandApplicationDto {

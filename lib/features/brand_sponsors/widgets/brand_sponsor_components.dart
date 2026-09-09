@@ -47,6 +47,7 @@ Future<void> showBrandSheet(
   BuildContext context, {
   required String title,
   required Widget child,
+  double maxWidth = 620,
 }) {
   final colors = context.appColors;
   return showModalBottomSheet<void>(
@@ -62,7 +63,7 @@ Future<void> showBrandSheet(
       child: Align(
         alignment: Alignment.bottomCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
+          constraints: BoxConstraints(maxWidth: maxWidth),
           child: GlassSectionCard(
             radius: 20,
             padding: const EdgeInsets.all(16),

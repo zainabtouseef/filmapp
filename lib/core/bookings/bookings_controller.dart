@@ -107,6 +107,18 @@ class BookingsController extends ChangeNotifier {
     return _repository.rejectBooking(bookingId, reason: reason);
   }
 
+  Future<Booking> cancelBooking(
+    String bookingId, {
+    required String reason,
+  }) async {
+    final booking = await _repository.cancelBooking(
+      bookingId,
+      reason: reason,
+    );
+    await bookings(force: true);
+    return booking;
+  }
+
   Future<List<AvailabilityEntry>> availability() {
     return _repository.availability();
   }

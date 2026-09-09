@@ -361,6 +361,69 @@ class AuthRepository {
         .toList();
   }
 
+  Future<MarketplaceShortlist> createShortlist({
+    required String name,
+    String? projectId,
+    String? requirementId,
+  }) async {
+    final response = await _client.post(
+      '/shortlists',
+      body: {
+        'name': name,
+        if (projectId != null) 'project_id': projectId,
+        if (requirementId != null) 'requirement_id': requirementId,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return MarketplaceShortlist.fromJson(
+      data['shortlist'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<MarketplaceShortlistItem> addShortlistItem({
+    required String shortlistId,
+    required String listingId,
+    String? notes,
+  }) async {
+    final response = await _client.post(
+      '/shortlists/$shortlistId/items',
+      body: {
+        'listing_id': listingId,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return MarketplaceShortlistItem.fromJson(
+      data['item'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<MarketplaceShortlistItem> addToProjectShortlist({
+    required String listingId,
+    required String projectId,
+    required String projectTitle,
+    String? requirementId,
+  }) async {
+    final boards = await shortlists();
+    MarketplaceShortlist? board;
+    for (final candidate in boards) {
+      if (candidate.projectId == projectId &&
+          candidate.requirementId == requirementId) {
+        board = candidate;
+        break;
+      }
+    }
+    board ??= await createShortlist(
+      name: '$projectTitle shortlist',
+      projectId: projectId,
+      requirementId: requirementId,
+    );
+    return addShortlistItem(
+      shortlistId: board.publicId,
+      listingId: listingId,
+    );
+  }
+
   Future<MarketplaceShortlistItem> updateShortlistItem({
     required String publicId,
     int? rank,

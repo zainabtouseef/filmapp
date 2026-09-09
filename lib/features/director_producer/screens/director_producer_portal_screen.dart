@@ -26,6 +26,7 @@ import 'dp_requirement_builder_screen.dart';
 import 'dp_shortlist_board_screen.dart';
 import 'dp_smart_filters_sheet.dart';
 import 'dp_stakeholder_profile_screen.dart';
+import 'cineplanner_console_screen.dart';
 
 class DirectorProducerPortalScreen extends StatelessWidget {
   final String routeName;
@@ -52,6 +53,7 @@ class DirectorProducerPortalScreen extends StatelessWidget {
     DirectorProducerRoutes.createProject,
     DirectorProducerRoutes.payments,
     DirectorProducerRoutes.schedule,
+    DirectorProducerRoutes.cinePlanner,
   };
 
   @override
@@ -106,6 +108,7 @@ class DirectorProducerPortalScreen extends StatelessWidget {
       DirectorProducerRoutes.accounts => 'Accounts',
       DirectorProducerRoutes.room => 'Project Room',
       DirectorProducerRoutes.reports => 'Reports',
+      DirectorProducerRoutes.cinePlanner => 'CinePlanner',
       _ => 'Director / Producer Portal',
     };
   }
@@ -160,6 +163,7 @@ class DirectorProducerPortalScreen extends StatelessWidget {
       DirectorProducerRoutes.accounts => const DPProjectAccountsScreen(),
       DirectorProducerRoutes.room => DPProjectRoomScreen(projectId: id),
       DirectorProducerRoutes.reports => const DPReportsExportScreen(),
+      DirectorProducerRoutes.cinePlanner => const CinePlannerConsoleScreen(),
       _ => const DPHomeDashboardScreen(),
     };
   }

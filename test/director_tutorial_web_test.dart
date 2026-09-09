@@ -30,6 +30,32 @@ void main() {
   test('modal and project steps wait for confirmed completion', () {
     expect(script, contains('waitForTextCycle: "Add a city"'));
     expect(script, contains('requireTargetTextChange: true'));
+    expect(script, contains('hideGuideWhileWaiting: true'));
+    expect(
+      script,
+      contains('setSilentInteraction(Boolean(step.hideGuideWhileWaiting))'),
+    );
+    expect(script, contains('function setSilentInteraction(active)'));
+    expect(
+      script,
+      contains('pageHasText(step.waitForTextCycle)'),
+    );
+    expect(
+      script,
+      contains('beginActionOutcomeWait(step);'),
+    );
+    expect(
+      styles,
+      contains('[data-interaction-mode="silent"] .cc-guide-card'),
+    );
+    expect(
+      styles,
+      contains('[data-interaction-mode="silent"] .cc-guide-spotlight'),
+    );
+    expect(
+      styles,
+      contains('[data-interaction-mode="silent"] .cc-guide-controls'),
+    );
     expect(script, contains('function semanticOutcomeTarget(step)'));
     expect(script, contains('state.outcomeBaselineTargetRect'));
     expect(
@@ -178,9 +204,24 @@ void main() {
 
   test('coach cards are measured and placed outside action targets', () {
     expect(script, contains('function placeCoachMark(rect)'));
+    expect(script, contains('const baseCardWidth = Math.min(250'));
     expect(script, contains('targetOverlap * 100000'));
     expect(script, contains('card.dataset.overlapsTarget'));
     expect(script, contains('card.offsetHeight'));
+  });
+
+  test('coach cards stay compact with concise workflow copy', () {
+    expect(styles, contains('width: min(250px, calc(100vw - 32px))'));
+    expect(styles, contains('max-height: min(230px'));
+    expect(script, contains('Build a production, start to finish'));
+    expect(
+      script,
+      contains('Create the project, hire by requirement, then manage deals'),
+    );
+    expect(
+      script,
+      isNot(contains('Build one complete production from start to finish')),
+    );
   });
 
   test('walkthrough surfaces use glass styling and cache-busted assets', () {
@@ -190,7 +231,21 @@ void main() {
       styles,
       isNot(contains('linear-gradient(160deg, #ffffff 0%, #f7f8fa 100%)')),
     );
-    expect(index, contains('director_tutorial.css?v=20260811-32'));
-    expect(index, contains('director_tutorial.js?v=20260811-32'));
+    expect(index, contains('director_tutorial.css?v=20260813-35'));
+    expect(index, contains('director_tutorial.js?v=20260813-35'));
+    expect(
+      index,
+      contains('no-cache, no-store, must-revalidate'),
+    );
+  });
+
+  test('web startup is self-hosted and never fails to a blank screen', () {
+    expect(index, contains("canvasKitBaseUrl: 'canvaskit/'"));
+    expect(index, contains("'flutter-first-frame'"));
+    expect(index, contains("document.querySelector('flutter-view')"));
+    expect(index, contains('window.requestAnimationFrame(finishBoot)'));
+    expect(index, contains('Loading CineConnect…'));
+    expect(index, contains('Reload portal'));
+    expect(index, contains('window.setTimeout(showBootFailure, 15000)'));
   });
 }

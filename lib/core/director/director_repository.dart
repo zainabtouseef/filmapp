@@ -15,6 +15,14 @@ class DirectorRepository {
     );
   }
 
+  Future<DirectorDashboard> brandDashboard() async {
+    final response = await _client.get('/brands/dashboard');
+    final data = response['data'] as Map<String, dynamic>;
+    return DirectorDashboard.fromJson(
+      data['dashboard'] as Map<String, dynamic>,
+    );
+  }
+
   Future<DirectorSchedule> schedule({String? projectId}) async {
     final suffix = projectId == null ? '' : '?project_id=$projectId';
     final response = await _client.get('/director/schedule$suffix');
@@ -41,12 +49,40 @@ class DirectorRepository {
     );
   }
 
+  Future<DirectorDiscoveryBundle> brandDiscovery({
+    String? category,
+    String? query,
+  }) async {
+    final params = <String, String>{};
+    if (category != null && category.isNotEmpty) params['category'] = category;
+    if (query != null && query.isNotEmpty) params['q'] = query;
+    final suffix = params.isEmpty
+        ? ''
+        : '?${params.entries.map((item) => '${item.key}=${Uri.encodeComponent(item.value)}').join('&')}';
+    final response = await _client.get('/brands/discovery$suffix');
+    final data = response['data'] as Map<String, dynamic>;
+    return DirectorDiscoveryBundle.fromJson(
+      data['discovery'] as Map<String, dynamic>,
+    );
+  }
+
   Future<DirectorDiscoveryItem> discoveryItem({
     required String kind,
     required String publicId,
   }) async {
     final response = await _client.get(
       '/director/discovery/${Uri.encodeComponent(kind)}/${Uri.encodeComponent(publicId)}',
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return DirectorDiscoveryItem.fromJson(data['item'] as Map<String, dynamic>);
+  }
+
+  Future<DirectorDiscoveryItem> brandDiscoveryItem({
+    required String kind,
+    required String publicId,
+  }) async {
+    final response = await _client.get(
+      '/brands/discovery/${Uri.encodeComponent(kind)}/${Uri.encodeComponent(publicId)}',
     );
     final data = response['data'] as Map<String, dynamic>;
     return DirectorDiscoveryItem.fromJson(data['item'] as Map<String, dynamic>);

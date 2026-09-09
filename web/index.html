@@ -18,6 +18,9 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="description" content="CineConnect dark cinematic film-industry marketplace app.">
 
   <!-- iOS meta tags & icons -->
@@ -32,9 +35,60 @@
   <title>cineconnect</title>
   <link rel="manifest" href="manifest.json">
   <script src="director_tutorial_bootstrap.js?v=20260809-27"></script>
-  <link rel="stylesheet" href="director_tutorial.css?v=20260811-32">
+  <link rel="stylesheet" href="director_tutorial.css?v=20260813-35">
+  <style>
+    #cc-boot-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483000;
+      display: grid;
+      place-items: center;
+      background: #faf6ee;
+      color: #17140f;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .cc-boot-content { text-align: center; }
+    .cc-boot-mark {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 16px;
+      border: 2px solid rgba(184, 134, 46, 0.24);
+      border-top-color: #b8862e;
+      border-radius: 50%;
+      animation: cc-boot-spin 0.9s linear infinite;
+    }
+    #cc-boot-message {
+      margin: 0;
+      color: #6b655a;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+    #cc-boot-reload {
+      display: none;
+      margin: 18px auto 0;
+      padding: 10px 18px;
+      border: 1px solid #b8862e;
+      border-radius: 10px;
+      background: #b8862e;
+      color: #17140f;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    @keyframes cc-boot-spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <div id="cc-boot-screen" role="status" aria-live="polite">
+    <div class="cc-boot-content">
+      <div class="cc-boot-mark" aria-hidden="true"></div>
+      <p id="cc-boot-message">Loading CineConnect…</p>
+      <button id="cc-boot-reload" type="button" onclick="location.reload()">
+        Reload portal
+      </button>
+    </div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -57,10 +111,47 @@
       }
     }
 
-    _flutter.loader.load({
-      serviceWorkerSettings: { serviceWorkerVersion: buildVersion },
+    const bootScreen = document.getElementById('cc-boot-screen');
+    const bootMessage = document.getElementById('cc-boot-message');
+    const bootReload = document.getElementById('cc-boot-reload');
+    let firstFrameRendered = false;
+    let bootObserver;
+
+    const finishBoot = () => {
+      if (firstFrameRendered) return;
+      firstFrameRendered = true;
+      bootObserver?.disconnect();
+      bootScreen.remove();
+    };
+
+    const showBootFailure = () => {
+      if (firstFrameRendered) return;
+      if (document.querySelector('flutter-view')) {
+        finishBoot();
+        return;
+      }
+      bootMessage.textContent = 'The portal is taking longer than expected.';
+      bootReload.style.display = 'block';
+    };
+
+    window.addEventListener('flutter-first-frame', finishBoot, { once: true });
+    bootObserver = new MutationObserver(() => {
+      if (!document.querySelector('flutter-view')) return;
+      window.requestAnimationFrame(() => window.requestAnimationFrame(finishBoot));
     });
+    bootObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('error', (event) => {
+      if (event.target instanceof HTMLScriptElement) showBootFailure();
+    }, true);
+
+    // Serve CanvasKit from CineConnect itself. This avoids Safari blank screens
+    // when privacy settings or content blockers reject the public CDN.
+    Promise.resolve(_flutter.loader.load({
+      config: { canvasKitBaseUrl: 'canvaskit/' },
+      serviceWorkerSettings: { serviceWorkerVersion: buildVersion },
+    })).catch(showBootFailure);
+    window.setTimeout(showBootFailure, 15000);
   </script>
-  <script src="director_tutorial.js?v=20260811-32" defer></script>
+  <script src="director_tutorial.js?v=20260813-35" defer></script>
 </body>
 </html>

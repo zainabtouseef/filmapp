@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cineconnect/core/tour/tour_controller.dart';
 import 'package:cineconnect/core/tour/tour_models.dart';
+import 'package:cineconnect/core/tour/tour_target.dart';
 
 void main() {
   group('TourController', () {
@@ -220,6 +221,41 @@ void main() {
       expect(find.text('other'), findsOneWidget);
       expect(navigatorKey.currentState!.canPop(), isFalse);
     });
+  });
+
+  testWidgets('registering an active target during build notifies after frame',
+      (tester) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    final controller = TourController(navigatorKey: navigatorKey);
+    const buildStep = TourStep(
+      id: 'build-target',
+      targetId: 'target-during-build',
+      badge: '1 / 1',
+      title: 'Build target',
+      description: 'The target mounts after the tour starts.',
+    );
+    var notifications = 0;
+    controller.addListener(() => notifications++);
+    controller.start(const [buildStep], tourId: 'build-target-test');
+    final afterStart = notifications;
+
+    await tester.pumpWidget(
+      TourScope(
+        controller: controller,
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          home: const Scaffold(
+            body: TourTarget(
+              id: 'target-during-build',
+              child: SizedBox(width: 40, height: 40),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(notifications, greaterThan(afterStart));
   });
 
   group('TourScope', () {

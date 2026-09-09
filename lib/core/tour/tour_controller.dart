@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'tour_models.dart';
 
@@ -22,6 +23,7 @@ class TourController extends ChangeNotifier {
   VoidCallback? _onFinished;
   String? _lastSyncedRoute;
   bool _replaceRoutes = false;
+  bool _targetNotificationScheduled = false;
 
   bool get isActive => _index >= 0 && _index < _steps.length;
   TourStep? get currentStep => isActive ? _steps[_index] : null;
@@ -36,6 +38,22 @@ class TourController extends ChangeNotifier {
   void registerTarget(String id, GlobalKey key) {
     _targets[id] = key;
     if (isActive && currentStep!.targetId == id) {
+      // Targets commonly mount while a route is being built. Notifying the
+      // inherited TourScope synchronously in that phase asks Flutter to mark
+      // it dirty during the same build and triggers a runtime assertion.
+      // Let the frame finish, then tell the overlay that its target exists.
+      if (SchedulerBinding.instance.schedulerPhase ==
+          SchedulerPhase.persistentCallbacks) {
+        if (_targetNotificationScheduled) return;
+        _targetNotificationScheduled = true;
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _targetNotificationScheduled = false;
+          if (isActive && currentStep!.targetId == id) {
+            notifyListeners();
+          }
+        });
+        return;
+      }
       notifyListeners();
     }
   }

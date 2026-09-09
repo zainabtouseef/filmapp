@@ -128,6 +128,18 @@ class BookingsRepository {
     return Booking.fromJson(data['booking'] as Map<String, dynamic>);
   }
 
+  Future<Booking> cancelBooking(
+    String bookingId, {
+    required String reason,
+  }) async {
+    final response = await _client.post(
+      '/bookings/$bookingId/cancel',
+      body: {'reason': reason},
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return Booking.fromJson(data['booking'] as Map<String, dynamic>);
+  }
+
   Future<List<AvailabilityEntry>> availability() async {
     final response = await _client.get('/availability');
     final data = response['data'] as Map<String, dynamic>;

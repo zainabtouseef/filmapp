@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const GUIDE_VERSION = "10";
+  const GUIDE_VERSION = "13";
   const IDENTITY_KEY = "cineconnect.session_identity";
   const ROUTE_SESSION_KEY = "cineconnect.director_route_session";
   const STORAGE_PREFIX = `cineconnect.director_guide.v${GUIDE_VERSION}.`;
@@ -568,9 +568,9 @@
   const workflowSteps = [
     workflowStep({
       chapter: "Start",
-      title: "Build one complete production from start to finish",
-      description: "This tour now follows the real order: create the full project, hire against its requirements, then manage deals, contracts, money, production, and reporting.",
-      doThis: "Start the guided production workflow. The tour never submits, signs, hires, or pays on your behalf.",
+      title: "Build a production, start to finish",
+      description: "Create the project, hire by requirement, then manage deals, production, finance, and reports.",
+      doThis: "Start the workflow. You remain in control of every submission, signature, hire, and payment.",
       checklist: ["Project first", "Hiring second", "Operations and finance last"],
       prepareRoute: "#/console",
       routeLabel: "Production Console",
@@ -655,7 +655,8 @@
       requireTargetTextChange: true,
       keepInteractionScopeBright: true,
       interactionScopePattern: "Add a city",
-      waitingInstruction: "Choose a city from the sheet. The guide will continue after the city is added.",
+      hideGuideWhileWaiting: true,
+      waitingInstruction: "Choose a city. Continuing after it is added.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -671,7 +672,7 @@
       completionFlow: "date-range",
       keepInteractionScopeBright: true,
       interactionScopePattern: "Done",
-      completionInstruction: "Choose the start date, then the end date, then tap Done.",
+      completionInstruction: "Choose start, end, then Done.",
       startDateInstruction: "Choose the start date.",
       endDateInstruction: "Now choose the end date.",
       doneDateInstruction: "Date range selected. Tap Done.",
@@ -717,7 +718,7 @@
       actionLabel: "Enter a team member name, then add it",
       targetLabels: ["Team member name"],
       completionTargetLabels: ["Add"],
-      completionInstruction: "Team member name complete. Tap Add to confirm it.",
+      completionInstruction: "Tap Add to confirm the team member.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -740,7 +741,7 @@
       targetLabels: ["Script vault Upload PDF, DOC, DOCX, or TXT. Scripts stay private to invited team members. No files attached yet Add script from device", "Add script from device"],
       expectedTextCountIncrease: "Upload complete",
       outcomeTimeoutMs: 90000,
-      waitingInstruction: "Uploading the selected file… The guide will confirm it when the upload is complete.",
+      waitingInstruction: "Uploading… Continuing when complete.",
     }),
     workflowStep({
       chapter: "1 · Create project",
@@ -767,13 +768,13 @@
       chapter: "1 · Create project",
       title,
       description,
-      doThis: `Tap ${label}, then complete its fields before continuing.`,
+      doThis: `Open ${label} and complete its fields.`,
       routeLabel: `Project requirements > ${label}`,
       action: "click",
       actionLabel: `Add ${label}`,
       targetLabels: [label],
       completionTargetLabels: ["Save requirement"],
-      completionInstruction: `Complete the ${label} requirement, then tap Save requirement.`,
+      completionInstruction: `Complete ${label}, then tap Save requirement.`,
       completionDismissedPattern: "Save requirement",
       keepInteractionScopeBright: true,
       interactionScopePattern: "Add requirement",
@@ -802,7 +803,7 @@
       targetLabels: ["Create Project"],
       expectedTextPattern: "Project created",
       failureTextPatterns: ["Request validation failed", "Could not create", "Sign in to create projects"],
-      waitingInstruction: "Creating the project… The next step starts only after the project is saved successfully.",
+      waitingInstruction: "Creating project… Continuing when saved.",
     })
   );
 
@@ -875,7 +876,7 @@
           "Enter a valid fee before sending",
           "Live booking service is unavailable",
         ],
-        waitingInstruction: "Sending the request… The guide will continue only after CineConnect confirms it.",
+        waitingInstruction: "Sending request… Continuing when confirmed.",
       })
     );
   });
@@ -1135,9 +1136,9 @@
     }),
     workflowStep({
       chapter: "Complete",
-      title: "The complete director workflow is ready",
-      description: "Use this order for every production: create the project, define all requirements, hire by requirement, negotiate, contract, pay by milestone, schedule, coordinate, and report.",
-      doThis: "Finish the guide. You can restart it from Director Guide at any time.",
+      title: "Your production workflow is ready",
+      description: "Create, define requirements, hire, negotiate, contract, pay, schedule, coordinate, and report.",
+      doThis: "Finish now. Restart anytime from Director Guide.",
       checklist: ["Everything stays attached to one project", "Every provider is hired against a requirement", "Every payment follows a signed contract"],
       prepareRoute: "#/console",
       routeLabel: "Production Console",
@@ -1210,6 +1211,7 @@
     scrollAttempted: false,
     actionPending: false,
     actionCompleting: false,
+    silentInteraction: false,
     actionFailureMessage: "",
     actionTimer: null,
     outcomeCycleObserved: false,
@@ -1790,6 +1792,18 @@
     state.mutationTimer = setTimeout(() => {
       if (!state.open) return;
       const step = currentRenderedStep();
+      if (
+        step.hideGuideWhileWaiting &&
+        step.waitForTextCycle &&
+        pageHasText(step.waitForTextCycle)
+      ) {
+        if (!state.actionPending) {
+          beginActionOutcomeWait(step);
+        } else {
+          setSilentInteraction(true);
+        }
+        return;
+      }
       if (state.actionPending && hasDeferredOutcome(step)) {
         const failureMessage = actionFailureMessage(step);
         if (failureMessage) {
@@ -1948,11 +1962,11 @@
   function placeCoachMark(rect) {
     const margin = 12;
     const gap = 18;
-    const baseCardWidth = Math.min(300, innerWidth - margin * 2);
+    const baseCardWidth = Math.min(250, innerWidth - margin * 2);
     const leftSideWidth = Math.max(0, rect.left - gap - margin);
     const rightSideWidth = Math.max(0, innerWidth - (rect.left + rect.width) - gap - margin);
     const availableSideWidth = Math.max(leftSideWidth, rightSideWidth);
-    const fittedCardWidth = availableSideWidth >= 220
+    const fittedCardWidth = availableSideWidth >= 190
       ? Math.min(baseCardWidth, availableSideWidth)
       : baseCardWidth;
     card.style.width = `${fittedCardWidth}px`;
@@ -2192,6 +2206,7 @@
     card.dataset.actionState = "working";
     actionStatus.textContent = step.waitingInstruction || "Waiting for CineConnect to confirm the action…";
     if (step.waitingInstruction) mission.textContent = step.waitingInstruction;
+    setSilentInteraction(Boolean(step.hideGuideWhileWaiting));
     renderSpotlight(step);
     const startedAt = Date.now();
     state.actionTimer = setTimeout(() => waitForActionOutcome(step, startedAt), 60);
@@ -2227,6 +2242,7 @@
     state.actionCompleting = false;
     state.actionFailureMessage = message;
     state.targetRetryCount = 0;
+    setSilentInteraction(false);
     card.dataset.actionState = "error";
     renderSpotlight(step);
     if (missionLabel) missionLabel.innerHTML = `${icon("target")} Needs attention`;
@@ -2824,6 +2840,7 @@
     if (!state.open || !state.actionPending || state.actionCompleting) return;
     state.actionCompleting = true;
     clearTimeout(state.actionTimer);
+    setSilentInteraction(false);
     root.querySelectorAll('.cc-guide-spotlight[data-visible="true"]').forEach((node) => {
       node.dataset.success = "true";
     });
@@ -2853,6 +2870,7 @@
     clearTimeout(state.actionTimer);
     state.actionPending = false;
     state.actionCompleting = false;
+    setSilentInteraction(false);
     state.actionFailureMessage = "";
     state.outcomeCycleObserved = false;
     state.outcomeBaselineTargetText = "";
@@ -2924,6 +2942,14 @@
     if (launcher) launcher.dataset.visible = value;
   }
 
+  function setSilentInteraction(active) {
+    state.silentInteraction = Boolean(active);
+    if (!layer) return;
+    layer.dataset.interactionMode = state.silentInteraction ? "silent" : "guided";
+    if (card) card.setAttribute("aria-hidden", state.silentInteraction ? "true" : "false");
+    if (controls) controls.setAttribute("aria-hidden", state.silentInteraction ? "true" : "false");
+  }
+
   function openGuide(isAutomatic) {
     if (!state.isDirector && !window.__CINECONNECT_DIRECTOR_GUIDE_PREVIEW__) return;
     clearTimeout(state.autoTimer);
@@ -2946,6 +2972,7 @@
     clearTimeout(state.mutationTimer);
     state.actionPending = false;
     state.actionCompleting = false;
+    setSilentInteraction(false);
     clearTargetHighlights();
     layer.dataset.open = "false";
     targetTag.dataset.visible = "false";
@@ -2967,6 +2994,7 @@
     clearTimeout(state.mutationTimer);
     state.actionPending = false;
     state.actionCompleting = false;
+    setSilentInteraction(false);
     clearTargetHighlights();
     layer.dataset.open = "false";
     targetTag.dataset.visible = "false";

@@ -60,6 +60,55 @@ class ProjectsRepository {
     return Project.fromJson(data['project'] as Map<String, dynamic>);
   }
 
+  Future<Project> updateProject({
+    required String projectId,
+    String? title,
+    String? projectType,
+    String? description,
+    String? cityId,
+    String? startDate,
+    String? endDate,
+    int? estimatedBudgetMinor,
+    String? currency,
+    String? status,
+    String? visibility,
+    int? progressPercent,
+  }) async {
+    final response = await _client.patch(
+      '/projects/$projectId',
+      body: {
+        if (title != null) 'title': title,
+        if (projectType != null) 'project_type': projectType,
+        if (description != null) 'description': description,
+        if (cityId != null) 'city_id': cityId,
+        if (startDate != null) 'start_date': startDate,
+        if (endDate != null) 'end_date': endDate,
+        if (estimatedBudgetMinor != null)
+          'estimated_budget_minor': estimatedBudgetMinor,
+        if (currency != null) 'currency': currency,
+        if (status != null) 'status': status,
+        if (visibility != null) 'visibility': visibility,
+        if (progressPercent != null) 'progress_percent': progressPercent,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return Project.fromJson(data['project'] as Map<String, dynamic>);
+  }
+
+  Future<Project> duplicateProject(
+    String projectId, {
+    String? title,
+  }) async {
+    final response = await _client.post(
+      '/projects/$projectId/duplicate',
+      body: {
+        if (title != null && title.trim().isNotEmpty) 'title': title.trim()
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return Project.fromJson(data['project'] as Map<String, dynamic>);
+  }
+
   Future<Project> project(String publicId) async {
     final response = await _client.get('/projects/$publicId');
     final data = response['data'] as Map<String, dynamic>;

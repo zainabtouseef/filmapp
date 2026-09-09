@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/bookings/booking_models.dart';
+import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/director/director_dashboard_models.dart';
+import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/specialist/specialist_controller.dart';
@@ -10,7 +15,9 @@ import '../../../core/theme/app_text_styles.dart';
 import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
+import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_sponsor_live.dart';
+import '../widgets/brand_sponsor_shell.dart' show startBrandTour;
 
 class BR01BrandDashboardScreen extends StatefulWidget {
   const BR01BrandDashboardScreen({super.key});
@@ -23,11 +30,16 @@ class BR01BrandDashboardScreen extends StatefulWidget {
 class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
   SpecialistController? _specialist;
   PaymentsController? _payments;
+  BookingsController? _bookingsController;
+  AuthController? _auth;
   BrandProfileDto? _profile;
   List<BrandOpportunityDto> _opportunities = const [];
   List<BrandApplicationDto> _applications = const [];
   List<CampaignDeliverableDto> _deliverables = const [];
   PaymentDashboardDto? _paymentDashboard;
+  DirectorDashboard? _productionDashboard;
+  List<Booking> _productionBookings = const [];
+  MarketplaceShortlistBundle? _shortlistBundle;
   bool _loading = false;
   bool _loaded = false;
   String? _error;
@@ -37,11 +49,18 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
     final payments = PaymentsScope.maybeOf(context);
-    if (identical(specialist, _specialist) && identical(payments, _payments)) {
+    final bookings = BookingsScope.maybeOf(context);
+    final auth = AuthScope.maybeOf(context);
+    if (identical(specialist, _specialist) &&
+        identical(payments, _payments) &&
+        identical(bookings, _bookingsController) &&
+        identical(auth, _auth)) {
       return;
     }
     _specialist = specialist;
     _payments = payments;
+    _bookingsController = bookings;
+    _auth = auth;
     if (specialist != null) _load(force: true);
   }
 
@@ -69,6 +88,22 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
       if (_payments != null) {
         paymentDashboard = await _payments!.dashboard(force: force);
       }
+      DirectorDashboard? productionDashboard;
+      List<Booking> productionBookings = const [];
+      MarketplaceShortlistBundle? shortlistBundle;
+      if (_auth?.isAuthenticated == true) {
+        final productionValues = await Future.wait<Object>([
+          _auth!.brandProductionDashboard(),
+          _auth!.shortlistBundle(),
+          if (_bookingsController != null)
+            _bookingsController!.bookings(force: force)
+          else
+            Future<List<Booking>>.value(const []),
+        ]);
+        productionDashboard = productionValues[0] as DirectorDashboard;
+        shortlistBundle = productionValues[1] as MarketplaceShortlistBundle;
+        productionBookings = productionValues[2] as List<Booking>;
+      }
       if (!mounted) return;
       setState(() {
         _profile = profile;
@@ -76,6 +111,9 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         _applications = applications;
         _deliverables = deliverables;
         _paymentDashboard = paymentDashboard;
+        _productionDashboard = productionDashboard;
+        _shortlistBundle = shortlistBundle;
+        _productionBookings = productionBookings;
         _loaded = true;
       });
     } catch (error) {
@@ -175,6 +213,50 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
       ),
     ];
     final active = activeBrandOpportunity(_opportunities);
+    final production = _productionDashboard?.summary;
+    final demoProject = isBrandDemoAccount(_auth)
+        ? selectBrandDemoProject(_productionDashboard?.projects ?? const [])
+        : null;
+    final productionMetrics = [
+      BrandMetric(
+        label: 'Active projects',
+        value: '${production?.activeProjects ?? 0}',
+        delta: '${production?.projectCount ?? 0} projects total',
+        icon: Icons.movie_creation_outlined,
+        tone: BrandTone.gold,
+        route: BrandSponsorRoutes.projects,
+      ),
+      BrandMetric(
+        label: 'Confirmed bookings',
+        value: '${production?.securedBookings ?? 0}',
+        delta: 'Accepted and secured resources',
+        icon: Icons.verified_outlined,
+        tone: BrandTone.green,
+        route: BrandSponsorRoutes.bookings,
+      ),
+      BrandMetric(
+        label: 'Production actions',
+        value: '${production?.attentionCount ?? 0}',
+        delta: 'Requests and payments needing attention',
+        icon: Icons.priority_high_rounded,
+        tone: BrandTone.purple,
+        route: BrandSponsorRoutes.bookings,
+      ),
+      BrandMetric(
+        label: 'Committed budget',
+        value: brandMoney(
+          production?.committedBudgetMinor,
+          currency: production?.currency ?? 'PKR',
+        ),
+        delta: brandMoney(
+          production?.pendingPaymentMinor,
+          currency: production?.currency ?? 'PKR',
+        ),
+        icon: Icons.account_balance_wallet_outlined,
+        tone: BrandTone.blue,
+        route: BrandSponsorRoutes.payments,
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -186,6 +268,27 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
           const SizedBox(height: 12),
         ],
+        if (demoProject != null) ...[
+          BrandDemoJourneyCard(
+            project: demoProject,
+            shortlistCount: (_shortlistBundle?.shortlists ?? const [])
+                .where((board) => board.projectId == demoProject.publicId)
+                .fold<int>(0, (total, board) => total + board.items.length),
+            requestCount: _productionBookings
+                .where((booking) => booking.projectId == demoProject.publicId)
+                .length,
+            confirmedCount: _productionBookings
+                .where((booking) =>
+                    booking.projectId == demoProject.publicId &&
+                    {'accepted', 'secured', 'completed'}
+                        .contains(booking.status))
+                .length,
+            onPlay: () => startBrandTour(context),
+          ),
+          const SizedBox(height: 14),
+        ],
+        BrandKpiRail(metrics: productionMetrics),
+        const SizedBox(height: 12),
         BrandKpiRail(metrics: metrics),
         const SizedBox(height: 12),
         BrandTwoColumn(

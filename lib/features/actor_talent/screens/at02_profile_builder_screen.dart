@@ -9,6 +9,7 @@ import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -493,6 +494,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       ),
       right: _ProfileSummary(
         avatarUrl: avatarUrl,
+        coverUrl: coverUrl,
         stageName: stageName.text,
         city: city.text,
         languages: languages.text,
@@ -1344,6 +1346,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
 
 class _ProfileSummary extends StatelessWidget {
   final String? avatarUrl;
+  final String? coverUrl;
   final String stageName;
   final String city;
   final String languages;
@@ -1357,6 +1360,7 @@ class _ProfileSummary extends StatelessWidget {
   final int completeness;
   const _ProfileSummary({
     this.avatarUrl,
+    this.coverUrl,
     required this.stageName,
     required this.city,
     required this.languages,
@@ -1373,6 +1377,20 @@ class _ProfileSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final profileName =
+        stageName.isEmpty ? 'Your professional name' : stageName;
+    final profileCity = city.isEmpty ? 'City not set' : city;
+    final pitch = workHistory.isEmpty
+        ? 'Add a concise screen identity, strongest credits and the kinds of roles you bring to life.'
+        : workHistory;
+    final highlights = [
+      ...languages
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty),
+      if (ageRange.isNotEmpty) 'Plays $ageRange',
+      if (agency.isNotEmpty) agency,
+    ];
     return ActorSectionCard(
       title: 'Director-facing Profile',
       icon: Icons.visibility_outlined,
@@ -1383,68 +1401,20 @@ class _ProfileSummary extends StatelessWidget {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: const BoxConstraints(maxWidth: 980),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ActorSectionCard(
-                  title: 'As seen by directors',
-                  icon: Icons.visibility_outlined,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ActorMediaFrame(
-                        imageUrl: avatarUrl ?? '',
-                        title: stageName.isEmpty ? 'Stage name' : stageName,
-                        badge: 'Draft',
-                        fallbackIcon: Icons.person_outline_rounded,
-                        aspectRatio: 4 / 5,
-                      ),
-                      const SizedBox(height: 10),
-                      ActorInfoRow(
-                        icon: Icons.location_on_outlined,
-                        label: 'City',
-                        value: city.isEmpty ? 'City' : city,
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.translate_rounded,
-                        label: 'Languages',
-                        value: languages.isEmpty ? 'Languages' : languages,
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.face_retouching_natural_outlined,
-                        label: 'Playable age',
-                        value: ageRange.isEmpty ? 'Not set' : ageRange,
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.height_outlined,
-                        label: 'Height',
-                        value: height.isEmpty ? 'Not set' : height,
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.alternate_email_rounded,
-                        label: 'Instagram',
-                        value: instagram.isEmpty
-                            ? 'Not connected'
-                            : '$instagram • ${followers.isEmpty ? 'followers not set' : followers}',
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.music_note_rounded,
-                        label: 'TikTok',
-                        value: tiktok.isEmpty ? 'Not connected' : tiktok,
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.history_edu_outlined,
-                        label: 'Work history',
-                        value: workHistory.isEmpty ? 'Not set' : workHistory,
-                      ),
-                      ActorInfoRow(
-                        icon: Icons.apartment_outlined,
-                        label: 'Agency',
-                        value: agency.isEmpty ? 'Independent' : agency,
-                      ),
-                    ],
-                  ),
+                TalentProfileShowcase(
+                  name: profileName,
+                  role: 'Actor · Talent',
+                  city: profileCity,
+                  summary: pitch,
+                  portraitUrl: avatarUrl,
+                  coverUrl: coverUrl,
+                  rateLabel: 'Rate shared with brief',
+                  highlights: highlights,
+                  badge: 'Director-facing preview',
                 ),
                 const SizedBox(height: 12),
                 CoreSecondaryButton(
@@ -1461,32 +1431,23 @@ class _ProfileSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActorMediaFrame(
-            imageUrl: avatarUrl ?? '',
-            title: 'Public headshot',
-            badge: 'Draft',
-            fallbackIcon: Icons.person_outline_rounded,
-            aspectRatio: 4 / 5,
+          TalentProfileShowcase(
+            name: profileName,
+            role: 'Actor · Talent',
+            city: profileCity,
+            summary: pitch,
+            portraitUrl: avatarUrl,
+            coverUrl: coverUrl,
+            rateLabel: 'Rate shared with brief',
+            highlights: highlights,
+            badge: 'Director-facing preview',
           ),
           const SizedBox(height: 12),
           Text(
-            stageName.isEmpty ? 'Stage name' : stageName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.sectionHeading.copyWith(
-              color: colors.textPrimary,
-              fontSize: 18,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$city - $languages',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            'Profile strength',
             style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-              height: 1.25,
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 10),

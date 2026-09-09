@@ -127,6 +127,12 @@ class _SplashScreenState extends State<SplashScreen>
           forceUpdateRequired: false, maintenanceEnabled: false);
       return;
     }
+    try {
+      await auth.initialize().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Session restoration is best effort. The login screen must remain
+      // reachable even when browser storage or the network is unavailable.
+    }
     var forceUpdateRequired = false;
     var maintenanceEnabled = false;
     try {

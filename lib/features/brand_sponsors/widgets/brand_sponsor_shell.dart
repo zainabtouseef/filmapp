@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
+import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_preferences_store.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -17,6 +21,16 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/brand_sponsor_routes.dart';
 import 'brand_sponsor_live.dart';
+import 'brand_tour_steps.dart';
+
+void startBrandTour(BuildContext context) {
+  TourScope.of(context).start(
+    brandTourSteps,
+    tourId: brandTourId,
+    replaceRoutes: true,
+    onFinished: () => const TourPreferencesStore().markSeen(brandTourId),
+  );
+}
 
 typedef BrandSponsorMenuEntry = ({
   String route,
@@ -31,6 +45,30 @@ const brandSponsorMenuEntries = <BrandSponsorMenuEntry>[
     screenId: 'BR-01',
     label: 'Overview',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: BrandSponsorRoutes.projects,
+    screenId: 'BR-08',
+    label: 'Projects',
+    icon: Icons.movie_creation_outlined,
+  ),
+  (
+    route: BrandSponsorRoutes.marketplace,
+    screenId: 'BR-09',
+    label: 'Discover',
+    icon: Icons.manage_search_outlined,
+  ),
+  (
+    route: BrandSponsorRoutes.shortlists,
+    screenId: 'BR-10',
+    label: 'Shortlists',
+    icon: Icons.favorite_border_rounded,
+  ),
+  (
+    route: BrandSponsorRoutes.bookings,
+    screenId: 'BR-11',
+    label: 'Requests & Bookings',
+    icon: Icons.send_time_extension_outlined,
   ),
   (
     route: BrandSponsorRoutes.profile,
@@ -71,24 +109,47 @@ const brandSponsorMenuEntries = <BrandSponsorMenuEntry>[
 ];
 
 const _brandBottomDestinations = [
-  CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
   CineBottomNavDestination(
-      label: 'Opportunities', icon: Icons.campaign_outlined),
-  CineBottomNavDestination(label: 'Applications', icon: Icons.inbox_outlined),
-  CineBottomNavDestination(label: 'Campaigns', icon: Icons.fact_check_outlined),
-  CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
+    label: 'Home',
+    icon: Icons.home_outlined,
+    route: BrandSponsorRoutes.home,
+  ),
+  CineBottomNavDestination(
+    label: 'Projects',
+    icon: Icons.movie_outlined,
+    route: BrandSponsorRoutes.projects,
+  ),
+  CineBottomNavDestination(
+    label: 'Discover',
+    icon: Icons.search_rounded,
+    route: BrandSponsorRoutes.marketplace,
+  ),
+  CineBottomNavDestination(
+    label: 'Requests',
+    icon: Icons.send_outlined,
+    route: BrandSponsorRoutes.bookings,
+  ),
+  CineBottomNavDestination(
+    label: 'More',
+    icon: Icons.menu_rounded,
+    route: BrandSponsorRoutes.shortlists,
+  ),
 ];
 
 const _brandBottomRoutes = [
   BrandSponsorRoutes.home,
-  BrandSponsorRoutes.composer,
-  BrandSponsorRoutes.applications,
-  BrandSponsorRoutes.tracker,
+  BrandSponsorRoutes.projects,
+  BrandSponsorRoutes.marketplace,
+  BrandSponsorRoutes.bookings,
 ];
 
 const _brandBottomIndexOverrides = {
   BrandSponsorRoutes.profile: 4,
+  BrandSponsorRoutes.shortlists: 4,
+  BrandSponsorRoutes.composer: 4,
+  BrandSponsorRoutes.applications: 4,
   BrandSponsorRoutes.negotiation: 4,
+  BrandSponsorRoutes.tracker: 4,
   BrandSponsorRoutes.payments: 4,
 };
 
@@ -108,6 +169,8 @@ class BrandSponsorShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showMobileDemo =
+        MediaQuery.sizeOf(context).width < AppBreakpoints.laptop;
     return AdminScreenScaffold(
       title: title,
       currentRoute: routeName,
@@ -154,10 +217,77 @@ class BrandSponsorShell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BrandRouteHeading(title: title, route: routeName),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _BrandRouteHeading(title: title, route: routeName),
+              ),
+              if (showMobileDemo) ...[
+                const SizedBox(width: 10),
+                _BrandDemoLauncher(onTap: () => startBrandTour(context)),
+              ],
+            ],
+          ),
           const SizedBox(height: 14),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _BrandDemoLauncher extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BrandDemoLauncher({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Tooltip(
+      message: 'Play one complete project story',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const ValueKey('brand-demo-launcher'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            decoration: BoxDecoration(
+              gradient: colors.goldGradient,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.goldMid),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.goldGlow,
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.play_circle_outline_rounded,
+                  color: colors.onGold,
+                  size: 19,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  'Project demo',
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: colors.onGold,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -229,6 +359,10 @@ class _BrandRouteHeading extends StatelessWidget {
   String get _eyebrow {
     return switch (route) {
       BrandSponsorRoutes.home => 'Brand workspace · overview',
+      BrandSponsorRoutes.projects => 'Campaign planning · production scope',
+      BrandSponsorRoutes.marketplace => 'Talent · crew · locations · equipment',
+      BrandSponsorRoutes.shortlists => 'Project picks · comparison · selection',
+      BrandSponsorRoutes.bookings => 'Requests · responses · confirmations',
       BrandSponsorRoutes.profile => 'Identity · organization trust',
       BrandSponsorRoutes.composer => 'Campaign brief · opportunity publishing',
       BrandSponsorRoutes.applications => 'Proposals · audience · selection',
@@ -252,6 +386,7 @@ class _BrandWorkspaceTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = !wide;
+    final veryCompact = MediaQuery.sizeOf(context).width < 380;
     final canGoBack = Navigator.canPop(context);
     return AdminTopBarFrame(
       compact: compact,
@@ -262,30 +397,49 @@ class _BrandWorkspaceTopBar extends StatelessWidget {
             tooltip: canGoBack ? 'Back' : 'Menu',
             onTap: canGoBack ? () => navigateCoreBack(context) : onMenuTap,
           ),
-          const SizedBox(width: 10),
-          _BrandLockup(compact: compact),
-          SizedBox(width: compact ? 8 : 16),
+          SizedBox(width: veryCompact ? 6 : 10),
+          if (veryCompact)
+            Icon(
+              Icons.movie_filter_outlined,
+              color: context.appColors.goldDark,
+              size: 22,
+            )
+          else
+            _BrandLockup(compact: compact),
+          SizedBox(width: veryCompact ? 6 : (compact ? 8 : 16)),
           Expanded(
             child: _BrandSearchPill(
               compact: compact,
               onTap: () => Navigator.pushNamed(
                 context,
-                BrandSponsorRoutes.applications,
+                BrandSponsorRoutes.marketplace,
               ),
             ),
           ),
           const SizedBox(width: 10),
           if (wide) ...[
-            _BrandNotificationButton(
-              onTap: () =>
-                  Navigator.pushNamed(context, CoreRoutes.notifications),
+            _BrandTopIcon(
+              icon: Icons.explore_outlined,
+              tooltip: 'Play one complete project story',
+              onTap: () => startBrandTour(context),
             ),
             const SizedBox(width: 10),
           ],
-          _BrandProfileButton(
-            onTap: () => Navigator.pushNamed(
-              context,
-              BrandSponsorRoutes.profile,
+          TourTarget(
+            id: 'brand:notifications',
+            child: _BrandNotificationButton(
+              onTap: () =>
+                  Navigator.pushNamed(context, CoreRoutes.notifications),
+            ),
+          ),
+          const SizedBox(width: 10),
+          TourTarget(
+            id: 'nav:${BrandSponsorRoutes.profile}',
+            child: _BrandProfileButton(
+              onTap: () => Navigator.pushNamed(
+                context,
+                BrandSponsorRoutes.profile,
+              ),
             ),
           ),
           SizedBox(width: compact ? 8 : 10),
@@ -314,8 +468,8 @@ class _BrandLockup extends StatelessWidget {
     final colors = context.appColors;
     return ConstrainedBox(
       constraints: BoxConstraints(
-        minWidth: compact ? 96 : 166,
-        maxWidth: compact ? 116 : 190,
+        minWidth: compact ? 78 : 166,
+        maxWidth: compact ? 88 : 190,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,7 +481,7 @@ class _BrandLockup extends StatelessWidget {
             text: TextSpan(
               style: AppTextStyles.sectionHeaderStyle.copyWith(
                 color: colors.textPrimary,
-                fontSize: compact ? 17 : 22,
+                fontSize: compact ? 14.5 : 22,
                 fontWeight: FontWeight.w800,
                 height: 1.05,
               ),
@@ -347,7 +501,7 @@ class _BrandLockup extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.caption.copyWith(
               color: colors.textSecondary,
-              fontSize: compact ? 10.5 : 13,
+              fontSize: compact ? 9.5 : 13,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -574,60 +728,64 @@ class _BrandWorkspaceSidebar extends StatelessWidget {
                       final item = brandSponsorMenuEntries[index];
                       final active =
                           _brandRouteActive(currentRoute, item.route);
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => onRouteTap(item.route),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: active
-                                ? colors.activeChipGradient
-                                : colors.inactiveChipGradient,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: active ? colors.goldMid : colors.border,
+                      return TourTarget(
+                        id: 'nav:${item.route}',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => onRouteTap(item.route),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 11,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                item.icon,
-                                color:
-                                    active ? colors.goldDark : colors.iconMuted,
-                                size: 20,
+                            decoration: BoxDecoration(
+                              gradient: active
+                                  ? colors.activeChipGradient
+                                  : colors.inactiveChipGradient,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: active ? colors.goldMid : colors.border,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.cardLabel.copyWith(
-                                    color: active
-                                        ? colors.textPrimary
-                                        : colors.textSecondary,
-                                    fontWeight: active
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item.icon,
+                                  color: active
+                                      ? colors.goldDark
+                                      : colors.iconMuted,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    item.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.cardLabel.copyWith(
+                                      color: active
+                                          ? colors.textPrimary
+                                          : colors.textSecondary,
+                                      fontWeight: active
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? colors.goldMid
-                                      : colors.iconMuted
-                                          .withValues(alpha: 0.45),
-                                  shape: BoxShape.circle,
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: active
+                                        ? colors.goldMid
+                                        : colors.iconMuted
+                                            .withValues(alpha: 0.45),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );

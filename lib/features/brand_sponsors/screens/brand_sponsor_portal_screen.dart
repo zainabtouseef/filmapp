@@ -9,6 +9,10 @@ import 'br04_applications_inbox_screen.dart';
 import 'br05_negotiation_terms_screen.dart';
 import 'br06_campaign_tracker_screen.dart';
 import 'br07_payments_records_screen.dart';
+import 'br08_brand_projects_screen.dart';
+import 'br09_brand_marketplace_screen.dart';
+import 'br10_brand_shortlists_screen.dart';
+import 'br11_brand_bookings_screen.dart';
 
 class BrandSponsorPortalScreen extends StatelessWidget {
   final String routeName;
@@ -31,6 +35,10 @@ class BrandSponsorPortalScreen extends StatelessWidget {
   Widget _screenFor(String route) {
     return switch (route) {
       BrandSponsorRoutes.profile => const BR02BrandProfileScreen(),
+      BrandSponsorRoutes.projects => const BR08BrandProjectsScreen(),
+      BrandSponsorRoutes.marketplace => const BR09BrandMarketplaceScreen(),
+      BrandSponsorRoutes.shortlists => const BR10BrandShortlistsScreen(),
+      BrandSponsorRoutes.bookings => const BR11BrandBookingsScreen(),
       BrandSponsorRoutes.composer => const BR03OpportunityComposerScreen(),
       BrandSponsorRoutes.applications => const BR04ApplicationsInboxScreen(),
       BrandSponsorRoutes.negotiation => const BR05NegotiationTermsScreen(),

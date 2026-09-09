@@ -122,6 +122,21 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('native coach card stays compact on mobile', (tester) async {
+    final controller = await _pumpDemo(tester, size: const Size(400, 800));
+    controller.start(_steps, tourId: 'demo');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final card = find
+        .ancestor(of: find.text('First step'), matching: find.byType(ClipRRect))
+        .first;
+    final cardSize = tester.getSize(card);
+    expect(cardSize.width, lessThanOrEqualTo(300));
+    expect(cardSize.height, lessThan(180));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the measured coach card stays outside its action target', (
     tester,
   ) async {

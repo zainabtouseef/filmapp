@@ -16,6 +16,7 @@ import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
+import '../../../shared/widgets/talent_profile_showcase.dart';
 
 class DPStakeholderProfileScreen extends StatefulWidget {
   final String? candidateId;
@@ -351,122 +352,25 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DPGlassCard(
-      selected: true,
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          children: [
-            Container(
-              height: 260,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colors.goldMid.withValues(alpha: 0.72),
-                    colors.infoBlue.withValues(alpha: 0.46),
-                    colors.surface,
-                  ],
-                ),
-              ),
-              child: candidate.imageUrl == null
-                  ? null
-                  : Image.network(
-                      candidate.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox.shrink(),
-                    ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      colors.surface
-                          .withValues(alpha: colors.isLight ? 0.92 : 0.78),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 34,
-                          backgroundColor:
-                              colors.goldGlow.withValues(alpha: 0.42),
-                          child: Text(
-                            candidate.avatarLabel,
-                            style: AppTextStyles.metricNumberCompact.copyWith(
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                candidate.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.sectionTitle.copyWith(
-                                  color: colors.textPrimary,
-                                  fontSize: 23,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              dpText(
-                                context,
-                                '$type • ${candidate.city}',
-                                strong: true,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (candidate.verified)
-                          const DPStatusChip(
-                            label: 'Verified',
-                            tone: DpTone.success,
-                            icon: Icons.verified_outlined,
-                          ),
-                        DPStatusChip(
-                          label: candidate.available
-                              ? 'Available on dates'
-                              : 'Limited dates',
-                          tone: candidate.available
-                              ? DpTone.success
-                              : DpTone.warning,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    final highlights = <String>[
+      if (candidate.completedBookings > 0)
+        '${candidate.completedBookings} bookings delivered',
+      if (candidate.isNew) 'New on CineConnect',
+      ...candidate.skills,
+    ];
+    return TalentProfileShowcase(
+      name: candidate.name,
+      role: type,
+      city: candidate.city,
+      summary: candidate.notes,
+      portraitUrl: candidate.imageUrl,
+      verified: candidate.verified,
+      available: candidate.available,
+      rateLabel: candidate.rateRange.trim().isEmpty
+          ? 'Rate on request'
+          : candidate.rateRange,
+      rating: candidate.rating > 0 ? candidate.rating : null,
+      highlights: highlights,
     );
   }
 }
@@ -702,17 +606,20 @@ class _LiveGallerySection extends StatelessWidget {
       title: 'Public gallery',
       icon: Icons.photo_library_outlined,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
+        TalentProfileGallery(
+          items: [
             for (final item in media)
-              _PhotoTile(
+              TalentProfileGalleryItem(
                 label: item.caption ?? item.file?.originalName ?? 'Media',
                 imageUrl: item.file?.publicUrl,
                 isVideo: item.file?.mimeType.startsWith('video/') ?? false,
+                value: item,
               ),
           ],
+          onOpen: (item) {
+            final url = item.imageUrl;
+            if (url != null) openUrlInNewTab(url);
+          },
         ),
       ],
     );
@@ -1100,75 +1007,6 @@ class _ProfileSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: children,
-      ),
-    );
-  }
-}
-
-class _PhotoTile extends StatelessWidget {
-  final String label;
-  final String? imageUrl;
-  final bool isVideo;
-
-  const _PhotoTile({
-    required this.label,
-    this.imageUrl,
-    this.isVideo = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final url = imageUrl;
-    return GestureDetector(
-      onTap: url == null ? null : () => openUrlInNewTab(url),
-      child: Container(
-        width: 96,
-        height: 96,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: colors.goldGradient,
-          border: Border.all(color: colors.border),
-          image: url == null || isVideo
-              ? null
-              : DecorationImage(
-                  image: NetworkImage(url),
-                  fit: BoxFit.cover,
-                  onError: (_, __) {},
-                ),
-        ),
-        child: Stack(
-          children: [
-            if (isVideo)
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-              ),
-            Align(
-              alignment: Alignment.bottomLeft,
-              child: Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.onGold,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

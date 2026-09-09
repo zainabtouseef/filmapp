@@ -1120,7 +1120,7 @@ class _DPCreateProjectWizardScreenState
             itemCount: _requirements.length,
             onReorder: (oldIndex, newIndex) {
               setState(() {
-                if (newIndex > oldIndex) newIndex--;
+                if (newIndex > oldIndex) newIndex -= 1;
                 final item = _requirements.removeAt(oldIndex);
                 _requirements.insert(newIndex, item);
               });

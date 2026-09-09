@@ -27,6 +27,7 @@ class DirectorProducerRoutes {
   static const accounts = '/director/accounts';
   static const room = '/director/room';
   static const reports = '/director/reports';
+  static const cinePlanner = '/director/cineplanner';
 
   static const allRoutes = [
     home,
@@ -50,6 +51,7 @@ class DirectorProducerRoutes {
     accounts,
     room,
     reports,
+    cinePlanner,
   ];
 }
 
