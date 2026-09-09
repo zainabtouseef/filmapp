@@ -140,6 +140,7 @@ class BrandSectionCard extends StatelessWidget {
     return GlassSectionCard(
       radius: 18,
       padding: EdgeInsets.zero,
+      accentEdge: false,
       child: Stack(
         children: [
           Positioned(
@@ -445,9 +446,44 @@ class _BrandFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      decoration: BoxDecoration(gradient: colors.cardGradient),
-      child: Center(child: Icon(icon, color: colors.goldDark, size: 28)),
+    final accent = colors.goldDark;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.lerp(colors.surface, accent, colors.isLight ? 0.10 : 0.20)!,
+            colors.softSurface,
+            Color.lerp(colors.surface, accent, colors.isLight ? 0.24 : 0.34)!,
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -28,
+            top: -34,
+            child: Icon(
+              icon,
+              size: 190,
+              color: accent.withValues(alpha: 0.10),
+            ),
+          ),
+          Center(
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: colors.elevatedSurface.withValues(alpha: 0.76),
+                shape: BoxShape.circle,
+                border: Border.all(color: accent.withValues(alpha: 0.32)),
+              ),
+              child: Icon(icon, color: accent, size: 32),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

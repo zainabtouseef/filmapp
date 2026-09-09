@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import mimetypes
 import os
 import shutil
 import sys
@@ -24,13 +25,20 @@ from app.models import (
     Booking,
     BookingParticipant,
     BookingStatusEvent,
+    BrandOpportunity,
+    BrandProfile,
+    CastingAgency,
     City,
     Conversation,
     ConversationMember,
+    DistributionPartnerProfile,
+    EquipmentProviderProfile,
     FileAsset,
     ListingMedia,
+    LocationProperty,
     MarketplaceListing,
     Message,
+    ModelProfile,
     Notification,
     Project,
     ProjectMember,
@@ -52,19 +60,24 @@ DEMO_DOMAIN = os.getenv(
 )
 
 DEMO_ASSET_ROOT = ROOT / "demo_assets" / "brand_portal"
+DEMO_MEDIA_ROOT = ROOT / "demo_assets" / "portal_media"
 
 
-def install_public_portrait(
+def install_public_image(
     stats: dict[str, int],
     *,
     public_id: str,
     owner: User,
     filename: str,
+    source_root: Path = DEMO_ASSET_ROOT,
+    storage_folder: str = "profile-heroes",
+    storage_filename: str | None = None,
 ) -> FileAsset:
-    source = DEMO_ASSET_ROOT / filename
+    source = source_root / filename
     if not source.is_file():
-        raise RuntimeError(f"Missing Brand demo portrait: {source}")
-    storage_key = f"demo/brand-portal/profile-heroes/{filename}"
+        raise RuntimeError(f"Missing demo media asset: {source}")
+    stored_name = storage_filename or filename
+    storage_key = f"demo/brand-portal/{storage_folder}/{stored_name}"
     public_root = Path(
         os.getenv("LOCAL_STORAGE_PUBLIC_ROOT", "/data/storage/public")
     ).expanduser()
@@ -75,34 +88,34 @@ def install_public_portrait(
     file = ensure(
         FileAsset,
         stats,
-        "portrait_file",
+        "public_image",
         public_id=public_id,
         defaults={
             "owner_user_id": owner.id,
             "storage_key": storage_key,
             "bucket": os.getenv("OBJECT_STORAGE_BUCKET_PUBLIC", "cineconnect-public"),
-            "mime_type": "image/png",
+            "mime_type": mimetypes.guess_type(filename)[0] or "image/jpeg",
             "size_bytes": len(payload),
             "checksum_sha256": hashlib.sha256(payload).hexdigest(),
             "visibility": "public",
             "scan_status": "clean",
             "processing_status": "ready",
-            "original_name": filename,
+            "original_name": stored_name,
         },
     )
     file.owner_user_id = owner.id
     file.storage_key = storage_key
-    file.mime_type = "image/png"
+    file.mime_type = mimetypes.guess_type(filename)[0] or "image/jpeg"
     file.size_bytes = len(payload)
     file.checksum_sha256 = hashlib.sha256(payload).hexdigest()
     file.visibility = "public"
     file.scan_status = "clean"
     file.processing_status = "ready"
-    file.original_name = filename
+    file.original_name = stored_name
     return file
 
 
-def attach_listing_portrait(
+def attach_listing_cover(
     stats: dict[str, int],
     *,
     listing: MarketplaceListing,
@@ -114,7 +127,7 @@ def attach_listing_portrait(
     media = ensure(
         ListingMedia,
         stats,
-        "portrait_listing_media",
+        "listing_cover_media",
         listing_id=listing.id,
         file_id=file.id,
         defaults={"sort_order": -10, "is_cover": True, "caption": caption},
@@ -188,6 +201,239 @@ def ensure_listing(
             "published_at": utc_now(),
         },
     )
+
+
+def demo_media_id(kind: str, entity_id: str) -> tuple[str, str]:
+    digest = hashlib.sha256(f"{kind}:{entity_id}".encode()).hexdigest()[:12].upper()
+    return f"DEMO-MEDIA-{kind[:3].upper()}-{digest}", f"{kind}-{digest.lower()}.jpg"
+
+
+def ensure_demo_provider_listing(
+    stats: dict[str, int],
+    *,
+    owner: User,
+    listing_type: str,
+    profile_entity_id: str,
+    title: str,
+    summary: str,
+    city: City,
+    price_minor: int,
+) -> MarketplaceListing:
+    existing = db.session.execute(
+        select(MarketplaceListing)
+        .where(
+            MarketplaceListing.owner_user_id == owner.id,
+            MarketplaceListing.listing_type == listing_type,
+            MarketplaceListing.profile_entity_id == profile_entity_id,
+        )
+        .order_by(MarketplaceListing.updated_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if existing is not None:
+        stats["demo_provider_listing_existing"] = (
+            stats.get("demo_provider_listing_existing", 0) + 1
+        )
+        return existing
+    digest = (
+        hashlib.sha256(f"{listing_type}:{profile_entity_id}".encode())
+        .hexdigest()[:10]
+        .upper()
+    )
+    return ensure_listing(
+        stats,
+        public_id=f"DEMO-AUTO-{listing_type[:3].upper()}-{digest}",
+        owner=owner,
+        listing_type=listing_type,
+        profile_entity_id=profile_entity_id,
+        title=title,
+        summary=summary,
+        city=city,
+        price_minor=price_minor,
+    )
+
+
+def attach_all_demo_marketplace_media(
+    stats: dict[str, int],
+    *,
+    default_city: City,
+) -> None:
+    """Give every public demo provider a DB-backed cover without touching real users."""
+
+    demo_email = f"%@{DEMO_DOMAIN}"
+    for model in db.session.execute(
+        select(ModelProfile)
+        .join(User, User.id == ModelProfile.user_id)
+        .where(User.email.like(demo_email), ModelProfile.public_visibility.is_(True))
+    ).scalars():
+        profile = one(UserProfile, user_id=model.user_id)
+        ensure_demo_provider_listing(
+            stats,
+            owner=model.user,
+            listing_type="model",
+            profile_entity_id=model.public_id,
+            title=f"{model.talent_profile.screen_name} · Commercial model",
+            summary=(profile.bio if profile else None)
+            or model.brand_safety_notes
+            or "Commercial and editorial model available for verified productions.",
+            city=(profile.city if profile and profile.city else default_city),
+            price_minor=model.talent_profile.day_rate_minor or 180_000 * 100,
+        )
+
+    for location in db.session.execute(
+        select(LocationProperty)
+        .join(User, User.id == LocationProperty.owner_user_id)
+        .where(
+            User.email.like(demo_email),
+            LocationProperty.status.in_(["published", "active", "available"]),
+        )
+    ).scalars():
+        ensure_demo_provider_listing(
+            stats,
+            owner=location.owner,
+            listing_type="location",
+            profile_entity_id=location.public_id,
+            title=location.name,
+            summary=location.description or "Production-ready filming location.",
+            city=location.city or default_city,
+            price_minor=220_000 * 100,
+        )
+
+    for provider in db.session.execute(
+        select(EquipmentProviderProfile)
+        .join(User, User.id == EquipmentProviderProfile.user_id)
+        .where(User.email.like(demo_email))
+    ).scalars():
+        ensure_demo_provider_listing(
+            stats,
+            owner=provider.user,
+            listing_type="equipment",
+            profile_entity_id=provider.public_id,
+            title=provider.name,
+            summary=provider.bio
+            or provider.coverage
+            or "Professional cinema equipment.",
+            city=provider.city or default_city,
+            price_minor=260_000 * 100,
+        )
+
+    for agency in db.session.execute(
+        select(CastingAgency)
+        .join(User, User.id == CastingAgency.owner_user_id)
+        .where(User.email.like(demo_email))
+    ).scalars():
+        ensure_demo_provider_listing(
+            stats,
+            owner=agency.owner,
+            listing_type="agency",
+            profile_entity_id=agency.public_id,
+            title=agency.name,
+            summary="Casting, auditions and a production-ready represented roster.",
+            city=agency.city or default_city,
+            price_minor=125_000 * 100,
+        )
+
+    for partner in db.session.execute(
+        select(DistributionPartnerProfile)
+        .join(User, User.id == DistributionPartnerProfile.user_id)
+        .where(User.email.like(demo_email))
+    ).scalars():
+        profile = one(UserProfile, user_id=partner.user_id)
+        ensure_demo_provider_listing(
+            stats,
+            owner=partner.user,
+            listing_type="distribution",
+            profile_entity_id=partner.public_id,
+            title=partner.name,
+            summary=partner.territories
+            or "Theatrical, streaming and digital release partner.",
+            city=(profile.city if profile and profile.city else default_city),
+            price_minor=350_000 * 100,
+        )
+
+    asset_specs = {
+        "actor": ("nova-cola-actor-hero.jpg", DEMO_ASSET_ROOT, "profile-heroes"),
+        "talent": ("nova-cola-actor-hero.jpg", DEMO_ASSET_ROOT, "profile-heroes"),
+        "model": ("nova-cola-model-hero.jpg", DEMO_ASSET_ROOT, "profile-heroes"),
+        "influencer": (
+            "nova-cola-model-hero.jpg",
+            DEMO_ASSET_ROOT,
+            "profile-heroes",
+        ),
+        "crew": (
+            "commercial-production-crew.jpg",
+            DEMO_MEDIA_ROOT,
+            "marketplace-covers",
+        ),
+        "location": (
+            "haveli-gulberg-location.jpg",
+            DEMO_MEDIA_ROOT,
+            "marketplace-covers",
+        ),
+        "equipment": (
+            "cinema-equipment-package.jpg",
+            DEMO_MEDIA_ROOT,
+            "marketplace-covers",
+        ),
+        "agency": (
+            "casting-agency-studio.jpg",
+            DEMO_MEDIA_ROOT,
+            "marketplace-covers",
+        ),
+        "distribution": (
+            "distribution-premiere.jpg",
+            DEMO_MEDIA_ROOT,
+            "marketplace-covers",
+        ),
+    }
+    listings = db.session.execute(
+        select(MarketplaceListing)
+        .join(User, User.id == MarketplaceListing.owner_user_id)
+        .where(
+            User.email.like(demo_email),
+            MarketplaceListing.visibility == "public",
+            MarketplaceListing.moderation_status == "approved",
+        )
+    ).scalars()
+    for listing in listings:
+        spec = asset_specs.get(listing.listing_type)
+        if spec is None:
+            continue
+        existing_cover = next(
+            (row.file for row in listing.media if row.file is not None),
+            None,
+        )
+        if existing_cover is not None:
+            stats["demo_listing_media_existing"] = (
+                stats.get("demo_listing_media_existing", 0) + 1
+            )
+            cover = existing_cover
+        else:
+            public_id, stored_name = demo_media_id(
+                listing.listing_type,
+                listing.profile_entity_id or listing.public_id,
+            )
+            filename, source_root, storage_folder = spec
+            cover = install_public_image(
+                stats,
+                public_id=public_id,
+                owner=listing.owner,
+                filename=filename,
+                source_root=source_root,
+                storage_folder=storage_folder,
+                storage_filename=stored_name,
+            )
+            attach_listing_cover(
+                stats,
+                listing=listing,
+                file=cover,
+                caption=f"{listing.title} · marketplace cover",
+            )
+        profile = one(UserProfile, user_id=listing.owner_user_id)
+        if profile is not None:
+            if profile.avatar_file_id is None:
+                profile.avatar_file_id = cover.id
+            if profile.cover_file_id is None:
+                profile.cover_file_id = cover.id
 
 
 def ensure_project(
@@ -386,20 +632,49 @@ def seed() -> dict[str, int]:
             )
         )
 
+    agency_listing = ensure_listing(
+        stats,
+        public_id="DEMO-LST-BRAND-AGENCY-001",
+        owner=required(User, public_id="DEMO-CA-001"),
+        listing_type="agency",
+        profile_entity_id="DEMO-AGY-001",
+        title="North Star Casting · Commercial roster",
+        summary=(
+            "A verified casting studio representing screen-ready actors, models "
+            "and real people for campaigns and film productions."
+        ),
+        city=city,
+        price_minor=125_000 * 100,
+    )
+    distribution_listing = ensure_listing(
+        stats,
+        public_id="DEMO-LST-BRAND-DISTRIBUTION-001",
+        owner=required(User, public_id="DEMO-DS-001"),
+        listing_type="distribution",
+        profile_entity_id="DEMO-DSTP-001",
+        title="Nova Cola Distribution Desk",
+        summary=(
+            "A release partner coordinating theatrical, OTT and social delivery "
+            "across Pakistan, the GCC and the UK."
+        ),
+        city=city,
+        price_minor=350_000 * 100,
+    )
+
     actor = actor_listing.owner
     model_listing = listings[1]
     model = model_listing.owner
-    actor_portrait = install_public_portrait(
+    actor_portrait = install_public_image(
         stats,
         public_id="DEMO-BRAND-ACTOR-HERO-001",
         owner=actor,
-        filename="nova-cola-actor-hero.png",
+        filename="nova-cola-actor-hero.jpg",
     )
-    model_portrait = install_public_portrait(
+    model_portrait = install_public_image(
         stats,
         public_id="DEMO-BRAND-MODEL-HERO-001",
         owner=model,
-        filename="nova-cola-model-hero.png",
+        filename="nova-cola-model-hero.jpg",
     )
     actor_profile = required(UserProfile, user_id=actor.id)
     actor_profile.bio = (
@@ -434,7 +709,7 @@ def seed() -> dict[str, int]:
     )
     actor_listing.title = "Ayaan Malik · Commercial actor"
     actor_listing.summary = actor_profile.bio
-    attach_listing_portrait(
+    attach_listing_cover(
         stats,
         listing=actor_listing,
         file=actor_portrait,
@@ -465,11 +740,91 @@ def seed() -> dict[str, int]:
     )
     model_listing.title = "Maya Raza · Commercial model"
     model_listing.summary = model_profile.bio
-    attach_listing_portrait(
+    attach_listing_cover(
         stats,
         listing=model_listing,
         file=model_portrait,
         caption="Maya Raza · campaign portrait",
+    )
+
+    marketplace_media = [
+        (
+            listings[2],
+            "DEMO-BRAND-CREW-COVER-001",
+            "commercial-production-crew.jpg",
+            "Commercial production crew · live set",
+        ),
+        (
+            listings[3],
+            "DEMO-BRAND-LOCATION-COVER-001",
+            "haveli-gulberg-location.jpg",
+            "Haveli Gulberg · production interior",
+        ),
+        (
+            listings[4],
+            "DEMO-BRAND-EQUIPMENT-COVER-001",
+            "cinema-equipment-package.jpg",
+            "Cinema equipment package · camera and lighting",
+        ),
+        (
+            agency_listing,
+            "DEMO-BRAND-AGENCY-COVER-001",
+            "casting-agency-studio.jpg",
+            "North Star Casting · roster studio",
+        ),
+        (
+            distribution_listing,
+            "DEMO-BRAND-DISTRIBUTION-COVER-001",
+            "distribution-premiere.jpg",
+            "Distribution partner · premiere and release planning",
+        ),
+    ]
+    for listing, public_id, filename, caption in marketplace_media:
+        file = install_public_image(
+            stats,
+            public_id=public_id,
+            owner=listing.owner,
+            filename=filename,
+            source_root=DEMO_MEDIA_ROOT,
+            storage_folder="marketplace-covers",
+        )
+        attach_listing_cover(
+            stats,
+            listing=listing,
+            file=file,
+            caption=caption,
+        )
+        owner_profile = one(UserProfile, user_id=listing.owner_user_id)
+        if owner_profile is not None:
+            owner_profile.avatar_file_id = file.id
+            owner_profile.cover_file_id = file.id
+
+    attach_all_demo_marketplace_media(stats, default_city=city)
+
+    campaign_cover = install_public_image(
+        stats,
+        public_id="DEMO-BRAND-CAMPAIGN-COVER-001",
+        owner=brand,
+        filename="nova-cola-winter-stories.jpg",
+        source_root=DEMO_MEDIA_ROOT,
+        storage_folder="campaign-covers",
+    )
+    brand_logo = install_public_image(
+        stats,
+        public_id="DEMO-BRAND-LOGO-001",
+        owner=brand,
+        filename="nova-cola-brand-mark.jpg",
+        source_root=DEMO_MEDIA_ROOT,
+        storage_folder="brand-identity",
+    )
+    brand_profile = required(BrandProfile, owner_user_id=brand.id)
+    brand_profile.logo_file_id = brand_logo.id
+    brand_public_profile = required(UserProfile, user_id=brand.id)
+    brand_public_profile.avatar_file_id = brand_logo.id
+    brand_public_profile.cover_file_id = campaign_cover.id
+    brand_public_profile.bio = (
+        "Nova Cola creates optimistic, cinematic brand stories rooted in modern "
+        "Pakistani culture and shared moments."
     )
 
     shoot_day = date.today() + timedelta(days=21)
@@ -485,7 +840,7 @@ def seed() -> dict[str, int]:
         progress=58,
         budget_minor=3_800_000 * 100,
     )
-    ensure_project(
+    draft_project = ensure_project(
         stats,
         public_id="DEMO-BRAND-PRJ-002",
         owner=brand,
@@ -497,7 +852,7 @@ def seed() -> dict[str, int]:
         progress=0,
         budget_minor=1_650_000 * 100,
     )
-    ensure_project(
+    completed_project = ensure_project(
         stats,
         public_id="DEMO-BRAND-PRJ-003",
         owner=brand,
@@ -509,6 +864,14 @@ def seed() -> dict[str, int]:
         progress=100,
         budget_minor=2_400_000 * 100,
     )
+    for project in (active_project, draft_project, completed_project):
+        project.cover_file_id = campaign_cover.id
+    for opportunity in db.session.execute(
+        select(BrandOpportunity).where(
+            BrandOpportunity.brand_profile_id == brand_profile.id
+        )
+    ).scalars():
+        opportunity.cover_file_id = campaign_cover.id
 
     requirement_specs = [
         ("talent", "Lead actor", 1, 280_000 * 100),

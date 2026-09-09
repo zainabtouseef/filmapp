@@ -376,6 +376,7 @@ class CoreGlassCard extends StatelessWidget {
       padding: padding,
       selected: selected,
       tone: CineTone.premium,
+      accentEdge: true,
       child: child,
     );
   }

@@ -12,7 +12,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
-import '../models/brand_sponsor_models.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_booking_dialog.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -26,6 +26,8 @@ const _brandDiscoveryCategories = [
   'Crew',
   'Locations',
   'Media & Equipment',
+  'Agencies',
+  'Distribution',
 ];
 
 class BR09BrandMarketplaceScreen extends StatefulWidget {
@@ -236,16 +238,28 @@ class _BR09BrandMarketplaceScreenState
         else
           TourTarget(
             id: 'brand:demo:discovery-results',
-            child: BrandResponsiveGrid(
-              minWidth: 300,
-              children: [
-                for (final item in _items)
-                  _DiscoveryCard(
-                    item: item,
+            child: CineMarketplaceResults(
+              cards: [
+                for (final entry in _items.indexed)
+                  CineMarketplaceCard(
+                    title: entry.$2.title,
+                    kind: entry.$2.kind,
+                    category: entry.$2.category,
+                    subtitle: entry.$2.subtitle,
+                    summary: entry.$2.summary,
+                    city: entry.$2.cityName,
+                    rateLabel: entry.$2.rateLabel,
+                    verificationStatus: entry.$2.verificationStatus,
+                    imageUrl: entry.$2.coverImageUrl,
+                    tags: entry.$2.tags,
+                    available: entry.$2.available,
+                    rating: entry.$2.ratingAverage.toDouble(),
+                    trustScore: entry.$2.trustMetrics?.score,
                     busy: _loading,
-                    onProfile: () => _showProfile(item),
-                    onShortlist: () => _shortlist(item),
-                    onRequest: () => _request(item),
+                    featured: entry.$1 == 0,
+                    onProfile: () => _showProfile(entry.$2),
+                    onShortlist: () => _shortlist(entry.$2),
+                    onRequest: () => _request(entry.$2),
                   ),
               ],
             ),
@@ -261,17 +275,17 @@ class _BR09BrandMarketplaceScreenState
     return null;
   }
 
-  Future<void> _shortlist(DirectorDiscoveryItem item) async {
+  Future<bool> _shortlist(DirectorDiscoveryItem item) async {
     final listingId = item.listingId;
     final project = _selectedProject;
     if (listingId == null) {
       brandSnack(
           context, 'This provider has not published a bookable listing yet');
-      return;
+      return false;
     }
     if (project == null) {
       brandSnack(context, 'Select or create a project first');
-      return;
+      return false;
     }
     setState(() => _loading = true);
     try {
@@ -283,8 +297,10 @@ class _BR09BrandMarketplaceScreenState
       if (mounted) {
         brandSnack(context, '${item.title} added to ${project.title}');
       }
+      return true;
     } catch (error) {
       if (mounted) brandSnack(context, brandApiMessage(error));
+      return false;
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -336,38 +352,31 @@ class _BR09BrandMarketplaceScreenState
             );
           }
           final detail = snapshot.data!;
-          final talentProfile = {'actor', 'model', 'influencer'}
-              .contains(detail.kind.toLowerCase());
           final trust = detail.trustMetrics;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (talentProfile)
-                TalentProfileShowcase(
-                  name: detail.title,
-                  role: detail.category,
-                  city: detail.cityName,
-                  summary: detail.summary,
-                  portraitUrl: detail.coverImageUrl,
-                  verified: detail.verificationStatus == 'approved',
-                  available: detail.available,
-                  rateLabel: detail.rateLabel,
-                  rating: trust?.ratingAverage ??
-                      (detail.ratingAverage > 0
-                          ? detail.ratingAverage.toDouble()
-                          : null),
-                  reviewCount: trust?.reviewCount,
-                  highlights: [
-                    ...detail.tags,
-                    if (trust != null && trust.score > 0)
-                      'Trust ${trust.score}/100',
-                  ],
-                  badge: detail.kind == 'model'
-                      ? 'Campaign-ready model'
-                      : 'Screen-ready talent',
-                )
-              else
-                Text(detail.summary),
+              TalentProfileShowcase(
+                name: detail.title,
+                role: detail.category,
+                city: detail.cityName,
+                summary: detail.summary,
+                portraitUrl: detail.coverImageUrl,
+                verified: detail.verificationStatus == 'approved',
+                available: detail.available,
+                rateLabel: detail.rateLabel,
+                rating: trust?.ratingAverage ??
+                    (detail.ratingAverage > 0
+                        ? detail.ratingAverage.toDouble()
+                        : null),
+                reviewCount: trust?.reviewCount,
+                highlights: [
+                  ...detail.tags,
+                  if (trust != null && trust.score > 0)
+                    'Trust ${trust.score}/100',
+                ],
+                badge: _profileBadge(detail.kind),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 7,
@@ -398,7 +407,7 @@ class _BR09BrandMarketplaceScreenState
                     value: row.value,
                   ),
               ],
-              if (talentProfile && detail.media.isNotEmpty) ...[
+              if (detail.media.isNotEmpty) ...[
                 const SizedBox(height: 18),
                 TalentProfileGallery(
                   items: [
@@ -426,115 +435,16 @@ class _BR09BrandMarketplaceScreenState
   }
 }
 
-class _DiscoveryCard extends StatelessWidget {
-  final DirectorDiscoveryItem item;
-  final bool busy;
-  final VoidCallback onProfile;
-  final VoidCallback onShortlist;
-  final VoidCallback onRequest;
-
-  const _DiscoveryCard({
-    required this.item,
-    required this.busy,
-    required this.onProfile,
-    required this.onShortlist,
-    required this.onRequest,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BrandSectionCard(
-      title: item.title,
-      icon: _discoveryIcon(item.kind),
-      tone: item.verificationStatus == 'approved'
-          ? BrandTone.green
-          : BrandTone.gold,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BrandMediaFrame(
-            imageUrl: item.coverImageUrl ?? '',
-            title: item.title,
-            badge: item.verificationStatus == 'approved'
-                ? 'Verified ${item.kind}'
-                : readableBrandStatus(item.kind),
-            fallbackIcon: _discoveryIcon(item.kind),
-            aspectRatio: {'actor', 'model', 'influencer'}.contains(item.kind)
-                ? 4 / 3
-                : 16 / 9,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            item.subtitle.isEmpty ? item.category : item.subtitle,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: context.appColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            item.summary,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              BrandLiveStatusChip(status: item.verificationStatus),
-              Chip(label: Text(item.cityName)),
-              Chip(label: Text(item.rateLabel)),
-              if (item.trustMetrics?.score != null)
-                Chip(label: Text('Trust ${item.trustMetrics!.score}/100')),
-            ],
-          ),
-          if (item.tags.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              item.tags.take(4).join(' · '),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: context.appColors.textSecondary,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              TextButton.icon(
-                onPressed: busy ? null : onProfile,
-                icon: const Icon(Icons.person_search_outlined),
-                label: const Text('Profile'),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy ? null : onShortlist,
-                icon: const Icon(Icons.favorite_border_rounded),
-                label: const Text('Shortlist'),
-              ),
-              FilledButton.icon(
-                onPressed: busy ? null : onRequest,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text('Request'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-IconData _discoveryIcon(String kind) {
-  return switch (kind) {
-    'actor' => Icons.theater_comedy_outlined,
-    'model' => Icons.accessibility_new_outlined,
-    'influencer' => Icons.campaign_outlined,
-    'crew' => Icons.groups_outlined,
-    'location' => Icons.location_on_outlined,
-    'equipment' => Icons.videocam_outlined,
-    _ => Icons.storefront_outlined,
+String _profileBadge(String kind) {
+  return switch (kind.toLowerCase()) {
+    'actor' => 'Screen-ready actor',
+    'model' => 'Campaign-ready model',
+    'influencer' => 'Verified creator profile',
+    'crew' => 'Production-ready crew',
+    'location' => 'Camera-ready location',
+    'equipment' => 'Production-ready package',
+    'agency' => 'Verified casting partner',
+    'distribution' => 'Release-ready partner',
+    _ => 'Verified CineConnect profile',
   };
 }

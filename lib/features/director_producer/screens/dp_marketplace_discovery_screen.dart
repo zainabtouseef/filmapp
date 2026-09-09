@@ -16,6 +16,7 @@ import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 
 const _categoryKeys = [
   'All',
@@ -26,6 +27,7 @@ const _categoryKeys = [
   'Locations',
   'Media & Equipment',
   'Agencies',
+  'Distribution',
 ];
 
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
@@ -106,9 +108,11 @@ class _DPMarketplaceDiscoveryScreenState
         category == 'Actors' ||
         category == 'Models' ||
         category == 'Influencers' ||
+        category == 'Crew' ||
         category == 'Locations' ||
         category == 'Media & Equipment' ||
-        category == 'Agencies';
+        category == 'Agencies' ||
+        category == 'Distribution';
   }
 
   bool _matchesFilters(DpCandidate candidate) {
@@ -119,7 +123,10 @@ class _DPMarketplaceDiscoveryScreenState
     final queryMatch = query.isEmpty ||
         candidate.name.toLowerCase().contains(query) ||
         candidate.city.toLowerCase().contains(query) ||
-        candidate.category.toLowerCase().contains(query);
+        candidate.category.toLowerCase().contains(query) ||
+        candidate.rateRange.toLowerCase().contains(query) ||
+        candidate.notes.toLowerCase().contains(query) ||
+        candidate.skills.any((skill) => skill.toLowerCase().contains(query));
     return categoryMatch && trustMatch && queryMatch;
   }
 
@@ -267,12 +274,12 @@ class _DPMarketplaceDiscoveryScreenState
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DPResponsiveGrid(
-                  minWidth: 300,
-                  children: candidates
+                CineMarketplaceResults(
+                  cards: candidates.indexed
                       .map(
-                        (candidate) => DPCandidateCard(
-                          candidate: candidate,
+                        (entry) => DPCandidateCard(
+                          featured: entry.$1 == 0,
+                          candidate: entry.$2,
                           onProfile: () => Navigator.pushNamed(
                             context,
                             widget.publicBuyerMode
@@ -280,16 +287,16 @@ class _DPMarketplaceDiscoveryScreenState
                                 : DirectorProducerRoutes.profile,
                             arguments: {
                               'candidateId': widget.publicBuyerMode
-                                  ? candidate.marketplaceListingId ??
-                                      candidate.profileId
-                                  : candidate.profileId,
-                              'type': candidate.category,
+                                  ? entry.$2.marketplaceListingId ??
+                                      entry.$2.profileId
+                                  : entry.$2.profileId,
+                              'type': entry.$2.category,
                               if (!widget.publicBuyerMode)
                                 'projectId': _projectId,
                             },
                           ),
-                          onRequest: candidate.marketplaceListingId == null
-                              ? () => _showProviderActionPending(candidate)
+                          onRequest: entry.$2.marketplaceListingId == null
+                              ? () => _showProviderActionPending(entry.$2)
                               : () async {
                                   final isPublicBuyer =
                                       AuthScope.maybeOf(context)
@@ -309,10 +316,10 @@ class _DPMarketplaceDiscoveryScreenState
                                         : DirectorProducerRoutes.bookingRequest,
                                     arguments: {
                                       'candidateId':
-                                          candidate.marketplaceListingId,
+                                          entry.$2.marketplaceListingId,
                                       if (!widget.publicBuyerMode)
                                         'projectId': _projectId,
-                                      'category': candidate.category,
+                                      'category': entry.$2.category,
                                     },
                                   );
                                 },
@@ -323,12 +330,12 @@ class _DPMarketplaceDiscoveryScreenState
                                   );
                                   return false;
                                 }
-                              : candidate.marketplaceListingId == null
+                              : entry.$2.marketplaceListingId == null
                                   ? () async {
-                                      _showProviderActionPending(candidate);
+                                      _showProviderActionPending(entry.$2);
                                       return false;
                                     }
-                                  : () => _shortlistCandidate(candidate),
+                                  : () => _shortlistCandidate(entry.$2),
                         ),
                       )
                       .toList(),

@@ -7,6 +7,8 @@ class GlassSectionCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final bool selected;
   final double radius;
+  final CineTone tone;
+  final bool accentEdge;
 
   const GlassSectionCard({
     super.key,
@@ -14,6 +16,8 @@ class GlassSectionCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(16),
     this.selected = false,
     this.radius = 22,
+    this.tone = CineTone.premium,
+    this.accentEdge = true,
   });
 
   @override
@@ -24,7 +28,8 @@ class GlassSectionCard extends StatelessWidget {
       radius: radius,
       padding: padding,
       selected: selected,
-      tone: CineTone.premium,
+      tone: tone,
+      accentEdge: accentEdge,
       child: child,
     );
   }
