@@ -108,20 +108,25 @@ DEMO_MEDIA = [
 
 
 def _city(name: str) -> City | None:
-    return db.session.execute(select(City).where(City.name == name)).scalar_one_or_none()
+    return db.session.execute(
+        select(City).where(City.name == name)
+    ).scalar_one_or_none()
 
 
 def _project(owner: User, item: dict[str, object]) -> Project:
     project = db.session.execute(
-        select(Project).where(Project.owner_user_id == owner.id, Project.title == item["project"])
+        select(Project).where(
+            Project.owner_user_id == owner.id, Project.title == item["project"]
+        )
     ).scalar_one_or_none()
     if project is None:
+        project_city = _city(str(item["city"]))
         project = Project(
             owner_user_id=owner.id,
             title=str(item["project"]),
             project_type=str(item["type"]),
             description=str(item["description"]),
-            city_id=_city(str(item["city"])).id if _city(str(item["city"])) else None,
+            city_id=project_city.id if project_city else None,
             start_date=date(2026, 8, 1),
             end_date=date(2026, 12, 31),
             status="active",
@@ -157,7 +162,9 @@ def _project(owner: User, item: dict[str, object]) -> Project:
 
 
 def seed() -> None:
-    owner = db.session.execute(select(User).where(User.email == OWNER_EMAIL)).scalar_one_or_none()
+    owner = db.session.execute(
+        select(User).where(User.email == OWNER_EMAIL)
+    ).scalar_one_or_none()
     if owner is None:
         raise RuntimeError(f"Demo owner not found: {OWNER_EMAIL}")
 
@@ -188,7 +195,7 @@ def seed() -> None:
         media.external_url = str(item["url"])
         media.external_provider = "youtube"
         media.external_thumbnail_url = str(item["thumbnail"])
-        media.external_duration_seconds = int(item["duration"])
+        media.external_duration_seconds = int(str(item["duration"]))
         media.folder = str(item["folder"])
         media.label = str(item["label"])
         media.visibility = "public"

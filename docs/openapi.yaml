@@ -40,6 +40,7 @@ tags:
   - name: Announcements
   - name: Analytics
   - name: Insurance
+  - name: CinePlanner
 security:
   - bearerAuth: []
 paths:
@@ -985,6 +986,39 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/ValidationError"
+  /projects/{project_id}/duplicate:
+    post:
+      tags: [Projects]
+      operationId: duplicateProject
+      parameters:
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title:
+                  type: string
+      responses:
+        "201":
+          description: Project and its requirements duplicated as a draft.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /projects/{project_id}/members:
     get:
       tags: [Projects]
@@ -1378,6 +1412,17 @@ paths:
           name: q
           schema:
             type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
       responses:
         "200":
           description: Public approved marketplace listings.
@@ -1745,6 +1790,43 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "409":
           $ref: "#/components/responses/Conflict"
+  /bookings/{booking_id}/cancel:
+    post:
+      tags: [Bookings]
+      operationId: cancelBooking
+      parameters:
+        - in: path
+          name: booking_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+      responses:
+        "200":
+          description: Booking cancelled and reserved availability released.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /offers/{offer_id}/accept:
     post:
       tags: [Bookings]
@@ -2933,6 +3015,95 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BrandProfileEnvelope"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /brands/dashboard:
+    get:
+      tags: [Brand]
+      operationId: getBrandProductionDashboard
+      responses:
+        "200":
+          description: Live project, booking, payment and activity dashboard.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /brands/schedule:
+    get:
+      tags: [Brand]
+      operationId: getBrandProductionSchedule
+      parameters:
+        - in: query
+          name: project_id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project-scoped shoot and booking schedule.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /brands/discovery:
+    get:
+      tags: [Brand]
+      operationId: listBrandDiscovery
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: q
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verified actors, models, crew, locations and equipment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /brands/discovery/{kind}/{public_id}:
+    get:
+      tags: [Brand]
+      operationId: getBrandDiscoveryItem
+      parameters:
+        - in: path
+          name: kind
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: public_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Detailed verified production-resource profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /brand-opportunities:
     get:
       tags: [Brand]
@@ -4376,6 +4547,197 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEnvelope"
+  /cineplanner/productions:
+    get:
+      tags: [CinePlanner]
+      operationId: listCinePlannerProductions
+      summary: List productions available to the authenticated production user
+      responses:
+        "200":
+          description: Accessible CinePlanner productions.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [CinePlanner]
+      operationId: createCinePlannerProduction
+      summary: Create a CinePlanner production
+      responses:
+        "201":
+          description: Production created.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /cineplanner/productions/{productionId}:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+    get:
+      tags: [CinePlanner]
+      operationId: getCinePlannerProduction
+      summary: Get the connected production console snapshot
+      responses:
+        "200":
+          description: Screenplay, breakdown, schedule, budget, and permission snapshot.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /cineplanner/productions/{productionId}/scripts:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+    post:
+      tags: [CinePlanner]
+      operationId: analyzeCinePlannerScreenplay
+      summary: Create an immutable script revision and queue staged screenplay analysis
+      responses:
+        "202":
+          description: Screenplay analysis queued.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /cineplanner/productions/{productionId}/schedule/generate:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+    post:
+      tags: [CinePlanner]
+      operationId: generateCinePlannerSchedule
+      summary: Preview or apply lowest-cost, fastest, and balanced deterministic plans
+      responses:
+        "200":
+          description: Three schedule plans and their conflicts and cost estimates.
+  /cineplanner/productions/{productionId}/assistant:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+    post:
+      tags: [CinePlanner]
+      operationId: askCinePlanner
+      summary: Ask a question using a scoped production snapshot
+      responses:
+        "200":
+          description: Grounded answer and production entity sources.
+  /cineplanner/productions/{productionId}/call-sheets:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+    post:
+      tags: [CinePlanner]
+      operationId: generateCinePlannerCallSheet
+      summary: Generate a versioned call sheet from a locked shoot day
+      responses:
+        "201":
+          description: Call sheet generated.
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /cineplanner/productions/{productionId}/call-sheets/{callSheetId}.pdf:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: callSheetId
+        required: true
+        schema: {type: string}
+    get:
+      tags: [CinePlanner]
+      operationId: downloadCinePlannerCallSheetPdf
+      summary: Download a generated call sheet as a PDF
+      responses:
+        "200":
+          description: Call sheet PDF.
+          content:
+            application/pdf:
+              schema: {type: string, format: binary}
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /cineplanner/productions/{productionId}/reports/{reportType}:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: reportType
+        required: true
+        schema: {type: string}
+    get:
+      tags: [CinePlanner]
+      operationId: previewCinePlannerReport
+      summary: Preview a live production report as JSON
+      responses:
+        "200":
+          description: Report rows generated from current production data.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /cineplanner/productions/{productionId}/reports/{reportType}.csv:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: reportType
+        required: true
+        schema: {type: string}
+    get:
+      tags: [CinePlanner]
+      operationId: downloadCinePlannerReportCsv
+      summary: Download a live production report as CSV
+      responses:
+        "200":
+          description: UTF-8 CSV report.
+          content:
+            text/csv:
+              schema: {type: string, format: binary}
+  /cineplanner/productions/{productionId}/reports/{reportType}.xlsx:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: reportType
+        required: true
+        schema: {type: string}
+    get:
+      tags: [CinePlanner]
+      operationId: downloadCinePlannerReportExcel
+      summary: Download a live production report as Excel
+      responses:
+        "200":
+          description: Excel workbook.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: {type: string, format: binary}
+  /cineplanner/productions/{productionId}/reports/{reportType}.pdf:
+    parameters:
+      - in: path
+        name: productionId
+        required: true
+        schema: {type: string}
+      - in: path
+        name: reportType
+        required: true
+        schema: {type: string}
+    get:
+      tags: [CinePlanner]
+      operationId: downloadCinePlannerReportPdf
+      summary: Download a live production report as PDF
+      responses:
+        "200":
+          description: PDF report.
+          content:
+            application/pdf:
+              schema: {type: string, format: binary}
 components:
   parameters:
     SubmissionId:
@@ -5793,7 +6155,7 @@ components:
           format: date
         status:
           type: string
-          enum: [draft, active, paused, completed, archived]
+          enum: [draft, active, paused, completed, cancelled, archived]
         estimated_budget_minor:
           type: [integer, "null"]
         currency:
@@ -7716,14 +8078,23 @@ components:
     MarketplaceListingPublishRequest:
       type: object
       additionalProperties: false
-      required: [listing_type, title, summary]
+      required: [listing_type]
       properties:
         listing_type:
           type: string
-          enum: [talent]
+          enum: [actor, model, influencer, talent, crew, location, equipment]
         title:
           type: string
         summary:
+          type: string
+        profile_entity_id:
+          type: string
+        property_id:
+          type: string
+        price_from_minor:
+          type: integer
+          minimum: 0
+        currency:
           type: string
         city_id:
           type: [string, "null"]
@@ -7757,12 +8128,25 @@ components:
         data:
           type: object
           additionalProperties: false
-          required: [listings]
+          required: [listings, pagination]
           properties:
             listings:
               type: array
               items:
                 $ref: "#/components/schemas/MarketplaceListing"
+            pagination:
+              type: object
+              additionalProperties: false
+              required: [page, per_page, total, has_more]
+              properties:
+                page:
+                  type: integer
+                per_page:
+                  type: integer
+                total:
+                  type: integer
+                has_more:
+                  type: boolean
         meta:
           $ref: "#/components/schemas/Meta"
     MarketplaceFacetsEnvelope:

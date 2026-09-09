@@ -357,9 +357,7 @@ def _application_payload(item: CastingApplication) -> dict[str, Any]:
             "score": item.review_score,
             "comment": item.review_comment,
             "reviewed_by": _user_payload(item.reviewer) if item.reviewer else None,
-            "reviewed_at": item.reviewed_at.isoformat()
-            if item.reviewed_at
-            else None,
+            "reviewed_at": item.reviewed_at.isoformat() if item.reviewed_at else None,
         },
         "status_events": [_status_event_payload(row) for row in item.status_events],
         "created_at": item.created_at.isoformat(),
@@ -1235,13 +1233,15 @@ def update_director_casting_application(public_id: str) -> Response:
     review_touched = False
     if "review_score" in payload:
         raw_score = payload.get("review_score")
-        if raw_score in (None, ""):
+        if raw_score is None or raw_score == "":
             application.review_score = None
         else:
             try:
                 score = int(raw_score)
             except (TypeError, ValueError):
-                raise _field_error("review_score", "Review score must be a number.")
+                raise _field_error(
+                    "review_score", "Review score must be a number."
+                ) from None
             if score < 1 or score > 10:
                 raise _field_error("review_score", "Review score must be from 1 to 10.")
             application.review_score = score

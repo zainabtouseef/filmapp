@@ -40,8 +40,12 @@ def upgrade() -> None:
         "payment_schedules",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("total_minor", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
@@ -60,7 +64,9 @@ def upgrade() -> None:
         "payment_milestones",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("schedule_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "schedule_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("name", sa.String(length=120), nullable=False),
         sa.Column("sequence", sa.Integer(), nullable=False),
         sa.Column("amount_minor", sa.Integer(), nullable=False),
@@ -72,15 +78,23 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_payment_milestones_public_id"),
-        sa.UniqueConstraint("schedule_id", "sequence", name="uq_payment_milestone_sequence"),
+        sa.UniqueConstraint(
+            "schedule_id", "sequence", name="uq_payment_milestone_sequence"
+        ),
     )
     op.create_table(
         "payment_transactions",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("milestone_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("payer_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("payee_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "milestone_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "payer_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "payee_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("provider", sa.String(length=64), nullable=False),
         sa.Column("provider_reference", sa.String(length=180), nullable=True),
         sa.Column("amount_minor", sa.Integer(), nullable=False),
@@ -107,15 +121,23 @@ def upgrade() -> None:
         "payment_proofs",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("transaction_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "transaction_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("file_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
         sa.Column("claimed_amount_minor", sa.Integer(), nullable=False),
         sa.Column("method", sa.String(length=64), nullable=False),
-        sa.Column("transaction_reference_encrypted", sa.String(length=256), nullable=True),
-        sa.Column("submitted_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "transaction_reference_encrypted", sa.String(length=256), nullable=True
+        ),
+        sa.Column(
+            "submitted_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("risk_score", sa.Integer(), nullable=False),
-        sa.Column("reviewed_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "reviewed_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("rejection_reason", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(["file_id"], ["files.id"], ondelete="SET NULL"),
@@ -137,15 +159,21 @@ def upgrade() -> None:
         "receipts",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("transaction_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "transaction_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("receipt_number", sa.String(length=64), nullable=False),
         sa.Column(
-            "issued_to_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+            "issued_to_user_id",
+            sa.Uuid(as_uuid=True, native_uuid=False),
+            nullable=False,
         ),
         sa.Column("amount_minor", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
-        sa.ForeignKeyConstraint(["issued_to_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["issued_to_user_id"], ["users.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(
             ["transaction_id"], ["payment_transactions.id"], ondelete="CASCADE"
         ),
@@ -159,7 +187,9 @@ def upgrade() -> None:
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
         sa.Column("user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column(
             "transaction_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),
@@ -178,7 +208,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_ledger_entries_public_id"),
     )
-    op.create_index("ix_ledger_user_occurred", "ledger_entries", ["user_id", "occurred_at"])
+    op.create_index(
+        "ix_ledger_user_occurred", "ledger_entries", ["user_id", "occurred_at"]
+    )
     op.create_table(
         "fee_rules",
         *_audit_columns(),
@@ -196,8 +228,12 @@ def upgrade() -> None:
     op.create_table(
         "booking_fee_snapshots",
         *_audit_columns(),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("fee_rule_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "fee_rule_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("base_minor", sa.Integer(), nullable=False),
         sa.Column("fee_minor", sa.Integer(), nullable=False),
         sa.Column("tax_minor", sa.Integer(), nullable=False),
@@ -232,7 +268,9 @@ def upgrade() -> None:
         "payouts",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("payee_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "payee_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("amount_minor", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("provider_reference", sa.String(length=180), nullable=True),

@@ -32,17 +32,23 @@ def upgrade() -> None:
         "bookings",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column(
             "requirement_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),
         sa.Column(
-            "requester_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+            "requester_user_id",
+            sa.Uuid(as_uuid=True, native_uuid=False),
+            nullable=False,
         ),
         sa.Column(
             "provider_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
         ),
-        sa.Column("listing_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "listing_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("category", sa.String(length=64), nullable=False),
         sa.Column("status", sa.String(length=64), nullable=False),
         sa.Column("agreed_amount_minor", sa.Integer(), nullable=True),
@@ -56,9 +62,7 @@ def upgrade() -> None:
             ["listing_id"], ["marketplace_listings.id"], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["provider_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["provider_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["requester_user_id"], ["users.id"], ondelete="CASCADE"
         ),
@@ -68,12 +72,18 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_bookings_public_id"),
     )
-    op.create_index("ix_bookings_requester_status", "bookings", ["requester_user_id", "status"])
-    op.create_index("ix_bookings_provider_status", "bookings", ["provider_user_id", "status"])
+    op.create_index(
+        "ix_bookings_requester_status", "bookings", ["requester_user_id", "status"]
+    )
+    op.create_index(
+        "ix_bookings_provider_status", "bookings", ["provider_user_id", "status"]
+    )
     op.create_table(
         "booking_participants",
         *_audit_columns(),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("participant_role", sa.String(length=64), nullable=False),
         sa.Column("can_chat", sa.Boolean(), nullable=False),
@@ -81,12 +91,16 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("booking_id", "user_id", name="uq_booking_participant_user"),
+        sa.UniqueConstraint(
+            "booking_id", "user_id", name="uq_booking_participant_user"
+        ),
     )
     op.create_table(
         "booking_status_events",
         *_audit_columns(),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column(
             "actor_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),
@@ -102,12 +116,16 @@ def upgrade() -> None:
         "offers",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column(
             "sender_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
         ),
         sa.Column(
-            "recipient_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+            "recipient_user_id",
+            sa.Uuid(as_uuid=True, native_uuid=False),
+            nullable=False,
         ),
         sa.Column("revision", sa.Integer(), nullable=False),
         sa.Column("fee_minor", sa.Integer(), nullable=False),
@@ -118,7 +136,9 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["recipient_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["recipient_user_id"], ["users.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["sender_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_offers_public_id"),
@@ -128,14 +148,18 @@ def upgrade() -> None:
         "negotiation_threads",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column(
             "current_offer_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),
         sa.Column("locked_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["current_offer_id"], ["offers.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["current_offer_id"], ["offers.id"], ondelete="SET NULL"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("booking_id", name="uq_negotiation_threads_booking_id"),
         sa.UniqueConstraint("public_id", name="uq_negotiation_threads_public_id"),
@@ -143,7 +167,9 @@ def upgrade() -> None:
     op.create_table(
         "negotiation_rounds",
         *_audit_columns(),
-        sa.Column("thread_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "thread_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("offer_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("round_number", sa.Integer(), nullable=False),
         sa.Column(
@@ -151,9 +177,7 @@ def upgrade() -> None:
         ),
         sa.Column("message", sa.Text(), nullable=True),
         sa.ForeignKeyConstraint(["offer_id"], ["offers.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["sender_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["sender_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["thread_id"], ["negotiation_threads.id"], ondelete="CASCADE"
         ),
@@ -175,7 +199,9 @@ def upgrade() -> None:
         "availability_entries",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("calendar_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "calendar_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("resource_type", sa.String(length=64), nullable=False),
         sa.Column("resource_id", sa.String(length=40), nullable=False),
         sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
@@ -203,8 +229,12 @@ def upgrade() -> None:
         "conversations",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("type", sa.String(length=32), nullable=False),
         sa.Column("title", sa.String(length=180), nullable=False),
         sa.Column("last_message_at", sa.DateTime(timezone=True), nullable=True),
@@ -226,7 +256,9 @@ def upgrade() -> None:
         ),
         sa.Column("message_type", sa.String(length=32), nullable=False),
         sa.Column("body", sa.Text(), nullable=True),
-        sa.Column("reply_to_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "reply_to_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("decision_type", sa.String(length=64), nullable=True),
         sa.Column("edited_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
@@ -237,7 +269,11 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_messages_public_id"),
     )
-    op.create_index("ix_messages_conversation_created", "messages", ["conversation_id", "created_at"])
+    op.create_index(
+        "ix_messages_conversation_created",
+        "messages",
+        ["conversation_id", "created_at"],
+    )
     op.create_table(
         "conversation_members",
         *_audit_columns(),
@@ -259,12 +295,16 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("conversation_id", "user_id", name="uq_conversation_member"),
+        sa.UniqueConstraint(
+            "conversation_id", "user_id", name="uq_conversation_member"
+        ),
     )
     op.create_table(
         "message_attachments",
         *_audit_columns(),
-        sa.Column("message_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "message_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("file_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("attachment_type", sa.String(length=32), nullable=False),
         sa.Column("caption", sa.String(length=255), nullable=True),
@@ -278,8 +318,12 @@ def upgrade() -> None:
         sa.Column(
             "conversation_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
         ),
-        sa.Column("message_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("pinned_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "message_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "pinned_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("decision_key", sa.String(length=64), nullable=False),
         sa.Column(
             "superseded_by_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True

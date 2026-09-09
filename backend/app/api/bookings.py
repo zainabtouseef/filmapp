@@ -47,6 +47,7 @@ BOOKING_VISIBLE_STATUSES = BOOKING_MUTABLE_STATUSES | {
     "rejected",
     "cancelled",
     "secured",
+    "completed",
 }
 MANUAL_AVAILABILITY_STATUSES = {"available", "hold", "blocked"}
 CONFLICTING_AVAILABILITY_STATUSES = {"hold", "blocked", "booked"}
@@ -1041,6 +1042,53 @@ def reject_booking(public_id: str) -> Response:
     if booking.negotiation_thread:
         booking.negotiation_thread.status = "rejected"
         booking.negotiation_thread.locked_at = utc_now()
+    db.session.commit()
+    return jsonify(success({"booking": _booking_payload(booking)}))
+
+
+@bookings_blueprint.post("/bookings/<public_id>/cancel")
+def cancel_booking(public_id: str) -> Response:
+    user = _current_user()
+    booking = _booking_for_user(public_id, user)
+    if booking.status in {"rejected", "cancelled", "completed"}:
+        raise APIError(
+            "booking.invalid_state", "Booking cannot be cancelled.", status=409
+        )
+    reason = str(_json_body().get("reason", "")).strip()[:2000]
+    if len(reason) < 3:
+        raise _field_error("reason", "Add a short cancellation reason.")
+    _set_status(booking, "cancelled", user, reason=reason)
+    _sync_casting_application_status(
+        booking,
+        user,
+        "withdrawn" if user.id == booking.requester_user_id else "rejected",
+        note=reason,
+    )
+    if booking.negotiation_thread:
+        booking.negotiation_thread.status = "cancelled"
+        booking.negotiation_thread.locked_at = utc_now()
+    availability_rows = db.session.execute(
+        select(AvailabilityEntry).where(
+            AvailabilityEntry.source_booking_id == booking.id,
+            AvailabilityEntry.status == "booked",
+        )
+    ).scalars()
+    for entry in availability_rows:
+        entry.status = "available"
+        entry.note = f"Released after cancellation: {reason}"
+    counterparty_id = (
+        booking.provider_user_id
+        if user.id == booking.requester_user_id
+        else booking.requester_user_id
+    )
+    notify_user(
+        counterparty_id,
+        category="booking",
+        title=f"Booking cancelled: {booking.project.title}",
+        body=f"{user.display_name} cancelled the booking. {reason}",
+        route_name="/booking",
+        route_params={"id": booking.public_id},
+    )
     db.session.commit()
     return jsonify(success({"booking": _booking_payload(booking)}))
 

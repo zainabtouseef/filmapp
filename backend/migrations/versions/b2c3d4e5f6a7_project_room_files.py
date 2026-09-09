@@ -32,7 +32,9 @@ def upgrade() -> None:
         "project_files",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("file_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("folder", sa.String(length=64), nullable=False),
         sa.Column("label", sa.String(length=180), nullable=False),
@@ -57,13 +59,17 @@ def upgrade() -> None:
         "project_room_items",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("item_type", sa.String(length=32), nullable=False),
         sa.Column("title", sa.String(length=180), nullable=False),
         sa.Column("body", sa.Text(), nullable=True),
         sa.Column("linked_entity_type", sa.String(length=64), nullable=True),
         sa.Column("linked_entity_id", sa.String(length=40), nullable=True),
-        sa.Column("created_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "created_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("pinned_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),

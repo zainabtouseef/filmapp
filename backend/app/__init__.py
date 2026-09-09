@@ -5,6 +5,7 @@ from flask import Flask
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 from app.api import api_v1
+from app.api.health import live
 from app.config import Config
 from app.errors import register_error_handlers
 from app.extensions import cors, db, limiter, migrate
@@ -47,5 +48,6 @@ def create_app(config: type[Config] = Config) -> Flask:
     register_middleware(app)
     register_error_handlers(app)
     app.register_blueprint(api_v1, url_prefix="/api/v1")
+    app.add_url_rule("/api/health", "health_alias", live, methods=["GET"])
 
     return app

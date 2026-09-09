@@ -6,6 +6,7 @@ from app.api.app import app_blueprint
 from app.api.auth import auth_blueprint
 from app.api.bookings import bookings_blueprint
 from app.api.casting import casting_blueprint
+from app.api.cineplanner import cineplanner_blueprint
 from app.api.contracts import contracts_blueprint
 from app.api.director import director_blueprint
 from app.api.health import health_blueprint
@@ -29,6 +30,7 @@ api_v1.register_blueprint(marketplace_blueprint)
 api_v1.register_blueprint(projects_blueprint)
 api_v1.register_blueprint(bookings_blueprint)
 api_v1.register_blueprint(casting_blueprint)
+api_v1.register_blueprint(cineplanner_blueprint)
 api_v1.register_blueprint(opportunities_blueprint)
 api_v1.register_blueprint(contracts_blueprint)
 api_v1.register_blueprint(director_blueprint)

@@ -31,10 +31,18 @@ from app.models.projects import (
     Skill,
 )
 from app.responses import success
+from app.services.cineplanner_productions import ensure_cineplanner_production
 
 projects_blueprint = Blueprint("projects", __name__)
 
-PROJECT_STATUSES = {"draft", "active", "paused", "completed", "archived"}
+PROJECT_STATUSES = {
+    "draft",
+    "active",
+    "paused",
+    "completed",
+    "cancelled",
+    "archived",
+}
 PROJECT_VISIBILITIES = {"private", "project_members"}
 REQUIREMENT_CATEGORIES = {
     "talent",
@@ -90,10 +98,17 @@ def _has_role(user: User, *role_codes: str) -> bool:
 
 
 def _require_project_creator(user: User) -> None:
-    if not _has_role(user, "director_producer", "casting_agency", "super_admin"):
+    if not _has_role(
+        user,
+        "director_producer",
+        "casting_agency",
+        "brand_sponsor",
+        "super_admin",
+    ):
         raise APIError(
             "projects.role_required",
-            "A director/producer or casting agency role is required for projects.",
+            "A director/producer, casting agency, or brand role is required for "
+            "projects.",
             status=403,
         )
 
@@ -145,10 +160,11 @@ def _project_file_payload(item: ProjectFile) -> dict[str, Any]:
 def _public_cinema_payload(item: ProjectFile) -> dict[str, Any]:
     project = item.project
     file_payload = _file_payload(item.file)
+    file_name = item.file.original_name if item.file else None
     return {
         "public_id": item.public_id,
         "kind": item.folder,
-        "title": item.label or item.file.original_name or project.title,
+        "title": item.label or file_name or project.title,
         "project": {
             "public_id": project.public_id,
             "title": project.title,
@@ -166,7 +182,9 @@ def _public_cinema_payload(item: ProjectFile) -> dict[str, Any]:
             "visibility": project.visibility,
             "progress_percent": project.progress_percent,
             "requirement_count": len(project.requirements),
-            "member_count": len([row for row in project.members if row.status == "active"]),
+            "member_count": len(
+                [row for row in project.members if row.status == "active"]
+            ),
         },
         "file": file_payload,
         "external_url": item.external_url,
@@ -569,6 +587,8 @@ def create_project() -> ResponseReturnValue:
             status="active",
         )
     )
+    if _has_role(user, "director_producer", "super_admin"):
+        ensure_cineplanner_production(project, actor_user_id=user.id)
     db.session.commit()
     return jsonify(
         success({"project": _project_payload(project, include_nested=True)})
@@ -584,7 +604,7 @@ def public_cinema() -> Response:
     try:
         limit = min(max(int(request.args.get("limit", 60) or 60), 1), 100)
     except ValueError:
-        raise _field_error("limit", "Limit must be an integer.")
+        raise _field_error("limit", "Limit must be an integer.") from None
 
     statement = (
         select(ProjectFile)
@@ -641,6 +661,88 @@ def update_project(public_id: str) -> Response:
     _apply_project_payload(project, _json_body(), actor=user)
     db.session.commit()
     return jsonify(success({"project": _project_payload(project, include_nested=True)}))
+
+
+@projects_blueprint.post("/projects/<public_id>/duplicate")
+def duplicate_project(public_id: str) -> ResponseReturnValue:
+    user = _current_user()
+    source = _project_for_user(public_id, user)
+    if source.owner_user_id != user.id:
+        raise APIError(
+            "project.permission_denied",
+            "Only the project owner can duplicate this project.",
+            status=403,
+        )
+    payload = _json_body()
+    requested_title = str(payload.get("title", "")).strip()
+    if requested_title and len(requested_title) < 2:
+        raise _field_error("title", "Project title must contain at least 2 characters.")
+    title = requested_title or f"{source.title} copy"
+    duplicate = Project(
+        owner_user_id=user.id,
+        organization_id=source.organization_id,
+        title=title[:180],
+        project_type=source.project_type,
+        description=source.description,
+        city_id=source.city_id,
+        cover_file_id=source.cover_file_id,
+        start_date=source.start_date,
+        end_date=source.end_date,
+        status="draft",
+        estimated_budget_minor=source.estimated_budget_minor,
+        currency=source.currency,
+        visibility=source.visibility,
+        progress_percent=0,
+    )
+    db.session.add(duplicate)
+    db.session.flush()
+    db.session.add(
+        ProjectMember(
+            project_id=duplicate.id,
+            user_id=user.id,
+            role_label="Owner",
+            permissions_json=json.dumps(
+                {
+                    "manage_project": True,
+                    "manage_requirements": True,
+                    "manage_members": True,
+                },
+                sort_keys=True,
+            ),
+            status="active",
+        )
+    )
+    for source_requirement in source.requirements:
+        requirement = ProjectRequirement(
+            project_id=duplicate.id,
+            category=source_requirement.category,
+            title=source_requirement.title,
+            summary=source_requirement.summary,
+            budget_min_minor=source_requirement.budget_min_minor,
+            budget_max_minor=source_requirement.budget_max_minor,
+            currency=source_requirement.currency,
+            start_date=source_requirement.start_date,
+            end_date=source_requirement.end_date,
+            status="draft",
+            visibility=source_requirement.visibility,
+            quantity=source_requirement.quantity,
+            required_documents_json=source_requirement.required_documents_json,
+        )
+        requirement.skills = [
+            RequirementSkill(
+                skill_id=row.skill_id,
+                required=row.required,
+                minimum_level=row.minimum_level,
+            )
+            for row in source_requirement.skills
+        ]
+        db.session.add(requirement)
+    if _has_role(user, "director_producer", "super_admin"):
+        ensure_cineplanner_production(duplicate, actor_user_id=user.id)
+    db.session.commit()
+    return jsonify(
+        success({"project": _project_payload(duplicate, include_nested=True)})
+    ), 201
 
 
 @projects_blueprint.get("/projects/<public_id>/room")

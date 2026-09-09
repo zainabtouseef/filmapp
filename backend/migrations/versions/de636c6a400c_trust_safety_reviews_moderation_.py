@@ -48,12 +48,8 @@ def upgrade():
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["blocked_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["blocker_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["blocked_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["blocker_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "blocker_user_id", "blocked_user_id", name="uq_blocked_user_pair"
@@ -115,9 +111,7 @@ def upgrade():
         sa.Column("version", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "user_id", "device_id", name="uq_push_device_user_device"
-        ),
+        sa.UniqueConstraint("user_id", "device_id", name="uq_push_device_user_device"),
     )
     op.create_table(
         "reports",
@@ -142,9 +136,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["reported_user_id"], ["users.id"], ondelete="SET NULL"
         ),
-        sa.ForeignKeyConstraint(
-            ["reporter_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["reporter_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
     )
@@ -232,12 +224,8 @@ def upgrade():
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["reviewee_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["reviewer_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["reviewee_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["reviewer_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "booking_id",
@@ -266,9 +254,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["assigned_admin_id"], ["users.id"], ondelete="SET NULL"
         ),
-        sa.ForeignKeyConstraint(
-            ["booking_id"], ["bookings.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
@@ -337,12 +323,8 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["completed_review_id"], ["reviews.id"], ondelete="SET NULL"
         ),
-        sa.ForeignKeyConstraint(
-            ["requested_by"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["requested_from"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["requested_by"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["requested_from"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
     )
@@ -359,9 +341,7 @@ def upgrade():
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["file_id"], ["files.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["sender_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["sender_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["ticket_id"], ["support_tickets.id"], ondelete="CASCADE"
         ),

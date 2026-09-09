@@ -119,6 +119,7 @@ def _talent_profile_by_public_id(public_id: str) -> TalentProfile:
 
 
 def _brand_for_owner(user: User) -> BrandProfile:
+    _require_brand_role(user)
     brand = db.session.execute(
         select(BrandProfile).where(BrandProfile.owner_user_id == user.id)
     ).scalar_one_or_none()
@@ -127,6 +128,19 @@ def _brand_for_owner(user: User) -> BrandProfile:
             "brand.profile_required", "Create a brand profile first.", status=409
         )
     return brand
+
+
+def _require_brand_role(user: User) -> None:
+    if any(
+        user_role.status == "active" and user_role.role.code == "brand_sponsor"
+        for user_role in user.roles
+    ):
+        return
+    raise APIError(
+        "brand.role_required",
+        "An active brand role is required.",
+        status=403,
+    )
 
 
 def _distribution_partner_for_owner(user: User) -> DistributionPartnerProfile:
@@ -268,15 +282,33 @@ def _brand_profile_payload(item: BrandProfile) -> dict[str, Any]:
     }
 
 
+def _brand_payment_schedule_payload(raw_value: str | None) -> list[dict[str, Any]]:
+    if not raw_value:
+        return []
+    try:
+        decoded = json.loads(raw_value)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    if isinstance(decoded, list):
+        return [row for row in decoded if isinstance(row, dict)]
+    if isinstance(decoded, dict):
+        # Early demo/import rows stored `{ "advance": 50, ... }`; the public
+        # API contract uses the newer list-of-milestones representation.
+        return [
+            {"key": str(key), "percent": value}
+            for key, value in decoded.items()
+            if isinstance(value, (int, float))
+        ]
+    return []
+
+
 def _brand_term_payload(item: BrandTerm) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
         "scope": item.scope,
         "exclusivity": item.exclusivity,
         "approval_rights": item.approval_rights,
-        "payment_schedule": json.loads(item.payment_schedule_json)
-        if item.payment_schedule_json
-        else [],
+        "payment_schedule": _brand_payment_schedule_payload(item.payment_schedule_json),
         "status": item.status,
         "version": item.version,
     }
@@ -896,6 +928,7 @@ def agency_commissions(public_id: str) -> Response:
 @specialist_blueprint.get("/brands/profile")
 def brand_profile() -> Response:
     user = _current_user()
+    _require_brand_role(user)
     brand = db.session.execute(
         select(BrandProfile).where(BrandProfile.owner_user_id == user.id)
     ).scalar_one_or_none()
@@ -905,6 +938,7 @@ def brand_profile() -> Response:
 @specialist_blueprint.patch("/brands/profile")
 def upsert_brand_profile() -> Response:
     user = _current_user()
+    _require_brand_role(user)
     payload = _json_body()
     brand = db.session.execute(
         select(BrandProfile).where(BrandProfile.owner_user_id == user.id)

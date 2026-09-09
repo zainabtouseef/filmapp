@@ -27,7 +27,9 @@ def _id() -> str:
 def upgrade() -> None:
     connection = op.get_bind()
     inspector = sa.inspect(connection)
-    talent_columns = {column["name"] for column in inspector.get_columns("talent_profiles")}
+    talent_columns = {
+        column["name"] for column in inspector.get_columns("talent_profiles")
+    }
     if "availability_categories_json" not in talent_columns:
         op.add_column(
             "talent_profiles",
@@ -79,6 +81,8 @@ def downgrade() -> None:
         sa.text("DELETE FROM roles WHERE code IN ('influencer', 'general_public')")
     )
     inspector = sa.inspect(connection)
-    talent_columns = {column["name"] for column in inspector.get_columns("talent_profiles")}
+    talent_columns = {
+        column["name"] for column in inspector.get_columns("talent_profiles")
+    }
     if "availability_categories_json" in talent_columns:
         op.drop_column("talent_profiles", "availability_categories_json")

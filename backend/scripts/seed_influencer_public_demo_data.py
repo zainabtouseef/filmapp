@@ -17,9 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app import create_app  # noqa: E402
-from app.extensions import db  # noqa: E402
-from app.models import (  # noqa: E402
+from app import create_app
+from app.extensions import db
+from app.models import (
     Booking,
     BookingParticipant,
     BookingStatusEvent,
@@ -44,7 +44,7 @@ from app.models import (  # noqa: E402
     UserRole,
     VerificationEvent,
 )
-from app.security import hash_password  # noqa: E402
+from app.security import hash_password
 
 SEED_BATCH = "cineconnect-influencer-public-demo-2026-07-26"
 DEFAULT_PASSWORD = os.getenv("CINECONNECT_DEMO_PASSWORD", "CineDemo@2026!")

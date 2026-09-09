@@ -51,7 +51,6 @@ from app.models import (
     LocationInspectionItem,
     LocationProperty,
     LocationSpace,
-    MarketplaceListing,
     ModerationCase,
     ModerationEvent,
     Notification,
@@ -153,12 +152,15 @@ def seed_operations_and_insurance(stats: dict[str, int]) -> None:
         producer = user(f"DEMO-DP-{idx:03}")
         talent = user(f"DEMO-AT-{idx:03}")
         location_owner = user(f"DEMO-LO-{idx:03}")
-        equipment_user = user(f"DEMO-ME-{idx:03}")
         insurance_user = user(f"DEMO-IN-{idx:03}")
         loc = required(LocationProperty, public_id=f"DEMO-LOC-{idx:03}")
-        space = db.session.execute(
-            select(LocationSpace).where(LocationSpace.property_id == loc.id)
-        ).scalars().first()
+        space = (
+            db.session.execute(
+                select(LocationSpace).where(LocationSpace.property_id == loc.id)
+            )
+            .scalars()
+            .first()
+        )
         inspection = ensure(
             LocationInspection,
             stats,
@@ -170,7 +172,9 @@ def seed_operations_and_insurance(stats: dict[str, int]) -> None:
                 "inspection_type": "check_in",
                 "status": "confirmed" if idx % 2 else "in_progress",
                 "confirmed_by_owner_at": NOW - timedelta(days=idx) if idx % 2 else None,
-                "confirmed_by_renter_at": NOW - timedelta(days=idx) if idx % 2 else None,
+                "confirmed_by_renter_at": NOW - timedelta(days=idx)
+                if idx % 2
+                else None,
                 "meter_reading": f"MTR-{idx:03}",
                 "notes": f"Demo check-in inspection for {PROJECT_TITLES[idx - 1]}.",
             },
@@ -238,9 +242,13 @@ def seed_operations_and_insurance(stats: dict[str, int]) -> None:
                 "signed_by_renter": idx % 2 == 1,
             },
         )
-        item = db.session.execute(
-            select(EquipmentItem).where(EquipmentItem.provider_profile_id == epp.id)
-        ).scalars().first()
+        item = (
+            db.session.execute(
+                select(EquipmentItem).where(EquipmentItem.provider_profile_id == epp.id)
+            )
+            .scalars()
+            .first()
+        )
         if item:
             ensure(
                 EquipmentInspectionItem,
@@ -250,7 +258,9 @@ def seed_operations_and_insurance(stats: dict[str, int]) -> None:
                 equipment_item_id=item.id,
                 defaults={
                     "before_file_id": file_asset(f"DEMO-FILE-EQUIPMENT-{idx:03}").id,
-                    "after_file_id": file_asset(f"DEMO-FILE-EQUIPMENT-{idx + 10:03}").id,
+                    "after_file_id": file_asset(
+                        f"DEMO-FILE-EQUIPMENT-{idx + 10:03}"
+                    ).id,
                     "accessories_json": json.dumps(["battery", "charger", "case"]),
                     "stage": "captured",
                     "note": "Seeded equipment handover item",
@@ -272,8 +282,12 @@ def seed_operations_and_insurance(stats: dict[str, int]) -> None:
                 "status": "in_review" if idx % 3 else "approved",
             },
         )
-        SafetyCheckItem = __import__("app.models", fromlist=["SafetyCheckItem"]).SafetyCheckItem
-        for item_idx, label in enumerate(["Fire exits verified", "First-aid kit on set"], start=1):
+        SafetyCheckItem = __import__(
+            "app.models", fromlist=["SafetyCheckItem"]
+        ).SafetyCheckItem
+        for item_idx, label in enumerate(
+            ["Fire exits verified", "First-aid kit on set"], start=1
+        ):
             ensure(
                 SafetyCheckItem,
                 stats,
@@ -314,7 +328,9 @@ def seed_operations_and_insurance(stats: dict[str, int]) -> None:
                 "user_id": talent.id,
                 "booking_id": booking.id,
                 "scheduled_at": booking.start_at,
-                "checked_in_at": booking.start_at + timedelta(minutes=15) if idx % 3 else None,
+                "checked_in_at": booking.start_at + timedelta(minutes=15)
+                if idx % 3
+                else None,
                 "latitude_token": f"demo-lat-{idx:03}",
                 "longitude_token": f"demo-lng-{idx:03}",
                 "status": "checked_in" if idx % 3 else "missed",
@@ -410,7 +426,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
             },
         )
         for rank in range(1, 4):
-            candidate_talent = required(TalentProfile, public_id=f"DEMO-TAL-{((idx + rank - 2) % 10) + 1:03}")
+            candidate_talent = required(
+                TalentProfile, public_id=f"DEMO-TAL-{((idx + rank - 2) % 10) + 1:03}"
+            )
             cand = ensure(
                 AuditionCandidate,
                 stats,
@@ -435,7 +453,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
                     defaults={
                         "audition_candidate_id": cand.id,
                         "file_id": file_asset(f"DEMO-FILE-SHOWREEL-{rank:03}").id,
-                        "thumbnail_file_id": file_asset(f"DEMO-FILE-PORTFOLIO-{idx:03}").id,
+                        "thumbnail_file_id": file_asset(
+                            f"DEMO-FILE-PORTFOLIO-{idx:03}"
+                        ).id,
                         "duration_seconds": 90 + idx,
                         "transcript": "Seeded self-tape transcript.",
                         "status": "submitted",
@@ -465,7 +485,11 @@ def seed_specialist(stats: dict[str, int]) -> None:
                 "talent_profile_id": talent.id,
                 "gross_minor": booking.agreed_amount_minor or 200_000 * 100,
                 "commission_bps": agency.commission_bps,
-                "commission_minor": ((booking.agreed_amount_minor or 200_000 * 100) * agency.commission_bps) // 10000,
+                "commission_minor": (
+                    (booking.agreed_amount_minor or 200_000 * 100)
+                    * agency.commission_bps
+                )
+                // 10000,
                 "currency": "PKR",
                 "due_at": NOW + timedelta(days=idx),
                 "status": "paid" if idx % 3 == 0 else "pending",
@@ -496,7 +520,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
         first_app: BrandApplication | None = None
         for app_idx in range(1, 4):
             applicant = user(f"DEMO-AT-{((idx + app_idx - 2) % 10) + 1:03}")
-            applicant_talent = required(TalentProfile, public_id=f"DEMO-TAL-{((idx + app_idx - 2) % 10) + 1:03}")
+            applicant_talent = required(
+                TalentProfile, public_id=f"DEMO-TAL-{((idx + app_idx - 2) % 10) + 1:03}"
+            )
             app = ensure(
                 BrandApplication,
                 stats,
@@ -507,7 +533,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
                     "applicant_user_id": applicant.id,
                     "talent_profile_id": applicant_talent.id,
                     "proposal": "Seeded campaign application proposal.",
-                    "audience_metrics_json": json.dumps({"followers": 10000 + idx * 1000, "engagement": 4.2}),
+                    "audience_metrics_json": json.dumps(
+                        {"followers": 10000 + idx * 1000, "engagement": 4.2}
+                    ),
                     "budget_ask_minor": (120_000 + app_idx * 15_000) * 100,
                     "currency": "PKR",
                     "status": "approved" if app_idx == 1 else "submitted",
@@ -525,7 +553,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
                     "scope": "Seeded social + BTS usage terms.",
                     "exclusivity": "non-exclusive",
                     "approval_rights": "Brand gets one revision round.",
-                    "payment_schedule_json": json.dumps({"advance": 50, "delivery": 50}),
+                    "payment_schedule_json": json.dumps(
+                        {"advance": 50, "delivery": 50}
+                    ),
                     "status": "accepted" if idx % 2 else "draft",
                     "version": 1,
                 },
@@ -542,7 +572,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
                     "owner_user_id": user(f"DEMO-AT-{idx:03}").id,
                     "label": f"Campaign proof {del_idx}",
                     "due_at": NOW + timedelta(days=del_idx + idx),
-                    "proof_file_id": file_asset(f"DEMO-FILE-BRAND-{idx + del_idx:03}").id,
+                    "proof_file_id": file_asset(
+                        f"DEMO-FILE-BRAND-{idx + del_idx:03}"
+                    ).id,
                     "status": "approved" if del_idx == 1 and idx % 2 else "pending",
                     "approved_at": NOW if del_idx == 1 and idx % 2 else None,
                 },
@@ -566,7 +598,9 @@ def seed_specialist(stats: dict[str, int]) -> None:
 
         partner = required(DistributionPartnerProfile, public_id=f"DEMO-DSTP-{idx:03}")
         dproj = required(DistributionProject, public_id=f"DEMO-DPR-{idx:03}")
-        for item_idx, label in enumerate(["Final master file", "Poster key art"], start=1):
+        for item_idx, label in enumerate(
+            ["Final master file", "Poster key art"], start=1
+        ):
             ensure(
                 ReleaseHandoverItem,
                 stats,
@@ -696,10 +730,16 @@ def seed_trust_support_notifications(stats: dict[str, int]) -> None:
                 "entity_id": report.entity_id,
                 "source": "report",
                 "risk_level": "high" if idx in {4, 9} else "medium",
-                "status": "queued" if idx <= 5 else "resolved" if idx <= 8 else "escalated",
+                "status": "queued"
+                if idx <= 5
+                else "resolved"
+                if idx <= 8
+                else "escalated",
                 "assigned_admin_id": admin.id,
                 "decision": "approved" if idx in {6, 7, 8} else None,
-                "decision_reason": "Seeded moderation decision" if idx in {6, 7, 8} else None,
+                "decision_reason": "Seeded moderation decision"
+                if idx in {6, 7, 8}
+                else None,
             },
         )
         ensure(
@@ -729,7 +769,11 @@ def seed_trust_support_notifications(stats: dict[str, int]) -> None:
                 "value_minor": (50_000 + idx * 5_000) * 100,
                 "currency": "PKR",
                 "severity": "high" if idx in {4, 9} else "medium",
-                "status": "open" if idx <= 4 else "decided" if idx <= 8 else "awaiting_evidence",
+                "status": "open"
+                if idx <= 4
+                else "decided"
+                if idx <= 8
+                else "awaiting_evidence",
                 "assigned_admin_id": admin.id,
                 "resolved_at": NOW if idx in {5, 6, 7, 8} else None,
             },
@@ -769,7 +813,11 @@ def seed_trust_support_notifications(stats: dict[str, int]) -> None:
                 "category": "booking",
                 "priority": "high" if idx in {4, 9} else "normal",
                 "subject": f"Support for {PROJECT_TITLES[idx - 1]}",
-                "status": "open" if idx <= 5 else "waiting_user" if idx <= 8 else "closed",
+                "status": "open"
+                if idx <= 5
+                else "waiting_user"
+                if idx <= 8
+                else "closed",
                 "assigned_admin_id": admin.id,
                 "last_message_at": NOW - timedelta(hours=idx),
             },
@@ -783,7 +831,9 @@ def seed_trust_support_notifications(stats: dict[str, int]) -> None:
                 sender_user_id=sender.id,
                 body=f"Seeded support message {msg_idx} for {PROJECT_TITLES[idx - 1]}.",
                 defaults={
-                    "file_id": file_asset(f"DEMO-FILE-PROJECT-{idx:03}").id if msg_idx == 1 else None,
+                    "file_id": file_asset(f"DEMO-FILE-PROJECT-{idx:03}").id
+                    if msg_idx == 1
+                    else None,
                     "internal_note": False,
                 },
             )
@@ -839,15 +889,23 @@ def seed_trust_support_notifications(stats: dict[str, int]) -> None:
             defaults={
                 "title": f"Demo platform announcement {idx}",
                 "body": "Seeded broadcast announcement for Super Admin demo.",
-                "audience_json": json.dumps({"roles": ["director_producer", "actor_talent"]}),
+                "audience_json": json.dumps(
+                    {"roles": ["director_producer", "actor_talent"]}
+                ),
                 "channel_json": json.dumps({"in_app": True, "push": True}),
                 "status": status,
-                "scheduled_at": NOW + timedelta(days=2) if status == "scheduled" else None,
-                "published_at": NOW - timedelta(days=1) if status == "published" else None,
+                "scheduled_at": NOW + timedelta(days=2)
+                if status == "scheduled"
+                else None,
+                "published_at": NOW - timedelta(days=1)
+                if status == "published"
+                else None,
                 "created_by": admin.id,
             },
         )
-    for idx, export_type in enumerate(["bookings", "ledger", "admin_disputes"], start=1):
+    for idx, export_type in enumerate(
+        ["bookings", "ledger", "admin_disputes"], start=1
+    ):
         ensure(
             ExportJob,
             stats,
@@ -874,7 +932,11 @@ def main() -> None:
         seed_specialist(stats)
         seed_trust_support_notifications(stats)
         db.session.commit()
-    print(json.dumps({"seed_batch": SEED_BATCH, "stats": dict(sorted(stats.items()))}, indent=2))
+    print(
+        json.dumps(
+            {"seed_batch": SEED_BATCH, "stats": dict(sorted(stats.items()))}, indent=2
+        )
+    )
 
 
 if __name__ == "__main__":

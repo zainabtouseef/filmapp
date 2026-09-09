@@ -18,11 +18,28 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.alter_column("project_files", "file_id", existing_type=sa.Uuid(native_uuid=False), nullable=True)
-    op.add_column("project_files", sa.Column("external_url", sa.String(length=1000), nullable=True))
-    op.add_column("project_files", sa.Column("external_provider", sa.String(length=64), nullable=True))
-    op.add_column("project_files", sa.Column("external_thumbnail_url", sa.String(length=1000), nullable=True))
-    op.add_column("project_files", sa.Column("external_duration_seconds", sa.Integer(), nullable=True))
+    op.alter_column(
+        "project_files",
+        "file_id",
+        existing_type=sa.Uuid(native_uuid=False),
+        nullable=True,
+    )
+    op.add_column(
+        "project_files",
+        sa.Column("external_url", sa.String(length=1000), nullable=True),
+    )
+    op.add_column(
+        "project_files",
+        sa.Column("external_provider", sa.String(length=64), nullable=True),
+    )
+    op.add_column(
+        "project_files",
+        sa.Column("external_thumbnail_url", sa.String(length=1000), nullable=True),
+    )
+    op.add_column(
+        "project_files",
+        sa.Column("external_duration_seconds", sa.Integer(), nullable=True),
+    )
 
 
 def downgrade() -> None:
@@ -30,4 +47,9 @@ def downgrade() -> None:
     op.drop_column("project_files", "external_thumbnail_url")
     op.drop_column("project_files", "external_provider")
     op.drop_column("project_files", "external_url")
-    op.alter_column("project_files", "file_id", existing_type=sa.Uuid(native_uuid=False), nullable=False)
+    op.alter_column(
+        "project_files",
+        "file_id",
+        existing_type=sa.Uuid(native_uuid=False),
+        nullable=False,
+    )

@@ -24,7 +24,7 @@ def create_celery() -> Celery:
         enable_utc=True,
         task_acks_late=True,
         worker_prefetch_multiplier=1,
-        imports=("app.tasks.files",),
+        imports=("app.tasks.files", "app.tasks.cineplanner"),
     )
     celery_app.set_default()
     return celery_app

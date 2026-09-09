@@ -311,6 +311,7 @@ def presign_upload() -> ResponseReturnValue:
         "insurance_evidence",
         "dispute_evidence",
         "self_tape",
+        "screenplay",
     }:
         raise _field_error("purpose", "Unsupported upload purpose.")
     if mime_type not in ALLOWED_UPLOAD_MIME_TYPES:

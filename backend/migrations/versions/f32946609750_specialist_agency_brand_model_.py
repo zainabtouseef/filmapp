@@ -144,9 +144,7 @@ def upgrade():
             ["agency_id"], ["casting_agencies.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(["invited_by"], ["users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["talent_user_id"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["talent_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
     )
@@ -171,9 +169,7 @@ def upgrade():
             ["talent_profile_id"], ["talent_profiles.id"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "agency_id", "talent_profile_id", name="uq_agency_talent"
-        ),
+        sa.UniqueConstraint("agency_id", "talent_profile_id", name="uq_agency_talent"),
     )
     op.create_table(
         "brand_opportunities",
@@ -394,9 +390,7 @@ def upgrade():
             ["distribution_partner_profiles.id"],
             ondelete="CASCADE",
         ),
-        sa.ForeignKeyConstraint(
-            ["source_file_id"], ["files.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["source_file_id"], ["files.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
     )
@@ -544,9 +538,7 @@ def upgrade():
             ["opportunity_id"], ["brand_opportunities.id"], ondelete="CASCADE"
         ),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["proof_file_id"], ["files.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["proof_file_id"], ["files.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
     )

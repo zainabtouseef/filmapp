@@ -41,12 +41,8 @@ def upgrade():
         sa.Column("cover_file_id", sa.Uuid(native_uuid=False), nullable=True),
         sa.Column("sort_order", sa.Integer(), nullable=False),
         *_entity_columns(),
-        sa.ForeignKeyConstraint(
-            ["owner_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["cover_file_id"], ["files.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["cover_file_id"], ["files.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id"),
     )

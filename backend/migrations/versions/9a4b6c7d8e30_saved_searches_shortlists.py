@@ -42,9 +42,7 @@ def upgrade() -> None:
         sa.Column("filters_json", sa.Text(), nullable=True),
         sa.Column("notify_enabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["city_id"], ["cities.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["owner_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_saved_searches_public_id"),
     )
@@ -59,7 +57,9 @@ def upgrade() -> None:
         sa.Column("public_id", sa.String(length=40), nullable=False),
         sa.Column("project_id", sa.String(length=40), nullable=True),
         sa.Column("requirement_id", sa.String(length=40), nullable=True),
-        sa.Column("created_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "created_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("name", sa.String(length=160), nullable=False),
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -74,8 +74,12 @@ def upgrade() -> None:
         "shortlist_items",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("shortlist_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("listing_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "shortlist_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "listing_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column(
             "candidate_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),

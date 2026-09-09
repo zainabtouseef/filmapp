@@ -46,8 +46,12 @@ def upgrade() -> None:
         sa.Column("version_number", sa.Integer(), nullable=False),
         sa.Column("body_schema_json", sa.Text(), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
-        sa.Column("created_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
-        sa.Column("approved_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "created_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
+        sa.Column(
+            "approved_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["approved_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
@@ -81,8 +85,12 @@ def upgrade() -> None:
         "contracts",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "booking_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column(
             "template_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
         ),
@@ -96,10 +104,14 @@ def upgrade() -> None:
             "rendered_file_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),
         sa.Column("content_snapshot_json", sa.Text(), nullable=False),
-        sa.Column("signature_progress", sa.Numeric(precision=4, scale=3), nullable=False),
+        sa.Column(
+            "signature_progress", sa.Numeric(precision=4, scale=3), nullable=False
+        ),
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["rendered_file_id"], ["files.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["rendered_file_id"], ["files.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(
             ["template_id"], ["contract_templates.id"], ondelete="RESTRICT"
         ),
@@ -107,12 +119,16 @@ def upgrade() -> None:
         sa.UniqueConstraint("booking_id", name="uq_contracts_booking_id"),
         sa.UniqueConstraint("public_id", name="uq_contracts_public_id"),
     )
-    op.create_index("ix_contracts_project_status", "contracts", ["project_id", "status"])
+    op.create_index(
+        "ix_contracts_project_status", "contracts", ["project_id", "status"]
+    )
     op.create_table(
         "contract_parties",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("organization_id", sa.String(length=40), nullable=True),
         sa.Column("party_role", sa.String(length=64), nullable=False),
@@ -130,7 +146,9 @@ def upgrade() -> None:
     op.create_table(
         "contract_clauses",
         *_audit_columns(),
-        sa.Column("contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("clause_key", sa.String(length=80), nullable=False),
         sa.Column("title", sa.String(length=180), nullable=False),
         sa.Column("body_text", sa.Text(), nullable=False),
@@ -151,7 +169,9 @@ def upgrade() -> None:
     op.create_table(
         "contract_signatures",
         *_audit_columns(),
-        sa.Column("contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("party_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column(
             "signer_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
@@ -166,8 +186,12 @@ def upgrade() -> None:
         sa.Column("ip_address", sa.String(length=64), nullable=True),
         sa.Column("user_agent", sa.String(length=512), nullable=True),
         sa.ForeignKeyConstraint(["contract_id"], ["contracts.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["party_id"], ["contract_parties.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["signature_file_id"], ["files.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["party_id"], ["contract_parties.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["signature_file_id"], ["files.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(["signer_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("party_id", name="uq_contract_signature_party"),
@@ -176,17 +200,25 @@ def upgrade() -> None:
         "contract_addendums",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
-        sa.Column("requested_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
+        sa.Column(
+            "requested_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("reason", sa.Text(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
-        sa.Column("reviewer_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "reviewer_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column(
             "rendered_file_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
         ),
         sa.ForeignKeyConstraint(["contract_id"], ["contracts.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["rendered_file_id"], ["files.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["rendered_file_id"], ["files.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(["requested_by"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["reviewer_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
@@ -196,10 +228,18 @@ def upgrade() -> None:
         "legal_review_requests",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
-        sa.Column("template_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
-        sa.Column("addendum_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
-        sa.Column("requested_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "contract_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
+        sa.Column(
+            "template_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
+        sa.Column(
+            "addendum_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
+        sa.Column(
+            "requested_by", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column(
             "assigned_legal_user_id",
             sa.Uuid(as_uuid=True, native_uuid=False),
@@ -210,7 +250,9 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("sla_due_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("decision_notes", sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(["addendum_id"], ["contract_addendums.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["addendum_id"], ["contract_addendums.id"], ondelete="SET NULL"
+        ),
         sa.ForeignKeyConstraint(
             ["assigned_legal_user_id"], ["users.id"], ondelete="SET NULL"
         ),
@@ -261,7 +303,9 @@ def upgrade() -> None:
         ),
         sa.Column("matter_type", sa.String(length=64), nullable=False),
         sa.Column("matter_id", sa.String(length=40), nullable=False),
-        sa.Column("client_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True),
+        sa.Column(
+            "client_user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=True
+        ),
         sa.Column("minutes", sa.Integer(), nullable=False),
         sa.Column("amount_minor", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),

@@ -10,9 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app import create_app  # noqa: E402
-from app.extensions import db  # noqa: E402
-from app.models import (  # noqa: E402
+from app import create_app
+from app.extensions import db
+from app.models import (
     CastingAgency,
     DistributionPartnerProfile,
     EquipmentItem,
@@ -26,7 +26,7 @@ from app.models import (  # noqa: E402
     UserProfile,
     UserRole,
 )
-from app.models.base import utc_now  # noqa: E402
+from app.models.base import utc_now
 
 
 def _money_label_rate(amount: int | None) -> int | None:
@@ -97,32 +97,44 @@ def _publish(
 
 
 def _location_rate(item: LocationProperty) -> tuple[int | None, str]:
-    rate = db.session.execute(
-        select(LocationPricing)
-        .where(LocationPricing.property_id == item.id, LocationPricing.enabled)
-        .order_by(LocationPricing.amount_minor.asc())
-    ).scalars().first()
+    rate = (
+        db.session.execute(
+            select(LocationPricing)
+            .where(LocationPricing.property_id == item.id, LocationPricing.enabled)
+            .order_by(LocationPricing.amount_minor.asc())
+        )
+        .scalars()
+        .first()
+    )
     return (rate.amount_minor, rate.currency) if rate else (None, "PKR")
 
 
 def _equipment_rate(item: EquipmentProviderProfile) -> tuple[int | None, str]:
-    rate = db.session.execute(
-        select(EquipmentItem)
-        .where(
-            EquipmentItem.provider_profile_id == item.id,
-            EquipmentItem.day_rate_minor.is_not(None),
+    rate = (
+        db.session.execute(
+            select(EquipmentItem)
+            .where(
+                EquipmentItem.provider_profile_id == item.id,
+                EquipmentItem.day_rate_minor.is_not(None),
+            )
+            .order_by(EquipmentItem.day_rate_minor.asc())
         )
-        .order_by(EquipmentItem.day_rate_minor.asc())
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     return (rate.day_rate_minor, rate.currency) if rate else (None, "PKR")
 
 
 def _model_rate(item: ModelProfile) -> tuple[int | None, str]:
-    rate = db.session.execute(
-        select(ModelUsageRate)
-        .where(ModelUsageRate.model_profile_id == item.id)
-        .order_by(ModelUsageRate.amount_minor.asc())
-    ).scalars().first()
+    rate = (
+        db.session.execute(
+            select(ModelUsageRate)
+            .where(ModelUsageRate.model_profile_id == item.id)
+            .order_by(ModelUsageRate.amount_minor.asc())
+        )
+        .scalars()
+        .first()
+    )
     if rate:
         return rate.amount_minor, rate.currency
     return item.talent_profile.day_rate_minor, item.talent_profile.currency

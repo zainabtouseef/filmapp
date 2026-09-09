@@ -65,6 +65,16 @@ class Config:
     SENTRY_DSN = os.getenv("SENTRY_DSN", "")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     OPENAPI_PATH = os.getenv("OPENAPI_PATH", "/app/docs/openapi.yaml")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_SCREENPLAY_MODEL = os.getenv("OPENAI_SCREENPLAY_MODEL", "gpt-5-mini")
+    CINEPLANNER_AI_PARALLELISM = max(
+        1, min(4, int(os.getenv("CINEPLANNER_AI_PARALLELISM", "4")))
+    )
+    CINEPLANNER_AI_ENABLED = os.getenv("CINEPLANNER_AI_ENABLED", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
 
     @classmethod
     def validate(cls, values: Mapping[str, Any]) -> None:
@@ -80,6 +90,10 @@ class Config:
             raise RuntimeError("JWT_SECRET_KEY must contain at least 64 characters")
         if values["PAYMENT_MODE"] == "sandbox":
             raise RuntimeError("PAYMENT_MODE=sandbox is forbidden in production")
+        if values.get("CINEPLANNER_AI_ENABLED") and not values.get("OPENAI_API_KEY"):
+            raise RuntimeError(
+                "OPENAI_API_KEY is required when CinePlanner AI is enabled"
+            )
         origins = values["CORS_ALLOWED_ORIGINS"]
         if not origins or "*" in origins:
             raise RuntimeError("Production CORS origins must be explicit")

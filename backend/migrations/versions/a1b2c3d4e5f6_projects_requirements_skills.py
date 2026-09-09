@@ -56,19 +56,17 @@ def upgrade() -> None:
         sa.Column("visibility", sa.String(length=32), nullable=False),
         sa.Column("progress_percent", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["city_id"], ["cities.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["owner_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("public_id", name="uq_projects_public_id"),
     )
-    op.create_index(
-        "ix_projects_owner_status", "projects", ["owner_user_id", "status"]
-    )
+    op.create_index("ix_projects_owner_status", "projects", ["owner_user_id", "status"])
     op.create_table(
         "project_members",
         *_audit_columns(),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("user_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("role_label", sa.String(length=120), nullable=False),
         sa.Column("permissions_json", sa.Text(), nullable=True),
@@ -98,7 +96,9 @@ def upgrade() -> None:
         "project_requirements",
         *_audit_columns(),
         sa.Column("public_id", sa.String(length=40), nullable=False),
-        sa.Column("project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "project_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("category", sa.String(length=64), nullable=False),
         sa.Column("title", sa.String(length=180), nullable=False),
         sa.Column("summary", sa.Text(), nullable=True),

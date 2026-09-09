@@ -58,9 +58,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["document_file_id"], ["files.id"], ondelete="SET NULL"
         ),
-        sa.ForeignKeyConstraint(
-            ["insured_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["insured_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["provider_profile_id"],
@@ -92,9 +90,7 @@ def upgrade():
             ["adjuster_user_id"], ["users.id"], ondelete="SET NULL"
         ),
         sa.ForeignKeyConstraint(["booking_id"], ["bookings.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["claimant_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["claimant_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["policy_id"], ["insurance_policies.id"], ondelete="CASCADE"
         ),

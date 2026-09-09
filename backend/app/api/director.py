@@ -59,22 +59,35 @@ def _has_role(user: User, *role_codes: str) -> bool:
 
 
 def _require_director_dashboard(user: User) -> None:
-    if not _has_role(user, "director_producer", "casting_agency", "super_admin"):
+    if not _has_role(
+        user,
+        "director_producer",
+        "casting_agency",
+        "brand_sponsor",
+        "super_admin",
+    ):
         raise APIError(
             "director.role_required",
-            "A director/producer, casting agency, or admin role is required.",
+            "A director/producer, casting agency, brand, or admin role is required.",
             status=403,
         )
 
 
 def _require_discovery_access(user: User) -> set[str] | None:
-    if _has_role(user, "director_producer", "casting_agency", "super_admin"):
+    if _has_role(
+        user,
+        "director_producer",
+        "casting_agency",
+        "brand_sponsor",
+        "super_admin",
+    ):
         return None
     if _has_role(user, "general_public"):
         return {"actor", "model", "influencer"}
     raise APIError(
         "director.role_required",
-        "A director/producer, casting agency, admin, or public buyer role is required.",
+        "A director/producer, casting agency, brand, admin, or public buyer "
+        "role is required.",
         status=403,
     )
 
@@ -257,13 +270,24 @@ def _listing_for_profile(
     listing_type: str,
     profile_entity_id: str,
 ) -> MarketplaceListing | None:
+    listing_types = {"actor", "talent"} if listing_type == "actor" else {listing_type}
     return db.session.execute(
-        select(MarketplaceListing).where(
-            MarketplaceListing.listing_type == listing_type,
+        select(MarketplaceListing)
+        .where(
+            MarketplaceListing.listing_type.in_(listing_types),
             MarketplaceListing.profile_entity_id == profile_entity_id,
             MarketplaceListing.visibility == "public",
             MarketplaceListing.moderation_status == "approved",
         )
+        # Historical imports may contain more than one approved listing for
+        # the same provider profile (for example an older `actor` listing and
+        # a newer `talent` alias). Discovery should use the newest approved
+        # record rather than failing the whole marketplace response.
+        .order_by(
+            MarketplaceListing.updated_at.desc(),
+            MarketplaceListing.published_at.desc(),
+        )
+        .limit(1)
     ).scalar_one_or_none()
 
 
@@ -361,7 +385,10 @@ def _media_kit_payload(
                 if user_profile
                 else "Not reviewed yet",
             },
-            {"label": "Reviews", "value": str(user_profile.review_count if user_profile else 0)},
+            {
+                "label": "Reviews",
+                "value": str(user_profile.review_count if user_profile else 0),
+            },
             {"label": "Portfolio media", "value": str(len(rows))},
             {"label": "Social links", "value": str(len(platforms))},
         ],
@@ -568,7 +595,9 @@ def _trust_metrics_payload(
             "score": review_score,
             "max_score": 25,
             "status": "tracked" if reviews else "new",
-            "summary": f"{rating:.1f}/5 from {reviews} review{'s' if reviews != 1 else ''}"
+            "summary": (
+                f"{rating:.1f}/5 from {reviews} review{'s' if reviews != 1 else ''}"
+            )
             if reviews
             else "No verified booking reviews yet",
         },
@@ -588,9 +617,14 @@ def _trust_metrics_payload(
             "score": dispute_score,
             "max_score": 20,
             "status": "clear" if open_disputes == 0 else "attention",
-            "summary": f"{open_disputes} open dispute{'s' if open_disputes != 1 else ''}"
+            "summary": (
+                f"{open_disputes} open dispute{'s' if open_disputes != 1 else ''}"
+            )
             if open_disputes
-            else f"{resolved_disputes} resolved dispute{'s' if resolved_disputes != 1 else ''}; none open",
+            else (
+                f"{resolved_disputes} resolved "
+                f"dispute{'s' if resolved_disputes != 1 else ''}; none open"
+            ),
         },
         {
             "key": "response",
@@ -673,7 +707,7 @@ def _actor_discovery_item(item: TalentProfile) -> dict[str, Any]:
         profile_id=item.public_id,
         talent_profile=item,
         user_profile=profile,
-        rate_label=card["rate_label"],
+        rate_label=str(card["rate_label"]),
     )
     return _attach_trust_metrics(
         _with_listing(card, "actor", item.public_id),
@@ -693,9 +727,7 @@ def _influencer_discovery_item(item: TalentProfile) -> dict[str, Any]:
             social_links = {}
         if isinstance(social_links, dict):
             social_tags = [
-                key.title()
-                for key, value in social_links.items()
-                if str(value).strip()
+                key.title() for key, value in social_links.items() if str(value).strip()
             ][:4]
     card = {
         "public_id": item.public_id,
@@ -723,7 +755,7 @@ def _influencer_discovery_item(item: TalentProfile) -> dict[str, Any]:
         profile_id=item.public_id,
         talent_profile=item,
         user_profile=profile,
-        rate_label=card["rate_label"],
+        rate_label=str(card["rate_label"]),
     )
     return _attach_trust_metrics(
         _with_listing(card, "influencer", item.public_id),
@@ -761,7 +793,7 @@ def _talent_model_discovery_item(item: TalentProfile) -> dict[str, Any]:
         profile_id=item.public_id,
         talent_profile=item,
         user_profile=profile,
-        rate_label=card["rate_label"],
+        rate_label=str(card["rate_label"]),
     )
     return _attach_trust_metrics(
         _with_listing(card, "model", item.public_id),
@@ -868,8 +900,8 @@ def _model_discovery_item(item: ModelProfile) -> dict[str, Any]:
         "category": "Models",
         "title": item.talent_profile.screen_name,
         "subtitle": "Model profile",
-        "summary": item.brand_safety_notes
-        or (profile.bio if profile else None)
+        "summary": (profile.bio if profile else None)
+        or item.brand_safety_notes
         or "Model / brand campaign profile.",
         "city": _city_payload(profile.city) if profile else None,
         "owner": _owner_payload(item.user),
@@ -890,7 +922,7 @@ def _model_discovery_item(item: ModelProfile) -> dict[str, Any]:
         profile_id=item.public_id,
         talent_profile=item.talent_profile,
         user_profile=profile,
-        rate_label=card["rate_label"],
+        rate_label=str(card["rate_label"]),
     )
     return _attach_trust_metrics(
         _with_listing(card, "model", item.public_id),
@@ -1346,11 +1378,60 @@ def _distribution_discovery_detail(item: DistributionPartnerProfile) -> dict[str
     return card
 
 
+def _crew_discovery_item(item: MarketplaceListing) -> dict[str, Any]:
+    profile = _profile_for_user(item.owner_user_id)
+    card = {
+        "public_id": item.profile_entity_id,
+        "listing_id": item.public_id,
+        "kind": "crew",
+        "category": "Crew",
+        "title": item.title,
+        "subtitle": item.owner.display_name,
+        "summary": item.summary,
+        "city": _city_payload(item.city),
+        "owner": _owner_payload(item.owner),
+        "rate_from_minor": item.price_from_minor,
+        "currency": item.currency,
+        "rate_label": _minor_money_label(item.price_from_minor, item.currency),
+        "verification_status": item.verification_status,
+        "rating_average": int(profile.rating_average) if profile else 0,
+        "available": True,
+        "tags": ["Crew service", item.currency],
+        "media": [
+            {
+                "file": _file_payload(row.file),
+                "sort_order": row.sort_order,
+                "is_cover": row.is_cover,
+                "caption": row.caption,
+            }
+            for row in item.media
+        ],
+        "route": "/brands/discovery/crew",
+        "source": {"table": "marketplace_listings"},
+        "sections": [
+            _detail_section(
+                "Crew profile",
+                ("Provider", item.owner.display_name),
+                ("Service summary", item.summary),
+                ("City", item.city.name if item.city else None),
+                ("Rate", _minor_money_label(item.price_from_minor, item.currency)),
+                ("Verification", item.verification_status),
+            )
+        ],
+    }
+    return _attach_trust_metrics(
+        card,
+        user_id=item.owner_user_id,
+        review_count=profile.review_count if profile else 0,
+    )
+
+
 _DIRECTOR_DISCOVERY_KIND_ALIASES = {
     "all": {
         "actor",
         "model",
         "influencer",
+        "crew",
         "location",
         "equipment",
         "agency",
@@ -1374,7 +1455,7 @@ _DIRECTOR_DISCOVERY_KIND_ALIASES = {
     "agencies": {"agency"},
     "agency": {"agency"},
     "distribution": {"distribution"},
-    "crew": set(),
+    "crew": {"crew"},
 }
 
 
@@ -1391,6 +1472,7 @@ def _director_discovery_items(
             "actor",
             "model",
             "influencer",
+            "crew",
             "location",
             "equipment",
             "agency",
@@ -1439,9 +1521,7 @@ def _director_discovery_items(
         )
     if "influencer" in kinds:
         influencer_query = (
-            select(TalentProfile)
-            .order_by(TalentProfile.updated_at.desc())
-            .limit(120)
+            select(TalentProfile).order_by(TalentProfile.updated_at.desc()).limit(120)
         )
         influencers = db.session.execute(influencer_query).scalars()
         items.extend(
@@ -1449,6 +1529,18 @@ def _director_discovery_items(
             for row in influencers
             if "influencer" in _talent_availability_categories(row)
         )
+    if "crew" in kinds:
+        crew = db.session.execute(
+            select(MarketplaceListing)
+            .where(
+                MarketplaceListing.listing_type == "crew",
+                MarketplaceListing.visibility == "public",
+                MarketplaceListing.moderation_status == "approved",
+            )
+            .order_by(MarketplaceListing.updated_at.desc())
+            .limit(120)
+        ).scalars()
+        items.extend(_crew_discovery_item(row) for row in crew)
     if "location" in kinds:
         locations = db.session.execute(
             select(LocationProperty)
@@ -1492,12 +1584,7 @@ def _director_discovery_facets(items: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "kind_counts": by_kind,
         "city_counts": by_city,
-        "unsupported_categories": {
-            "Crew": (
-                "Crew currently uses talent/project requirement records until "
-                "a dedicated crew-provider schema is added."
-            ),
-        },
+        "unsupported_categories": {},
     }
 
 
@@ -1518,14 +1605,17 @@ def _director_discovery_detail(kind: str, public_id: str) -> dict[str, Any]:
             "actor",
             "model",
             "influencer",
+            "crew",
             "location",
             "equipment",
             "agency",
             "distribution",
         }:
             kind_key = listing.listing_type
+    if kind_key == "crew" and listing is not None:
+        return _crew_discovery_item(listing)
     if kind_key == "location":
-        row = db.session.execute(
+        row: Any = db.session.execute(
             select(LocationProperty).where(LocationProperty.public_id == public_id)
         ).scalar_one_or_none()
         if row:
@@ -2003,6 +2093,7 @@ def _priority_actions(
     return actions[:5]
 
 
+@director_blueprint.get("/brands/dashboard")
 @director_blueprint.get("/director/dashboard")
 def director_dashboard() -> Response:
     user = _current_user()
@@ -2061,6 +2152,7 @@ def director_dashboard() -> Response:
     return jsonify(success({"dashboard": payload}))
 
 
+@director_blueprint.get("/brands/schedule")
 @director_blueprint.get("/director/schedule")
 def director_schedule() -> Response:
     user = _current_user()
@@ -2070,6 +2162,7 @@ def director_schedule() -> Response:
     return jsonify(success({"schedule": payload}))
 
 
+@director_blueprint.get("/brands/discovery")
 @director_blueprint.get("/director/discovery")
 def director_discovery() -> Response:
     user = _current_user()
@@ -2091,6 +2184,7 @@ def director_discovery() -> Response:
     )
 
 
+@director_blueprint.get("/brands/discovery/<kind>/<public_id>")
 @director_blueprint.get("/director/discovery/<kind>/<public_id>")
 def director_discovery_item(kind: str, public_id: str) -> Response:
     user = _current_user()

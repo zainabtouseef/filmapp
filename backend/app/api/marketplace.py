@@ -29,7 +29,12 @@ from app.models.marketplace import (
     TalentProfile,
     UserProfile,
 )
-from app.models.operations import EquipmentProviderProfile, LocationProperty
+from app.models.operations import (
+    EquipmentItem,
+    EquipmentProviderProfile,
+    LocationProperty,
+)
+from app.models.projects import Project, ProjectMember, ProjectRequirement
 from app.responses import success
 from app.services.local_storage import public_url_for
 
@@ -306,18 +311,24 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
         select(UserProfile).where(UserProfile.user_id == listing.owner_user_id)
     ).scalar_one_or_none()
     talent = db.session.execute(
-        select(TalentProfile).where(TalentProfile.public_id == listing.profile_entity_id)
+        select(TalentProfile).where(
+            TalentProfile.public_id == listing.profile_entity_id
+        )
     ).scalar_one_or_none()
     model_profile = None
     if talent is None and listing.listing_type == "model":
         model_profile = db.session.execute(
-            select(ModelProfile).where(ModelProfile.public_id == listing.profile_entity_id)
+            select(ModelProfile).where(
+                ModelProfile.public_id == listing.profile_entity_id
+            )
         ).scalar_one_or_none()
         talent = model_profile.talent_profile if model_profile else None
     social_links = _safe_json_dict(talent.social_links_json if talent else None)
     portfolio_profile_type = "model" if model_profile else "talent"
     portfolio_profile_id = (
-        model_profile.public_id if model_profile else (talent.public_id if talent else "")
+        model_profile.public_id
+        if model_profile
+        else (talent.public_id if talent else "")
     )
     portfolio = []
     if portfolio_profile_id:
@@ -396,11 +407,17 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
         and str(value).replace(",", "").isdigit()
     ]
     return {
-        "verified": listing.verification_status in {"approved", "verified", "published"},
+        "verified": listing.verification_status
+        in {"approved", "verified", "published"},
         "headline": "Verified media kit",
         "reels": reels,
         "metrics": [
-            {"label": "Rating", "value": f"{float(profile.rating_average):.1f}/5" if profile else "Not reviewed yet"},
+            {
+                "label": "Rating",
+                "value": f"{float(profile.rating_average):.1f}/5"
+                if profile
+                else "Not reviewed yet",
+            },
             {"label": "Reviews", "value": str(profile.review_count if profile else 0)},
             {"label": "Portfolio media", "value": str(len(portfolio))},
             {"label": "Social links", "value": str(len(platforms))},
@@ -415,7 +432,11 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
             {"label": "Top markets", "value": "Not provided yet"},
             {"label": "Age bands", "value": "Not provided yet"},
             {"label": "Gender split", "value": "Not provided yet"},
-            {"label": "Niche", "value": ", ".join(platform["platform"] for platform in platforms) or "Not provided yet"},
+            {
+                "label": "Niche",
+                "value": ", ".join(platform["platform"] for platform in platforms)
+                or "Not provided yet",
+            },
         ],
         "platforms": platforms,
         "rate_cards": rate_cards,
@@ -684,6 +705,43 @@ def _shortlist_item_for_user(public_id: str, user_id: object) -> ShortlistItem:
             status=404,
         )
     return item
+
+
+def _validated_shortlist_scope(
+    user_id: object,
+    *,
+    project_public_id: str | None,
+    requirement_public_id: str | None,
+) -> tuple[str | None, str | None]:
+    if requirement_public_id and not project_public_id:
+        raise _field_error(
+            "project_id", "A project is required for a requirement shortlist."
+        )
+    if not project_public_id:
+        return None, None
+    project = db.session.execute(
+        select(Project)
+        .join(ProjectMember, ProjectMember.project_id == Project.id)
+        .where(
+            Project.public_id == project_public_id,
+            ProjectMember.user_id == user_id,
+            ProjectMember.status == "active",
+        )
+    ).scalar_one_or_none()
+    if project is None:
+        raise _field_error("project_id", "Select a project you can access.")
+    if requirement_public_id:
+        requirement = db.session.execute(
+            select(ProjectRequirement).where(
+                ProjectRequirement.public_id == requirement_public_id,
+                ProjectRequirement.project_id == project.id,
+            )
+        ).scalar_one_or_none()
+        if requirement is None:
+            raise _field_error(
+                "requirement_id", "Select a requirement in this project."
+            )
+    return project.public_id, requirement_public_id
 
 
 def _sync_listing_media(
@@ -1269,11 +1327,17 @@ def create_shortlist() -> ResponseReturnValue:
     name = str(payload.get("name", "")).strip()
     if len(name) < 2:
         raise _field_error("name", "Shortlist name is required.")
+    project_id, requirement_id = _validated_shortlist_scope(
+        user.id,
+        project_public_id=str(payload.get("project_id", "")).strip()[:40] or None,
+        requirement_public_id=str(payload.get("requirement_id", "")).strip()[:40]
+        or None,
+    )
     item = Shortlist(
         created_by=user.id,
         name=name[:160],
-        project_id=str(payload.get("project_id", "")).strip()[:40] or None,
-        requirement_id=str(payload.get("requirement_id", "")).strip()[:40] or None,
+        project_id=project_id,
+        requirement_id=requirement_id,
     )
     db.session.add(item)
     db.session.commit()
@@ -1345,10 +1409,11 @@ def publish_listing() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     listing_type = str(payload.get("listing_type", "")).strip()
-    if listing_type not in TALENT_LISTING_TYPES | {"location"}:
+    if listing_type not in TALENT_LISTING_TYPES | {"location", "equipment", "crew"}:
         raise _field_error(
             "listing_type",
-            "Only actor, model, influencer, talent and location listings can be published.",
+            "Only actor, model, influencer, talent, crew, location and equipment "
+            "listings can be published.",
         )
     if listing_type == "location":
         property_id = str(
@@ -1415,10 +1480,134 @@ def publish_listing() -> ResponseReturnValue:
         _sync_listing_media(listing, user.id, payload)
         db.session.commit()
         return jsonify(success({"listing": _listing_payload(listing)})), 201
+    if listing_type == "equipment":
+        profile = _equipment_profile_for_user(user.id)
+        if profile.verification_status not in {"approved", "verified", "active"}:
+            raise APIError(
+                "marketplace.kyc_required",
+                "Verified equipment-provider status is required before publishing.",
+                status=403,
+            )
+        title = str(payload.get("title") or profile.name).strip()
+        summary = str(
+            payload.get("summary")
+            or profile.bio
+            or profile.coverage
+            or "Production equipment and camera services."
+        ).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Listing title is required.")
+        if len(summary) < 10:
+            raise _field_error(
+                "summary", "Listing summary must contain 10+ characters."
+            )
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "equipment",
+                MarketplaceListing.profile_entity_id == profile.public_id,
+            )
+        ).scalar_one_or_none()
+        if listing is None:
+            listing = MarketplaceListing(
+                owner_user_id=user.id,
+                listing_type="equipment",
+                profile_entity_id=profile.public_id,
+                verification_status=profile.verification_status,
+                moderation_status="approved",
+                visibility="public",
+            )
+            db.session.add(listing)
+        available_rates = [
+            rate
+            for rate in db.session.execute(
+                select(EquipmentItem.day_rate_minor).where(
+                    EquipmentItem.provider_profile_id == profile.id,
+                    EquipmentItem.status.in_({"available", "published", "active"}),
+                    EquipmentItem.day_rate_minor.is_not(None),
+                )
+            ).scalars()
+            if rate is not None
+        ]
+        listing.title = title[:180]
+        listing.summary = summary[:2000]
+        listing.city_id = profile.city_id
+        listing.price_from_minor = min(available_rates) if available_rates else None
+        listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        listing.published_at = listing.published_at or utc_now()
+        db.session.flush()
+        _sync_listing_media(listing, user.id, payload)
+        db.session.commit()
+        return jsonify(success({"listing": _listing_payload(listing)})), 201
+    if listing_type == "crew":
+        has_crew_role = any(
+            row.status == "active" and row.role.code == "crew_service"
+            for row in user.roles
+        )
+        if not has_crew_role:
+            raise APIError(
+                "marketplace.role_required",
+                "A crew-service role is required to publish a crew listing.",
+                status=403,
+            )
+        if not _has_any_provider_kyc(user.id):
+            raise APIError(
+                "marketplace.kyc_required",
+                "Approved crew-provider KYC is required before publishing.",
+                status=403,
+            )
+        title = str(payload.get("title") or user.display_name).strip()
+        summary = str(payload.get("summary", "")).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Listing title is required.")
+        if len(summary) < 10:
+            raise _field_error(
+                "summary", "Listing summary must contain 10+ characters."
+            )
+        crew_user_profile = db.session.execute(
+            select(UserProfile).where(UserProfile.user_id == user.id)
+        ).scalar_one_or_none()
+        requested_city = str(payload.get("city_id", "")).strip()
+        city = _city_by_public_id(requested_city) if requested_city else None
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "crew",
+                MarketplaceListing.profile_entity_id == user.public_id,
+            )
+        ).scalar_one_or_none()
+        if listing is None:
+            listing = MarketplaceListing(
+                owner_user_id=user.id,
+                listing_type="crew",
+                profile_entity_id=user.public_id,
+                verification_status="approved",
+                moderation_status="approved",
+                visibility="public",
+            )
+            db.session.add(listing)
+        day_rate = _optional_int(payload.get("price_from_minor"), "price_from_minor")
+        if day_rate is not None and day_rate < 0:
+            raise _field_error("price_from_minor", "Rate cannot be negative.")
+        listing.title = title[:180]
+        listing.summary = summary[:2000]
+        listing.city_id = (
+            city.id
+            if city
+            else (crew_user_profile.city_id if crew_user_profile else None)
+        )
+        listing.price_from_minor = day_rate
+        listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        listing.published_at = listing.published_at or utc_now()
+        db.session.flush()
+        _sync_listing_media(listing, user.id, payload)
+        db.session.commit()
+        return jsonify(success({"listing": _listing_payload(listing)})), 201
     if not _has_any_provider_kyc(user.id):
         raise APIError(
             "marketplace.kyc_required",
-            "Approved provider KYC is required before publishing actor, model, or influencer listings.",
+            "Approved provider KYC is required before publishing actor, model, or "
+            "influencer listings.",
             status=403,
         )
     talent = db.session.execute(
@@ -1482,16 +1671,41 @@ def marketplace_listings() -> Response:
             "q": request.args.get("q"),
         }
     )
-    listings = db.session.execute(
-        query.order_by(MarketplaceListing.published_at.desc()).limit(50)
-    ).scalars()
-    return jsonify(success({"listings": [_listing_payload(item) for item in listings]}))
+    try:
+        page = max(int(request.args.get("page", 1) or 1), 1)
+        per_page = min(max(int(request.args.get("per_page", 24) or 24), 1), 50)
+    except ValueError:
+        raise _field_error("page", "Pagination values must be integers.") from None
+    total = db.session.execute(
+        select(func.count()).select_from(query.subquery())
+    ).scalar_one()
+    listings = list(
+        db.session.execute(
+            query.order_by(MarketplaceListing.published_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+        ).scalars()
+    )
+    return jsonify(
+        success(
+            {
+                "listings": [_listing_payload(item) for item in listings],
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": total,
+                    "has_more": page * per_page < total,
+                },
+            }
+        )
+    )
 
 
 @marketplace_blueprint.get("/marketplace/listings/<public_id>")
 def marketplace_listing_detail(public_id: str) -> Response:
     listing = db.session.execute(
-        select(MarketplaceListing).where(
+        select(MarketplaceListing)
+        .where(
             (
                 (MarketplaceListing.public_id == public_id)
                 | (MarketplaceListing.profile_entity_id == public_id)

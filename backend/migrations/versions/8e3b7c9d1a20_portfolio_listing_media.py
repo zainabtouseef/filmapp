@@ -51,9 +51,7 @@ def upgrade() -> None:
         sa.Column("sort_order", sa.Integer(), nullable=False),
         sa.Column("moderation_status", sa.String(length=32), nullable=False),
         sa.ForeignKeyConstraint(["file_id"], ["files.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["owner_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["thumbnail_file_id"], ["files.id"], ondelete="SET NULL"
         ),
@@ -68,7 +66,9 @@ def upgrade() -> None:
     op.create_table(
         "listing_media",
         *_audit_columns(),
-        sa.Column("listing_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
+        sa.Column(
+            "listing_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False
+        ),
         sa.Column("file_id", sa.Uuid(as_uuid=True, native_uuid=False), nullable=False),
         sa.Column("sort_order", sa.Integer(), nullable=False),
         sa.Column("is_cover", sa.Boolean(), nullable=False),

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -177,11 +177,27 @@ def ensure_contract_template(stats: dict[str, int], admin: User) -> ContractTemp
         },
     )
     clauses = [
-        ("parties", "Parties", "Producer and talent are the named contracting parties."),
+        (
+            "parties",
+            "Parties",
+            "Producer and talent are the named contracting parties.",
+        ),
         ("project", "Project", "Engagement is limited to the seeded demo project."),
-        ("payment", "Payment Schedule", "Payment follows the attached milestone schedule."),
-        ("usage", "Usage Rights", "Usage is limited to the campaign scope unless amended."),
-        ("cancellation", "Cancellation", "Cancellation fees follow the platform policy."),
+        (
+            "payment",
+            "Payment Schedule",
+            "Payment follows the attached milestone schedule.",
+        ),
+        (
+            "usage",
+            "Usage Rights",
+            "Usage is limited to the campaign scope unless amended.",
+        ),
+        (
+            "cancellation",
+            "Cancellation",
+            "Cancellation fees follow the platform policy.",
+        ),
     ]
     for order, (key_name, title, body) in enumerate(clauses, start=1):
         ensure(
@@ -208,11 +224,15 @@ def seed_bookings(stats: dict[str, int]) -> list[Booking]:
         producer = user(f"DEMO-DP-{idx:03}")
         talent = user(f"DEMO-AT-{idx:03}")
         listing = required(MarketplaceListing, public_id=f"DEMO-LST-AT-{idx:03}")
-        requirement = db.session.execute(
-            select(ProjectRequirement)
-            .where(ProjectRequirement.project_id == project.id)
-            .order_by(ProjectRequirement.created_at)
-        ).scalars().first()
+        requirement = (
+            db.session.execute(
+                select(ProjectRequirement)
+                .where(ProjectRequirement.project_id == project.id)
+                .order_by(ProjectRequirement.created_at)
+            )
+            .scalars()
+            .first()
+        )
         amount_minor = (180_000 + idx * 25_000) * 100
         start = datetime(2026, 9, idx + 1, 9, tzinfo=UTC)
         booking = ensure(
@@ -233,7 +253,9 @@ def seed_bookings(stats: dict[str, int]) -> list[Booking]:
                 "start_at": start,
                 "end_at": start + timedelta(days=2, hours=8),
                 "expires_at": start - timedelta(days=3),
-                "secured_at": NOW - timedelta(days=2) if BOOKING_STATUSES[idx - 1] in {"secured", "completed"} else None,
+                "secured_at": NOW - timedelta(days=2)
+                if BOOKING_STATUSES[idx - 1] in {"secured", "completed"}
+                else None,
             },
         )
         bookings.append(booking)
@@ -269,7 +291,9 @@ def seed_bookings(stats: dict[str, int]) -> list[Booking]:
             )
         offer_ids = []
         for rev in range(1, 4):
-            sender, recipient = (producer, talent) if rev % 2 == 1 else (talent, producer)
+            sender, recipient = (
+                (producer, talent) if rev % 2 == 1 else (talent, producer)
+            )
             offer = ensure(
                 Offer,
                 stats,
@@ -282,10 +306,22 @@ def seed_bookings(stats: dict[str, int]) -> list[Booking]:
                     "revision": rev,
                     "fee_minor": amount_minor + (rev - 2) * 15_000 * 100,
                     "currency": "PKR",
-                    "schedule_json": json.dumps({"start": booking.start_at.isoformat(), "end": booking.end_at.isoformat()}),
+                    "schedule_json": json.dumps(
+                        {
+                            "start": booking.start_at.isoformat(),
+                            "end": booking.end_at.isoformat(),
+                        }
+                    ),
                     "conditions": f"Demo round {rev} terms for {PROJECT_TITLES[idx - 1]}",
-                    "payment_schedule_json": json.dumps({"advance_percent": 50, "completion_percent": 50}),
-                    "status": "active" if rev == 3 and booking.status in {"sent", "countered"} else "accepted" if booking.status in {"accepted", "secured", "completed"} and rev == 3 else "superseded",
+                    "payment_schedule_json": json.dumps(
+                        {"advance_percent": 50, "completion_percent": 50}
+                    ),
+                    "status": "active"
+                    if rev == 3 and booking.status in {"sent", "countered"}
+                    else "accepted"
+                    if booking.status in {"accepted", "secured", "completed"}
+                    and rev == 3
+                    else "superseded",
                     "expires_at": booking.expires_at,
                 },
             )
@@ -297,9 +333,13 @@ def seed_bookings(stats: dict[str, int]) -> list[Booking]:
             public_id=f"DEMO-NEG-{idx:03}",
             defaults={
                 "booking_id": booking.id,
-                "status": "locked" if booking.status in {"accepted", "secured", "completed"} else "open",
+                "status": "locked"
+                if booking.status in {"accepted", "secured", "completed"}
+                else "open",
                 "current_offer_id": offer_ids[-1].id,
-                "locked_at": NOW - timedelta(days=1) if booking.status in {"accepted", "secured", "completed"} else None,
+                "locked_at": NOW - timedelta(days=1)
+                if booking.status in {"accepted", "secured", "completed"}
+                else None,
             },
         )
         if thread.current_offer_id is None:
@@ -355,7 +395,9 @@ def seed_bookings(stats: dict[str, int]) -> list[Booking]:
                 },
             )
         if booking.status in {"accepted", "secured", "completed"}:
-            calendar_entry = required(AvailabilityEntry, public_id=f"DEMO-AVL-AT-{idx:03}-2")
+            calendar_entry = required(
+                AvailabilityEntry, public_id=f"DEMO-AVL-AT-{idx:03}-2"
+            )
             calendar_entry.status = "booked"
             calendar_entry.source_booking_id = booking.id
         booking.status = BOOKING_STATUSES[idx - 1]
@@ -385,11 +427,18 @@ def seed_contracts_and_legal(
                 "title": f"{PROJECT_TITLES[idx - 1]} Talent Agreement",
                 "status": CONTRACT_STATUSES[idx - 1],
                 "effective_date": booking.start_at.date(),
-                "value_minor": booking.agreed_amount_minor or (180_000 + idx * 25_000) * 100,
+                "value_minor": booking.agreed_amount_minor
+                or (180_000 + idx * 25_000) * 100,
                 "currency": "PKR",
-                "rendered_file_id": file_asset(f"DEMO-FILE-PROJECT-{((idx - 1) % 20) + 1:03}").id,
-                "content_snapshot_json": json.dumps({"seed_batch": SEED_BATCH, "booking": booking.public_id}),
-                "signature_progress": Decimal("1.000") if CONTRACT_STATUSES[idx - 1] == "signed" else Decimal("0.500"),
+                "rendered_file_id": file_asset(
+                    f"DEMO-FILE-PROJECT-{((idx - 1) % 20) + 1:03}"
+                ).id,
+                "content_snapshot_json": json.dumps(
+                    {"seed_batch": SEED_BATCH, "booking": booking.public_id}
+                ),
+                "signature_progress": Decimal("1.000")
+                if CONTRACT_STATUSES[idx - 1] == "signed"
+                else Decimal("0.500"),
             },
         )
         contracts.append(contract)
@@ -407,7 +456,9 @@ def seed_contracts_and_legal(
                     "user_id": party_user.id,
                     "party_role": party_role,
                     "signing_order": order,
-                    "status": "signed" if contract.status == "signed" or order == 1 else "pending",
+                    "status": "signed"
+                    if contract.status == "signed" or order == 1
+                    else "pending",
                 },
             )
             if party.status == "signed":
@@ -419,7 +470,9 @@ def seed_contracts_and_legal(
                     party_id=party.id,
                     signer_user_id=party_user.id,
                     defaults={
-                        "signature_file_id": file_asset(f"DEMO-FILE-PROJECT-{((idx + order - 1) % 20) + 1:03}").id,
+                        "signature_file_id": file_asset(
+                            f"DEMO-FILE-PROJECT-{((idx + order - 1) % 20) + 1:03}"
+                        ).id,
                         "signature_hash": f"demo-signature-{idx:03}-{order}",
                         "signed_at": NOW - timedelta(days=idx),
                         "ip_address": "127.0.0.1",
@@ -454,7 +507,9 @@ def seed_contracts_and_legal(
                 "risk": "high" if idx in {7, 9} else "medium" if idx % 2 else "low",
                 "status": "approved" if idx in {3, 6, 8, 10} else "requested",
                 "sla_due_at": NOW + timedelta(days=2 + idx),
-                "decision_notes": "Demo legal approval" if idx in {3, 6, 8, 10} else None,
+                "decision_notes": "Demo legal approval"
+                if idx in {3, 6, 8, 10}
+                else None,
             },
         )
         ensure(
@@ -507,12 +562,18 @@ def seed_contracts_and_legal(
     return contracts
 
 
-def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: list[Contract]) -> None:
+def seed_payments(
+    stats: dict[str, int], bookings: list[Booking], contracts: list[Contract]
+) -> None:
     admin = user("DEMO-ADMIN-001")
-    fee_rule = db.session.execute(
-        select(FeeRule).where(FeeRule.active.is_(True))
-    ).scalars().first()
-    for idx, (booking, contract) in enumerate(zip(bookings, contracts, strict=True), start=1):
+    fee_rule = (
+        db.session.execute(select(FeeRule).where(FeeRule.active.is_(True)))
+        .scalars()
+        .first()
+    )
+    for idx, (booking, contract) in enumerate(
+        zip(bookings, contracts, strict=True), start=1
+    ):
         payer = user(f"DEMO-DP-{idx:03}")
         payee = user(f"DEMO-AT-{idx:03}")
         total = contract.value_minor or (200_000 + idx * 20_000) * 100
@@ -529,7 +590,9 @@ def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: lis
                 "status": "active" if idx != 8 else "completed",
             },
         )
-        for seq, (name, percent) in enumerate([("Advance", 50), ("Completion", 50)], start=1):
+        for seq, (name, percent) in enumerate(
+            [("Advance", 50), ("Completion", 50)], start=1
+        ):
             milestone = ensure(
                 PaymentMilestone,
                 stats,
@@ -540,9 +603,15 @@ def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: lis
                     "name": name,
                     "sequence": seq,
                     "amount_minor": total * percent // 100,
-                    "due_at": booking.start_at - timedelta(days=3) if seq == 1 else booking.end_at + timedelta(days=1),
-                    "release_condition": "contract_signed" if seq == 1 else "job_completed",
-                    "status": "verified" if PAYMENT_PROOF_STATUSES[idx - 1] == "approved" and seq == 1 else "pending",
+                    "due_at": booking.start_at - timedelta(days=3)
+                    if seq == 1
+                    else booking.end_at + timedelta(days=1),
+                    "release_condition": "contract_signed"
+                    if seq == 1
+                    else "job_completed",
+                    "status": "verified"
+                    if PAYMENT_PROOF_STATUSES[idx - 1] == "approved" and seq == 1
+                    else "pending",
                 },
             )
             if seq == 1:
@@ -560,8 +629,14 @@ def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: lis
                         "amount_minor": milestone.amount_minor,
                         "currency": "PKR",
                         "direction": "outgoing",
-                        "status": "succeeded" if PAYMENT_PROOF_STATUSES[idx - 1] == "approved" else "under_verification" if PAYMENT_PROOF_STATUSES[idx - 1] == "pending" else "failed",
-                        "paid_at": NOW - timedelta(days=idx) if PAYMENT_PROOF_STATUSES[idx - 1] == "approved" else None,
+                        "status": "succeeded"
+                        if PAYMENT_PROOF_STATUSES[idx - 1] == "approved"
+                        else "under_verification"
+                        if PAYMENT_PROOF_STATUSES[idx - 1] == "pending"
+                        else "failed",
+                        "paid_at": NOW - timedelta(days=idx)
+                        if PAYMENT_PROOF_STATUSES[idx - 1] == "approved"
+                        else None,
                         "idempotency_key": f"demo-payment-{idx:03}",
                     },
                 )
@@ -579,9 +654,15 @@ def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: lis
                         "submitted_by": payer.id,
                         "status": PAYMENT_PROOF_STATUSES[idx - 1],
                         "risk_score": 12 + idx,
-                        "reviewed_by": admin.id if PAYMENT_PROOF_STATUSES[idx - 1] != "pending" else None,
-                        "reviewed_at": NOW - timedelta(days=idx - 1) if PAYMENT_PROOF_STATUSES[idx - 1] != "pending" else None,
-                        "rejection_reason": "Demo rejected proof example" if PAYMENT_PROOF_STATUSES[idx - 1] == "rejected" else None,
+                        "reviewed_by": admin.id
+                        if PAYMENT_PROOF_STATUSES[idx - 1] != "pending"
+                        else None,
+                        "reviewed_at": NOW - timedelta(days=idx - 1)
+                        if PAYMENT_PROOF_STATUSES[idx - 1] != "pending"
+                        else None,
+                        "rejection_reason": "Demo rejected proof example"
+                        if PAYMENT_PROOF_STATUSES[idx - 1] == "rejected"
+                        else None,
                     },
                 )
                 if proof.status == "approved":
@@ -600,7 +681,10 @@ def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: lis
                         },
                     )
                     for entry_no, (entry_user, direction, desc) in enumerate(
-                        [(payer, "debit", "Demo payer ledger debit"), (payee, "credit", "Demo payee pending release")],
+                        [
+                            (payer, "debit", "Demo payer ledger debit"),
+                            (payee, "credit", "Demo payee pending release"),
+                        ],
                         start=1,
                     ):
                         ensure(
@@ -632,7 +716,9 @@ def seed_payments(stats: dict[str, int], bookings: list[Booking], contracts: lis
                 "fee_minor": total * 10 // 100,
                 "tax_minor": 0,
                 "currency": "PKR",
-                "calculation_json": json.dumps({"seed_batch": SEED_BATCH, "fee_bps": 1000}),
+                "calculation_json": json.dumps(
+                    {"seed_batch": SEED_BATCH, "fee_bps": 1000}
+                ),
             },
         )
         ensure(
@@ -662,7 +748,11 @@ def main() -> None:
         contracts = seed_contracts_and_legal(stats, bookings, template)
         seed_payments(stats, bookings, contracts)
         db.session.commit()
-    print(json.dumps({"seed_batch": SEED_BATCH, "stats": dict(sorted(stats.items()))}, indent=2))
+    print(
+        json.dumps(
+            {"seed_batch": SEED_BATCH, "stats": dict(sorted(stats.items()))}, indent=2
+        )
+    )
 
 
 if __name__ == "__main__":
