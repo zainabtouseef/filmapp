@@ -68,5 +68,9 @@ jobs:
       - run: mypy --config-file backend/pyproject.toml backend/app
       - run: flask --app app.wsgi db upgrade -d migrations
         working-directory: backend
-      - run: pytest --cov=app --cov-report=term-missing
+      - name: Run backend tests
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=0
+        working-directory: backend
+      - name: Enforce backend coverage threshold
+        run: coverage report --fail-under=85
         working-directory: backend
