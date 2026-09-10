@@ -105,9 +105,14 @@
     // Reuse it for the app bundle URL so browsers cannot keep running an
     // earlier deployment after the server has been updated.
     const buildVersion = {{flutter_service_worker_version}};
+    // This release suffix intentionally changes when the production shell or
+    // cache policy changes. Flutter's bundle filename is stable, so a unique
+    // request URL guarantees that an existing browser cannot reuse the prior
+    // day's main.dart.js response.
+    const releaseVersion = `${buildVersion}-20260910-picture-cards-2`;
     for (const build of _flutter.buildConfig.builds) {
       if (build.mainJsPath) {
-        build.mainJsPath = `${build.mainJsPath}?v=${buildVersion}`;
+        build.mainJsPath = `${build.mainJsPath}?v=${releaseVersion}`;
       }
     }
 
@@ -148,7 +153,7 @@
     // when privacy settings or content blockers reject the public CDN.
     Promise.resolve(_flutter.loader.load({
       config: { canvasKitBaseUrl: 'canvaskit/' },
-      serviceWorkerSettings: { serviceWorkerVersion: buildVersion },
+      serviceWorkerSettings: { serviceWorkerVersion: releaseVersion },
     })).catch(showBootFailure);
     window.setTimeout(showBootFailure, 15000);
   </script>
