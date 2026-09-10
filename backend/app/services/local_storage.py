@@ -85,4 +85,12 @@ def public_url_for(file_asset: FileAsset) -> str | None:
     base_url = str(current_app.config.get("PUBLIC_MEDIA_BASE_URL") or "").rstrip("/")
     if not base_url:
         return None
-    return f"{base_url}/{file_asset.storage_key.lstrip('/')}"
+    url = f"{base_url}/{file_asset.storage_key.lstrip('/')}"
+    # Public media is served with a long immutable cache lifetime. Append a
+    # content-derived version so browsers that cached an earlier missing or
+    # replaced object cannot keep showing the UI fallback after deployment.
+    checksum = str(file_asset.checksum_sha256 or "").strip().lower()
+    if checksum:
+        return f"{url}?v={checksum[:12]}"
+    version = file_asset.version
+    return f"{url}?v=r{version}" if version else url

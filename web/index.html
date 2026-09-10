@@ -109,7 +109,7 @@
     // cache policy changes. Flutter's bundle filename is stable, so a unique
     // request URL guarantees that an existing browser cannot reuse the prior
     // day's main.dart.js response.
-    const releaseVersion = `${buildVersion}-20260910-picture-cards-2`;
+    const releaseVersion = `${buildVersion}-20260910-media-v3`;
     for (const build of _flutter.buildConfig.builds) {
       if (build.mainJsPath) {
         build.mainJsPath = `${build.mainJsPath}?v=${releaseVersion}`;
