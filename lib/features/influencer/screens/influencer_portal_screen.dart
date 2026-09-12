@@ -18,6 +18,7 @@ import '../../actor_talent/screens/at12_safety_controls_screen.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../../director_producer/widgets/dp_glass_card.dart';
 import '../../director_producer/widgets/dp_holographic_button.dart';
 import '../../director_producer/widgets/dp_layout_helpers.dart';
@@ -277,6 +278,11 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const MarketplacePricingPreferencePanel(
+              listingTypes: {'influencer'},
+              title: 'Influencer marketplace pricing',
+            ),
+            const SizedBox(height: 12),
             DPResponsiveGrid(
               minWidth: 210,
               children: [

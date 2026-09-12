@@ -436,13 +436,44 @@ def _with_listing(
                 }
                 for row in listing.media
             ]
-        item["rate_from_minor"] = listing.price_from_minor
+        mode = (listing.pricing_mode or "negotiable").strip().lower()
+        if mode not in {"fixed", "negotiable", "on_request"}:
+            mode = "negotiable"
+        shows_price = mode != "on_request"
+        allows_bargaining = mode != "fixed"
+        item["pricing_mode"] = mode
+        item["shows_price"] = shows_price
+        item["allows_bargaining"] = allows_bargaining
+        item["rate_from_minor"] = listing.price_from_minor if shows_price else None
         item["currency"] = listing.currency
-        item["rate_label"] = _minor_money_label(
-            listing.price_from_minor,
-            listing.currency,
+        item["rate_label"] = (
+            _minor_money_label(listing.price_from_minor, listing.currency)
+            if shows_price
+            else "Open to offers"
         )
         item["verification_status"] = listing.verification_status
+    else:
+        # Provider records without a published listing have not chosen to
+        # disclose their pricing. Never infer and expose a private source rate.
+        item["pricing_mode"] = "on_request"
+        item["shows_price"] = False
+        item["allows_bargaining"] = True
+        item["rate_from_minor"] = None
+        item["rate_label"] = "Open to offers"
+    media_kit = item.get("media_kit")
+    if isinstance(media_kit, dict):
+        media_kit["rate_cards"] = [
+            {
+                "label": "Campaign / booking rate",
+                "price_label": item["rate_label"],
+                "scope": (
+                    "Price shared through a private offer"
+                    if not item["shows_price"]
+                    else "Live marketplace rate"
+                ),
+                "negotiable": item["allows_bargaining"],
+            }
+        ]
     return item
 
 
@@ -952,20 +983,29 @@ def _model_discovery_detail(item: ModelProfile) -> dict[str, Any]:
         },
         {
             "title": "Usage rates",
-            "rows": [
-                _detail_row(
-                    row.label,
-                    " · ".join(
-                        [
-                            _minor_money_label(row.amount_minor, row.currency),
-                            row.scope or "",
-                            "Negotiable" if row.negotiable else "Fixed",
-                            "Review required" if row.requires_review else "",
-                        ]
-                    ).strip(" ·"),
-                )
-                for row in item.usage_rates
-            ],
+            "rows": (
+                [
+                    _detail_row(
+                        row.label,
+                        " · ".join(
+                            [
+                                _minor_money_label(row.amount_minor, row.currency),
+                                row.scope or "",
+                                "Negotiable" if row.negotiable else "Fixed",
+                                "Review required" if row.requires_review else "",
+                            ]
+                        ).strip(" ·"),
+                    )
+                    for row in item.usage_rates
+                ]
+                if card["shows_price"]
+                else [
+                    _detail_row(
+                        "Commercial pricing",
+                        "Shared privately through the bargaining workflow",
+                    )
+                ]
+            ),
         },
         {
             "title": "Usage rights",
@@ -1099,14 +1139,26 @@ def _location_discovery_detail(item: LocationProperty) -> dict[str, Any]:
         },
         {
             "title": "Pricing",
-            "rows": [
-                _detail_row(
-                    row.label,
-                    f"{_minor_money_label(row.amount_minor, row.currency)} / {row.unit}"
-                    + (f" · {row.conditions}" if row.conditions else ""),
-                )
-                for row in pricing
-            ],
+            "rows": (
+                [
+                    _detail_row(
+                        row.label,
+                        (
+                            f"{_minor_money_label(row.amount_minor, row.currency)}"
+                            f" / {row.unit}"
+                        )
+                        + (f" · {row.conditions}" if row.conditions else ""),
+                    )
+                    for row in pricing
+                ]
+                if card["shows_price"]
+                else [
+                    _detail_row(
+                        "Location pricing",
+                        "Shared privately through the bargaining workflow",
+                    )
+                ]
+            ),
         },
         {
             "title": "Rules",
@@ -1214,7 +1266,11 @@ def _equipment_discovery_detail(item: EquipmentProviderProfile) -> dict[str, Any
                             row.category,
                             row.brand or "",
                             row.condition,
-                            _minor_money_label(row.day_rate_minor, row.currency),
+                            (
+                                _minor_money_label(row.day_rate_minor, row.currency)
+                                if card["shows_price"]
+                                else "Price on request"
+                            ),
                             row.status,
                         ]
                     ).strip(" ·"),
@@ -1229,7 +1285,11 @@ def _equipment_discovery_detail(item: EquipmentProviderProfile) -> dict[str, Any
                     row.name,
                     " · ".join(
                         [
-                            _minor_money_label(row.price_minor, row.currency),
+                            (
+                                _minor_money_label(row.price_minor, row.currency)
+                                if card["shows_price"]
+                                else "Price on request"
+                            ),
                             "Operator included" if row.operator_included else "",
                             row.status,
                             row.description or "",
@@ -1248,7 +1308,7 @@ def _equipment_discovery_detail(item: EquipmentProviderProfile) -> dict[str, Any
                         [
                             row.term_type,
                             _minor_money_label(row.amount_minor, row.currency)
-                            if row.amount_minor is not None
+                            if row.amount_minor is not None and card["shows_price"]
                             else "",
                             row.note or "",
                         ]
@@ -1312,7 +1372,12 @@ def _agency_discovery_detail(item: CastingAgency) -> dict[str, Any]:
     card["sections"] = [
         _detail_section(
             "Agency profile",
-            ("Commission", f"{item.commission_bps / 100:.0f}%"),
+            (
+                "Commission",
+                f"{item.commission_bps / 100:.0f}%"
+                if card["shows_price"]
+                else "Shared during bargaining",
+            ),
             ("Verification", item.verification_status),
             ("Owner", item.owner.display_name if item.owner else None),
         ),
@@ -1325,7 +1390,11 @@ def _agency_discovery_detail(item: CastingAgency) -> dict[str, Any]:
                         [
                             row.representation_type.replace("_", " ").title(),
                             row.status,
-                            f"{row.commission_bps / 100:.0f}% commission",
+                            (
+                                f"{row.commission_bps / 100:.0f}% commission"
+                                if card["shows_price"]
+                                else "Private terms"
+                            ),
                         ]
                     ),
                 )
@@ -1380,6 +1449,16 @@ def _distribution_discovery_detail(item: DistributionPartnerProfile) -> dict[str
 
 def _crew_discovery_item(item: MarketplaceListing) -> dict[str, Any]:
     profile = _profile_for_user(item.owner_user_id)
+    mode = (item.pricing_mode or "negotiable").strip().lower()
+    if mode not in {"fixed", "negotiable", "on_request"}:
+        mode = "negotiable"
+    shows_price = mode != "on_request"
+    allows_bargaining = mode != "fixed"
+    rate_label = (
+        _minor_money_label(item.price_from_minor, item.currency)
+        if shows_price
+        else "Open to offers"
+    )
     card = {
         "public_id": item.profile_entity_id,
         "listing_id": item.public_id,
@@ -1390,9 +1469,12 @@ def _crew_discovery_item(item: MarketplaceListing) -> dict[str, Any]:
         "summary": item.summary,
         "city": _city_payload(item.city),
         "owner": _owner_payload(item.owner),
-        "rate_from_minor": item.price_from_minor,
+        "rate_from_minor": item.price_from_minor if shows_price else None,
         "currency": item.currency,
-        "rate_label": _minor_money_label(item.price_from_minor, item.currency),
+        "rate_label": rate_label,
+        "pricing_mode": mode,
+        "shows_price": shows_price,
+        "allows_bargaining": allows_bargaining,
         "verification_status": item.verification_status,
         "rating_average": int(profile.rating_average) if profile else 0,
         "available": True,
@@ -1414,7 +1496,13 @@ def _crew_discovery_item(item: MarketplaceListing) -> dict[str, Any]:
                 ("Provider", item.owner.display_name),
                 ("Service summary", item.summary),
                 ("City", item.city.name if item.city else None),
-                ("Rate", _minor_money_label(item.price_from_minor, item.currency)),
+                ("Rate", rate_label),
+                (
+                    "Commercial terms",
+                    "Counteroffers enabled"
+                    if allows_bargaining
+                    else "Fixed listed price",
+                ),
                 ("Verification", item.verification_status),
             )
         ],

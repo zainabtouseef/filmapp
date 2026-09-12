@@ -302,12 +302,43 @@ class AuthRepository {
     return MarketplaceListing.fromJson(data['listing'] as Map<String, dynamic>);
   }
 
+  Future<List<MarketplaceListing>> myMarketplaceListings({String? type}) async {
+    final suffix = type == null || type.isEmpty
+        ? ''
+        : '?type=${Uri.encodeComponent(type)}';
+    final response = await _client.get('/marketplace/my-listings$suffix');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['listings'] as List<dynamic>? ?? const [])
+        .map(
+            (item) => MarketplaceListing.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<MarketplaceListing> updateMarketplaceListingPricing({
+    required String listingId,
+    required String pricingMode,
+    int? priceFromMinor,
+    String currency = 'PKR',
+  }) async {
+    final response = await _client.patch(
+      '/marketplace/listings/$listingId/pricing',
+      body: {
+        'pricing_mode': pricingMode,
+        'price_from_minor': priceFromMinor,
+        'currency': currency,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return MarketplaceListing.fromJson(data['listing'] as Map<String, dynamic>);
+  }
+
   Future<MarketplaceListing> publishMarketplaceListing({
     required String title,
     required String summary,
     String listingType = 'talent',
     String? cityId,
     List<String> portfolioItemIds = const [],
+    String? pricingMode,
   }) async {
     final response = await _client.post(
       '/marketplace/listings',
@@ -317,6 +348,7 @@ class AuthRepository {
         'summary': summary,
         if (cityId != null) 'city_id': cityId,
         if (portfolioItemIds.isNotEmpty) 'portfolio_item_ids': portfolioItemIds,
+        if (pricingMode != null) 'pricing_mode': pricingMode,
       },
     );
     final data = response['data'] as Map<String, dynamic>;

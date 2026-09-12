@@ -42,6 +42,7 @@ marketplace_blueprint = Blueprint("marketplace", __name__)
 
 TALENT_LISTING_TYPES = {"talent", "actor", "model", "influencer"}
 TALENT_AVAILABILITY_CATEGORIES = {"actor", "model", "influencer"}
+PRICING_MODES = {"fixed", "negotiable", "on_request"}
 
 
 def _field_error(field: str, message: str) -> APIError:
@@ -294,6 +295,49 @@ def _money_label(amount_minor: int | None, currency: str = "PKR") -> str:
     return f"{currency} {whole}"
 
 
+def _normalized_pricing_mode(listing: MarketplaceListing) -> str:
+    mode = (listing.pricing_mode or "negotiable").strip().lower()
+    return mode if mode in PRICING_MODES else "negotiable"
+
+
+def _pricing_payload(
+    listing: MarketplaceListing,
+    *,
+    reveal_private_price: bool = False,
+) -> dict[str, Any]:
+    mode = _normalized_pricing_mode(listing)
+    shows_price = mode != "on_request"
+    payload: dict[str, Any] = {
+        "pricing_mode": mode,
+        "shows_price": shows_price,
+        "allows_bargaining": mode != "fixed",
+        "price_from_minor": listing.price_from_minor if shows_price else None,
+        "price_label": (
+            _money_label(listing.price_from_minor, listing.currency)
+            if shows_price
+            else "Open to offers"
+        ),
+    }
+    if reveal_private_price:
+        payload["configured_price_from_minor"] = listing.price_from_minor
+    return payload
+
+
+def _apply_pricing_mode(
+    listing: MarketplaceListing,
+    payload: dict[str, Any],
+) -> None:
+    if "pricing_mode" not in payload:
+        return
+    mode = str(payload.get("pricing_mode") or "").strip().lower()
+    if mode not in PRICING_MODES:
+        raise _field_error(
+            "pricing_mode",
+            "Use fixed, negotiable, or on_request.",
+        )
+    listing.pricing_mode = mode
+
+
 def _safe_json_dict(value: str | None) -> dict[str, Any]:
     if not value:
         return {}
@@ -368,15 +412,20 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
             for row in portfolio[:6]
             if row.file is not None
         ]
+    pricing = _pricing_payload(listing)
     rate_cards = [
         {
             "label": "Starting package",
-            "price_label": _money_label(listing.price_from_minor, listing.currency),
-            "scope": "Booking request starting rate",
-            "negotiable": True,
+            "price_label": pricing["price_label"],
+            "scope": (
+                "Price shared through a private offer"
+                if not pricing["shows_price"]
+                else "Booking request starting rate"
+            ),
+            "negotiable": pricing["allows_bargaining"],
         }
     ]
-    if talent and talent.day_rate_minor is not None:
+    if pricing["shows_price"] and talent and talent.day_rate_minor is not None:
         rate_cards.append(
             {
                 "label": "Day rate",
@@ -385,7 +434,7 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
                 "negotiable": True,
             }
         )
-    if model_profile:
+    if pricing["shows_price"] and model_profile:
         for rate in model_profile.usage_rates[:6]:
             rate_cards.append(
                 {
@@ -447,7 +496,15 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
     }
 
 
-def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
+def _listing_payload(
+    listing: MarketplaceListing,
+    *,
+    reveal_private_price: bool = False,
+) -> dict[str, Any]:
+    pricing = _pricing_payload(
+        listing,
+        reveal_private_price=reveal_private_price,
+    )
     payload = {
         "public_id": listing.public_id,
         "listing_type": listing.listing_type,
@@ -455,7 +512,6 @@ def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
         "title": listing.title,
         "summary": listing.summary,
         "city": _city_payload(listing.city),
-        "price_from_minor": listing.price_from_minor,
         "currency": listing.currency,
         "verification_status": listing.verification_status,
         "moderation_status": listing.moderation_status,
@@ -469,6 +525,7 @@ def _listing_payload(listing: MarketplaceListing) -> dict[str, Any]:
             "avatar_url": _owner_avatar_url(listing.owner_user_id),
         },
         "media": [_listing_media_payload(item) for item in listing.media],
+        **pricing,
     }
     media_kit = _media_kit_for_listing(listing)
     if media_kit is not None:
@@ -1474,6 +1531,7 @@ def publish_listing() -> ResponseReturnValue:
         listing.city_id = city.id if city else location.city_id
         listing.price_from_minor = min(enabled_prices) if enabled_prices else None
         listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        _apply_pricing_mode(listing, payload)
         listing.published_at = listing.published_at or utc_now()
         location.status = "published"
         db.session.flush()
@@ -1534,6 +1592,7 @@ def publish_listing() -> ResponseReturnValue:
         listing.city_id = profile.city_id
         listing.price_from_minor = min(available_rates) if available_rates else None
         listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        _apply_pricing_mode(listing, payload)
         listing.published_at = listing.published_at or utc_now()
         db.session.flush()
         _sync_listing_media(listing, user.id, payload)
@@ -1598,6 +1657,7 @@ def publish_listing() -> ResponseReturnValue:
         )
         listing.price_from_minor = day_rate
         listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        _apply_pricing_mode(listing, payload)
         listing.published_at = listing.published_at or utc_now()
         db.session.flush()
         _sync_listing_media(listing, user.id, payload)
@@ -1655,6 +1715,7 @@ def publish_listing() -> ResponseReturnValue:
     listing.city_id = city.id if city else None
     listing.price_from_minor = talent.day_rate_minor
     listing.currency = talent.currency
+    _apply_pricing_mode(listing, payload)
     listing.published_at = listing.published_at or utc_now()
     db.session.flush()
     _sync_listing_media(listing, user.id, payload)
@@ -1721,6 +1782,73 @@ def marketplace_listing_detail(public_id: str) -> Response:
             "marketplace.not_found", "Marketplace listing was not found.", status=404
         )
     return jsonify(success({"listing": _listing_payload(listing)}))
+
+
+@marketplace_blueprint.get("/marketplace/my-listings")
+def my_marketplace_listings() -> Response:
+    user = _current_user()
+    query = select(MarketplaceListing).where(
+        MarketplaceListing.owner_user_id == user.id,
+    )
+    listing_type = str(request.args.get("type") or "").strip().lower()
+    if listing_type:
+        listing_types = (
+            {"actor", "talent"} if listing_type == "actor" else {listing_type}
+        )
+        query = query.where(MarketplaceListing.listing_type.in_(listing_types))
+    rows = list(
+        db.session.execute(
+            query.order_by(MarketplaceListing.updated_at.desc()).limit(100)
+        ).scalars()
+    )
+    return jsonify(
+        success(
+            {
+                "listings": [
+                    _listing_payload(item, reveal_private_price=True) for item in rows
+                ]
+            }
+        )
+    )
+
+
+@marketplace_blueprint.patch("/marketplace/listings/<public_id>/pricing")
+def update_marketplace_listing_pricing(public_id: str) -> Response:
+    user = _current_user()
+    listing = db.session.execute(
+        select(MarketplaceListing).where(
+            MarketplaceListing.public_id == public_id,
+            MarketplaceListing.owner_user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if listing is None:
+        raise APIError(
+            "marketplace.not_found",
+            "Marketplace listing was not found.",
+            status=404,
+        )
+    payload = _json_body()
+    _apply_pricing_mode(listing, payload)
+    if "price_from_minor" in payload:
+        amount = _optional_int(payload.get("price_from_minor"), "price_from_minor")
+        if amount is not None and amount <= 0:
+            raise _field_error("price_from_minor", "Rate must be positive.")
+        listing.price_from_minor = amount
+    if "currency" in payload:
+        currency = str(payload.get("currency") or "").strip().upper()
+        if len(currency) != 3:
+            raise _field_error("currency", "Currency must be a 3-letter ISO code.")
+        listing.currency = currency
+    mode = _normalized_pricing_mode(listing)
+    if mode in {"fixed", "negotiable"} and listing.price_from_minor is None:
+        raise _field_error(
+            "price_from_minor",
+            "Add a price before making it public.",
+        )
+    db.session.commit()
+    return jsonify(
+        success({"listing": _listing_payload(listing, reveal_private_price=True)})
+    )
 
 
 @marketplace_blueprint.post("/marketplace/result-count")

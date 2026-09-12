@@ -249,6 +249,8 @@ class _BR09BrandMarketplaceScreenState
                     summary: entry.$2.summary,
                     city: entry.$2.cityName,
                     rateLabel: entry.$2.rateLabel,
+                    pricingMode: entry.$2.pricingMode,
+                    allowsBargaining: entry.$2.allowsBargaining,
                     verificationStatus: entry.$2.verificationStatus,
                     imageUrl: entry.$2.coverImageUrl,
                     tags: entry.$2.tags,
@@ -321,6 +323,8 @@ class _BR09BrandMarketplaceScreenState
       initialProjectId: _projectId,
       suggestedRateMinor: item.rateFromMinor,
       currency: item.currency,
+      pricingMode: item.pricingMode,
+      allowsBargaining: item.allowsBargaining,
     );
     if (sent && mounted) brandSnack(context, 'Booking request sent');
   }
@@ -385,6 +389,7 @@ class _BR09BrandMarketplaceScreenState
                   BrandLiveStatusChip(status: detail.verificationStatus),
                   Chip(label: Text(detail.cityName)),
                   Chip(label: Text(detail.rateLabel)),
+                  Chip(label: Text(detail.pricingChoiceLabel)),
                   if (detail.trustMetrics?.score != null)
                     Chip(
                         label: Text('Trust ${detail.trustMetrics!.score}/100')),

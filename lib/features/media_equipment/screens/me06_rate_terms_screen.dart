@@ -7,6 +7,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../widgets/media_equipment_components.dart';
 
 class ME06RateTermsScreen extends StatefulWidget {
@@ -61,6 +62,11 @@ class _ME06RateTermsScreenState extends State<ME06RateTermsScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const MarketplacePricingPreferencePanel(
+              listingTypes: {'equipment'},
+              title: 'Equipment marketplace pricing',
+            ),
+            const SizedBox(height: 12),
             MetricActionRail(
               items: [
                 MetricActionItem(

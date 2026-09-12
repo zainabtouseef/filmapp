@@ -308,6 +308,7 @@ class _ThreadFooter extends StatelessWidget {
   final VoidCallback onCounter;
   final VoidCallback onChat;
   final VoidCallback onDecline;
+  final bool allowsBargaining;
 
   const _ThreadFooter({
     required this.name,
@@ -316,6 +317,7 @@ class _ThreadFooter extends StatelessWidget {
     required this.onCounter,
     required this.onChat,
     required this.onDecline,
+    required this.allowsBargaining,
   });
 
   @override
@@ -332,15 +334,17 @@ class _ThreadFooter extends StatelessWidget {
                 onTap: sending ? null : onAccept,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: DPHolographicButton(
-                label: 'Send counter',
-                icon: Icons.send_rounded,
-                secondary: true,
-                onTap: sending ? null : onCounter,
+            if (allowsBargaining) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: DPHolographicButton(
+                  label: 'Send counter',
+                  icon: Icons.send_rounded,
+                  secondary: true,
+                  onTap: sending ? null : onCounter,
+                ),
               ),
-            ),
+            ],
           ],
         ),
         const SizedBox(height: 8),
@@ -438,15 +442,23 @@ class _LiveNegotiationThread extends StatelessWidget {
         const SizedBox(height: 8),
         Container(height: 1, color: context.appColors.borderMuted),
         const SizedBox(height: 16),
-        const _SectionLabel(icon: Icons.tune_rounded, label: 'Counter offer'),
-        const SizedBox(height: 12),
-        _FieldBox(
-          label: 'Rate',
-          controller: rate,
-          keyboardType: TextInputType.number,
-        ),
-        const SizedBox(height: 10),
-        _FieldBox(label: 'Payment schedule', controller: schedule),
+        if (thread.booking.allowsBargaining) ...[
+          const _SectionLabel(icon: Icons.tune_rounded, label: 'Counter offer'),
+          const SizedBox(height: 12),
+          _FieldBox(
+            label: 'Rate',
+            controller: rate,
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 10),
+          _FieldBox(label: 'Payment schedule', controller: schedule),
+        ] else
+          const InlineNotice(
+            message:
+                'The provider selected a fixed public price. Accept or decline these terms; counteroffers are disabled.',
+            icon: Icons.lock_outline_rounded,
+            tone: CoreStatusTone.info,
+          ),
         const SizedBox(height: 20),
         _ThreadFooter(
           name: name,
@@ -459,6 +471,7 @@ class _LiveNegotiationThread extends StatelessWidget {
             arguments: thread.booking.conversationId,
           ),
           onDecline: () => onDecline(thread),
+          allowsBargaining: thread.booking.allowsBargaining,
         ),
       ],
     );

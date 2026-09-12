@@ -8,6 +8,7 @@ import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../widgets/crew_services_components.dart';
 
 /// CR-02 Service Profile
@@ -79,6 +80,11 @@ class _CR02ServiceProfileScreenState extends State<CR02ServiceProfileScreen> {
     return CrewTwoColumn(
       left: Column(
         children: [
+          const MarketplacePricingPreferencePanel(
+            listingTypes: {'crew'},
+            title: 'Crew marketplace pricing',
+          ),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Column(

@@ -259,10 +259,14 @@ class _LiveOfferDetail extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             CoreSecondaryButton(
-              icon: Icons.edit_note_outlined,
-              label: 'Counteroffer',
+              icon: booking.allowsBargaining
+                  ? Icons.edit_note_outlined
+                  : Icons.lock_outline_rounded,
+              label: booking.allowsBargaining
+                  ? 'Counteroffer'
+                  : 'Fixed price',
               compact: true,
-              onTap: canRespond
+              onTap: canRespond && booking.allowsBargaining
                   ? () => Navigator.pushNamed(
                         context,
                         ActorTalentRoutes.counteroffer,

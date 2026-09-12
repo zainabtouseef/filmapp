@@ -402,6 +402,14 @@ class _LiveListingProfile extends StatelessWidget {
               DPDetailRow(label: 'Listing type', value: candidate.category),
               DPDetailRow(label: 'City', value: candidate.city),
               DPDetailRow(label: 'Rate', value: candidate.rateRange),
+              DPDetailRow(
+                label: 'Pricing choice',
+                value: switch (candidate.pricingMode) {
+                  'fixed' => 'Fixed public price',
+                  'on_request' => 'Private price · bargaining',
+                  _ => 'Public starting price · bargaining',
+                },
+              ),
               DPDetailRow(label: 'Owner', value: listing.ownerName),
               DPDetailRow(
                 label: 'Verification',
@@ -475,6 +483,14 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
               DPDetailRow(label: 'Provider type', value: candidate.category),
               DPDetailRow(label: 'City', value: candidate.city),
               DPDetailRow(label: 'Rate', value: candidate.rateRange),
+              DPDetailRow(
+                label: 'Pricing choice',
+                value: switch (candidate.pricingMode) {
+                  'fixed' => 'Fixed public price',
+                  'on_request' => 'Private price · bargaining',
+                  _ => 'Public starting price · bargaining',
+                },
+              ),
               DPDetailRow(label: 'Owner', value: item.ownerName ?? 'Not shown'),
               DPDetailRow(
                 label: 'Verification',

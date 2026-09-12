@@ -125,6 +125,9 @@ def _offer_payload(item: Offer) -> dict[str, Any]:
 
 
 def _booking_payload(item: Booking) -> dict[str, Any]:
+    pricing_mode = (item.listing.pricing_mode or "negotiable").strip().lower()
+    if pricing_mode not in {"fixed", "negotiable", "on_request"}:
+        pricing_mode = "negotiable"
     return {
         "public_id": item.public_id,
         "project_id": item.project.public_id,
@@ -135,6 +138,8 @@ def _booking_payload(item: Booking) -> dict[str, Any]:
         "requirement_title": item.requirement.title if item.requirement else None,
         "listing_id": item.listing.public_id,
         "listing_title": item.listing.title,
+        "pricing_mode": pricing_mode,
+        "allows_bargaining": pricing_mode != "fixed",
         "category": item.category,
         "status": item.status,
         "requester": _user_payload(item.requester),
@@ -563,6 +568,37 @@ def _create_offer(
     return offer
 
 
+def _enforce_listing_pricing(
+    listing: MarketplaceListing,
+    fee_minor: int | None,
+    *,
+    counter: bool,
+) -> None:
+    mode = (listing.pricing_mode or "negotiable").strip().lower()
+    if mode != "fixed":
+        return
+    if counter:
+        raise APIError(
+            "booking.bargaining_disabled",
+            "This provider selected a fixed public price and disabled counteroffers.",
+            status=409,
+        )
+    fixed_amount = listing.price_from_minor
+    if fixed_amount is None:
+        raise APIError(
+            "booking.fixed_price_unavailable",
+            "This fixed-price listing does not have a valid public amount.",
+            status=409,
+        )
+    if fee_minor != fixed_amount:
+        raise APIError(
+            "booking.fixed_price_required",
+            "This provider accepts requests only at the listed fixed price.",
+            status=409,
+            fields={"fee_minor": ["Use the listing's fixed public price."]},
+        )
+
+
 @bookings_blueprint.get("/availability")
 def availability_entries() -> Response:
     user = _current_user()
@@ -798,6 +834,8 @@ def create_booking() -> ResponseReturnValue:
             status=409,
         )
     amount = _optional_int(payload.get("fee_minor"), "fee_minor")
+    if (listing.pricing_mode or "negotiable").strip().lower() == "fixed":
+        _enforce_listing_pricing(listing, amount, counter=False)
     booking = Booking(
         project_id=project.id,
         requirement_id=requirement.id if requirement else None,
@@ -873,6 +911,11 @@ def send_booking(public_id: str) -> Response:
         if booking.expires_at
         else None,
     }
+    _enforce_listing_pricing(
+        booking.listing,
+        _optional_int(offer_payload.get("fee_minor"), "fee_minor"),
+        counter=False,
+    )
     offer = _create_offer(
         booking,
         user,
@@ -950,6 +993,7 @@ def create_counter_offer(public_id: str) -> ResponseReturnValue:
         )
     if user.id not in {booking.requester_user_id, booking.provider_user_id}:
         raise APIError("booking.permission_denied", "Not a participant.", status=403)
+    _enforce_listing_pricing(booking.listing, None, counter=True)
     recipient_id = (
         booking.provider_user_id
         if user.id == booking.requester_user_id

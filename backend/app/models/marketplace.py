@@ -178,6 +178,9 @@ class MarketplaceListing(EntityMixin, Base):
     )
     price_from_minor: Mapped[int | None] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="PKR")
+    pricing_mode: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="negotiable"
+    )
     verification_status: Mapped[str] = mapped_column(String(32), nullable=False)
     moderation_status: Mapped[str] = mapped_column(String(32), nullable=False)
     visibility: Mapped[str] = mapped_column(String(32), nullable=False)

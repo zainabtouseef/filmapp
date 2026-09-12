@@ -7,6 +7,7 @@ import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -137,6 +138,11 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const MarketplacePricingPreferencePanel(
+          listingTypes: {'location'},
+          title: 'Location marketplace pricing',
+        ),
+        const SizedBox(height: 12),
         MetricActionRail(
           items: [
             MetricActionItem(

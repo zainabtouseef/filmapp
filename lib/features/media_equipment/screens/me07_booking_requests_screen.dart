@@ -485,15 +485,17 @@ class _LiveRequestCard extends StatelessWidget {
                     onTap: busy ? null : onReject,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CoreSecondaryButton(
-                    icon: Icons.edit_note_outlined,
-                    label: 'Counter',
-                    compact: true,
-                    onTap: busy ? null : onCounter,
+                if (booking.allowsBargaining) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: CoreSecondaryButton(
+                      icon: Icons.edit_note_outlined,
+                      label: 'Counter',
+                      compact: true,
+                      onTap: busy ? null : onCounter,
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(width: 8),
                 Expanded(
                   child: CorePrimaryButton(

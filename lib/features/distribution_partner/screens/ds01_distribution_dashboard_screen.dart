@@ -6,6 +6,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../routes/distribution_partner_routes.dart';
 import '../widgets/distribution_partner_components.dart';
 
@@ -43,6 +44,11 @@ class _DS01DistributionDashboardScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const PersonalDashboardKpiStrip(),
+        const SizedBox(height: 12),
+        const MarketplacePricingPreferencePanel(
+          listingTypes: {'distribution'},
+          title: 'Distribution marketplace pricing',
+        ),
         const SizedBox(height: 12),
         if (_future == null)
           const DistributionSectionCard(

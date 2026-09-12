@@ -44,6 +44,9 @@ class DirectorDiscoveryItem {
   final int? rateFromMinor;
   final String currency;
   final String rateLabel;
+  final String pricingMode;
+  final bool showsPrice;
+  final bool allowsBargaining;
   final String verificationStatus;
   final int ratingAverage;
   final bool available;
@@ -68,6 +71,9 @@ class DirectorDiscoveryItem {
     required this.rateFromMinor,
     required this.currency,
     required this.rateLabel,
+    this.pricingMode = 'negotiable',
+    this.showsPrice = true,
+    this.allowsBargaining = true,
     required this.verificationStatus,
     required this.ratingAverage,
     required this.available,
@@ -96,6 +102,9 @@ class DirectorDiscoveryItem {
       rateFromMinor: (json['rate_from_minor'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'PKR',
       rateLabel: json['rate_label'] as String? ?? 'Rate on request',
+      pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
+      showsPrice: json['shows_price'] as bool? ?? true,
+      allowsBargaining: json['allows_bargaining'] as bool? ?? true,
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       ratingAverage: (json['rating_average'] as num?)?.toInt() ?? 0,
       available: json['available'] as bool? ?? true,
@@ -138,6 +147,9 @@ class DirectorDiscoveryItem {
       category: category,
       city: cityName,
       rateRange: rateLabel,
+      pricingMode: pricingMode,
+      showsPrice: showsPrice,
+      allowsBargaining: allowsBargaining,
       rating: ratingAverage.toDouble(),
       verified: verificationStatus == 'approved' ||
           verificationStatus == 'verified' ||
@@ -155,6 +167,12 @@ class DirectorDiscoveryItem {
       trustMetrics: trustMetrics,
     );
   }
+
+  String get pricingChoiceLabel => switch (pricingMode) {
+        'fixed' => 'Fixed public price',
+        'on_request' => 'Private price · bargaining',
+        _ => 'Public price · bargaining',
+      };
 
   String? get coverImageUrl {
     if (media.isEmpty) return ownerAvatarUrl;

@@ -5,6 +5,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../widgets/actor_talent_components.dart';
 
 /// AT-05 Rate Card
@@ -92,6 +93,11 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
                 ),
             ],
           ),
+        ),
+        const SizedBox(height: 12),
+        const MarketplacePricingPreferencePanel(
+          listingTypes: {'actor', 'talent'},
+          title: 'Actor marketplace pricing',
         ),
         if (_loadError != null) ...[
           const SizedBox(height: 12),

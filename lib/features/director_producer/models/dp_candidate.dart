@@ -6,6 +6,9 @@ class DpCandidate {
   final String category;
   final String city;
   final String rateRange;
+  final String pricingMode;
+  final bool showsPrice;
+  final bool allowsBargaining;
   final double rating;
   final bool verified;
   final bool available;
@@ -27,6 +30,9 @@ class DpCandidate {
     required this.category,
     required this.city,
     required this.rateRange,
+    this.pricingMode = 'negotiable',
+    this.showsPrice = true,
+    this.allowsBargaining = true,
     required this.rating,
     required this.verified,
     required this.available,

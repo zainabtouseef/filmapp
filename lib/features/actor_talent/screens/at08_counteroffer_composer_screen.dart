@@ -32,6 +32,7 @@ class _AT08CounterofferComposerScreenState
   String? error;
   bool sending = false;
   bool _loadedLiveTerms = false;
+  bool _allowsBargaining = true;
 
   @override
   void initState() {
@@ -75,6 +76,19 @@ class _AT08CounterofferComposerScreenState
           title: 'Open a live offer first',
           message:
               'Counteroffers require a server booking ID. No local draft or fake offer is shown.',
+        ),
+      );
+    }
+    if (!_allowsBargaining) {
+      return const ActorSectionCard(
+        title: 'Fixed-price booking',
+        icon: Icons.lock_outline_rounded,
+        tone: ActorTone.blue,
+        child: CoreEmptyState(
+          icon: Icons.price_check_outlined,
+          title: 'Counteroffers are disabled',
+          message:
+              'This marketplace listing uses a fixed public price. Accept or reject the offer from the offer detail screen.',
         ),
       );
     }
@@ -158,6 +172,7 @@ class _AT08CounterofferComposerScreenState
       if (!mounted) return;
       final offer = booking.activeOffer;
       setState(() {
+        _allowsBargaining = booking.allowsBargaining;
         if (offer != null) amount.text = offer.feeLabel;
         dates.text =
             '${DateFormat('MMM d').format(booking.startAt.toLocal())} - ${DateFormat('MMM d, y').format(booking.endAt.toLocal())}';

@@ -34,6 +34,8 @@ class DPCandidateCard extends StatelessWidget {
       summary: candidate.notes,
       city: candidate.city,
       rateLabel: candidate.rateRange,
+      pricingMode: candidate.pricingMode,
+      allowsBargaining: candidate.allowsBargaining,
       verificationStatus: candidate.verified ? 'approved' : 'pending',
       imageUrl: candidate.imageUrl,
       tags: candidate.skills,

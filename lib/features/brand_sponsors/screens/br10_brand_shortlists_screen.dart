@@ -300,6 +300,8 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
       initialProjectId: board.projectId,
       suggestedRateMinor: item.listing.priceFromMinor,
       currency: item.listing.currency,
+      pricingMode: item.listing.pricingMode,
+      allowsBargaining: item.listing.allowsBargaining,
     );
     if (sent && mounted) brandSnack(context, 'Booking request sent');
   }

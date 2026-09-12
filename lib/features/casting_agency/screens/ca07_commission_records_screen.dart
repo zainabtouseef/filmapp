@@ -8,6 +8,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../models/casting_agency_models.dart';
 import '../widgets/casting_agency_components.dart';
 
@@ -43,6 +44,11 @@ class _CA07CommissionRecordsScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const MarketplacePricingPreferencePanel(
+          listingTypes: {'agency'},
+          title: 'Agency marketplace pricing',
+        ),
+        const SizedBox(height: 12),
         if (_future == null)
           const CoreEmptyState(
             icon: Icons.lock_outline_rounded,

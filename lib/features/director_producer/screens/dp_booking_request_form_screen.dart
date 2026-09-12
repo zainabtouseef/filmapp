@@ -162,7 +162,9 @@ class _DPBookingRequestFormScreenState
     _fee.text = _feeLabel(requirement, _candidate);
     _deliverables.text = _schema.deliverablesHint;
     _usageRights.text = _schema.usageRightsHint;
-    _conditions.text = 'Counteroffers allowed; chat remains in booking record.';
+    _conditions.text = _candidate?.allowsBargaining == false
+        ? 'Fixed listed price; counteroffers disabled. Scope questions remain in the booking chat.'
+        : 'Counteroffers allowed; chat remains in booking record.';
     _dynamicA.text = _schema.fieldHints[0];
     _dynamicB.text = _schema.fieldHints[1];
     _dynamicC.text = _schema.fieldHints[2];
@@ -442,6 +444,10 @@ class _DPBookingRequestFormScreenState
   }
 
   String _feeLabel(ProjectRequirement? requirement, DpCandidate? candidate) {
+    if (_listing?.pricingMode == 'fixed' &&
+        _listing?.priceFromMinor != null) {
+      return '${_listing!.priceFromMinor! ~/ 100}';
+    }
     if (requirement?.budgetMinMinor != null ||
         requirement?.budgetMaxMinor != null) {
       final min = requirement?.budgetMinMinor == null
@@ -676,8 +682,11 @@ class _TermsStep extends StatelessWidget {
             const SizedBox(height: 12),
             CoreTextField(
               controller: fee,
-              label: 'Fee offered',
+              label: candidate.allowsBargaining
+                  ? 'Fee offered'
+                  : 'Fixed listed fee',
               icon: Icons.payments_outlined,
+              enabled: candidate.allowsBargaining,
               onChanged: (_) => onChanged(),
             ),
             const SizedBox(height: 8),
@@ -685,7 +694,9 @@ class _TermsStep extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               child: dpText(
                 context,
-                'Talent rate reference: ${candidate.rateRange}',
+                candidate.allowsBargaining
+                    ? 'Rate reference: ${candidate.rateRange} · bargaining enabled'
+                    : 'Fixed rate: ${candidate.rateRange} · counteroffers disabled',
                 strong: true,
               ),
             ),

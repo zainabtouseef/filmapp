@@ -17,6 +17,8 @@ class CineMarketplaceCard extends StatefulWidget {
   final String summary;
   final String city;
   final String rateLabel;
+  final String pricingMode;
+  final bool allowsBargaining;
   final String verificationStatus;
   final String? imageUrl;
   final List<String> tags;
@@ -38,6 +40,8 @@ class CineMarketplaceCard extends StatefulWidget {
     required this.summary,
     required this.city,
     required this.rateLabel,
+    this.pricingMode = 'negotiable',
+    this.allowsBargaining = true,
     required this.verificationStatus,
     required this.imageUrl,
     required this.tags,
@@ -244,6 +248,20 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
                 icon: Icons.payments_outlined,
                 showDot: false,
               ),
+              CineStatusBadge(
+                label: switch (widget.pricingMode) {
+                  'fixed' => 'Fixed price',
+                  'on_request' => 'Bargain privately',
+                  _ => 'Offers welcome',
+                },
+                tone: widget.allowsBargaining
+                    ? CineTone.information
+                    : CineTone.neutral,
+                icon: widget.allowsBargaining
+                    ? Icons.handshake_outlined
+                    : Icons.lock_outline_rounded,
+                showDot: false,
+              ),
               if (widget.trustScore != null)
                 CineStatusBadge(
                   label: 'Trust ${widget.trustScore}/100',
@@ -285,7 +303,9 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
               FilledButton.icon(
                 onPressed: widget.busy ? null : widget.onRequest,
                 icon: const Icon(Icons.send_rounded, size: 18),
-                label: const Text('Request'),
+                label: Text(
+                  widget.allowsBargaining ? 'Make offer' : 'Request at price',
+                ),
               ),
             ],
           ),

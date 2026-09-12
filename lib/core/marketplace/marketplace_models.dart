@@ -8,7 +8,11 @@ class MarketplaceListing {
   final String summary;
   final String cityName;
   final int? priceFromMinor;
+  final int? configuredPriceFromMinor;
   final String currency;
+  final String pricingMode;
+  final bool showsPrice;
+  final bool allowsBargaining;
   final String verificationStatus;
   final String ownerName;
   final String? ownerAvatarUrl;
@@ -22,7 +26,11 @@ class MarketplaceListing {
     required this.summary,
     required this.cityName,
     required this.priceFromMinor,
+    this.configuredPriceFromMinor,
     required this.currency,
+    this.pricingMode = 'negotiable',
+    this.showsPrice = true,
+    this.allowsBargaining = true,
     required this.verificationStatus,
     required this.ownerName,
     this.ownerAvatarUrl,
@@ -41,7 +49,12 @@ class MarketplaceListing {
       summary: json['summary'] as String,
       cityName: city?['name'] as String? ?? 'Pakistan',
       priceFromMinor: json['price_from_minor'] as int?,
+      configuredPriceFromMinor:
+          json['configured_price_from_minor'] as int?,
       currency: json['currency'] as String? ?? 'PKR',
+      pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
+      showsPrice: json['shows_price'] as bool? ?? true,
+      allowsBargaining: json['allows_bargaining'] as bool? ?? true,
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       ownerName: owner['display_name'] as String? ?? 'CineConnect member',
       ownerAvatarUrl: owner['avatar_url'] as String?,
@@ -80,6 +93,9 @@ class MarketplaceListing {
       },
       city: cityName,
       rateRange: _priceLabel(),
+      pricingMode: pricingMode,
+      showsPrice: showsPrice,
+      allowsBargaining: allowsBargaining,
       rating: 0,
       verified: verificationStatus == 'approved',
       available: true,
@@ -99,6 +115,7 @@ class MarketplaceListing {
   }
 
   String _priceLabel() {
+    if (!showsPrice) return 'Open to offers';
     final amount = priceFromMinor;
     if (amount == null) return 'Rate on request';
     final whole = (amount / 100).round();
@@ -110,6 +127,12 @@ class MarketplaceListing {
     }
     return '$currency $whole';
   }
+
+  String get pricingChoiceLabel => switch (pricingMode) {
+        'fixed' => 'Fixed public price',
+        'on_request' => 'Private price · bargaining',
+        _ => 'Public price · bargaining',
+      };
 }
 
 class VerifiedMediaKit {

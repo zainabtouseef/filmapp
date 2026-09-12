@@ -14,6 +14,8 @@ Future<bool> showBrandBookingDialog(
   String? initialProjectId,
   int? suggestedRateMinor,
   String currency = 'PKR',
+  String pricingMode = 'negotiable',
+  bool allowsBargaining = true,
 }) async {
   final bookings = BookingsScope.maybeOf(context);
   if (bookings == null) {
@@ -190,10 +192,28 @@ Future<bool> showBrandBookingDialog(
                   const SizedBox(height: 12),
                   CoreTextField(
                     controller: amount,
-                    label: 'Proposed rate ($currency)',
+                    label: pricingMode == 'fixed'
+                        ? 'Fixed listed rate ($currency)'
+                        : 'Proposed rate ($currency)',
                     icon: Icons.payments_outlined,
                     keyboardType: TextInputType.number,
-                    enabled: !saving,
+                    enabled: !saving && pricingMode != 'fixed',
+                  ),
+                  const SizedBox(height: 8),
+                  InlineNotice(
+                    message: switch (pricingMode) {
+                      'fixed' =>
+                        'This provider publishes a fixed price. Counteroffers are disabled, but you can still discuss scope in chat.',
+                      'on_request' =>
+                        'The provider keeps pricing private. Enter your offer to begin bargaining.',
+                      _ => allowsBargaining
+                          ? 'This is a public starting price. You and the provider may counteroffer.'
+                          : 'Send the request at the published rate.',
+                    },
+                    icon: allowsBargaining
+                        ? Icons.handshake_outlined
+                        : Icons.lock_outline_rounded,
+                    tone: CoreStatusTone.info,
                   ),
                   const SizedBox(height: 12),
                   CoreTextField(

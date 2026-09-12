@@ -207,6 +207,9 @@ class AdminListingRecordDto {
   final String? city;
   final int? priceFromMinor;
   final String currency;
+  final String pricingMode;
+  final bool showsPrice;
+  final bool allowsBargaining;
   final String verificationStatus;
   final String moderationStatus;
   final String visibility;
@@ -224,6 +227,9 @@ class AdminListingRecordDto {
     this.city,
     this.priceFromMinor,
     required this.currency,
+    this.pricingMode = 'negotiable',
+    this.showsPrice = true,
+    this.allowsBargaining = true,
     required this.verificationStatus,
     required this.moderationStatus,
     required this.visibility,
@@ -243,6 +249,9 @@ class AdminListingRecordDto {
       city: json['city'] as String?,
       priceFromMinor: (json['price_from_minor'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'PKR',
+      pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
+      showsPrice: json['shows_price'] as bool? ?? true,
+      allowsBargaining: json['allows_bargaining'] as bool? ?? true,
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       moderationStatus: json['moderation_status'] as String? ?? 'pending',
       visibility: json['visibility'] as String? ?? 'private',

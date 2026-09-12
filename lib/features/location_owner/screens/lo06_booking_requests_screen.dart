@@ -545,7 +545,7 @@ class _LiveRequestCard extends StatelessWidget {
                   onTap: busy ? null : onDetails,
                 ),
               ),
-              if (mutable) ...[
+              if (mutable && booking.allowsBargaining) ...[
                 const SizedBox(width: 8),
                 Expanded(
                   child: CoreSecondaryButton(

@@ -6,6 +6,7 @@ import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../widgets/model_extension_components.dart';
 
@@ -61,6 +62,11 @@ class _MD04RateByUsageScreenState extends State<MD04RateByUsageScreen> {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 12),
+        const MarketplacePricingPreferencePanel(
+          listingTypes: {'model'},
+          title: 'Model marketplace pricing',
         ),
         const SizedBox(height: 12),
         ActorSectionCard(

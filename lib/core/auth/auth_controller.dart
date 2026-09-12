@@ -353,12 +353,31 @@ class AuthController extends ChangeNotifier {
     return _repository.marketplaceListing(publicId);
   }
 
+  Future<List<MarketplaceListing>> myMarketplaceListings({String? type}) {
+    return _repository.myMarketplaceListings(type: type);
+  }
+
+  Future<MarketplaceListing> updateMarketplaceListingPricing({
+    required String listingId,
+    required String pricingMode,
+    int? priceFromMinor,
+    String currency = 'PKR',
+  }) {
+    return _repository.updateMarketplaceListingPricing(
+      listingId: listingId,
+      pricingMode: pricingMode,
+      priceFromMinor: priceFromMinor,
+      currency: currency,
+    );
+  }
+
   Future<MarketplaceListing> publishMarketplaceListing({
     required String title,
     required String summary,
     String listingType = 'talent',
     String? cityId,
     List<String> portfolioItemIds = const [],
+    String? pricingMode,
   }) {
     return _repository.publishMarketplaceListing(
       title: title,
@@ -366,6 +385,7 @@ class AuthController extends ChangeNotifier {
       listingType: listingType,
       cityId: cityId,
       portfolioItemIds: portfolioItemIds,
+      pricingMode: pricingMode,
     );
   }
 

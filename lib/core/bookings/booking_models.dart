@@ -69,6 +69,8 @@ class Booking {
   final String? requirementTitle;
   final String listingId;
   final String listingTitle;
+  final String pricingMode;
+  final bool allowsBargaining;
   final String category;
   final String status;
   final BookingUser requester;
@@ -93,6 +95,8 @@ class Booking {
     required this.requirementTitle,
     required this.listingId,
     required this.listingTitle,
+    this.pricingMode = 'negotiable',
+    this.allowsBargaining = true,
     required this.category,
     required this.status,
     required this.requester,
@@ -120,6 +124,8 @@ class Booking {
       requirementTitle: json['requirement_title'] as String?,
       listingId: json['listing_id'] as String? ?? '',
       listingTitle: json['listing_title'] as String? ?? 'Talent booking',
+      pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
+      allowsBargaining: json['allows_bargaining'] as bool? ?? true,
       category: json['category'] as String? ?? 'talent',
       status: json['status'] as String? ?? 'draft',
       requester:
