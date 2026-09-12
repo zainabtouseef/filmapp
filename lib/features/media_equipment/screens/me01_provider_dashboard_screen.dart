@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/provider_workspace_hero.dart';
 import '../models/media_equipment_models.dart';
 import '../routes/media_equipment_routes.dart';
 import '../widgets/media_equipment_components.dart';
@@ -26,18 +29,30 @@ class ME01ProviderDashboardScreen extends StatefulWidget {
 class _ME01ProviderDashboardScreenState
     extends State<ME01ProviderDashboardScreen> {
   Future<_DashboardData>? _dataFuture;
+  AuthController? _auth;
+  OperationsController? _operations;
+  BookingsController? _bookings;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_dataFuture != null) return;
+    final auth = AuthScope.maybeOf(context);
     final operations = OperationsScope.maybeOf(context);
     final bookings = BookingsScope.maybeOf(context);
-    if (operations == null || bookings == null) return;
-    _dataFuture = _load(operations, bookings);
+    if (auth == null || operations == null || bookings == null) return;
+    if (identical(auth, _auth) &&
+        identical(operations, _operations) &&
+        identical(bookings, _bookings)) {
+      return;
+    }
+    _auth = auth;
+    _operations = operations;
+    _bookings = bookings;
+    _dataFuture = _load(auth, operations, bookings);
   }
 
   Future<_DashboardData> _load(
+    AuthController auth,
     OperationsController operations,
     BookingsController bookings,
   ) async {
@@ -47,8 +62,10 @@ class _ME01ProviderDashboardScreenState
       operations.equipmentPackages(force: true),
       operations.equipmentInspections(force: true),
       bookings.bookings(role: 'provider', force: true),
+      auth.myProfile(),
     ]);
     return _DashboardData(
+      displayName: auth.user?.displayName ?? 'Equipment Provider',
       profile: values[0] as EquipmentProfileDto?,
       items: values[1] as List<EquipmentItemDto>,
       packages: values[2] as List<EquipmentPackageDto>,
@@ -56,6 +73,7 @@ class _ME01ProviderDashboardScreenState
       bookings: (values[4] as List<Booking>)
           .where((booking) => booking.category == 'equipment')
           .toList(),
+      userProfile: values[5] as UserProfile,
     );
   }
 
@@ -157,6 +175,48 @@ class _DashboardBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        ProviderWorkspaceHero(
+          imageUrl: data.userProfile.coverFile?.publicUrl ?? '',
+          avatarUrl: data.userProfile.avatarFile?.publicUrl,
+          eyebrow: 'Camera, grip and equipment services',
+          title: data.profile?.name ?? data.displayName,
+          summary: data.profile?.bio.trim().isNotEmpty == true
+              ? data.profile!.bio
+              : 'Show directors the equipment, operator support and production coverage available for their next shoot.',
+          badge: data.profile?.visibility == 'public'
+              ? 'Director visible'
+              : 'Profile setup',
+          fallbackIcon: Icons.video_camera_back_outlined,
+          accentColor: colors.infoBlue,
+          facts: [
+            ProviderHeroFact(
+              icon: Icons.inventory_2_outlined,
+              label: 'Inventory',
+              value: '${data.items.length} tracked asset(s)',
+            ),
+            ProviderHeroFact(
+              icon: Icons.widgets_outlined,
+              label: 'Packages',
+              value: '${data.packages.length} production kit(s)',
+            ),
+            ProviderHeroFact(
+              icon: Icons.location_on_outlined,
+              label: 'Coverage',
+              value: data.profile?.coverage.isNotEmpty == true
+                  ? data.profile!.coverage
+                  : data.userProfile.city?.name ?? 'Add coverage',
+            ),
+          ],
+          primaryLabel: 'Manage inventory',
+          primaryIcon: Icons.inventory_2_outlined,
+          onPrimary: () =>
+              Navigator.pushNamed(context, MediaEquipmentRoutes.inventory),
+          secondaryLabel: 'Edit provider profile',
+          secondaryIcon: Icons.edit_outlined,
+          onSecondary: () =>
+              Navigator.pushNamed(context, MediaEquipmentRoutes.profile),
+        ),
+        const SizedBox(height: 14),
         MediaKpiRail(metrics: metrics),
         const SizedBox(height: 12),
         MediaTwoColumn(
@@ -517,6 +577,8 @@ class _DashboardBlock extends StatelessWidget {
 }
 
 class _DashboardData {
+  final String displayName;
+  final UserProfile userProfile;
   final EquipmentProfileDto? profile;
   final List<EquipmentItemDto> items;
   final List<EquipmentPackageDto> packages;
@@ -524,6 +586,8 @@ class _DashboardData {
   final List<Booking> bookings;
 
   const _DashboardData({
+    required this.displayName,
+    required this.userProfile,
     required this.profile,
     required this.items,
     required this.packages,

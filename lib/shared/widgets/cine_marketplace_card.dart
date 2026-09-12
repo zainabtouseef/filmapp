@@ -386,16 +386,13 @@ class _MarketplaceVisual extends StatelessWidget {
               _MarketplaceFallback(kind: kind, accent: accent),
               Image.network(
                 source,
+                webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
                 fit: BoxFit.cover,
                 alignment: {'actor', 'model', 'influencer'}.contains(kind)
                     ? Alignment.topCenter
                     : Alignment.center,
                 filterQuality: FilterQuality.medium,
                 gaplessPlayback: true,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const SizedBox.shrink();
-                },
                 errorBuilder: (_, __, ___) => const SizedBox.shrink(),
               ),
             ],

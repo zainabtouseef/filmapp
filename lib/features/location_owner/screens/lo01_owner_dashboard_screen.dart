@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -8,6 +9,7 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -27,6 +29,7 @@ class LO01OwnerDashboardScreen extends StatefulWidget {
 
 class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
   Future<_DashboardData>? _future;
+  AuthController? _auth;
   OperationsController? _operations;
   BookingsController? _bookings;
   PaymentsController? _payments;
@@ -34,15 +37,23 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final auth = AuthScope.maybeOf(context);
     final operations = OperationsScope.maybeOf(context);
     final bookings = BookingsScope.maybeOf(context);
     final payments = PaymentsScope.maybeOf(context);
-    if (operations == null || bookings == null || payments == null) return;
-    if (identical(operations, _operations) &&
+    if (auth == null ||
+        operations == null ||
+        bookings == null ||
+        payments == null) {
+      return;
+    }
+    if (identical(auth, _auth) &&
+        identical(operations, _operations) &&
         identical(bookings, _bookings) &&
         identical(payments, _payments)) {
       return;
     }
+    _auth = auth;
     _operations = operations;
     _bookings = bookings;
     _payments = payments;
@@ -50,13 +61,19 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
   }
 
   Future<_DashboardData> _load({bool force = false}) async {
-    final properties = await _operations!.locationProperties(force: force);
-    final bookings = await _bookings!.bookings(role: 'provider', force: force);
-    final payments = await _payments!.dashboard(force: force);
+    final values = await Future.wait([
+      _auth!.myProfile(),
+      _operations!.locationProperties(force: force),
+      _bookings!.bookings(role: 'provider', force: force),
+      _payments!.dashboard(force: force),
+    ]);
+    final properties = values[1] as List<LocationPropertyDto>;
+    final bookings = values[2] as List<Booking>;
     return _DashboardData(
+      userProfile: values[0] as UserProfile,
       properties: properties,
       bookings: bookings.where((item) => item.category == 'location').toList(),
-      payments: payments,
+      payments: values[3] as PaymentDashboardDto,
     );
   }
 
@@ -178,7 +195,10 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
                     ),
                   ),
                 )
-              : _LivePropertyCard(property: property),
+              : _LivePropertyCard(
+                  property: property,
+                  fallbackImageUrl: data.userProfile.coverFile?.publicUrl ?? '',
+                ),
           right: LocationSectionCard(
             title: 'Action required',
             icon: Icons.priority_high_rounded,
@@ -351,8 +371,12 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
 
 class _LivePropertyCard extends StatelessWidget {
   final LocationPropertyDto property;
+  final String fallbackImageUrl;
 
-  const _LivePropertyCard({required this.property});
+  const _LivePropertyCard({
+    required this.property,
+    required this.fallbackImageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -365,8 +389,9 @@ class _LivePropertyCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           LocationMediaFrame(
-            imageUrl:
-                property.mediaUrls.isEmpty ? '' : property.mediaUrls.first,
+            imageUrl: property.mediaUrls.isEmpty
+                ? fallbackImageUrl
+                : property.mediaUrls.first,
             title: property.name,
             badge: readableLocationStatus(property.status),
             fallbackIcon: Icons.location_city_outlined,
@@ -679,11 +704,13 @@ class _CompactStatus extends StatelessWidget {
 }
 
 class _DashboardData {
+  final UserProfile userProfile;
   final List<LocationPropertyDto> properties;
   final List<Booking> bookings;
   final PaymentDashboardDto payments;
 
   const _DashboardData({
+    required this.userProfile,
     required this.properties,
     required this.bookings,
     required this.payments,

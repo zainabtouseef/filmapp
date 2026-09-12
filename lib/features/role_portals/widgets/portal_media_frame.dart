@@ -30,11 +30,12 @@ class PortalMediaFrame extends StatelessWidget {
           children: [
             Image.network(
               asset.url,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return _MediaFallback(asset: asset, loading: true);
-              },
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                  wasSynchronouslyLoaded || frame != null
+                      ? child
+                      : _MediaFallback(asset: asset, loading: true),
               errorBuilder: (_, __, ___) => _MediaFallback(asset: asset),
             ),
             DecoratedBox(

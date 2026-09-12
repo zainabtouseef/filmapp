@@ -97,7 +97,32 @@ class CrewServicesShell extends StatelessWidget {
       navDestinations: _crewBottomDestinations,
       menuEntries: crewMenuEntries,
       bottomIndexOverrides: _crewBottomIndexOverrides,
+      workspaceLayout: true,
+      workspaceTitle: 'Crew Workspace',
+      workspaceSectionLabel: 'CREW / PRODUCTION SERVICES',
+      workspaceBadgeLabel: 'Crew Pro',
+      workspaceStatusSubtitle:
+          'Profile, credits, availability, requests and payments',
+      workspaceSearchHint: 'Search requests, projects and opportunities...',
+      workspaceSearchRoute: CrewServicesRoutes.opportunities,
+      workspaceProfileRoute: CrewServicesRoutes.profile,
+      workspaceIcon: Icons.groups_2_outlined,
+      workspaceEyebrow: _crewEyebrow,
       child: child,
     );
   }
+}
+
+String _crewEyebrow(String route) {
+  return switch (route) {
+    CrewServicesRoutes.home => 'Crew workspace · live operations',
+    CrewServicesRoutes.profile => 'Public identity · services · coverage',
+    CrewServicesRoutes.portfolio => 'Credits · reels · production work',
+    CrewServicesRoutes.availability => 'Schedule · holds · confirmed work',
+    CrewServicesRoutes.requests => 'Requests · offers · negotiation',
+    CrewServicesRoutes.contracts => 'Contracts · earnings · payout ledger',
+    CrewServicesRoutes.ratings => 'Reputation · reviews · work history',
+    CrewServicesRoutes.opportunities => 'Open projects · applications',
+    _ => 'Crew production workspace',
+  };
 }

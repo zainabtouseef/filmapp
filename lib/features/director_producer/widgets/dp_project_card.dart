@@ -48,6 +48,7 @@ class DPProjectCard extends StatelessWidget {
                   aspectRatio: 16 / 7,
                   child: Image.network(
                     project.coverImageUrl!,
+                    webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
                     fit: BoxFit.cover,
                     semanticLabel: '${project.title} project cover',
                     errorBuilder: (context, error, stackTrace) => Container(

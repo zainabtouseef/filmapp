@@ -428,6 +428,7 @@ class _ShowcaseImage extends StatelessWidget {
     if (url == null || url.trim().isEmpty) return fallback;
     return Image.network(
       url,
+      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
       fit: BoxFit.cover,
       alignment: alignment,
       errorBuilder: (_, __, ___) => fallback,

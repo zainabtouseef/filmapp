@@ -563,9 +563,12 @@ class ActorMediaFrame extends StatelessWidget {
           children: [
             Image.network(
               imageUrl,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) =>
-                  progress == null ? child : _MediaFallback(icon: fallbackIcon),
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                  wasSynchronouslyLoaded || frame != null
+                      ? child
+                      : _MediaFallback(icon: fallbackIcon),
               errorBuilder: (_, __, ___) => _MediaFallback(icon: fallbackIcon),
             ),
             DecoratedBox(

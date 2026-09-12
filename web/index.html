@@ -109,7 +109,7 @@
     // cache policy changes. Flutter's bundle filename is stable, so a unique
     // request URL guarantees that an existing browser cannot reuse the prior
     // day's main.dart.js response.
-    const releaseVersion = `${buildVersion}-20260910-media-v3`;
+    const releaseVersion = `${buildVersion}-20260912-specialist-v7`;
     for (const build of _flutter.buildConfig.builds) {
       if (build.mainJsPath) {
         build.mainJsPath = `${build.mainJsPath}?v=${releaseVersion}`;
@@ -149,10 +149,10 @@
       if (event.target instanceof HTMLScriptElement) showBootFailure();
     }, true);
 
-    // Serve CanvasKit from CineConnect itself. This avoids Safari blank screens
-    // when privacy settings or content blockers reject the public CDN.
+    // Let Flutter use its version-matched Google-hosted CanvasKit build. Keeping
+    // the 6-7 MB renderer off the origin materially improves first load for
+    // users whose route to the application server is bandwidth constrained.
     Promise.resolve(_flutter.loader.load({
-      config: { canvasKitBaseUrl: 'canvaskit/' },
       serviceWorkerSettings: { serviceWorkerVersion: releaseVersion },
     })).catch(showBootFailure);
     window.setTimeout(showBootFailure, 15000);

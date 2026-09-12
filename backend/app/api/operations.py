@@ -250,11 +250,14 @@ def _location_for_owner(public_id: str, user: User) -> LocationProperty:
 
 def _equipment_profile_payload(item: EquipmentProviderProfile) -> dict[str, Any]:
     listing = db.session.execute(
-        select(MarketplaceListing).where(
+        select(MarketplaceListing)
+        .where(
             MarketplaceListing.owner_user_id == item.user_id,
             MarketplaceListing.listing_type == "equipment",
             MarketplaceListing.profile_entity_id == item.public_id,
         )
+        .order_by(MarketplaceListing.updated_at.desc())
+        .limit(1)
     ).scalar_one_or_none()
     return {
         "public_id": item.public_id,
@@ -394,11 +397,14 @@ def _sync_equipment_listing(profile: EquipmentProviderProfile) -> None:
         .limit(1)
     ).scalar_one_or_none()
     listing = db.session.execute(
-        select(MarketplaceListing).where(
+        select(MarketplaceListing)
+        .where(
             MarketplaceListing.owner_user_id == profile.user_id,
             MarketplaceListing.listing_type == "equipment",
             MarketplaceListing.profile_entity_id == profile.public_id,
         )
+        .order_by(MarketplaceListing.updated_at.desc())
+        .limit(1)
     ).scalar_one_or_none()
     if listing is None:
         listing = MarketplaceListing(
@@ -968,11 +974,14 @@ def upsert_equipment_profile() -> Response:
         if visibility not in {"public", "private"}:
             raise _field_error("visibility", "Visibility must be public or private.")
         listing = db.session.execute(
-            select(MarketplaceListing).where(
+            select(MarketplaceListing)
+            .where(
                 MarketplaceListing.owner_user_id == item.user_id,
                 MarketplaceListing.listing_type == "equipment",
                 MarketplaceListing.profile_entity_id == item.public_id,
             )
+            .order_by(MarketplaceListing.updated_at.desc())
+            .limit(1)
         ).scalar_one()
         listing.visibility = visibility
     db.session.commit()

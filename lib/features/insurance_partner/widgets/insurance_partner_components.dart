@@ -311,10 +311,12 @@ class InsuranceMediaFrame extends StatelessWidget {
           children: [
             Image.network(
               imageUrl,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) => progress == null
-                  ? child
-                  : _InsuranceFallback(icon: fallbackIcon),
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                  wasSynchronouslyLoaded || frame != null
+                      ? child
+                      : _InsuranceFallback(icon: fallbackIcon),
               errorBuilder: (_, __, ___) =>
                   _InsuranceFallback(icon: fallbackIcon),
             ),

@@ -372,10 +372,12 @@ class BrandMediaFrame extends StatelessWidget {
               )
             : Image.network(
                 imageUrl,
+                webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) => progress == null
-                    ? child
-                    : _BrandFallback(icon: fallbackIcon),
+                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                    wasSynchronouslyLoaded || frame != null
+                        ? child
+                        : _BrandFallback(icon: fallbackIcon),
                 errorBuilder: (_, __, ___) =>
                     _BrandFallback(icon: fallbackIcon),
               );

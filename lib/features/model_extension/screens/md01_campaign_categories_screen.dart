@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/profile/profile_models.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/provider_workspace_hero.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../../actor_talent/models/actor_talent_models.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../routes/model_extension_routes.dart';
 
@@ -21,7 +23,9 @@ class MD01CampaignCategoriesScreen extends StatefulWidget {
 class _MD01CampaignCategoriesScreenState
     extends State<MD01CampaignCategoriesScreen> {
   SpecialistController? _specialist;
+  AuthController? _auth;
   Future<ModelProfileDto?>? _profileFuture;
+  Future<UserProfile>? _userProfileFuture;
   List<_CategoryDraft> _categories = const [];
   bool _saving = false;
 
@@ -29,9 +33,15 @@ class _MD01CampaignCategoriesScreenState
   void didChangeDependencies() {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
-    if (specialist == null || identical(specialist, _specialist)) return;
-    _specialist = specialist;
-    _profileFuture = specialist.modelProfile(force: true);
+    final auth = AuthScope.maybeOf(context);
+    if (specialist != null && !identical(specialist, _specialist)) {
+      _specialist = specialist;
+      _profileFuture = specialist.modelProfile(force: true);
+    }
+    if (auth != null && !identical(auth, _auth)) {
+      _auth = auth;
+      _userProfileFuture = auth.myProfile();
+    }
   }
 
   @override
@@ -75,28 +85,55 @@ class _MD01CampaignCategoriesScreenState
             .length;
         return Column(
           children: [
-            ActorSectionCard(
-              title: 'Model Opportunities',
-              icon: Icons.travel_explore_outlined,
-              tone: ActorTone.blue,
-              child: ActorTwoColumn(
-                left: Text(
-                  'Browse live campaign and production needs, apply with your model profile, then track application updates.',
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: context.appColors.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-                right: CorePrimaryButton(
-                  icon: Icons.arrow_forward_rounded,
-                  label: 'Open opportunities',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(
+            FutureBuilder<UserProfile>(
+              future: _userProfileFuture,
+              builder: (context, userSnapshot) {
+                final userProfile = userSnapshot.data;
+                final colors = context.appColors;
+                return ProviderWorkspaceHero(
+                  imageUrl: userProfile?.coverFile?.publicUrl ?? '',
+                  avatarUrl: userProfile?.avatarFile?.publicUrl,
+                  eyebrow: 'Commercial model profile',
+                  title: _auth?.user?.displayName ?? 'Model Workspace',
+                  summary: userProfile?.bio?.trim().isNotEmpty == true
+                      ? userProfile!.bio!
+                      : 'Present your campaign fit, commercial boundaries and usage rates in one director-ready profile.',
+                  badge: userProfile?.visibility == 'public'
+                      ? 'Director visible'
+                      : 'Profile setup',
+                  fallbackIcon: Icons.style_outlined,
+                  accentColor: colors.goldDark,
+                  facts: [
+                    ProviderHeroFact(
+                      icon: Icons.category_outlined,
+                      label: 'Campaign categories',
+                      value: '$selectedCount selected',
+                    ),
+                    ProviderHeroFact(
+                      icon: Icons.policy_outlined,
+                      label: 'Usage rights',
+                      value: '${profile?.usageRights.length ?? 0} configured',
+                    ),
+                    ProviderHeroFact(
+                      icon: Icons.location_on_outlined,
+                      label: 'Base',
+                      value: userProfile?.city?.name ?? 'Add city',
+                    ),
+                  ],
+                  primaryLabel: 'Open opportunities',
+                  primaryIcon: Icons.travel_explore_outlined,
+                  onPrimary: () => Navigator.pushNamed(
                     context,
                     ModelExtensionRoutes.opportunities,
                   ),
-                ),
-              ),
+                  secondaryLabel: 'Edit model profile',
+                  secondaryIcon: Icons.edit_outlined,
+                  onSecondary: () => Navigator.pushNamed(
+                    context,
+                    ModelExtensionRoutes.profile,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 12),
             ActorSectionCard(
@@ -121,12 +158,15 @@ class _MD01CampaignCategoriesScreenState
                           : CoreStatusTone.success,
                     ),
                     const SizedBox(height: 12),
-                    const ActorMediaFrame(
-                      imageUrl: '',
-                      title: 'Campaign fit',
-                      badge: 'Backend profile',
-                      fallbackIcon: Icons.style_outlined,
-                      aspectRatio: 16 / 10,
+                    FutureBuilder<UserProfile>(
+                      future: _userProfileFuture,
+                      builder: (context, userSnapshot) => ActorMediaFrame(
+                        imageUrl: userSnapshot.data?.coverFile?.publicUrl ?? '',
+                        title: 'Campaign fit',
+                        badge: 'Backend profile',
+                        fallbackIcon: Icons.style_outlined,
+                        aspectRatio: 16 / 10,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -280,6 +320,7 @@ class _MD01CampaignCategoriesScreenState
     setState(() {
       _categories = const [];
       _profileFuture = specialist.modelProfile(force: true);
+      _userProfileFuture = _auth?.myProfile();
     });
   }
 }

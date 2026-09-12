@@ -346,10 +346,12 @@ class AgencyMediaFrame extends StatelessWidget {
           children: [
             Image.network(
               imageUrl,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) => progress == null
-                  ? child
-                  : _AgencyFallback(icon: fallbackIcon),
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                  wasSynchronouslyLoaded || frame != null
+                      ? child
+                      : _AgencyFallback(icon: fallbackIcon),
               errorBuilder: (_, __, ___) => _AgencyFallback(icon: fallbackIcon),
             ),
             DecoratedBox(

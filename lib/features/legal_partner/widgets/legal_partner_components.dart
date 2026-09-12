@@ -304,9 +304,12 @@ class LegalMediaFrame extends StatelessWidget {
           children: [
             Image.network(
               imageUrl,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) =>
-                  progress == null ? child : _LegalFallback(icon: fallbackIcon),
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                  wasSynchronouslyLoaded || frame != null
+                      ? child
+                      : _LegalFallback(icon: fallbackIcon),
               errorBuilder: (_, __, ___) => _LegalFallback(icon: fallbackIcon),
             ),
             DecoratedBox(

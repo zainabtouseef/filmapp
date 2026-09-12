@@ -673,6 +673,7 @@ class _CandidateImage extends StatelessWidget {
         child: candidate.imageUrl?.isNotEmpty == true
             ? Image.network(
                 candidate.imageUrl!,
+                webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
                 fit: BoxFit.cover,
                 semanticLabel: '${candidate.name} profile image',
                 errorBuilder: (_, __, ___) =>

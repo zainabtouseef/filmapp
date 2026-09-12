@@ -10,6 +10,8 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models.identity import Role, User
 from app.models.kyc import KycSubmission
+from app.models.marketplace import MarketplaceListing
+from app.models.operations import EquipmentProviderProfile
 
 pytestmark = [
     pytest.mark.integration,
@@ -329,6 +331,35 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
     provider_profile_id = profile_payload["public_id"]
     assert profile_payload["listing_id"]
     assert profile_payload["visibility"] == "public"
+    # Historical deployments could create more than one discovery listing for
+    # the same provider profile. Reading or updating the provider workspace
+    # must remain deterministic while those additive rows are retained.
+    with client.application.app_context():
+        provider_profile = db.session.execute(
+            select(EquipmentProviderProfile).where(
+                EquipmentProviderProfile.public_id == provider_profile_id
+            )
+        ).scalar_one()
+        db.session.add(
+            MarketplaceListing(
+                owner_user_id=provider_profile.user_id,
+                listing_type="equipment",
+                profile_entity_id=provider_profile.public_id,
+                title="LensHouse Rentals duplicate",
+                summary="Historical listing retained for regression coverage.",
+                city_id=provider_profile.city_id,
+                currency="PKR",
+                verification_status="unverified",
+                moderation_status="approved",
+                visibility="public",
+            )
+        )
+        db.session.commit()
+    duplicate_profile = client.get(
+        "/api/v1/equipment/provider-profile", headers=equipment_headers
+    )
+    assert duplicate_profile.status_code == 200, duplicate_profile.text
+    assert duplicate_profile.json["data"]["profile"]["public_id"] == provider_profile_id
     equipment = client.post(
         "/api/v1/equipment/items",
         headers=equipment_headers,

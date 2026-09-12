@@ -34,12 +34,14 @@ from app.models import (
     DistributionPartnerProfile,
     EquipmentProviderProfile,
     FileAsset,
+    CreditEntry,
     ListingMedia,
     LocationProperty,
     MarketplaceListing,
     Message,
     ModelProfile,
     Notification,
+    PortfolioItem,
     Project,
     ProjectMember,
     ProjectRequirement,
@@ -779,6 +781,9 @@ def seed() -> dict[str, int]:
             "Distribution partner · premiere and release planning",
         ),
     ]
+    provider_media: dict[str, FileAsset] = {
+        model_listing.public_id: model_portrait,
+    }
     for listing, public_id, filename, caption in marketplace_media:
         file = install_public_image(
             stats,
@@ -798,6 +803,90 @@ def seed() -> dict[str, int]:
         if owner_profile is not None:
             owner_profile.avatar_file_id = file.id
             owner_profile.cover_file_id = file.id
+        provider_media[listing.public_id] = file
+
+    portfolio_specs = [
+        (
+            model_listing,
+            "model",
+            model_listing.profile_entity_id,
+            "DEMO-BRAND-PORT-MODEL-001",
+            "Nova Cola lifestyle campaign",
+            "Campaign model",
+        ),
+        (
+            listings[2],
+            "crew",
+            listings[2].owner.public_id,
+            "DEMO-BRAND-PORT-CREW-001",
+            "River Lights production unit",
+            "Assistant direction and production crew",
+        ),
+        (
+            listings[3],
+            "location",
+            listings[3].owner.public_id,
+            "DEMO-BRAND-PORT-LOCATION-001",
+            "Haveli Gulberg production spaces",
+            "Heritage interior location",
+        ),
+        (
+            listings[4],
+            "equipment",
+            listings[4].profile_entity_id,
+            "DEMO-BRAND-PORT-EQUIPMENT-001",
+            "Cinema camera and lighting package",
+            "Camera, lens and lighting package",
+        ),
+    ]
+    for (
+        listing,
+        profile_type,
+        profile_id,
+        public_id,
+        title,
+        role_label,
+    ) in portfolio_specs:
+        cover = provider_media[listing.public_id]
+        ensure(
+            PortfolioItem,
+            stats,
+            "provider_portfolio",
+            public_id=public_id,
+            defaults={
+                "owner_user_id": listing.owner_user_id,
+                "profile_type": profile_type,
+                "profile_id": profile_id,
+                "title": title,
+                "category": "image",
+                "file_id": cover.id,
+                "status": "published",
+                "is_cover": True,
+                "sort_order": 10,
+                "moderation_status": "approved",
+            },
+        )
+        ensure(
+            CreditEntry,
+            stats,
+            "provider_credit",
+            public_id=public_id.replace("PORT", "CREDIT"),
+            defaults={
+                "owner_user_id": listing.owner_user_id,
+                "profile_type": profile_type,
+                "profile_id": profile_id,
+                "title": title,
+                "production_name": "Nova Cola Winter Stories",
+                "role_label": role_label,
+                "year": date.today().year,
+                "description": (
+                    "Verified CineConnect demo credit connected to the live "
+                    "project, provider profile and portfolio image."
+                ),
+                "cover_file_id": cover.id,
+                "sort_order": 10,
+            },
+        )
 
     attach_all_demo_marketplace_media(stats, default_city=city)
 

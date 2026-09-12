@@ -239,8 +239,9 @@ void main() {
     );
   });
 
-  test('web startup is self-hosted and never fails to a blank screen', () {
-    expect(index, contains("canvasKitBaseUrl: 'canvaskit/'"));
+  test('web startup uses the Flutter renderer CDN and never stays blank', () {
+    expect(index, isNot(contains('canvasKitBaseUrl')));
+    expect(index, contains('serviceWorkerSettings'));
     expect(index, contains("'flutter-first-frame'"));
     expect(index, contains("document.querySelector('flutter-view')"));
     expect(index, contains('window.requestAnimationFrame(finishBoot)'));

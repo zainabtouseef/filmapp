@@ -368,9 +368,12 @@ class CrewMediaFrame extends StatelessWidget {
           children: [
             Image.network(
               imageUrl,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) =>
-                  progress == null ? child : _CrewFallback(icon: fallbackIcon),
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                  wasSynchronouslyLoaded || frame != null
+                      ? child
+                      : _CrewFallback(icon: fallbackIcon),
               errorBuilder: (_, __, ___) => _CrewFallback(icon: fallbackIcon),
             ),
             DecoratedBox(
