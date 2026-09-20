@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../routes/model_extension_routes.dart';
 import 'md01_campaign_categories_screen.dart';
@@ -22,6 +23,12 @@ const _modelBottomDestinations = [
 ];
 
 const _modelMenuEntries = <ActorShellMenuEntry>[
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
+  ),
   (
     route: ModelExtensionRoutes.categories,
     screenId: 'MD-01',

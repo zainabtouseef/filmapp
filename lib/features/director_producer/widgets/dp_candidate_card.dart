@@ -13,6 +13,10 @@ class DPCandidateCard extends StatelessWidget {
   final Future<bool> Function()? onShortlist;
   final bool featured;
 
+  /// Must match the id passed as the profile route's `candidateId` argument
+  /// so the thumbnail morphs into that screen's hero image.
+  final String? heroTag;
+
   const DPCandidateCard({
     super.key,
     required this.candidate,
@@ -20,11 +24,13 @@ class DPCandidateCard extends StatelessWidget {
     this.onRequest,
     this.onShortlist,
     this.featured = false,
+    this.heroTag,
   });
 
   @override
   Widget build(BuildContext context) {
     return CineMarketplaceCard(
+      heroTag: heroTag,
       title: candidate.name,
       kind: _kindForCategory(candidate.category),
       category: candidate.category,

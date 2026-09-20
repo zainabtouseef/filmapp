@@ -285,15 +285,25 @@ class AuthRepository {
     final params = <String, String>{};
     if (type != null && type.isNotEmpty) params['type'] = type;
     if (query != null && query.isNotEmpty) params['q'] = query;
-    final suffix = params.isEmpty
-        ? ''
-        : '?${params.entries.map((item) => '${item.key}=${Uri.encodeComponent(item.value)}').join('&')}';
-    final response = await _client.get('/marketplace/listings$suffix');
-    final data = response['data'] as Map<String, dynamic>;
-    return (data['listings'] as List<dynamic>? ?? const [])
-        .map(
-            (item) => MarketplaceListing.fromJson(item as Map<String, dynamic>))
-        .toList();
+    final listings = <MarketplaceListing>[];
+    var page = 1;
+    while (true) {
+      final pageParams = {
+        ...params,
+        'page': '$page',
+        'per_page': '50',
+      };
+      final suffix = Uri(queryParameters: pageParams).query;
+      final response = await _client.get('/marketplace/listings?$suffix');
+      final data = response['data'] as Map<String, dynamic>;
+      final pageItems = data['listings'] as List<dynamic>? ?? const [];
+      listings.addAll(pageItems.map((item) => MarketplaceListing.fromJson(
+            item as Map<String, dynamic>,
+          )));
+      final pagination = data['pagination'] as Map<String, dynamic>?;
+      if (pagination?['has_more'] != true || pageItems.isEmpty) return listings;
+      page++;
+    }
   }
 
   Future<MarketplaceListing> marketplaceListing(String publicId) async {

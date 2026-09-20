@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../routes/casting_agency_routes.dart';
 
@@ -16,6 +17,12 @@ const _agencyBottomDestinations = [
 ];
 
 const agencyMenuEntries = <ActorShellMenuEntry>[
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
+  ),
   (
     route: CastingAgencyRoutes.home,
     screenId: 'CA-01',

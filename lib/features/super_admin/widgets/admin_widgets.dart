@@ -16,6 +16,7 @@ import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_section_header.dart' as shared_layout;
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/sections/admin_filter_bar.dart' as shared_filters;
 import '../../../shared/widgets/premium_data_table.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -26,6 +27,11 @@ import '../models/admin_models.dart';
 import '../routes/super_admin_routes.dart';
 
 const adminNavItems = [
+  AdminNavItem(
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
+    route: MarketplaceRoutes.browse,
+  ),
   AdminNavItem(
     label: 'Dashboard',
     icon: Icons.grid_view_rounded,

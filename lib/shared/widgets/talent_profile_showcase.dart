@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_durations.dart';
 import '../../core/theme/app_text_styles.dart';
 
 /// A shared, image-led presentation for actor and model profiles.
@@ -24,6 +25,10 @@ class TalentProfileShowcase extends StatelessWidget {
   final List<Widget> actions;
   final String badge;
 
+  /// Stable identity shared with the marketplace card this profile was
+  /// opened from, so the thumbnail morphs into this hero image.
+  final String? heroTag;
+
   const TalentProfileShowcase({
     super.key,
     required this.name,
@@ -40,6 +45,7 @@ class TalentProfileShowcase extends StatelessWidget {
     this.highlights = const [],
     this.actions = const [],
     this.badge = 'CineConnect profile',
+    this.heroTag,
   });
 
   @override
@@ -54,9 +60,26 @@ class TalentProfileShowcase extends StatelessWidget {
         final showInsetPortrait = portraitUrl?.trim().isNotEmpty == true &&
             coverUrl?.trim().isNotEmpty == true &&
             portraitUrl != coverUrl;
+        final heroImage = _ShowcaseImage(
+          imageUrl: imageUrl,
+          fallbackLabel: _initials(name),
+          alignment: Alignment.topCenter,
+        );
 
-        return Container(
+        return TweenAnimationBuilder<double>(
           key: const ValueKey('talent-profile-showcase'),
+          tween: Tween(begin: 0, end: 1),
+          duration: AppDurations.pageEntrance,
+          curve: AppDurations.standardCurve,
+          builder: (context, reveal, child) => Opacity(
+            opacity: reveal,
+            child: Transform.scale(
+              scale: 0.985 + (0.015 * reveal),
+              alignment: Alignment.center,
+              child: child,
+            ),
+          ),
+          child: Container(
           height: heroHeight,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
@@ -74,11 +97,7 @@ class TalentProfileShowcase extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _ShowcaseImage(
-                imageUrl: imageUrl,
-                fallbackLabel: _initials(name),
-                alignment: Alignment.topCenter,
-              ),
+              heroTag == null ? heroImage : Hero(tag: heroTag!, child: heroImage),
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -135,13 +154,12 @@ class TalentProfileShowcase extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
-                      border:
-                          Border.all(color: const Color(0xFFE5B95B), width: 2),
-                      boxShadow: const [
+                      border: Border.all(color: colors.goldLight, width: 2),
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x66000000),
+                          color: colors.shadow,
                           blurRadius: 24,
-                          offset: Offset(0, 10),
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
@@ -162,14 +180,14 @@ class TalentProfileShowcase extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xFFE5B95B),
+                        color: colors.goldLight,
                         width: 2,
                       ),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x66000000),
+                          color: colors.shadow,
                           blurRadius: 18,
-                          offset: Offset(0, 8),
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -199,7 +217,7 @@ class TalentProfileShowcase extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.micro.copyWith(
-                            color: const Color(0xFFE8BE68),
+                            color: colors.goldLight,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.7,
                           ),
@@ -275,6 +293,7 @@ class TalentProfileShowcase extends StatelessWidget {
               ),
             ],
           ),
+          ),
         );
       },
     );
@@ -284,26 +303,74 @@ class TalentProfileShowcase extends StatelessWidget {
 class TalentProfileGallery extends StatelessWidget {
   final List<TalentProfileGalleryItem> items;
   final ValueChanged<TalentProfileGalleryItem>? onOpen;
+  final String title;
 
   const TalentProfileGallery({
     super.key,
     required this.items,
     this.onOpen,
+    this.title = 'Selected portfolio',
   });
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
     final colors = context.appColors;
+    final videoCount = items.where((item) => item.isVideo).length;
+    final kindLabel = videoCount == items.length
+        ? '${items.length} ${items.length == 1 ? 'video' : 'videos'}'
+        : videoCount == 0
+            ? '${items.length} ${items.length == 1 ? 'photo' : 'photos'}'
+            : '${items.length} items';
+
+    void openViewer(int index) {
+      TalentGalleryViewer.open(
+        context,
+        title: title,
+        countLabel: kindLabel,
+        items: items,
+        initialIndex: index,
+        onOpenOriginal: onOpen,
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Selected portfolio',
-          style: AppTextStyles.sectionTitle.copyWith(
-            color: colors.textPrimary,
-            fontSize: 22,
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.sectionTitle.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 22,
+                ),
+              ),
+            ),
+            InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () => openViewer(0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'More',
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.goldDark,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        color: colors.goldDark, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 5),
         Text(
@@ -319,62 +386,370 @@ class TalentProfileGallery extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final item = items[index];
-              return InkWell(
-                onTap: onOpen == null ? null : () => onOpen!(item),
-                borderRadius: BorderRadius.circular(22),
-                child: Container(
-                  width: 226,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: colors.border),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _ShowcaseImage(
-                        imageUrl: item.imageUrl,
-                        fallbackLabel: 'CC',
-                      ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Color(0xD9000000)],
-                          ),
-                        ),
-                      ),
-                      if (item.isVideo)
-                        const Center(
-                          child: Icon(
-                            Icons.play_circle_fill_rounded,
-                            color: Colors.white,
-                            size: 50,
-                          ),
-                        ),
-                      Positioned(
-                        left: 14,
-                        right: 14,
-                        bottom: 14,
-                        child: Text(
-                          item.label,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.cardLabel.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return _GalleryStripTile(
+                item: item,
+                heroTag: 'gallery-item-$title-$index',
+                onTap: () => openViewer(index),
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GalleryStripTile extends StatelessWidget {
+  final TalentProfileGalleryItem item;
+  final String heroTag;
+  final VoidCallback onTap;
+
+  const _GalleryStripTile({
+    required this.item,
+    required this.heroTag,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: 226,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: colors.border),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Hero(
+              tag: heroTag,
+              child: _ShowcaseImage(
+                imageUrl: item.imageUrl,
+                fallbackLabel: 'CC',
+              ),
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xD9000000)],
+                ),
+              ),
+            ),
+            if (item.isVideo)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: Colors.white,
+                  size: 50,
+                ),
+              ),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Text(
+                item.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-bleed masonry gallery the media strip opens into — the same
+/// "strip thumbnails resolve into the full gallery" motion as the rest of
+/// the marketplace flow, continued here via matching Hero tags.
+class TalentGalleryViewer extends StatelessWidget {
+  final String title;
+  final String countLabel;
+  final List<TalentProfileGalleryItem> items;
+  final int initialIndex;
+  final ValueChanged<TalentProfileGalleryItem>? onOpenOriginal;
+
+  const TalentGalleryViewer({
+    super.key,
+    required this.title,
+    required this.countLabel,
+    required this.items,
+    this.initialIndex = 0,
+    this.onOpenOriginal,
+  });
+
+  static Future<void> open(
+    BuildContext context, {
+    required String title,
+    required String countLabel,
+    required List<TalentProfileGalleryItem> items,
+    int initialIndex = 0,
+    ValueChanged<TalentProfileGalleryItem>? onOpenOriginal,
+  }) {
+    return Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: AppDurations.pageEntrance,
+        reverseTransitionDuration: AppDurations.pageEntrance,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            TalentGalleryViewer(
+          title: title,
+          countLabel: countLabel,
+          items: items,
+          initialIndex: initialIndex,
+          onOpenOriginal: onOpenOriginal,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: AppDurations.standardCurve,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween(begin: 0.97, end: 1.0).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 20, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.arrow_back_rounded,
+                        color: colors.textPrimary),
+                  ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 20,
+                          ),
+                        ),
+                        Text(
+                          countLabel.toUpperCase(),
+                          style: AppTextStyles.micro.copyWith(
+                            color: colors.goldDark,
+                            letterSpacing: 3,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _GalleryMasonry(
+                items: items,
+                title: title,
+                onOpenOriginal: onOpenOriginal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryMasonry extends StatelessWidget {
+  final List<TalentProfileGalleryItem> items;
+  final String title;
+  final ValueChanged<TalentProfileGalleryItem>? onOpenOriginal;
+
+  const _GalleryMasonry({
+    required this.items,
+    required this.title,
+    required this.onOpenOriginal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900
+            ? 3
+            : constraints.maxWidth >= 560
+                ? 2
+                : 2;
+        final columnHeights = List<double>.filled(columns, 0);
+        final columnItems = List.generate(columns, (_) => <int>[]);
+        for (var index = 0; index < items.length; index++) {
+          final ratio = const [1.15, 0.85, 1.0, 0.72][index % 4];
+          final shortest = columnHeights.indexOf(
+            columnHeights.reduce((a, b) => a < b ? a : b),
+          );
+          columnItems[shortest].add(index);
+          columnHeights[shortest] += ratio;
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var column = 0; column < columns; column++)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Column(
+                      children: [
+                        for (final index in columnItems[column])
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _GalleryTile(
+                              item: items[index],
+                              heroTag: 'gallery-item-$title-$index',
+                              aspectRatio: const [1.15, 0.85, 1.0, 0.72]
+                                  [index % 4],
+                              delay: index,
+                              onOpenOriginal: onOpenOriginal,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GalleryTile extends StatelessWidget {
+  final TalentProfileGalleryItem item;
+  final String heroTag;
+  final double aspectRatio;
+  final int delay;
+  final ValueChanged<TalentProfileGalleryItem>? onOpenOriginal;
+
+  const _GalleryTile({
+    required this.item,
+    required this.heroTag,
+    required this.aspectRatio,
+    required this.delay,
+    required this.onOpenOriginal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final tile = AspectRatio(
+      aspectRatio: aspectRatio,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onOpenOriginal == null ? null : () => onOpenOriginal!(item),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.border),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Hero(
+                tag: heroTag,
+                child: _ShowcaseImage(imageUrl: item.imageUrl, fallbackLabel: 'CC'),
+              ),
+              if (item.isVideo) ...[
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0xB3000000)],
+                      stops: [0.55, 1.0],
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.4),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.5)),
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 28),
+                  ),
+                ),
+              ],
+              if (item.label.trim().isNotEmpty)
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 10,
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      shadows: const [
+                        Shadow(color: Colors.black, blurRadius: 6),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (reduceMotion) return tile;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 280 + (delay.clamp(0, 10) * 55)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.scale(scale: 0.92 + (0.08 * value), child: child),
+      ),
+      child: tile,
     );
   }
 }
@@ -406,13 +781,17 @@ class _ShowcaseImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final url = imageUrl;
     final fallback = DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF7B5A24), Color(0xFF22314D), Color(0xFF11151C)],
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: const Alignment(-0.3, -0.6),
+          radius: 1.1,
+          colors: [
+            Color.lerp(colors.goldDark, colors.background, 0.35)!,
+            colors.background,
+          ],
         ),
       ),
       child: Center(
@@ -449,17 +828,17 @@ class _ShowcasePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Container(
       constraints: const BoxConstraints(maxWidth: 230),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: emphasized
-            ? const Color(0xFFE2AE47)
-            : Colors.black.withValues(alpha: 0.52),
+        gradient: emphasized ? colors.goldGradient : null,
+        color: emphasized ? null : Colors.black.withValues(alpha: 0.52),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: emphasized
-              ? const Color(0xFFF4D798)
+              ? colors.goldLight
               : Colors.white.withValues(alpha: 0.18),
         ),
       ),
@@ -469,7 +848,7 @@ class _ShowcasePill extends StatelessWidget {
           Icon(
             icon,
             size: 15,
-            color: emphasized ? const Color(0xFF251805) : Colors.white,
+            color: emphasized ? colors.onGold : Colors.white,
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -478,7 +857,7 @@ class _ShowcasePill extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.caption.copyWith(
-                color: emphasized ? const Color(0xFF251805) : Colors.white,
+                color: emphasized ? colors.onGold : Colors.white,
                 fontWeight: FontWeight.w800,
               ),
             ),

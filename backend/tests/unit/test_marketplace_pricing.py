@@ -167,6 +167,19 @@ def _create_project_and_requirement(
     return project_id, requirement.json["data"]["requirement"]["public_id"]
 
 
+def test_marketplace_actor_search_includes_talent_alias_and_city(
+    client: FlaskClient,
+) -> None:
+    _, _, listing_id = _publish_actor_listing(client)
+
+    response = client.get("/api/v1/marketplace/listings?type=actor&q=Lahore")
+
+    assert response.status_code == 200, response.text
+    assert [item["public_id"] for item in response.json["data"]["listings"]] == [
+        listing_id
+    ]
+
+
 def test_fixed_pricing_hides_bargaining_and_enforces_listed_amount(
     client: FlaskClient,
 ) -> None:

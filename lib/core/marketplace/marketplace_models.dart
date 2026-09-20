@@ -49,8 +49,7 @@ class MarketplaceListing {
       summary: json['summary'] as String,
       cityName: city?['name'] as String? ?? 'Pakistan',
       priceFromMinor: json['price_from_minor'] as int?,
-      configuredPriceFromMinor:
-          json['configured_price_from_minor'] as int?,
+      configuredPriceFromMinor: json['configured_price_from_minor'] as int?,
       currency: json['currency'] as String? ?? 'PKR',
       pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
       showsPrice: json['shows_price'] as bool? ?? true,
@@ -81,10 +80,11 @@ class MarketplaceListing {
       marketplaceListingId: publicId,
       name: title,
       category: switch (listingType) {
-        'talent' => 'Talent',
+        'talent' => 'Actors',
         'actor' => 'Actors',
         'model' => 'Models',
         'influencer' => 'Influencers',
+        'crew' => 'Crew',
         'location' => 'Locations',
         'equipment' => 'Media & Equipment',
         'agency' => 'Agencies',

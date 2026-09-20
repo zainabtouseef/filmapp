@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_durations.dart';
+import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../cards/cine_card_system.dart';
 
@@ -9,6 +11,10 @@ import '../cards/cine_card_system.dart';
 /// The card accepts display-ready values from the API models. It deliberately
 /// owns no demo records or placeholder business copy, so every portal keeps the
 /// same live database source while sharing one visual hierarchy.
+///
+/// Presented as a single cinematic list row — thumbnail, name, meta, chevron —
+/// so the whole row opens the live profile, matching the marketplace flow
+/// across every portal that reuses this widget.
 class CineMarketplaceCard extends StatefulWidget {
   final String title;
   final String kind;
@@ -30,6 +36,12 @@ class CineMarketplaceCard extends StatefulWidget {
   final VoidCallback? onProfile;
   final VoidCallback? onRequest;
   final Future<bool> Function()? onShortlist;
+
+  /// Stable identity shared with the destination profile route so its hero
+  /// image can morph out of this thumbnail. Leave null to skip the
+  /// shared-element transition (e.g. when the same id could render twice
+  /// on screen at once).
+  final String? heroTag;
 
   const CineMarketplaceCard({
     super.key,
@@ -53,6 +65,7 @@ class CineMarketplaceCard extends StatefulWidget {
     this.onProfile,
     this.onRequest,
     this.onShortlist,
+    this.heroTag,
   });
 
   @override
@@ -65,251 +78,220 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final accent = cineMarketplaceKindColor(context, widget.kind);
+    final verified = const {'approved', 'verified', 'published', 'active'}
+        .contains(widget.verificationStatus.toLowerCase());
+    final thumbSize = widget.featured ? 116.0 : 96.0;
+
     return CardShell(
       variant: CardVariant.media,
       padding: EdgeInsets.zero,
-      radius: 26,
+      radius: AppRadius.xl,
       selected: _shortlisted,
       tone: cineToneFromColor(context, accent),
       semanticLabel: '${widget.title}, ${widget.category}',
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: 5,
-              decoration: BoxDecoration(
-                color: accent,
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.25),
-                    blurRadius: 14,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 5),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final horizontal = constraints.maxWidth >= 720;
-                if (!horizontal) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+      onTap: widget.busy ? null : widget.onProfile,
+      child: Padding(
+        padding: EdgeInsets.all(widget.featured ? 16 : 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MarketplaceThumb(
+                  imageUrl: widget.imageUrl,
+                  kind: widget.kind,
+                  accent: accent,
+                  size: thumbSize,
+                  heroTag: widget.heroTag,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _MarketplaceVisual(
-                        imageUrl: widget.imageUrl,
-                        title: widget.title,
-                        kind: widget.kind,
-                        category: widget.category,
-                        status: widget.verificationStatus,
-                        featured: false,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            margin: const EdgeInsets.only(top: 4, right: 7),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: widget.available
+                                  ? colors.success
+                                  : colors.warning,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              widget.subtitle.trim().isEmpty
+                                  ? widget.category
+                                  : widget.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.micro.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                          if (widget.onShortlist != null)
+                            _ShortlistButton(
+                              active: _shortlisted,
+                              accent: accent,
+                              busy: widget.busy || _savingShortlist,
+                              onTap: _toggleShortlist,
+                            ),
+                        ],
                       ),
-                      _body(context, accent, compact: true),
-                    ],
-                  );
-                }
-                return SizedBox(
-                  height: widget.featured ? 400 : 370,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        flex: widget.featured ? 11 : 9,
-                        child: _MarketplaceVisual(
-                          imageUrl: widget.imageUrl,
-                          title: widget.title,
-                          kind: widget.kind,
-                          category: widget.category,
-                          status: widget.verificationStatus,
-                          featured: widget.featured,
+                      const SizedBox(height: 5),
+                      Text(
+                        widget.title,
+                        maxLines: widget.featured ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: colors.textPrimary,
+                          fontSize: widget.featured ? 22 : 18,
+                          height: 1.08,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                      Expanded(
-                        flex: widget.featured ? 10 : 11,
-                        child: _body(context, accent, compact: false),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.summary.trim().isEmpty
+                            ? 'Open the live profile for availability and production details.'
+                            : widget.summary,
+                        maxLines: widget.featured ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.smallMeta.copyWith(
+                          color: colors.textSecondary,
+                          height: 1.35,
+                        ),
                       ),
                     ],
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _body(BuildContext context, Color accent, {required bool compact}) {
-    final colors = context.appColors;
-    final verified = const {'approved', 'verified', 'published', 'active'}
-        .contains(widget.verificationStatus.toLowerCase());
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        compact ? 16 : 20,
-        compact ? 15 : 20,
-        compact ? 16 : 20,
-        compact ? 17 : 20,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: widget.available ? colors.success : colors.warning,
-                  shape: BoxShape.circle,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.subtitle.trim().isEmpty
-                      ? widget.category
-                      : widget.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.micro.copyWith(
-                    color: accent,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 6),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: colors.iconMuted,
+                    size: 22,
                   ),
                 ),
-              ),
-              if (widget.onShortlist != null)
-                IconButton(
-                  tooltip: _shortlisted
-                      ? 'Remove from shortlist'
-                      : 'Add to shortlist',
-                  visualDensity: VisualDensity.compact,
-                  onPressed:
-                      widget.busy || _savingShortlist ? null : _toggleShortlist,
-                  icon: Icon(
-                    _shortlisted
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: _shortlisted ? accent : colors.iconMuted,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Text(
-            widget.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.cardTitle.copyWith(
-              color: colors.textPrimary,
-              fontSize: widget.featured && !compact ? 24 : 19,
-              height: 1.08,
-              fontWeight: FontWeight.w900,
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.summary.trim().isEmpty
-                ? 'Open the live profile for availability and production details.'
-                : widget.summary,
-            maxLines: widget.featured && !compact ? 3 : 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              CineStatusBadge(
-                label: verified ? 'Verified' : widget.verificationStatus,
-                tone: verified ? CineTone.positive : CineTone.warning,
-                icon:
-                    verified ? Icons.verified_rounded : Icons.schedule_rounded,
-                showDot: false,
-              ),
-              CineStatusBadge(
-                label: widget.city,
-                tone: CineTone.neutral,
-                icon: Icons.location_on_outlined,
-                showDot: false,
-              ),
-              CineStatusBadge(
-                label: widget.rateLabel,
-                tone: CineTone.premium,
-                icon: Icons.payments_outlined,
-                showDot: false,
-              ),
-              CineStatusBadge(
-                label: switch (widget.pricingMode) {
-                  'fixed' => 'Fixed price',
-                  'on_request' => 'Bargain privately',
-                  _ => 'Offers welcome',
-                },
-                tone: widget.allowsBargaining
-                    ? CineTone.information
-                    : CineTone.neutral,
-                icon: widget.allowsBargaining
-                    ? Icons.handshake_outlined
-                    : Icons.lock_outline_rounded,
-                showDot: false,
-              ),
-              if (widget.trustScore != null)
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
                 CineStatusBadge(
-                  label: 'Trust ${widget.trustScore}/100',
-                  tone: CineTone.information,
-                  icon: Icons.shield_outlined,
+                  label: verified ? 'Verified' : widget.verificationStatus,
+                  tone: verified ? CineTone.positive : CineTone.warning,
+                  icon:
+                      verified ? Icons.verified_rounded : Icons.schedule_rounded,
                   showDot: false,
-                )
-              else if (widget.rating > 0)
+                ),
                 CineStatusBadge(
-                  label: widget.rating.toStringAsFixed(1),
+                  label: widget.city,
+                  tone: CineTone.neutral,
+                  icon: Icons.location_on_outlined,
+                  showDot: false,
+                ),
+                CineStatusBadge(
+                  label: widget.rateLabel,
                   tone: CineTone.premium,
-                  icon: Icons.star_rounded,
+                  icon: Icons.payments_outlined,
                   showDot: false,
                 ),
-            ],
-          ),
-          if (widget.tags.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              widget.tags.take(widget.featured ? 5 : 3).join('  ·  '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textTertiary,
-                fontWeight: FontWeight.w700,
+                CineStatusBadge(
+                  label: switch (widget.pricingMode) {
+                    'fixed' => 'Fixed price',
+                    'on_request' => 'Bargain privately',
+                    _ => 'Offers welcome',
+                  },
+                  tone: widget.allowsBargaining
+                      ? CineTone.information
+                      : CineTone.neutral,
+                  icon: widget.allowsBargaining
+                      ? Icons.handshake_outlined
+                      : Icons.lock_outline_rounded,
+                  showDot: false,
+                ),
+                if (widget.trustScore != null)
+                  CineStatusBadge(
+                    label: 'Trust ${widget.trustScore}/100',
+                    tone: CineTone.information,
+                    icon: Icons.shield_outlined,
+                    showDot: false,
+                  )
+                else if (widget.rating > 0)
+                  CineStatusBadge(
+                    label: widget.rating.toStringAsFixed(1),
+                    tone: CineTone.premium,
+                    icon: Icons.star_rounded,
+                    showDot: false,
+                  ),
+              ],
+            ),
+            if (widget.tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                widget.tags.take(widget.featured ? 5 : 3).join('  ·  '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textTertiary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.busy ? null : widget.onProfile,
+                    icon: const Icon(Icons.person_search_outlined, size: 16),
+                    label: const Text(
+                      'View profile',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: widget.busy ? null : widget.onRequest,
+                    icon: const Icon(Icons.send_rounded, size: 16),
+                    label: Text(
+                      widget.allowsBargaining
+                          ? 'Make offer'
+                          : 'Request at price',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
-          if (compact) const SizedBox(height: 14) else const Spacer(),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: widget.busy ? null : widget.onProfile,
-                icon: const Icon(Icons.person_search_outlined, size: 18),
-                label: const Text('View profile'),
-              ),
-              FilledButton.icon(
-                onPressed: widget.busy ? null : widget.onRequest,
-                icon: const Icon(Icons.send_rounded, size: 18),
-                label: Text(
-                  widget.allowsBargaining ? 'Make offer' : 'Request at price',
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -331,169 +313,207 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
   }
 }
 
-class CineMarketplaceResults extends StatelessWidget {
-  final List<Widget> cards;
+class _ShortlistButton extends StatelessWidget {
+  final bool active;
+  final bool busy;
+  final Color accent;
+  final VoidCallback onTap;
 
-  const CineMarketplaceResults({super.key, required this.cards});
-
-  @override
-  Widget build(BuildContext context) {
-    if (cards.isEmpty) return const SizedBox.shrink();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 860 || cards.length == 1) {
-          return Column(
-            children: [
-              for (var index = 0; index < cards.length; index++) ...[
-                cards[index],
-                if (index != cards.length - 1) const SizedBox(height: 12),
-              ],
-            ],
-          );
-        }
-        final supporting = cards.skip(1).toList();
-        final gap = 14.0;
-        final width = (constraints.maxWidth - gap) / 2;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            cards.first,
-            if (supporting.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: gap,
-                runSpacing: gap,
-                children: [
-                  for (final card in supporting)
-                    SizedBox(width: width, child: card),
-                ],
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _MarketplaceVisual extends StatelessWidget {
-  final String? imageUrl;
-  final String title;
-  final String kind;
-  final String category;
-  final String status;
-  final bool featured;
-
-  const _MarketplaceVisual({
-    required this.imageUrl,
-    required this.title,
-    required this.kind,
-    required this.category,
-    required this.status,
-    required this.featured,
+  const _ShortlistButton({
+    required this.active,
+    required this.busy,
+    required this.accent,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = cineMarketplaceKindColor(context, kind);
-    final source = imageUrl?.trim() ?? '';
-    final visual = source.isEmpty
-        ? _MarketplaceFallback(kind: kind, accent: accent)
-        : Stack(
-            fit: StackFit.expand,
-            children: [
-              _MarketplaceFallback(kind: kind, accent: accent),
-              Image.network(
-                source,
-                webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                fit: BoxFit.cover,
-                alignment: {'actor', 'model', 'influencer'}.contains(kind)
-                    ? Alignment.topCenter
-                    : Alignment.center,
-                filterQuality: FilterQuality.medium,
-                gaplessPlayback: true,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            ],
-          );
-    return AspectRatio(
-      aspectRatio: featured ? 16 / 10 : 16 / 9,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(21),
-          bottomLeft: Radius.circular(21),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            visual,
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x08000000), Color(0xA6000000)],
-                  stops: [0.38, 1.0],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 14,
-              left: 14,
-              child: CineStatusBadge(
-                label: category,
-                colorOverride: accent,
-                icon: cineMarketplaceKindIcon(kind),
-                showDot: false,
-              ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    status.toUpperCase(),
-                    style: AppTextStyles.micro.copyWith(
-                      color: accent,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardTitle.copyWith(
-                      color: Colors.white,
-                      fontSize: featured ? 23 : 18,
-                      fontWeight: FontWeight.w900,
-                      shadows: const [
-                        Shadow(color: Colors.black, blurRadius: 8)
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: colors.border),
-                  ),
-                ),
-              ),
-            ),
-          ],
+    // A plain GestureDetector nested inside the card's own InkWell-driven
+    // onTap would fight it for the same tap gesture. IconButton's InkResponse
+    // is the pattern Material itself uses for a tile's onTap + trailing
+    // action (see ListTile) and resolves that nesting correctly.
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        visualDensity: VisualDensity.compact,
+        tooltip: active ? 'Remove from shortlist' : 'Add to shortlist',
+        onPressed: busy ? null : onTap,
+        icon: AnimatedScale(
+          scale: active ? 1.1 : 1.0,
+          duration: AppDurations.press,
+          curve: AppDurations.standardCurve,
+          child: Icon(
+            active ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            size: 19,
+            color: active ? accent : colors.iconMuted,
+          ),
         ),
       ),
     );
+  }
+}
+
+/// Lays out marketplace result cards as one continuous cinematic list, with
+/// each row cascading into place the way the marketplace list builds in.
+class CineMarketplaceResults extends StatefulWidget {
+  final List<Widget> cards;
+
+  const CineMarketplaceResults({super.key, required this.cards});
+
+  @override
+  State<CineMarketplaceResults> createState() =>
+      _CineMarketplaceResultsState();
+}
+
+class _CineMarketplaceResultsState extends State<CineMarketplaceResults>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: _durationFor(widget.cards.length),
+    )..forward();
+  }
+
+  // Deliberately no didUpdateWidget restart: the caller rebuilds this widget
+  // with a freshly-mapped `cards` list on every keystroke while searching
+  // (new List instance each time, even when the matched set is unchanged),
+  // so restarting on any list-identity change would replay the stagger on
+  // every character typed. A category switch already gets a fresh entrance
+  // for free — it recreates this State via the FutureBuilder's loading ->
+  // data swap — so a single play-once-on-mount animation covers both cases
+  // without fighting search input.
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  static Duration _durationFor(int count) =>
+      Duration(milliseconds: 320 + count.clamp(0, 8) * 70);
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = widget.cards;
+    if (cards.isEmpty) return const SizedBox.shrink();
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final count = cards.length.clamp(1, 8);
+    return Column(
+      children: [
+        for (var index = 0; index < cards.length; index++) ...[
+          if (reduceMotion)
+            cards[index]
+          else
+            _RevealRow(
+              controller: _controller,
+              start: (index / count) * 0.6,
+              child: cards[index],
+            ),
+          if (index != cards.length - 1) const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _RevealRow extends StatelessWidget {
+  final AnimationController controller;
+  final double start;
+  final Widget child;
+
+  const _RevealRow({
+    required this.controller,
+    required this.start,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final curved = CurvedAnimation(
+      parent: controller,
+      curve: Interval(
+        start.clamp(0.0, 1.0),
+        (start + 0.45).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, _) => Opacity(
+        opacity: curved.value,
+        child: Transform.translate(
+          offset: Offset(0, (1 - curved.value) * 18),
+          child: child,
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _MarketplaceThumb extends StatelessWidget {
+  final String? imageUrl;
+  final String kind;
+  final Color accent;
+  final double size;
+  final String? heroTag;
+
+  const _MarketplaceThumb({
+    required this.imageUrl,
+    required this.kind,
+    required this.accent,
+    required this.size,
+    required this.heroTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final source = imageUrl?.trim() ?? '';
+    final visual = ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.xl - 3),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: source.isEmpty
+            ? _MarketplaceFallback(kind: kind, accent: accent)
+            : Stack(
+                fit: StackFit.expand,
+                children: [
+                  _MarketplaceFallback(kind: kind, accent: accent),
+                  Image.network(
+                    source,
+                    webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                    fit: BoxFit.cover,
+                    alignment: {'actor', 'model', 'influencer'}.contains(kind)
+                        ? Alignment.topCenter
+                        : Alignment.center,
+                    filterQuality: FilterQuality.medium,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+      ),
+    );
+    final framed = Container(
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: colors.border),
+      ),
+      child: visual,
+    );
+    final tag = heroTag;
+    if (tag == null) return framed;
+    return Hero(tag: tag, child: framed);
   }
 }
 

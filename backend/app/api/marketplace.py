@@ -13,7 +13,7 @@ from app.errors import APIError
 from app.extensions import db
 from app.models.base import utc_now
 from app.models.files import FileAsset
-from app.models.identity import Role
+from app.models.identity import Role, User
 from app.models.kyc import KycSubmission
 from app.models.marketplace import (
     City,
@@ -578,7 +578,12 @@ def _marketplace_query_from_payload(payload: dict[str, Any]) -> Any:
     )
     listing_type = str(payload.get("listing_type") or payload.get("type") or "").strip()
     if listing_type:
-        query = query.where(MarketplaceListing.listing_type == listing_type)
+        if listing_type == "actor":
+            query = query.where(
+                MarketplaceListing.listing_type.in_(("actor", "talent"))
+            )
+        else:
+            query = query.where(MarketplaceListing.listing_type == listing_type)
     city_id = str(payload.get("city_id") or payload.get("city") or "").strip()
     if city_id:
         query = query.join(City).where(City.public_id == city_id)
@@ -589,6 +594,8 @@ def _marketplace_query_from_payload(payload: dict[str, Any]) -> Any:
             or_(
                 MarketplaceListing.title.ilike(pattern),
                 MarketplaceListing.summary.ilike(pattern),
+                MarketplaceListing.city.has(City.name.ilike(pattern)),
+                MarketplaceListing.owner.has(User.display_name.ilike(pattern)),
             )
         )
     return query

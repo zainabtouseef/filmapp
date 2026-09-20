@@ -32,6 +32,8 @@ import '../../features/role_portals/routes/role_portal_routes.dart';
 import '../../features/role_portals/screens/role_portal_screen.dart';
 import '../../features/super_admin/routes/super_admin_routes.dart';
 import '../../features/super_admin/screens/super_admin_screens.dart';
+import '../../shared/marketplace/marketplace_portal_screen.dart';
+import '../../shared/marketplace/marketplace_routes.dart';
 import '../core_booking/screens/booking_chat_screen.dart';
 import '../core_contract/screens/contract_viewer_screen.dart';
 import '../core_payment/screens/payment_proof_screen.dart';
@@ -90,6 +92,12 @@ class CoreRoutes {
     final paymentDeepLinkId = _singleIdPath(routeSettings.name, 'payment');
     Widget page;
     switch (routeSettings.name) {
+      case MarketplaceRoutes.browse:
+      case MarketplaceRoutes.profile:
+        page = MarketplacePortalScreen(
+          routeName: routeSettings.name ?? MarketplaceRoutes.browse,
+          arguments: routeSettings.arguments,
+        );
       case splash:
         page = const SplashScreen();
       case onboarding:

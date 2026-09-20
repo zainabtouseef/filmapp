@@ -14,6 +14,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -38,6 +39,12 @@ typedef MediaEquipmentMenuEntry = ({
 });
 
 const mediaEquipmentMenuEntries = <MediaEquipmentMenuEntry>[
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
+  ),
   (
     route: MediaEquipmentRoutes.home,
     screenId: 'ME-01',
@@ -601,61 +608,62 @@ class _EquipmentSidebar extends StatelessWidget {
                       return TourTarget(
                         id: 'nav:${item.route}',
                         child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => onRouteTap(item.route),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: active
-                                ? colors.activeChipGradient
-                                : colors.inactiveChipGradient,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: active ? colors.goldMid : colors.border,
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => onRouteTap(item.route),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 11,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                item.icon,
-                                color:
-                                    active ? colors.goldDark : colors.iconMuted,
-                                size: 20,
+                            decoration: BoxDecoration(
+                              gradient: active
+                                  ? colors.activeChipGradient
+                                  : colors.inactiveChipGradient,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: active ? colors.goldMid : colors.border,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.cardLabel.copyWith(
-                                    color: active
-                                        ? colors.textPrimary
-                                        : colors.textSecondary,
-                                    fontWeight: active
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  item.icon,
+                                  color: active
+                                      ? colors.goldDark
+                                      : colors.iconMuted,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    item.label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.cardLabel.copyWith(
+                                      color: active
+                                          ? colors.textPrimary
+                                          : colors.textSecondary,
+                                      fontWeight: active
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? colors.goldMid
-                                      : colors.iconMuted
-                                          .withValues(alpha: 0.45),
-                                  shape: BoxShape.circle,
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: active
+                                        ? colors.goldMid
+                                        : colors.iconMuted
+                                            .withValues(alpha: 0.45),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
                         ),
                       );
                     },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/theme/app_durations.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/status_chip.dart';
 
@@ -76,7 +77,7 @@ class DpDotLabel extends StatelessWidget {
 
 /// A tap-to-select pill (filter/tab) — gold-filled with a dot when
 /// active, quiet glass otherwise.
-class DpDotChip extends StatelessWidget {
+class DpDotChip extends StatefulWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
@@ -89,41 +90,64 @@ class DpDotChip extends StatelessWidget {
   });
 
   @override
+  State<DpDotChip> createState() => _DpDotChipState();
+}
+
+class _DpDotChipState extends State<DpDotChip> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final active = widget.active;
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: active ? colors.goldGradient : null,
-          color: active
-              ? null
-              : colors.surface.withValues(alpha: colors.isLight ? 0.7 : 0.2),
-          border: Border.all(color: active ? colors.goldMid : colors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: active ? colors.onGold : colors.textTertiary,
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: AppDurations.press,
+        curve: AppDurations.standardCurve,
+        child: AnimatedContainer(
+          duration: AppDurations.tab,
+          curve: AppDurations.standardCurve,
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: active ? colors.goldGradient : null,
+            color: active
+                ? null
+                : colors.surface.withValues(alpha: colors.isLight ? 0.7 : 0.2),
+            border:
+                Border.all(color: active ? colors.goldMid : colors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: AppDurations.tab,
+                curve: AppDurations.standardCurve,
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: active ? colors.onGold : colors.textTertiary,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: active ? colors.onGold : colors.textSecondary,
-                fontWeight: FontWeight.w700,
+              const SizedBox(width: 6),
+              AnimatedDefaultTextStyle(
+                duration: AppDurations.tab,
+                curve: AppDurations.standardCurve,
+                style: AppTextStyles.caption.copyWith(
+                  color: active ? colors.onGold : colors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+                child: Text(widget.label),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

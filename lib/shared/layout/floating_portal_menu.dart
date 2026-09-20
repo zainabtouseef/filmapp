@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/tour/tour_target.dart';
+import '../marketplace/marketplace_routes.dart';
 import '../widgets/glass_card.dart';
 
 class FloatingPortalMenuItem {
@@ -98,7 +99,17 @@ class FloatingPortalMenuOverlay extends StatelessWidget {
                       child: _FloatingPortalMenuPanel(
                         open: open,
                         currentRoute: currentRoute,
-                        items: items,
+                        items: [
+                          ...items,
+                          if (!items.any(
+                            (item) => item.route == MarketplaceRoutes.browse,
+                          ))
+                            const FloatingPortalMenuItem(
+                              route: MarketplaceRoutes.browse,
+                              label: 'Marketplace',
+                              icon: Icons.storefront_outlined,
+                            ),
+                        ],
                         statusTitle: statusTitle,
                         statusSubtitle: statusSubtitle,
                         statusIcon: statusIcon,

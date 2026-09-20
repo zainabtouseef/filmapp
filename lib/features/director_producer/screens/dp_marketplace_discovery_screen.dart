@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
@@ -17,6 +19,7 @@ import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
 import '../../../shared/widgets/cine_marketplace_card.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
 
 const _categoryKeys = [
   'All',
@@ -34,12 +37,14 @@ class DPMarketplaceDiscoveryScreen extends StatefulWidget {
   final String? initialCategory;
   final String? projectId;
   final bool publicBuyerMode;
+  final bool browseOnly;
 
   const DPMarketplaceDiscoveryScreen({
     super.key,
     this.initialCategory,
     this.projectId,
     this.publicBuyerMode = false,
+    this.browseOnly = false,
   });
 
   @override
@@ -55,9 +60,11 @@ class _DPMarketplaceDiscoveryScreenState
   final _search = TextEditingController();
   String? _projectId;
   Future<List<DpCandidate>>? _candidatesFuture;
+  Timer? _searchDebounce;
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -80,14 +87,17 @@ class _DPMarketplaceDiscoveryScreenState
         message: 'Sign in to load the live marketplace.',
       );
     }
-    if (widget.publicBuyerMode) {
+    if (widget.publicBuyerMode || widget.browseOnly) {
       final listings = await auth.marketplaceListings(
         type: _publicListingType(_category),
         query: _search.text.trim(),
       );
       return listings.map((item) => item.toCandidate()).toList();
     }
-    final discovery = await auth.directorDiscovery(category: _category);
+    final discovery = await auth.directorDiscovery(
+      category: _category,
+      query: _search.text.trim(),
+    );
     return discovery.items.map((item) => item.toCandidate()).toList();
   }
 
@@ -98,7 +108,9 @@ class _DPMarketplaceDiscoveryScreenState
       'Influencers' => 'influencer',
       'Locations' => 'location',
       'Media & Equipment' => 'equipment',
+      'Crew' => 'crew',
       'Agencies' => 'agency',
+      'Distribution' => 'distribution',
       _ => null,
     };
   }
@@ -137,6 +149,14 @@ class _DPMarketplaceDiscoveryScreenState
     });
   }
 
+  void _searchChanged() {
+    setState(() {});
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) setState(() => _candidatesFuture = _load());
+    });
+  }
+
   String _normalizeCategory(String? category) {
     return category == 'Talent' ? 'Actors' : (category ?? 'All');
   }
@@ -145,25 +165,44 @@ class _DPMarketplaceDiscoveryScreenState
   Widget build(BuildContext context) {
     final categories = widget.publicBuyerMode
         ? const ['All', 'Actors', 'Models', 'Influencers']
-        : _categoryKeys;
+        : widget.browseOnly
+            ? const [
+                'All',
+                'Actors',
+                'Models',
+                'Influencers',
+                'Crew',
+                'Locations',
+                'Media & Equipment',
+                'Agencies',
+                'Distribution',
+              ]
+            : _categoryKeys;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DPPageHeader(
-          eyebrow: widget.publicBuyerMode
-              ? 'Book actors, models and influencers'
-              : _categoryHasLiveFeed(_category)
-                  ? 'Live marketplace listings'
-                  : 'Backend feed pending for $_category',
-          title: widget.publicBuyerMode
-              ? 'Find talent for your campaign'
-              : 'Marketplace',
-          trailing: _MarketplaceHeaderActions(
-            showAudition: !widget.publicBuyerMode,
-            onCreateAudition: _openAuditionBuilder,
-            onFilters: () =>
-                Navigator.pushNamed(context, DirectorProducerRoutes.filters),
-          ),
+          eyebrow: widget.browseOnly
+              ? 'Live approved marketplace listings'
+              : widget.publicBuyerMode
+                  ? 'Book actors, models and influencers'
+                  : _categoryHasLiveFeed(_category)
+                      ? 'Live marketplace listings'
+                      : 'Backend feed pending for $_category',
+          title: widget.browseOnly
+              ? 'Marketplace'
+              : widget.publicBuyerMode
+                  ? 'Find talent for your campaign'
+                  : 'Marketplace',
+          trailing: widget.browseOnly || widget.publicBuyerMode
+              ? null
+              : _MarketplaceHeaderActions(
+                  onCreateAudition: _openAuditionBuilder,
+                  onFilters: () => Navigator.pushNamed(
+                    context,
+                    DirectorProducerRoutes.filters,
+                  ),
+                ),
         ),
         const SizedBox(height: 14),
         _MarketplaceSearchBar(
@@ -171,13 +210,19 @@ class _DPMarketplaceDiscoveryScreenState
           hintText: widget.publicBuyerMode
               ? 'Search actors, models, influencers…'
               : null,
-          onChanged: () => setState(() {}),
-          onFilters: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.filters),
+          onChanged: _searchChanged,
+          onFilters: widget.browseOnly || widget.publicBuyerMode
+              ? null
+              : () => Navigator.pushNamed(
+                    context,
+                    DirectorProducerRoutes.filters,
+                  ),
           onSaveSearch: _saveCurrentSearch,
         ),
         const SizedBox(height: 10),
-        if (!widget.publicBuyerMode && _projectId != null) ...[
+        if (!widget.publicBuyerMode &&
+            !widget.browseOnly &&
+            _projectId != null) ...[
           DPGlassCard(
             padding: const EdgeInsets.all(11),
             child: Row(
@@ -280,62 +325,72 @@ class _DPMarketplaceDiscoveryScreenState
                         (entry) => DPCandidateCard(
                           featured: entry.$1 == 0,
                           candidate: entry.$2,
+                          heroTag: 'marketplace-profile-'
+                              '${widget.publicBuyerMode ? (entry.$2.marketplaceListingId ?? entry.$2.profileId) : entry.$2.profileId}',
                           onProfile: () => Navigator.pushNamed(
                             context,
-                            widget.publicBuyerMode
-                                ? GeneralPublicRoutes.profile
-                                : DirectorProducerRoutes.profile,
+                            widget.browseOnly
+                                ? MarketplaceRoutes.profile
+                                : widget.publicBuyerMode
+                                    ? GeneralPublicRoutes.profile
+                                    : DirectorProducerRoutes.profile,
                             arguments: {
-                              'candidateId': widget.publicBuyerMode
-                                  ? entry.$2.marketplaceListingId ??
-                                      entry.$2.profileId
-                                  : entry.$2.profileId,
+                              'candidateId':
+                                  widget.browseOnly || widget.publicBuyerMode
+                                      ? entry.$2.marketplaceListingId ??
+                                          entry.$2.profileId
+                                      : entry.$2.profileId,
                               'type': entry.$2.category,
-                              if (!widget.publicBuyerMode)
+                              if (!widget.publicBuyerMode && !widget.browseOnly)
                                 'projectId': _projectId,
                             },
                           ),
-                          onRequest: entry.$2.marketplaceListingId == null
-                              ? () => _showProviderActionPending(entry.$2)
-                              : () async {
-                                  final isPublicBuyer =
-                                      AuthScope.maybeOf(context)
-                                              ?.user
-                                              ?.primaryRole
-                                              ?.code ==
-                                          'general_public';
-                                  if (!isPublicBuyer &&
-                                      !await ensureKycApproved(context)) {
-                                    return;
-                                  }
-                                  if (!context.mounted) return;
-                                  Navigator.pushNamed(
-                                    context,
-                                    widget.publicBuyerMode
-                                        ? GeneralPublicRoutes.bookingRequest
-                                        : DirectorProducerRoutes.bookingRequest,
-                                    arguments: {
-                                      'candidateId':
-                                          entry.$2.marketplaceListingId,
-                                      if (!widget.publicBuyerMode)
-                                        'projectId': _projectId,
-                                      'category': entry.$2.category,
-                                    },
-                                  );
-                                },
-                          onShortlist: widget.publicBuyerMode
-                              ? () async {
-                                  _showSnack(
-                                    'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
-                                  );
-                                  return false;
-                                }
+                          onRequest: widget.browseOnly
+                              ? null
                               : entry.$2.marketplaceListingId == null
+                                  ? () => _showProviderActionPending(entry.$2)
+                                  : () async {
+                                      final isPublicBuyer =
+                                          AuthScope.maybeOf(context)
+                                                  ?.user
+                                                  ?.primaryRole
+                                                  ?.code ==
+                                              'general_public';
+                                      if (!isPublicBuyer &&
+                                          !await ensureKycApproved(context)) {
+                                        return;
+                                      }
+                                      if (!context.mounted) return;
+                                      Navigator.pushNamed(
+                                        context,
+                                        widget.publicBuyerMode
+                                            ? GeneralPublicRoutes.bookingRequest
+                                            : DirectorProducerRoutes
+                                                .bookingRequest,
+                                        arguments: {
+                                          'candidateId':
+                                              entry.$2.marketplaceListingId,
+                                          if (!widget.publicBuyerMode)
+                                            'projectId': _projectId,
+                                          'category': entry.$2.category,
+                                        },
+                                      );
+                                    },
+                          onShortlist: widget.browseOnly
+                              ? null
+                              : widget.publicBuyerMode
                                   ? () async {
-                                      _showProviderActionPending(entry.$2);
+                                      _showSnack(
+                                        'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
+                                      );
                                       return false;
                                     }
-                                  : () => _shortlistCandidate(entry.$2),
+                                  : entry.$2.marketplaceListingId == null
+                                      ? () async {
+                                          _showProviderActionPending(entry.$2);
+                                          return false;
+                                        }
+                                      : () => _shortlistCandidate(entry.$2),
                         ),
                       )
                       .toList(),
@@ -363,7 +418,9 @@ class _DPMarketplaceDiscoveryScreenState
           'Influencers' => 'influencer',
           'Locations' => 'location',
           'Media & Equipment' => 'equipment',
+          'Crew' => 'crew',
           'Agencies' => 'agency',
+          'Distribution' => 'distribution',
           _ => null,
         },
       );
@@ -691,12 +748,10 @@ class _ShortlistTarget {
 class _MarketplaceHeaderActions extends StatelessWidget {
   final VoidCallback onCreateAudition;
   final VoidCallback onFilters;
-  final bool showAudition;
 
   const _MarketplaceHeaderActions({
     required this.onCreateAudition,
     required this.onFilters,
-    this.showAudition = true,
   });
 
   @override
@@ -705,12 +760,11 @@ class _MarketplaceHeaderActions extends StatelessWidget {
       builder: (context, constraints) {
         final stack = constraints.maxWidth < 310;
         final buttons = [
-          if (showAudition)
-            DPHolographicButton(
-              label: 'Create Audition',
-              icon: Icons.campaign_outlined,
-              onTap: onCreateAudition,
-            ),
+          DPHolographicButton(
+            label: 'Create Audition',
+            icon: Icons.campaign_outlined,
+            onTap: onCreateAudition,
+          ),
           DPHolographicButton(
             label: 'Smart Filters',
             icon: Icons.tune_rounded,
@@ -907,14 +961,14 @@ class _MarketplaceSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String? hintText;
   final VoidCallback onChanged;
-  final VoidCallback onFilters;
+  final VoidCallback? onFilters;
   final VoidCallback onSaveSearch;
 
   const _MarketplaceSearchBar({
     required this.controller,
     this.hintText,
     required this.onChanged,
-    required this.onFilters,
+    this.onFilters,
     required this.onSaveSearch,
   });
 
@@ -984,24 +1038,26 @@ class _MarketplaceSearchBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: 'Filters',
-          child: GestureDetector(
-            onTap: onFilters,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13),
-                color: colors.surface
-                    .withValues(alpha: colors.isLight ? 0.7 : 0.2),
-                border: Border.all(color: colors.border),
+        if (onFilters != null) ...[
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Filters',
+            child: GestureDetector(
+              onTap: onFilters,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  color: colors.surface
+                      .withValues(alpha: colors.isLight ? 0.7 : 0.2),
+                  border: Border.all(color: colors.border),
+                ),
+                child: Icon(Icons.tune_rounded, color: colors.icon, size: 19),
               ),
-              child: Icon(Icons.tune_rounded, color: colors.icon, size: 19),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

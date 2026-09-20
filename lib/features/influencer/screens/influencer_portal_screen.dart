@@ -19,6 +19,7 @@ import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../director_producer/widgets/dp_glass_card.dart';
 import '../../director_producer/widgets/dp_holographic_button.dart';
 import '../../director_producer/widgets/dp_layout_helpers.dart';
@@ -43,6 +44,12 @@ const _influencerBottomDestinations = [
 ];
 
 const _influencerMenuEntries = <ActorShellMenuEntry>[
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
+  ),
   (
     route: InfluencerRoutes.home,
     screenId: 'IF-01',

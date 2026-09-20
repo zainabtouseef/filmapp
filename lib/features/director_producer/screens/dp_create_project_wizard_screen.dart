@@ -1118,9 +1118,8 @@ class _DPCreateProjectWizardScreenState
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _requirements.length,
-            onReorder: (oldIndex, newIndex) {
+            onReorderItem: (oldIndex, newIndex) {
               setState(() {
-                if (newIndex > oldIndex) newIndex -= 1;
                 final item = _requirements.removeAt(oldIndex);
                 _requirements.insert(newIndex, item);
               });
