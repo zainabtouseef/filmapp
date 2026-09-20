@@ -444,14 +444,12 @@ class _BrandWorkspaceTopBar extends StatelessWidget {
           ),
           SizedBox(width: compact ? 8 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
-          if (wide) ...[
-            const SizedBox(width: 10),
-            _BrandTopIcon(
-              icon: Icons.logout_rounded,
-              tooltip: 'Logout',
-              onTap: () => logoutToLogin(context),
-            ),
-          ],
+          const SizedBox(width: 10),
+          _BrandTopIcon(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
         ],
       ),
     );

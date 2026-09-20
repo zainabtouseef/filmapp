@@ -632,13 +632,15 @@ class _ActorWorkspaceTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
-          _ActorAvatarButton(
-            onTap: () => Navigator.pushNamed(
-              context,
-              profileRoute,
+          if (wide) ...[
+            _ActorAvatarButton(
+              onTap: () => Navigator.pushNamed(
+                context,
+                profileRoute,
+              ),
             ),
-          ),
-          SizedBox(width: compact ? 8 : 10),
+            const SizedBox(width: 10),
+          ],
           ThemeToggleButton(size: compact ? 34 : 38),
           if (wide) ...[
             const SizedBox(width: 10),
@@ -647,13 +649,13 @@ class _ActorWorkspaceTopBar extends StatelessWidget {
               tooltip: 'Take the tour',
               onTap: onTourTap,
             ),
-            const SizedBox(width: 10),
-            _ActorTopIcon(
-              icon: Icons.logout_rounded,
-              tooltip: 'Logout',
-              onTap: () => logoutToLogin(context),
-            ),
           ],
+          const SizedBox(width: 10),
+          _ActorTopIcon(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
         ],
       ),
     );

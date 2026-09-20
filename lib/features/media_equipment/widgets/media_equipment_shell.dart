@@ -410,13 +410,13 @@ class _EquipmentTopBar extends StatelessWidget {
               tooltip: 'Take the tour',
               onTap: () => _startEquipmentTour(context),
             ),
-            const SizedBox(width: 10),
-            _TopIcon(
-              icon: Icons.logout_rounded,
-              tooltip: 'Logout',
-              onTap: () => logoutToLogin(context),
-            ),
           ],
+          const SizedBox(width: 10),
+          _TopIcon(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
         ],
       ),
     );

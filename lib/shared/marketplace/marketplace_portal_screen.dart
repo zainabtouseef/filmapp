@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/core_ui/core_back_navigation.dart';
+import '../../core/core_ui/core_logout.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../features/director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../../features/director_producer/screens/dp_stakeholder_profile_screen.dart';
@@ -73,6 +74,11 @@ class MarketplacePortalScreen extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+            ),
+            IconButton(
+              tooltip: 'Logout',
+              onPressed: () => logoutToLogin(context),
+              icon: const Icon(Icons.logout_rounded),
             ),
           ],
         ),

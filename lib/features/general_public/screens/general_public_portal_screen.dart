@@ -478,6 +478,7 @@ class _PublicTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = !wide;
+    final narrow = MediaQuery.sizeOf(context).width < 350;
     final canGoBack = wide || Navigator.canPop(context);
     return AdminTopBarFrame(
       compact: compact,
@@ -488,11 +489,13 @@ class _PublicTopBar extends StatelessWidget {
             tooltip: canGoBack ? 'Back' : 'Menu',
             onTap: canGoBack ? () => navigateCoreBack(context) : onMenuTap,
           ),
-          const SizedBox(width: 10),
-          _PublicBrandLockup(compact: compact),
-          SizedBox(width: compact ? 8 : 16),
+          SizedBox(width: narrow ? 8 : 10),
+          if (!narrow) ...[
+            _PublicBrandLockup(compact: compact),
+            SizedBox(width: compact ? 6 : 16),
+          ],
           Expanded(child: _PublicSearchPill(compact: compact)),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 8 : 10),
           if (wide) ...[
             _PublicIconButton(
               icon: Icons.notifications_none_rounded,
@@ -503,6 +506,12 @@ class _PublicTopBar extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           ThemeToggleButton(size: compact ? 34 : 38),
+          SizedBox(width: compact ? 8 : 10),
+          _PublicIconButton(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
           if (wide) ...[
             const SizedBox(width: 10),
             _PublicIconButton(

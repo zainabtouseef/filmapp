@@ -328,10 +328,12 @@ class _DPTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
-          _DPAvatarButton(
-            onTap: () => Navigator.pushNamed(context, CoreRoutes.profileRoles),
-          ),
-          SizedBox(width: compact ? 8 : 10),
+          if (wide) ...[
+            _DPAvatarButton(
+              onTap: () => Navigator.pushNamed(context, CoreRoutes.profileRoles),
+            ),
+            const SizedBox(width: 10),
+          ],
           ThemeToggleButton(size: compact ? 34 : 38),
           if (wide) ...[
             const SizedBox(width: 10),
@@ -340,12 +342,14 @@ class _DPTopBar extends StatelessWidget {
               tooltip: 'Take the tour',
               onTap: () => startDpTour(context),
             ),
-            const SizedBox(width: 10),
-            _DPTopIcon(
-              icon: Icons.logout_rounded,
-              tooltip: 'Logout',
-              onTap: () => logoutToLogin(context),
-            ),
+          ],
+          const SizedBox(width: 10),
+          _DPTopIcon(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
+          if (wide) ...[
             const SizedBox(width: 10),
             DPStatusChip(
               label: isPublicBuyer ? 'Customer' : 'Producer',

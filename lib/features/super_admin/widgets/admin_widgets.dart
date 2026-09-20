@@ -607,13 +607,13 @@ class AdminTopBar extends StatelessWidget {
             ),
           SizedBox(width: compact ? 8 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
+          const SizedBox(width: 10),
+          AdminIconButton(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
           if (wide) ...[
-            const SizedBox(width: 10),
-            AdminIconButton(
-              icon: Icons.logout_rounded,
-              tooltip: 'Logout',
-              onTap: () => logoutToLogin(context),
-            ),
             const SizedBox(width: 10),
             const AdminStatusBadge(
               label: 'Super Admin',

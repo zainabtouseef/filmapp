@@ -166,10 +166,15 @@ class AuthController extends ChangeNotifier {
 
   Future<void> logout() async {
     final token = _refreshToken;
-    if (token != null) {
-      await _repository.logout(token);
+    try {
+      if (token != null) {
+        await _repository.logout(token);
+      }
+    } catch (_) {
+      // A server failure must not leave this device signed in.
+    } finally {
+      await clearSession();
     }
-    await clearSession();
   }
 
   Future<void> setPrimaryRole(String roleCode) async {

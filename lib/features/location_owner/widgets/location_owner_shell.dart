@@ -406,11 +406,13 @@ class _LocationWorkspaceTopBar extends StatelessWidget {
             ),
             const SizedBox(width: 10),
           ],
-          _LocationPropertyButton(
-            onTap: () =>
-                Navigator.pushNamed(context, LocationOwnerRoutes.listing),
-          ),
-          SizedBox(width: compact ? 8 : 10),
+          if (wide) ...[
+            _LocationPropertyButton(
+              onTap: () =>
+                  Navigator.pushNamed(context, LocationOwnerRoutes.listing),
+            ),
+            const SizedBox(width: 10),
+          ],
           ThemeToggleButton(size: compact ? 34 : 38),
           if (wide) ...[
             const SizedBox(width: 10),
@@ -419,13 +421,13 @@ class _LocationWorkspaceTopBar extends StatelessWidget {
               tooltip: 'Take the tour',
               onTap: () => _startLocationOwnerTour(context),
             ),
-            const SizedBox(width: 10),
-            _LocationTopIcon(
-              icon: Icons.logout_rounded,
-              tooltip: 'Logout',
-              onTap: () => logoutToLogin(context),
-            ),
           ],
+          const SizedBox(width: 10),
+          _LocationTopIcon(
+            icon: Icons.logout_rounded,
+            tooltip: 'Logout',
+            onTap: () => logoutToLogin(context),
+          ),
         ],
       ),
     );
