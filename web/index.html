@@ -109,7 +109,7 @@
     // cache policy changes. Flutter's bundle filename is stable, so a unique
     // request URL guarantees that an existing browser cannot reuse the prior
     // day's main.dart.js response.
-    const releaseVersion = `${buildVersion}-20260912-specialist-v7`;
+    const releaseVersion = `${buildVersion}-20260922-startup-v8`;
     for (const build of _flutter.buildConfig.builds) {
       if (build.mainJsPath) {
         build.mainJsPath = `${build.mainJsPath}?v=${releaseVersion}`;
@@ -149,13 +149,42 @@
       if (event.target instanceof HTMLScriptElement) showBootFailure();
     }, true);
 
-    // Let Flutter use its version-matched Google-hosted CanvasKit build. Keeping
-    // the 6-7 MB renderer off the origin materially improves first load for
-    // users whose route to the application server is bandwidth constrained.
-    Promise.resolve(_flutter.loader.load({
-      serviceWorkerSettings: { serviceWorkerVersion: releaseVersion },
-    })).catch(showBootFailure);
-    window.setTimeout(showBootFailure, 15000);
+    const clearLegacyWebCache = async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) =>
+            registration.unregister()
+          ));
+        }
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+        }
+      } catch (error) {
+        console.warn('Could not clear a legacy Flutter cache.', error);
+      }
+    };
+
+    const startFlutter = async () => {
+      // Older releases installed a Flutter service worker. Clear it before the
+      // application requests stable asset names so Safari cannot combine old
+      // cached files with the current main bundle.
+      await Promise.race([
+        clearLegacyWebCache(),
+        new Promise((resolve) => window.setTimeout(resolve, 2000)),
+      ]);
+
+      // Keep the renderer on the application origin. This removes a third-party
+      // network dependency from the first frame and makes startup reliable on
+      // networks where Google-hosted CanvasKit is slow or unavailable.
+      await _flutter.loader.load({
+        config: { canvasKitBaseUrl: 'canvaskit/' },
+      });
+    };
+
+    Promise.resolve(startFlutter()).catch(showBootFailure);
+    window.setTimeout(showBootFailure, 30000);
   </script>
   <script src="director_tutorial.js?v=20260813-35" defer></script>
 </body>

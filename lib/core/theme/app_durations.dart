@@ -38,5 +38,8 @@ class AppDurations {
   /// Holographic sweep on featured/selected cards — slow and limited.
   static const holographicSweep = Duration(milliseconds: 2600);
 
+  /// One full loop of the hero card's rotating gold ring accent.
+  static const heroRingRotation = Duration(seconds: 6);
+
   static const Curve standardCurve = Curves.easeOutCubic;
 }

@@ -14,6 +14,9 @@ class AppRadius {
   /// Compact cards.
   static const double md = 14;
 
+  /// Dashboard-kit cards (hero stat strip, modules grid, pipeline rows).
+  static const double panel = 16;
+
   /// Standard cards.
   static const double lg = 18;
 

@@ -10,8 +10,9 @@ import '../../../core/operations/operations_models.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
+import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../../shared/widgets/provider_workspace_hero.dart';
 import '../models/media_equipment_models.dart';
@@ -129,6 +130,7 @@ class _DashboardBody extends StatelessWidget {
     final pendingInspections = data.inspections
         .where((inspection) => inspection.status != 'confirmed')
         .toList();
+    final recentBookings = data.bookings.take(3).toList();
     final metrics = [
       MediaMetric(
         label: 'Inventory',
@@ -217,7 +219,7 @@ class _DashboardBody extends StatelessWidget {
               Navigator.pushNamed(context, MediaEquipmentRoutes.profile),
         ),
         const SizedBox(height: 14),
-        MediaKpiRail(metrics: metrics),
+        _MetricStatsRow(metrics: metrics),
         const SizedBox(height: 12),
         MediaTwoColumn(
           left: MediaSectionCard(
@@ -323,21 +325,28 @@ class _DashboardBody extends StatelessWidget {
                 : Column(
                     children: [
                       if (openRequests.isNotEmpty)
-                        _ActionRow(
-                          icon: Icons.move_to_inbox_outlined,
+                        PortalAttentionRow(
+                          kindLabel: 'Requests',
                           title: '${openRequests.length} booking request(s)',
-                          subtitle: 'Review scope, dates, price, and terms',
+                          meta: 'Review scope, dates, price, and terms',
+                          icon: Icons.move_to_inbox_outlined,
+                          tone: CineTone.warning,
                           onTap: () => Navigator.pushNamed(
                             context,
                             MediaEquipmentRoutes.requests,
                           ),
                         ),
+                      if (openRequests.isNotEmpty &&
+                          pendingInspections.isNotEmpty)
+                        const SizedBox(height: 10),
                       if (pendingInspections.isNotEmpty)
-                        _ActionRow(
-                          icon: Icons.fact_check_outlined,
+                        PortalAttentionRow(
+                          kindLabel: 'Inspections',
                           title:
                               '${pendingInspections.length} open inspection(s)',
-                          subtitle: 'Capture condition and required signatures',
+                          meta: 'Capture condition and required signatures',
+                          icon: Icons.fact_check_outlined,
+                          tone: CineTone.warning,
                           onTap: () => Navigator.pushNamed(
                             context,
                             pendingInspections.first.inspectionType == 'return'
@@ -356,60 +365,30 @@ class _DashboardBody extends StatelessWidget {
             _DashboardBlock(
               title: 'Recent Requests',
               icon: Icons.move_to_inbox_outlined,
-              child: data.bookings.isEmpty
+              child: recentBookings.isEmpty
                   ? const Text('No equipment bookings yet.')
                   : Column(
                       children: [
-                        for (final booking in data.bookings.take(3))
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(8),
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                MediaEquipmentRoutes.requests,
-                                arguments: booking.publicId,
-                              ),
-                              child: GlassSectionCard(
-                                radius: 8,
-                                padding: const EdgeInsets.all(10),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Project ${booking.projectId}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTextStyles.cardLabel
-                                                .copyWith(
-                                              color: colors.textPrimary,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            booking.requester.displayName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTextStyles.smallMeta
-                                                .copyWith(
-                                              color: colors.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    StatusChip(
-                                      label: _title(booking.status),
-                                      color: colors.goldMid,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                        for (var i = 0; i < recentBookings.length; i++)
+                          PortalPipelineRow(
+                            initials: recentBookings[i].requester.displayName,
+                            title: recentBookings[i].projectTitle,
+                            subtitle: recentBookings[i].requester.displayName,
+                            metaLabel:
+                                CineFormat.date(recentBookings[i].startAt),
+                            status: _title(recentBookings[i].status),
+                            tone: CineTone.premium,
+                            ctaLabel: 'Review',
+                            showDivider: i != 0,
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              MediaEquipmentRoutes.requests,
+                              arguments: recentBookings[i].publicId,
+                            ),
+                            onCta: () => Navigator.pushNamed(
+                              context,
+                              MediaEquipmentRoutes.requests,
+                              arguments: recentBookings[i].publicId,
                             ),
                           ),
                       ],
@@ -501,60 +480,48 @@ class _DashboardBody extends StatelessWidget {
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+/// The dashboard's KPI row — five quick-stat tiles (inventory, requests,
+/// opportunities, utilization, inspections), each backed by a real,
+/// already-computed [MediaMetric]. Mirrors the DP portal's pulse strip
+/// (`dp_pulse_strip.dart`).
+class _MetricStatsRow extends StatelessWidget {
+  final List<MediaMetric> metrics;
 
-  const _ActionRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  const _MetricStatsRow({required this.metrics});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onTap,
-        child: GlassSectionCard(
-          radius: 8,
-          padding: const EdgeInsets.all(11),
-          child: Row(
-            children: [
-              Icon(icon, color: colors.goldDark),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.cardLabel.copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: colors.iconMuted),
-            ],
-          ),
+    final tiles = [
+      for (final metric in metrics)
+        PortalQuickStatTile(
+          icon: metric.icon,
+          value: metric.value,
+          label: metric.label,
+          delta: metric.delta,
+          tone:
+              cineToneFromColor(context, mediaToneColor(context, metric.tone)),
+          onTap: () => Navigator.pushNamed(context, metric.route),
         ),
-      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 9.0;
+        final columns = constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth < 700
+                ? 2
+                : constraints.maxWidth < 1000
+                    ? 3
+                    : 5;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tile in tiles) SizedBox(width: width, child: tile),
+          ],
+        );
+      },
     );
   }
 }

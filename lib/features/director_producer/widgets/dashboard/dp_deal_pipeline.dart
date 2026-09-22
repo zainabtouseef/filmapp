@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/director/director_dashboard_models.dart';
-import '../../../../core/theme/app_color_scheme.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/cards/cine_card_system.dart';
+import '../../../../shared/dashboard/dashboard_kit.dart';
 import '../../../../shared/formatters/cine_format.dart';
 import '../../routes/director_producer_routes.dart';
-import '../dp_glass_card.dart';
 
 /// Deals & Contracts — three pipeline-stage previews, with the complete
 /// pipeline available from the parent section action.
@@ -112,53 +110,12 @@ class _DealStageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final color = cineToneColor(context, tone);
-    return DPGlassCard(
-      accentColor: color,
-      padding: const EdgeInsets.all(14),
+    return PortalPipelineStatCard(
+      label: label,
+      value: '$count',
+      sub: '${CineFormat.currency(total, compact: true)} total',
+      tone: tone,
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$count',
-            style: AppTextStyles.heroSerifNumber.copyWith(
-              color: colors.textPrimary,
-              fontSize: 24,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '${CineFormat.currency(total, compact: true)} total',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
-          ),
-        ],
-      ),
     );
   }
 }

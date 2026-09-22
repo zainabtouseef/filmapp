@@ -12,6 +12,8 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -268,6 +270,28 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
           const SizedBox(height: 12),
         ],
+        PortalHeroCard(
+          initials: _brandInitials(_profile!.name),
+          name: _profile!.name,
+          badgeLabel: readableBrandStatus(_profile!.trustStatus),
+          stats: [
+            PortalHeroStat(
+              value: '$openOpportunities',
+              label: 'Live opportunities',
+            ),
+            PortalHeroStat(
+              value: brandMoney(
+                production?.committedBudgetMinor,
+                currency: production?.currency ?? 'PKR',
+              ),
+              label: 'Committed budget',
+            ),
+          ],
+          ctaLabel: 'New opportunity',
+          onCta: () =>
+              Navigator.pushNamed(context, BrandSponsorRoutes.composer),
+        ),
+        const SizedBox(height: 14),
         if (demoProject != null) ...[
           BrandDemoJourneyCard(
             project: demoProject,
@@ -287,10 +311,10 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
           const SizedBox(height: 14),
         ],
-        BrandKpiRail(metrics: productionMetrics),
-        const SizedBox(height: 12),
-        BrandKpiRail(metrics: metrics),
-        const SizedBox(height: 12),
+        _BrandQuickStatRow(metrics: productionMetrics),
+        const SizedBox(height: 14),
+        _BrandQuickStatRow(metrics: metrics),
+        const SizedBox(height: 14),
         BrandTwoColumn(
           left: BrandSectionCard(
             title: active == null ? 'Opportunity portfolio' : 'Active brief',
@@ -497,39 +521,95 @@ class _ActionQueue extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       (
+        kindLabel: 'Applications',
         icon: Icons.inbox_outlined,
         title: '$applications applications',
-        subtitle: 'Review proposals and selection status',
+        meta: 'Review proposals and selection status',
         route: BrandSponsorRoutes.applications,
       ),
       (
+        kindLabel: 'Deliverables',
         icon: Icons.fact_check_outlined,
         title: '$deliverables proof reviews',
-        subtitle: 'Approve delivery or request a revision',
+        meta: 'Approve delivery or request a revision',
         route: BrandSponsorRoutes.tracker,
       ),
       (
+        kindLabel: 'Drafts',
         icon: Icons.drafts_outlined,
         title: '$draftOpportunities draft briefs',
-        subtitle: 'Complete or publish opportunity details',
+        meta: 'Complete or publish opportunity details',
         route: BrandSponsorRoutes.composer,
       ),
     ];
     return Column(
       children: [
-        for (final item in items)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 9),
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(item.icon, color: context.appColors.goldDark),
-              title: Text(item.title),
-              subtitle: Text(item.subtitle),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.pushNamed(context, item.route),
-            ),
+        for (var i = 0; i < items.length; i++) ...[
+          PortalAttentionRow(
+            kindLabel: items[i].kindLabel,
+            title: items[i].title,
+            meta: items[i].meta,
+            icon: items[i].icon,
+            tone: CineTone.information,
+            onTap: () => Navigator.pushNamed(context, items[i].route),
           ),
+          if (i != items.length - 1) const SizedBox(height: 10),
+        ],
       ],
     );
   }
+}
+
+/// A responsive row of dashboard-kit quick-stat tiles built from
+/// [BrandMetric] data — reuses the exact same values/tones already
+/// computed for [BrandKpiRail] elsewhere in this app, just presented
+/// with the shared dashboard-kit tile treatment.
+class _BrandQuickStatRow extends StatelessWidget {
+  final List<BrandMetric> metrics;
+
+  const _BrandQuickStatRow({required this.metrics});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 9.0;
+        final columns = constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth < 700
+                ? 2
+                : 4;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: width,
+                child: PortalQuickStatTile(
+                  icon: metric.icon,
+                  value: metric.value,
+                  label: metric.label,
+                  delta: metric.delta,
+                  tone: cineToneFromColor(
+                    context,
+                    brandToneColor(context, metric.tone),
+                  ),
+                  onTap: () => Navigator.pushNamed(context, metric.route),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+String _brandInitials(String name) {
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }

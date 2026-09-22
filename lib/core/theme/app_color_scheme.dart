@@ -32,6 +32,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
   final Color goldMid;
   final Color goldDark;
   final Color goldGlow;
+  final Color goldSoft;
+  final Color goldTint;
   final Color shadow;
   final Color success;
   final Color warning;
@@ -40,6 +42,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
   final Color danger;
   final Color onGold;
   final Color porcelain;
+  final Color railBackground;
+  final Color railForeground;
   final Color holographicTeal;
   final Color holographicCyan;
   final Color focusRing;
@@ -74,6 +78,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     required this.goldMid,
     required this.goldDark,
     required this.goldGlow,
+    required this.goldSoft,
+    required this.goldTint,
     required this.shadow,
     required this.success,
     required this.warning,
@@ -82,6 +88,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     required this.danger,
     required this.onGold,
     required this.porcelain,
+    required this.railBackground,
+    required this.railForeground,
     required this.holographicTeal,
     required this.holographicCyan,
     required this.focusRing,
@@ -117,6 +125,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     goldMid: Color(0xFFB28735),
     goldDark: Color(0xFF7B5A20),
     goldGlow: Color(0x18B28735),
+    goldSoft: Color(0x24C9A227),
+    goldTint: Color(0x38C9A227),
     shadow: Color(0x18131A20),
     success: Color(0xFF27764F),
     warning: Color(0xFFA66518),
@@ -125,6 +135,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     danger: Color(0xFFB74636),
     onGold: Color(0xFF171A1D),
     porcelain: Color(0xFFF0F3F4),
+    railBackground: Color(0xFF16150F),
+    railForeground: Color(0xFFECE6D6),
     holographicTeal: Color(0xFF247B75),
     holographicCyan: Color(0xFF3F9299),
     focusRing: Color(0xFF247B75),
@@ -182,36 +194,40 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
 
   static const dark = CineThemeColors(
     isLight: false,
-    background: Color(0xFF14171A),
-    surface: Color(0xFF1B1F23),
-    softSurface: Color(0xFF22272B),
-    elevatedSurface: Color(0xFF272C31),
-    mutedSurface: Color(0xFF20252A),
-    overlaySurface: Color(0xF5272C31),
-    card: Color(0xFF24292D),
-    textPrimary: Color(0xFFF2F4F5),
-    textSecondary: Color(0xFFAFB6BC),
-    textTertiary: Color(0xFF969EA5),
-    icon: Color(0xFFF2F4F5),
-    iconMuted: Color(0xFFA4ADB4),
-    border: Color(0xFF3D454B),
-    borderMuted: Color(0xFF31383D),
-    goldLight: Color(0xFFF0C66E),
-    goldMid: Color(0xFFDCA83E),
-    goldDark: Color(0xFFC18B29),
-    goldGlow: Color(0x2EDCA83E),
+    background: Color(0xFF07070A),
+    surface: Color(0xFF0D0D10),
+    softSurface: Color(0xFF17171B),
+    elevatedSurface: Color(0xFF121215),
+    mutedSurface: Color(0xFF0F0F12),
+    overlaySurface: Color(0xF5121215),
+    card: Color(0xFF121215),
+    textPrimary: Color(0xFFF3F0E7),
+    textSecondary: Color(0xFFC6C0B0),
+    textTertiary: Color(0xFF8B8677),
+    icon: Color(0xFFF3F0E7),
+    iconMuted: Color(0xFF8B8677),
+    border: Color(0x14FFFFFF),
+    borderMuted: Color(0x0DFFFFFF),
+    goldLight: Color(0xFFE5C46E),
+    goldMid: Color(0xFFD4AF37),
+    goldDark: Color(0xFF8A6E22),
+    goldGlow: Color(0x2ED4AF37),
+    goldSoft: Color(0x24D4AF37),
+    goldTint: Color(0x38D4AF37),
     shadow: Color(0x70000000),
-    success: Color(0xFF67BC8C),
-    warning: Color(0xFFD3A054),
-    infoBlue: Color(0xFF78AFD0),
-    infoPurple: Color(0xFFA78EBA),
-    danger: Color(0xFFE47D70),
-    onGold: Color(0xFF171A1D),
+    success: Color(0xFF6FB585),
+    warning: Color(0xFFD9A557),
+    infoBlue: Color(0xFF7FA8CC),
+    infoPurple: Color(0xFF9B8BE0),
+    danger: Color(0xFFD97B6A),
+    onGold: Color(0xFF16120A),
     porcelain: Color(0xFF2C3236),
+    railBackground: Color(0xFF101013),
+    railForeground: Color(0xFFE9E3D3),
     holographicTeal: Color(0xFF5BB1A6),
     holographicCyan: Color(0xFF75C0C5),
-    focusRing: Color(0xFF6BC1B6),
-    surfaceHighlight: Color(0xFF3B4247),
+    focusRing: Color(0xFFD4AF37),
+    surfaceHighlight: Color(0xFF17171B),
     backgroundGradient: LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
@@ -287,6 +303,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     Color? goldMid,
     Color? goldDark,
     Color? goldGlow,
+    Color? goldSoft,
+    Color? goldTint,
     Color? shadow,
     Color? success,
     Color? warning,
@@ -295,6 +313,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
     Color? danger,
     Color? onGold,
     Color? porcelain,
+    Color? railBackground,
+    Color? railForeground,
     Color? holographicTeal,
     Color? holographicCyan,
     Color? focusRing,
@@ -329,6 +349,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
       goldMid: goldMid ?? this.goldMid,
       goldDark: goldDark ?? this.goldDark,
       goldGlow: goldGlow ?? this.goldGlow,
+      goldSoft: goldSoft ?? this.goldSoft,
+      goldTint: goldTint ?? this.goldTint,
       shadow: shadow ?? this.shadow,
       success: success ?? this.success,
       warning: warning ?? this.warning,
@@ -337,6 +359,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
       danger: danger ?? this.danger,
       onGold: onGold ?? this.onGold,
       porcelain: porcelain ?? this.porcelain,
+      railBackground: railBackground ?? this.railBackground,
+      railForeground: railForeground ?? this.railForeground,
       holographicTeal: holographicTeal ?? this.holographicTeal,
       holographicCyan: holographicCyan ?? this.holographicCyan,
       focusRing: focusRing ?? this.focusRing,
@@ -380,6 +404,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
       goldMid: Color.lerp(goldMid, other.goldMid, t)!,
       goldDark: Color.lerp(goldDark, other.goldDark, t)!,
       goldGlow: Color.lerp(goldGlow, other.goldGlow, t)!,
+      goldSoft: Color.lerp(goldSoft, other.goldSoft, t)!,
+      goldTint: Color.lerp(goldTint, other.goldTint, t)!,
       shadow: Color.lerp(shadow, other.shadow, t)!,
       success: Color.lerp(success, other.success, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
@@ -388,6 +414,8 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
       danger: Color.lerp(danger, other.danger, t)!,
       onGold: Color.lerp(onGold, other.onGold, t)!,
       porcelain: Color.lerp(porcelain, other.porcelain, t)!,
+      railBackground: Color.lerp(railBackground, other.railBackground, t)!,
+      railForeground: Color.lerp(railForeground, other.railForeground, t)!,
       holographicTeal: Color.lerp(holographicTeal, other.holographicTeal, t)!,
       holographicCyan: Color.lerp(holographicCyan, other.holographicCyan, t)!,
       focusRing: Color.lerp(focusRing, other.focusRing, t)!,
@@ -419,4 +447,23 @@ class CineThemeColors extends ThemeExtension<CineThemeColors> {
         end: Alignment.bottomRight,
         colors: [holographicTeal, holographicCyan],
       );
+
+  /// Ambient top-left glow behind hero/feature cards — a dark-mode-only
+  /// accent (the design spec explicitly turns this off in light mode),
+  /// so it's derived from [isLight] rather than a stored field.
+  Gradient get ambientGlow => isLight
+      ? const RadialGradient(colors: [Colors.transparent, Colors.transparent])
+      : RadialGradient(
+          center: const Alignment(-0.85, -0.9),
+          radius: 1.4,
+          colors: [goldMid.withValues(alpha: 0.10), Colors.transparent],
+        );
+
+  /// Small blurred gold glow used under CTA underlines and hero accents.
+  List<BoxShadow> get goldEdgeGlow => [
+        BoxShadow(
+          color: goldMid.withValues(alpha: 0.55),
+          blurRadius: 10,
+        ),
+      ];
 }

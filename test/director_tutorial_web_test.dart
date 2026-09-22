@@ -239,14 +239,18 @@ void main() {
     );
   });
 
-  test('web startup uses the Flutter renderer CDN and never stays blank', () {
-    expect(index, isNot(contains('canvasKitBaseUrl')));
-    expect(index, contains('serviceWorkerSettings'));
+  test('web startup uses same-origin rendering and clears legacy caches', () {
+    expect(index, contains("canvasKitBaseUrl: 'canvaskit/'"));
+    expect(index, isNot(contains('serviceWorkerSettings')));
+    expect(index, contains('navigator.serviceWorker.getRegistrations()'));
+    expect(index, contains('registration.unregister()'));
+    expect(index, contains("'caches' in window"));
+    expect(index, contains('caches.delete(name)'));
     expect(index, contains("'flutter-first-frame'"));
     expect(index, contains("document.querySelector('flutter-view')"));
     expect(index, contains('window.requestAnimationFrame(finishBoot)'));
     expect(index, contains('Loading CineConnect…'));
     expect(index, contains('Reload portal'));
-    expect(index, contains('window.setTimeout(showBootFailure, 15000)'));
+    expect(index, contains('window.setTimeout(showBootFailure, 30000)'));
   });
 }

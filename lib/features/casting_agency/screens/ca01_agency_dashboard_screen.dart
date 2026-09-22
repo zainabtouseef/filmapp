@@ -4,8 +4,8 @@ import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_components.dart';
 
@@ -122,6 +122,8 @@ class _AgencyDashboardData {
   }
 }
 
+/// Live agency workspace body — dashboard-kit composition: hero → quick
+/// stat tiles → commission ring → audition pipeline + action-required rail.
 class _LiveAgencyDashboard extends StatelessWidget {
   final _AgencyDashboardData data;
   final VoidCallback onRefresh;
@@ -130,95 +132,112 @@ class _LiveAgencyDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final profile = data.profile;
     final activeAuditions = data.auditions
         .where((item) => item.status != 'closed' && item.status != 'rejected')
         .length;
-    final pendingCommissionMinor = data.commissions
-        .where((item) => item.status != 'paid')
+    final paidCommissionMinor = data.commissions
+        .where((item) => item.status == 'paid')
         .fold<int>(0, (sum, item) => sum + item.commissionMinor);
-    final primary = data.auditions.isEmpty ? null : data.auditions.first;
+    final totalCommissionMinor = data.commissions
+        .fold<int>(0, (sum, item) => sum + item.commissionMinor);
+    final pendingCommissionMinor = totalCommissionMinor - paidCommissionMinor;
+    final commissionProgress = totalCommissionMinor == 0
+        ? 0.0
+        : paidCommissionMinor / totalCommissionMinor;
+    final selfTapeCount = data.auditions.fold<int>(
+        0,
+        (sum, item) =>
+            sum +
+            item.candidates
+                .fold<int>(0, (inner, c) => inner + c.selfTapeCount));
+    final pipelineAuditions = data.auditions.take(4).toList();
+
     return Column(
       children: [
-        AgencyResponsiveGrid(
-          minWidth: 220,
-          children: [
-            _MetricTile(
-              icon: Icons.business_center_outlined,
-              label: 'Agency',
-              value: profile?.name ?? 'Profile pending',
-              color: colors.goldMid,
-            ),
-            _MetricTile(
-              icon: Icons.people_alt_outlined,
-              label: 'Roster',
-              value: '${data.roster.length}',
-              color: colors.infoBlue,
-            ),
-            _MetricTile(
-              icon: Icons.local_activity_outlined,
-              label: 'Active auditions',
-              value: '$activeAuditions',
-              color: colors.success,
-            ),
-            _MetricTile(
-              icon: Icons.payments_outlined,
-              label: 'Pending commission',
-              value: _money(pendingCommissionMinor),
-              color: colors.infoPurple,
-            ),
-          ],
+        _AgencyHero(
+          profile: data.profile,
+          roster: data.roster,
+          activeAuditions: activeAuditions,
+          onRefresh: onRefresh,
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 9.0;
+            final columns = constraints.maxWidth < 360
+                ? 1
+                : constraints.maxWidth < 700
+                    ? 2
+                    : 3;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            final tiles = [
+              PortalQuickStatTile(
+                icon: Icons.people_alt_outlined,
+                value: '${data.roster.length}',
+                label: 'Roster',
+                delta: 'Live now',
+                tone: CineTone.information,
+                onTap: () =>
+                    Navigator.pushNamed(context, CastingAgencyRoutes.roster),
+              ),
+              PortalQuickStatTile(
+                icon: Icons.local_activity_outlined,
+                value: '$activeAuditions',
+                label: 'Active auditions',
+                delta: 'Live now',
+                tone: CineTone.positive,
+                onTap: () =>
+                    Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
+              ),
+              PortalQuickStatTile(
+                icon: Icons.payments_outlined,
+                value: _money(pendingCommissionMinor),
+                label: 'Pending commission',
+                delta: 'This cycle',
+                tone: CineTone.warning,
+                onTap: () => Navigator.pushNamed(
+                    context, CastingAgencyRoutes.commission),
+              ),
+            ];
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final tile in tiles) SizedBox(width: width, child: tile),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        PortalRingMetricCard(
+          progress: commissionProgress,
+          value: _money(paidCommissionMinor),
+          label: 'Commission collected',
+          tone: CineTone.premium,
         ),
         const SizedBox(height: 12),
         AgencyTwoColumn(
           left: AgencySectionCard(
-            title: 'Primary workload',
+            title: 'Audition Pipeline',
             icon: Icons.auto_awesome_motion_outlined,
-            actionText: 'Refresh',
-            onActionTap: onRefresh,
-            selected: primary != null,
-            child: primary == null
+            actionText: 'View all',
+            onActionTap: () =>
+                Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
+            selected: pipelineAuditions.isNotEmpty,
+            child: pipelineAuditions.isEmpty
                 ? const CoreEmptyState(
                     icon: Icons.inbox_outlined,
                     title: 'No live audition requests',
                     message: 'Director audition requests will appear here.',
                   )
                 : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AgencyInfoRow(
-                        icon: Icons.local_activity_outlined,
-                        label: 'Project',
-                        value: primary.projectId,
-                      ),
-                      AgencyInfoRow(
-                        icon: Icons.theater_comedy_outlined,
-                        label: 'Role',
-                        value: primary.roleTitle,
-                      ),
-                      AgencyInfoRow(
-                        icon: Icons.payments_outlined,
-                        label: 'Budget',
-                        value: primary.budgetMinor == null
-                            ? 'Budget TBD'
-                            : _money(primary.budgetMinor!),
-                      ),
-                      AgencyInfoRow(
-                        icon: Icons.group_outlined,
-                        label: 'Candidates',
-                        value: '${primary.candidates.length}',
-                      ),
-                      const SizedBox(height: 10),
-                      CorePrimaryButton(
-                        icon: Icons.inbox_outlined,
-                        label: 'Open audition inbox',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          CastingAgencyRoutes.auditions,
+                      for (var i = 0; i < pipelineAuditions.length; i++)
+                        _AuditionPipelineRow(
+                          audition: pipelineAuditions[i],
+                          showDivider: i != 0,
                         ),
-                      ),
                     ],
                   ),
           ),
@@ -227,26 +246,42 @@ class _LiveAgencyDashboard extends StatelessWidget {
             icon: Icons.notifications_active_outlined,
             child: Column(
               children: [
-                _ActionRow(
-                  icon: Icons.person_add_alt_outlined,
-                  label: 'Roster management',
-                  value: data.roster.isEmpty
+                PortalAttentionRow(
+                  kindLabel: 'Roster',
+                  title: data.roster.isEmpty
                       ? 'Add represented talent'
-                      : 'Live roster ready',
-                  route: CastingAgencyRoutes.roster,
+                      : 'Roster ready · ${data.roster.length} talent',
+                  meta: 'Manage represented talent profiles',
+                  icon: Icons.person_add_alt_outlined,
+                  tone: data.roster.isEmpty
+                      ? CineTone.warning
+                      : CineTone.positive,
+                  onTap: () =>
+                      Navigator.pushNamed(context, CastingAgencyRoutes.roster),
                 ),
-                _ActionRow(
+                const SizedBox(height: 10),
+                PortalAttentionRow(
+                  kindLabel: 'Self-tapes',
+                  title: '$selfTapeCount received',
+                  meta: 'Review submitted takes',
                   icon: Icons.video_collection_outlined,
-                  label: 'Self-tapes',
-                  value:
-                      '${data.auditions.fold<int>(0, (sum, item) => sum + item.candidates.fold<int>(0, (inner, candidate) => inner + candidate.selfTapeCount))} received',
-                  route: CastingAgencyRoutes.selfTapes,
+                  tone: CineTone.information,
+                  onTap: () => Navigator.pushNamed(
+                      context, CastingAgencyRoutes.selfTapes),
                 ),
-                _ActionRow(
+                const SizedBox(height: 10),
+                PortalAttentionRow(
+                  kindLabel: 'Commissions',
+                  title: '${data.commissions.length} records',
+                  meta: pendingCommissionMinor > 0
+                      ? '${_money(pendingCommissionMinor)} pending'
+                      : 'All settled',
                   icon: Icons.receipt_long_outlined,
-                  label: 'Commissions',
-                  value: '${data.commissions.length} records',
-                  route: CastingAgencyRoutes.commission,
+                  tone: pendingCommissionMinor > 0
+                      ? CineTone.warning
+                      : CineTone.positive,
+                  onTap: () => Navigator.pushNamed(
+                      context, CastingAgencyRoutes.commission),
                 ),
               ],
             ),
@@ -257,58 +292,97 @@ class _LiveAgencyDashboard extends StatelessWidget {
   }
 }
 
-class _MetricTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
+/// Dashboard-kit hero: agency identity, roster/audition stats, and the
+/// primary "open audition inbox" action. Refresh (previously only reachable
+/// from the error state) is wired to the hero's secondary icon button.
+class _AgencyHero extends StatelessWidget {
+  final AgencyProfileDto? profile;
+  final List<AgencyTalentDto> roster;
+  final int activeAuditions;
+  final VoidCallback onRefresh;
 
-  const _MetricTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
+  const _AgencyHero({
+    required this.profile,
+    required this.roster,
+    required this.activeAuditions,
+    required this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MetricActionCard(
-      item: MetricActionItem(
-        icon: icon,
-        value: value,
-        title: label,
-        subtitle: 'Live database',
-        accentColor: color,
-      ),
+    final name = (profile == null || profile!.name.trim().isEmpty)
+        ? 'Agency'
+        : profile!.name.trim();
+    final badgeLabel = profile == null
+        ? 'Profile pending'
+        : _titleCase(profile!.verificationStatus);
+    return PortalHeroCard(
+      initials: _initialsFor(name),
+      name: name,
+      badgeLabel: badgeLabel,
+      stats: [
+        PortalHeroStat(value: '${roster.length}', label: 'Roster'),
+        PortalHeroStat(value: '$activeAuditions', label: 'Active auditions'),
+      ],
+      ctaLabel: 'Open audition inbox',
+      onCta: () => Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
+      secondaryIcon: Icons.refresh_rounded,
+      onSecondary: onRefresh,
     );
   }
 }
 
-class _ActionRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final String route;
+/// One audition mapped onto the shared pipeline row — replaces the previous
+/// single-item "primary workload" spotlight with a real multi-item list.
+class _AuditionPipelineRow extends StatelessWidget {
+  final AuditionDto audition;
+  final bool showDivider;
 
-  const _ActionRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.route,
+  const _AuditionPipelineRow({
+    required this.audition,
+    required this.showDivider,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: CoreSecondaryButton(
-        icon: icon,
-        label: '$label · $value',
-        compact: true,
-        onTap: () => Navigator.pushNamed(context, route),
-      ),
+    return PortalPipelineRow(
+      initials: _initialsFor(audition.roleTitle),
+      title: audition.roleTitle,
+      subtitle: 'Project ${audition.projectId}',
+      metaLabel: '${audition.candidates.length} candidate(s)',
+      status: _titleCase(audition.status),
+      tone: _auditionStatusTone(audition.status),
+      ctaLabel: 'Review',
+      onCta: () => Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
+      onTap: () => Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
+      showDivider: showDivider,
     );
   }
+}
+
+CineTone _auditionStatusTone(String status) {
+  switch (status.toLowerCase()) {
+    case 'closed':
+      return CineTone.neutral;
+    case 'rejected':
+      return CineTone.critical;
+    default:
+      return CineTone.positive;
+  }
+}
+
+String _initialsFor(String value) {
+  final parts =
+      value.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+String _titleCase(String value) {
+  if (value.isEmpty) return value;
+  final cleaned = value.replaceAll('_', ' ');
+  return cleaned[0].toUpperCase() + cleaned.substring(1);
 }
 
 String _money(int minor) {

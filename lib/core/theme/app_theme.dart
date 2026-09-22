@@ -168,4 +168,43 @@ class AppTheme {
       boxShadow: null,
     );
   }
+
+  /// Base fill/border for the dashboard-kit hero card (a gold-tinted wash
+  /// over the card surface, plus the ambient top-left glow). Pair with a
+  /// `CustomPaint` overlay for the animated rotating-ring border — this
+  /// helper only covers the static layer beneath it.
+  static BoxDecoration heroCard(
+    BuildContext context, {
+    double radius = 22,
+  }) {
+    final colors = context.appColors;
+
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [colors.goldTint, colors.goldSoft],
+      ),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: colors.border, width: 1),
+    );
+  }
+
+  /// Thin gold underline glow used beneath quick-action tiles and other
+  /// small CTA accents.
+  static BoxDecoration goldEdgeAccent(BuildContext context) {
+    final colors = context.appColors;
+
+    return BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          colors.goldMid.withValues(alpha: 0),
+          colors.goldMid,
+          colors.goldMid.withValues(alpha: 0),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(3),
+      boxShadow: colors.goldEdgeGlow,
+    );
+  }
 }

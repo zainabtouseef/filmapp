@@ -12,7 +12,8 @@ import '../../../core/payments/payments_controller.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/cards/glass_section_card.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
@@ -126,6 +127,7 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
       return {'accepted', 'secured', 'in_progress'}.contains(booking.status) &&
           booking.endAt.isAfter(DateTime.now());
     }).toList();
+    final latestRequests = openRequests.take(3).toList();
     final metrics = [
       LocationMetric(
         label: 'Properties',
@@ -175,7 +177,7 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LocationKpiRail(metrics: metrics),
+        _QuickStatsRow(metrics: metrics),
         const SizedBox(height: 12),
         LocationTwoColumn(
           left: property == null
@@ -227,8 +229,11 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
                     )
                   : Column(
                       children: [
-                        for (final booking in openRequests.take(3))
-                          _BookingSummaryRow(booking: booking),
+                        for (var i = 0; i < latestRequests.length; i++)
+                          _RequestPipelineRow(
+                            booking: latestRequests[i],
+                            showDivider: i != 0,
+                          ),
                         const SizedBox(height: 4),
                         CoreSecondaryButton(
                           icon: Icons.open_in_new_rounded,
@@ -369,6 +374,69 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
   }
 }
 
+/// The dashboard's top KPI rail — the shared dashboard-kit's quick-stat
+/// tile row, reusing the exact same real metric values (`LocationMetric`)
+/// the previous `LocationKpiRail` rendered.
+class _QuickStatsRow extends StatelessWidget {
+  final List<LocationMetric> metrics;
+
+  const _QuickStatsRow({required this.metrics});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 9.0;
+        final columns = constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth < 700
+                ? 2
+                : 3;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: width,
+                child: PortalQuickStatTile(
+                  icon: metric.icon,
+                  value: metric.value,
+                  label: metric.label,
+                  delta: metric.delta,
+                  tone: _cineToneForLocation(metric.tone),
+                  onTap: () => Navigator.pushNamed(context, metric.route),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Maps the location owner feature's own [LocationTone] palette onto the
+/// dashboard-kit's [CineTone], matching the equivalence already used by
+/// `cineToneFromColor` in location_owner_components.dart (both blue and
+/// purple resolve to `information`).
+CineTone _cineToneForLocation(LocationTone tone) => switch (tone) {
+      LocationTone.gold => CineTone.premium,
+      LocationTone.blue => CineTone.information,
+      LocationTone.green => CineTone.positive,
+      LocationTone.purple => CineTone.information,
+      LocationTone.danger => CineTone.critical,
+      LocationTone.neutral => CineTone.neutral,
+    };
+
+String _initialsFor(String name) {
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 class _LivePropertyCard extends StatelessWidget {
   final LocationPropertyDto property;
   final String fallbackImageUrl;
@@ -493,11 +561,17 @@ class _ActionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final actions =
-        <({IconData icon, String title, String detail, String route})>[
+    final actions = <({
+      IconData icon,
+      String kindLabel,
+      String title,
+      String detail,
+      String route,
+    })>[
       if (property == null)
         (
           icon: Icons.add_location_alt_outlined,
+          kindLabel: 'Get started',
           title: 'Create a property profile',
           detail: 'Add the property before accepting booking requests.',
           route: LocationOwnerRoutes.listing,
@@ -505,6 +579,7 @@ class _ActionList extends StatelessWidget {
       else if (property!.status == 'draft')
         (
           icon: Icons.publish_outlined,
+          kindLabel: 'Publish',
           title: 'Publish ${property!.name}',
           detail: 'Review rates and rules before making it discoverable.',
           route: LocationOwnerRoutes.listing,
@@ -512,6 +587,7 @@ class _ActionList extends StatelessWidget {
       if (openRequests.isNotEmpty)
         (
           icon: Icons.inbox_outlined,
+          kindLabel: 'Respond',
           title: '${openRequests.length} requests need a response',
           detail: 'Review dates, fee and production conditions.',
           route: LocationOwnerRoutes.requests,
@@ -519,6 +595,7 @@ class _ActionList extends StatelessWidget {
       if (upcoming.isNotEmpty)
         (
           icon: Icons.fact_check_outlined,
+          kindLabel: 'Prepare',
           title: 'Prepare the next handover',
           detail:
               'The next booking starts ${shortLocationDate(upcoming.first.startAt)}.',
@@ -534,118 +611,50 @@ class _ActionList extends StatelessWidget {
     }
     return Column(
       children: [
-        for (final action in actions)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 9),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => Navigator.pushNamed(context, action.route),
-              child: GlassSectionCard(
-                radius: 16,
-                padding: const EdgeInsets.all(11),
-                child: Row(
-                  children: [
-                    Icon(
-                      action.icon,
-                      color: context.appColors.goldDark,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            action.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.cardLabel.copyWith(
-                              color: context.appColors.textPrimary,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            action.detail,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.smallMeta.copyWith(
-                              color: context.appColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: context.appColors.iconMuted,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        for (var i = 0; i < actions.length; i++) ...[
+          PortalAttentionRow(
+            kindLabel: actions[i].kindLabel,
+            title: actions[i].title,
+            meta: actions[i].detail,
+            icon: actions[i].icon,
+            onTap: () => Navigator.pushNamed(context, actions[i].route),
           ),
+          if (i != actions.length - 1) const SizedBox(height: 10),
+        ],
       ],
     );
   }
 }
 
-class _BookingSummaryRow extends StatelessWidget {
+class _RequestPipelineRow extends StatelessWidget {
   final Booking booking;
+  final bool showDivider;
 
-  const _BookingSummaryRow({required this.booking});
+  const _RequestPipelineRow({
+    required this.booking,
+    required this.showDivider,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.pushNamed(
+    final status = locationBookingStatusFromBooking(booking);
+    void openRequest() => Navigator.pushNamed(
           context,
           LocationOwnerRoutes.requests,
           arguments: booking.publicId,
-        ),
-        child: GlassSectionCard(
-          radius: 16,
-          padding: const EdgeInsets.all(11),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Project ${booking.projectId}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.cardLabel.copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${locationBookingDates(booking)} · '
-                      '${locationBookingAmount(booking)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              LocationBookingStatusChip(
-                status: locationBookingStatusFromBooking(booking),
-              ),
-            ],
-          ),
-        ),
-      ),
+        );
+    return PortalPipelineRow(
+      initials: _initialsFor(booking.requester.displayName),
+      title: booking.projectTitle,
+      subtitle: booking.requester.displayName,
+      metaLabel:
+          '${locationBookingDates(booking)} · ${locationBookingAmount(booking)}',
+      status: locationBookingStatusLabel(status),
+      tone: cineToneFromColor(context, locationStatusColor(context, status)),
+      ctaLabel: 'Review',
+      showDivider: showDivider,
+      onTap: openRequest,
+      onCta: openRequest,
     );
   }
 }

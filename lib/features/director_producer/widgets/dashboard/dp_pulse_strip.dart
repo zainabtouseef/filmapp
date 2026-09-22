@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/director/director_dashboard_models.dart';
-import '../../../../core/theme/app_color_scheme.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/cards/cine_card_system.dart';
+import '../../../../shared/dashboard/dashboard_kit.dart';
 import '../../../../shared/formatters/cine_format.dart';
 import '../../routes/director_producer_routes.dart';
-import '../dp_glass_card.dart';
 
-/// The dashboard's "Production Pulse" — the exact 3-tile plain glass
-/// grid from the source design (Active productions / Paid-pending /
-/// Bookings secured), values computed live from demo-data state.
+/// The dashboard's "Production Pulse" — three quick-action stat tiles
+/// (Active productions / Paid-pending / Bookings secured), values
+/// computed live from demo-data state.
 class DPPulseStrip extends StatelessWidget {
   final DirectorDashboardSummary summary;
 
@@ -21,22 +20,31 @@ class DPPulseStrip extends StatelessWidget {
     final pending = summary.pendingPaymentMinor ~/ 100;
 
     final tiles = [
-      _PulseTile(
-        label: 'Active productions',
+      PortalQuickStatTile(
+        icon: Icons.movie_creation_outlined,
         value: '${summary.activeProjects}',
+        label: 'Active productions',
+        delta: 'Live now',
+        tone: CineTone.information,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.projects),
       ),
-      _PulseTile(
-        label: 'Paid / pending',
+      PortalQuickStatTile(
+        icon: Icons.account_balance_wallet_outlined,
         value:
             '${CineFormat.count(paid, compact: true)} / ${CineFormat.count(pending, compact: true)}',
+        label: 'Paid / pending',
+        delta: 'This cycle',
+        tone: CineTone.warning,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.payments),
       ),
-      _PulseTile(
-        label: 'Bookings secured',
+      PortalQuickStatTile(
+        icon: Icons.handshake_outlined,
         value: '${summary.securedBookings}',
+        label: 'Bookings secured',
+        delta: 'This cycle',
+        tone: CineTone.positive,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       ),
@@ -59,58 +67,6 @@ class DPPulseStrip extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _PulseTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  const _PulseTile({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final accent = switch (label) {
-      'Active productions' => colors.infoBlue,
-      'Paid / pending' => colors.warning,
-      'Bookings secured' => colors.success,
-      _ => colors.goldDark,
-    };
-    return GestureDetector(
-      onTap: onTap,
-      child: DPGlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 12),
-        accentColor: accent,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.cardLabel.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
-                fontSize: 15.5,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

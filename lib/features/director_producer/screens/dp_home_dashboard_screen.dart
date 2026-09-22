@@ -6,12 +6,17 @@ import '../../../core/director/director_dashboard_models.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
+import '../../../shared/formatters/cine_format.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dashboard/dp_command_header.dart';
 import '../widgets/dashboard/dp_deal_pipeline.dart';
 import '../widgets/dashboard/dp_financial_centre.dart';
+import '../widgets/dashboard/dp_mini_calendar_section.dart';
 import '../widgets/dashboard/dp_priority_actions.dart';
 import '../widgets/dashboard/dp_project_deck.dart';
 import '../widgets/dashboard/dp_pulse_strip.dart';
@@ -69,19 +74,23 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
           return _DashboardErrorState(message: message, onRetry: _retry);
         }
         final dashboard = snapshot.data!;
+        final displayName = AuthScope.maybeOf(context)?.user?.displayName;
         return LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= AppBreakpoints.tablet;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DPCommandHeader(summary: dashboard.summary),
+                DPCommandHeader(
+                  summary: dashboard.summary,
+                  displayName: displayName,
+                ),
                 const SizedBox(height: 14),
                 DPPulseStrip(summary: dashboard.summary),
                 const SizedBox(height: 14),
-                const _CinePlannerShortcutSection(),
+                _MetricsAndCalendarSection(wide: wide, dashboard: dashboard),
                 const SizedBox(height: 14),
-                const _ApplicationsShortcutSection(),
+                _ModulesSection(dashboard: dashboard),
                 const SizedBox(height: 14),
                 if (wide)
                   _WideBody(dashboard: dashboard)
@@ -96,88 +105,164 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   }
 }
 
-class _CinePlannerShortcutSection extends StatelessWidget {
-  const _CinePlannerShortcutSection();
+/// Ring metric (real payment-progress data) beside the mini calendar
+/// (real event dates from `dashboard.timeline`) — side by side on wide
+/// layouts, stacked on compact ones.
+class _MetricsAndCalendarSection extends StatelessWidget {
+  final bool wide;
+  final DirectorDashboard dashboard;
+
+  const _MetricsAndCalendarSection({
+    required this.wide,
+    required this.dashboard,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return DPSectionCard(
-      title: 'CinePlanner · Production Intelligence',
-      icon: Icons.view_timeline_rounded,
-      actionText: 'Open CinePlanner',
-      onActionTap: () =>
-          Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
-      child: Row(
+    final summary = dashboard.summary;
+    final paid = summary.paidMinor ~/ 100;
+    final pending = summary.pendingPaymentMinor ~/ 100;
+    final total = paid + pending;
+    final progress = total == 0 ? 0.0 : paid / total;
+
+    final ringCard = PortalRingMetricCard(
+      progress: progress,
+      value: CineFormat.currency(paid, compact: true),
+      label: 'Payments cleared this cycle',
+      tone: CineTone.premium,
+    );
+    final calendar = DPMiniCalendarSection(dashboard: dashboard);
+
+    if (!wide) {
+      return Column(
         children: [
-          Expanded(
-            child: Text(
-              'Break down screenplays, review AI results, schedule scenes, '
-              'resolve conflicts, control budget and issue call sheets.',
-              style: AppTextStyles.smallMeta.copyWith(
-                color: context.appColors.textSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          FilledButton.icon(
-            onPressed: () => Navigator.pushNamed(
-              context,
-              DirectorProducerRoutes.cinePlanner,
-            ),
-            icon: const Icon(Icons.movie_creation_outlined),
-            label: const Text('CinePlanner'),
-          ),
+          ringCard,
+          const SizedBox(height: 14),
+          calendar,
         ],
-      ),
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 2, child: ringCard),
+        const SizedBox(width: 14),
+        Expanded(flex: 3, child: calendar),
+      ],
     );
   }
 }
 
-class _ApplicationsShortcutSection extends StatelessWidget {
-  const _ApplicationsShortcutSection();
+/// "Modules" grid — the flagship's shortcut launchpad, replacing the
+/// previous ad hoc CinePlanner/applications button rows with the
+/// dashboard-kit's module-card grid. Counts are real pipeline/payment
+/// figures already computed elsewhere on this dashboard, not fabricated.
+class _ModulesSection extends StatelessWidget {
+  final DirectorDashboard dashboard;
+
+  const _ModulesSection({required this.dashboard});
 
   @override
   Widget build(BuildContext context) {
+    final negotiating = dashboard.pipeline
+        .where((item) =>
+            item.kind == 'booking' &&
+            ['sent', 'under_negotiation'].contains(item.status.toLowerCase()))
+        .length;
+    final contractsPending = dashboard.pipeline
+        .where((item) =>
+            item.kind == 'contract' &&
+            item.status.toLowerCase().contains('pending'))
+        .length;
+    final paymentsDue =
+        dashboard.dpPayments.where((p) => p.status == 'Due').length;
+
+    final modules = [
+      PortalModuleCard(
+        icon: Icons.view_timeline_rounded,
+        name: 'CinePlanner',
+        description: 'Breakdowns, scenes, call sheets.',
+        actionLabel: 'Open planner',
+        tone: CineTone.information,
+        onTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
+      ),
+      TourTarget(
+        id: 'dp.reviewApplications',
+        child: PortalModuleCard(
+          icon: Icons.how_to_reg_outlined,
+          name: 'Casting',
+          description: 'Applications and auditions.',
+          actionLabel: 'Review',
+          tone: CineTone.premium,
+          onTap: () =>
+              Navigator.pushNamed(context, DirectorProducerRoutes.projects),
+        ),
+      ),
+      TourTarget(
+        id: 'dp.findProviders',
+        child: PortalModuleCard(
+          icon: Icons.travel_explore_outlined,
+          name: 'Discover',
+          description: 'Talent, crew, locations, gear.',
+          actionLabel: 'Browse',
+          tone: CineTone.information,
+          onTap: () =>
+              Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
+        ),
+      ),
+      PortalModuleCard(
+        icon: Icons.handshake_outlined,
+        name: 'Bargaining',
+        count: negotiating > 0 ? negotiating : null,
+        description: 'Counter offers, lock rates.',
+        actionLabel: 'Open deals',
+        tone: CineTone.information,
+        onTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
+      ),
+      PortalModuleCard(
+        icon: Icons.description_outlined,
+        name: 'Contracts',
+        count: contractsPending > 0 ? contractsPending : null,
+        description: 'Agreements and e-signatures.',
+        actionLabel: 'View',
+        tone: CineTone.warning,
+        onTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.contracts),
+      ),
+      PortalModuleCard(
+        icon: Icons.shield_outlined,
+        name: 'Escrow',
+        count: paymentsDue > 0 ? paymentsDue : null,
+        description: 'Milestones and proof uploads.',
+        actionLabel: 'Release',
+        tone: CineTone.positive,
+        onTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.payments),
+      ),
+    ];
+
     return DPSectionCard(
-      title: 'Casting, Auditions & Applications',
-      icon: Icons.how_to_reg_outlined,
-      actionText: 'Open projects',
+      title: 'Modules',
+      icon: Icons.dashboard_customize_rounded,
+      actionText: 'Review applications',
       onActionTap: () =>
           Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          TourTarget(
-            id: 'dp.reviewApplications',
-            child: FilledButton.icon(
-              icon: const Icon(Icons.assignment_ind_outlined),
-              label: const Text('Review project applications'),
-              onPressed: () =>
-                  Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-            ),
-          ),
-          TourTarget(
-            id: 'dp.createAudition',
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.video_camera_front_outlined),
-              label: const Text('Create audition requirements'),
-              onPressed: () => Navigator.pushNamed(
-                context,
-                DirectorProducerRoutes.projects,
-              ),
-            ),
-          ),
-          TourTarget(
-            id: 'dp.findProviders',
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.travel_explore_outlined),
-              label: const Text('Find providers'),
-              onPressed: () => Navigator.pushNamed(
-                  context, DirectorProducerRoutes.marketplace),
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = AppSpacing.md;
+          final columns = (constraints.maxWidth / 216).floor().clamp(1, 3);
+          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (final module in modules)
+                SizedBox(width: width, child: module),
+            ],
+          );
+        },
       ),
     );
   }

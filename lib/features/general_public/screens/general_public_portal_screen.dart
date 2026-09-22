@@ -11,6 +11,8 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
@@ -256,39 +258,55 @@ class GeneralPublicHomeScreen extends StatelessWidget {
         DPResponsiveGrid(
           minWidth: 240,
           children: [
-            _PublicActionCard(
+            PortalModuleCard(
               icon: Icons.campaign_outlined,
-              title: 'Influencer campaigns',
-              body:
+              name: 'Influencer campaigns',
+              description:
                   'Find creators for reels, product launches and brand shoots.',
-              route: GeneralPublicRoutes.influencers,
+              actionLabel: 'Browse creators',
+              tone: CineTone.information,
+              onTap: () =>
+                  Navigator.pushNamed(context, GeneralPublicRoutes.influencers),
             ),
-            _PublicActionCard(
+            PortalModuleCard(
               icon: Icons.theater_comedy_outlined,
-              title: 'Actors for ads',
-              body:
+              name: 'Actors for ads',
+              description:
                   'Book screen-ready actors for commercials and social videos.',
-              route: GeneralPublicRoutes.actors,
+              actionLabel: 'Browse actors',
+              tone: CineTone.premium,
+              onTap: () =>
+                  Navigator.pushNamed(context, GeneralPublicRoutes.actors),
             ),
-            _PublicActionCard(
+            PortalModuleCard(
               icon: Icons.style_outlined,
-              title: 'Models',
-              body: 'Find models for fashion, ecommerce and product visuals.',
-              route: GeneralPublicRoutes.models,
+              name: 'Models',
+              description:
+                  'Find models for fashion, ecommerce and product visuals.',
+              actionLabel: 'Browse models',
+              tone: CineTone.premium,
+              onTap: () =>
+                  Navigator.pushNamed(context, GeneralPublicRoutes.models),
             ),
-            _PublicActionCard(
+            PortalModuleCard(
               icon: Icons.local_movies_outlined,
-              title: 'Cinema trailers',
-              body:
+              name: 'Cinema trailers',
+              description:
                   'Watch project trailers and listen to OST releases from live productions.',
-              route: GeneralPublicRoutes.cinema,
+              actionLabel: 'Watch now',
+              tone: CineTone.information,
+              onTap: () =>
+                  Navigator.pushNamed(context, GeneralPublicRoutes.cinema),
             ),
-            _PublicActionCard(
+            PortalModuleCard(
               icon: Icons.receipt_long_outlined,
-              title: 'My requests',
-              body:
+              name: 'My requests',
+              description:
                   'Track offers, status and next steps after you send a booking.',
-              route: GeneralPublicRoutes.requests,
+              actionLabel: 'Track requests',
+              tone: CineTone.positive,
+              onTap: () =>
+                  Navigator.pushNamed(context, GeneralPublicRoutes.requests),
             ),
           ],
         ),

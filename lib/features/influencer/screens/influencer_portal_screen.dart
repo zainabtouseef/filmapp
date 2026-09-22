@@ -17,6 +17,8 @@ import '../../actor_talent/screens/at11_reputation_reviews_screen.dart';
 import '../../actor_talent/screens/at12_safety_controls_screen.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
@@ -290,51 +292,19 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
               title: 'Influencer marketplace pricing',
             ),
             const SizedBox(height: 12),
-            DPResponsiveGrid(
-              minWidth: 210,
-              children: [
-                DPMetricCard(
-                  icon: Icons.groups_2_outlined,
-                  value: followers == 0 ? 'Add' : _shortNumber(followers),
-                  title: 'Audience',
-                  subtitle: 'From media-kit metrics',
-                  accentColor: context.appColors.goldDark,
-                  onTap: () =>
-                      Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
-                ),
-                DPMetricCard(
-                  icon: Icons.sell_outlined,
-                  value: '${packages.length}',
-                  title: 'Packages',
-                  subtitle: 'Saved in live profile',
-                  accentColor: context.appColors.infoBlue,
-                  onTap: () =>
-                      Navigator.pushNamed(context, InfluencerRoutes.packages),
-                ),
-                DPMetricCard(
-                  icon: Icons.campaign_outlined,
-                  value: '${activeCampaigns.length}',
-                  title: 'Campaign offers',
-                  subtitle: 'Live booking inbox',
-                  accentColor: context.appColors.warning,
-                  onTap: () =>
-                      Navigator.pushNamed(context, InfluencerRoutes.campaigns),
-                ),
-                DPMetricCard(
-                  icon: Icons.verified_outlined,
-                  value: '$secured',
-                  title: 'Secured work',
-                  subtitle: _money(data.payments?.creditMinor ?? 0),
-                  accentColor: context.appColors.success,
-                  onTap: () =>
-                      Navigator.pushNamed(context, InfluencerRoutes.analytics),
-                ),
-              ],
+            _QuickStatsRow(
+              followers: followers,
+              packagesCount: packages.length,
+              campaignOffers: activeCampaigns.length,
+              secured: secured,
             ),
             const SizedBox(height: 14),
             DPTwoColumn(
-              left:
-                  _HeroMediaKitCard(profile: data.profile, talent: data.talent),
+              left: _HeroMediaKitCard(
+                profile: data.profile,
+                talent: data.talent,
+                secured: secured,
+              ),
               right: _NextBestActions(
                 hasInfluencerCategory:
                     data.talent.availabilityCategories.contains('influencer'),
@@ -1079,60 +1049,121 @@ class InfluencerAnalyticsScreen extends StatelessWidget {
   }
 }
 
-class _HeroMediaKitCard extends StatelessWidget {
-  final UserProfile profile;
-  final TalentProfile talent;
+class _QuickStatsRow extends StatelessWidget {
+  final int followers;
+  final int packagesCount;
+  final int campaignOffers;
+  final int secured;
 
-  const _HeroMediaKitCard({required this.profile, required this.talent});
+  const _QuickStatsRow({
+    required this.followers,
+    required this.packagesCount,
+    required this.campaignOffers,
+    required this.secured,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            talent.screenName ?? 'Influencer media kit',
-            style: AppTextStyles.heroSerifHeadline
-                .copyWith(color: context.appColors.textPrimary),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            profile.bio ??
-                'Create a short brand-facing pitch so public buyers and brands understand your creator niche.',
-            style: AppTextStyles.body
-                .copyWith(color: context.appColors.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              DPStatusChip(
-                  label: profile.city?.name ?? 'Pakistan',
-                  tone: DpTone.neutral,
-                  icon: Icons.location_on_outlined),
-              DPStatusChip(
-                  label: talent.availabilityStatus,
-                  tone: DpTone.success,
-                  icon: Icons.event_available_outlined),
-              DPStatusChip(
-                  label: '${audienceFollowers(talent)} followers',
-                  tone: DpTone.info,
-                  icon: Icons.groups_outlined),
-            ],
-          ),
-          const SizedBox(height: 14),
-          DPHolographicButton(
-            label: 'Improve media kit',
-            icon: Icons.edit_outlined,
-            onTap: () =>
-                Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
-          ),
-        ],
+    final tiles = [
+      PortalQuickStatTile(
+        icon: Icons.groups_2_outlined,
+        value: followers == 0 ? 'Add' : _shortNumber(followers),
+        label: 'Audience',
+        delta: 'Live now',
+        tone: CineTone.premium,
+        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
       ),
+      PortalQuickStatTile(
+        icon: Icons.sell_outlined,
+        value: '$packagesCount',
+        label: 'Packages',
+        delta: 'Saved profile',
+        tone: CineTone.information,
+        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.packages),
+      ),
+      PortalQuickStatTile(
+        icon: Icons.campaign_outlined,
+        value: '$campaignOffers',
+        label: 'Campaign offers',
+        delta: 'Live inbox',
+        tone: CineTone.warning,
+        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.campaigns),
+      ),
+      PortalQuickStatTile(
+        icon: Icons.verified_outlined,
+        value: '$secured',
+        label: 'Secured work',
+        delta: 'This cycle',
+        tone: CineTone.positive,
+        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.analytics),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 9.0;
+        final columns = constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth < 700
+                ? 2
+                : 4;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tile in tiles) SizedBox(width: width, child: tile),
+          ],
+        );
+      },
     );
   }
+}
+
+class _HeroMediaKitCard extends StatelessWidget {
+  final UserProfile profile;
+  final TalentProfile talent;
+  final int secured;
+
+  const _HeroMediaKitCard({
+    required this.profile,
+    required this.talent,
+    required this.secured,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name =
+        (talent.screenName == null || talent.screenName!.trim().isEmpty)
+            ? 'Influencer'
+            : talent.screenName!.trim();
+    final followers = audienceFollowers(talent);
+    return PortalHeroCard(
+      initials: _heroInitials(name),
+      name: name,
+      badgeLabel: 'Influencer creator',
+      stats: [
+        PortalHeroStat(
+          value: followers == 0 ? 'Add' : _shortNumber(followers),
+          label: 'Audience',
+        ),
+        PortalHeroStat(
+          value: '$secured',
+          label: 'Secured work',
+        ),
+      ],
+      ctaLabel: 'Improve media kit',
+      onCta: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
+    );
+  }
+}
+
+String _heroInitials(String name) {
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 class _NextBestActions extends StatelessWidget {
@@ -1148,6 +1179,36 @@ class _NextBestActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final items = <PortalAttentionRow>[
+      if (!hasInfluencerCategory)
+        PortalAttentionRow(
+          kindLabel: 'Setup',
+          title: 'Enable influencer availability',
+          meta: 'Turn on the influencer category in your media kit',
+          icon: Icons.toggle_off_outlined,
+          tone: CineTone.warning,
+          onTap: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
+        ),
+      if (!hasAudience)
+        PortalAttentionRow(
+          kindLabel: 'Setup',
+          title: 'Add audience metrics',
+          meta: 'Add follower counts to your media kit',
+          icon: Icons.groups_outlined,
+          tone: CineTone.warning,
+          onTap: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
+        ),
+      if (!hasPackages)
+        PortalAttentionRow(
+          kindLabel: 'Setup',
+          title: 'Save a rate package',
+          meta: 'Add at least one rate package to receive briefs',
+          icon: Icons.sell_outlined,
+          tone: CineTone.warning,
+          onTap: () => Navigator.pushNamed(context, InfluencerRoutes.packages),
+        ),
+    ];
+
     return DPGlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1156,10 +1217,26 @@ class _NextBestActions extends StatelessWidget {
               style: AppTextStyles.cardTitle
                   .copyWith(color: context.appColors.textPrimary)),
           const SizedBox(height: 10),
-          _check(
-              context, hasInfluencerCategory, 'Enable influencer availability'),
-          _check(context, hasAudience, 'Add audience metrics'),
-          _check(context, hasPackages, 'Save at least one rate package'),
+          if (items.isEmpty)
+            Row(
+              children: [
+                Icon(Icons.check_circle_outline_rounded,
+                    color: context.appColors.success, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'All set — your media kit is ready for campaign requests.',
+                    style: AppTextStyles.smallMeta
+                        .copyWith(color: context.appColors.textSecondary),
+                  ),
+                ),
+              ],
+            )
+          else
+            for (var i = 0; i < items.length; i++) ...[
+              items[i],
+              if (i != items.length - 1) const SizedBox(height: 10),
+            ],
           const SizedBox(height: 14),
           DPHolographicButton(
             label: hasPackages && hasAudience
@@ -1213,16 +1290,40 @@ class _CampaignPreviewCard extends StatelessWidget {
                 style: AppTextStyles.smallMeta
                     .copyWith(color: context.appColors.textSecondary))
           else
-            for (final campaign in campaigns)
-              ActorInfoRow(
-                icon: Icons.campaign_outlined,
-                label: campaign.projectTitle,
-                value: campaign.activeOffer?.feeLabel ?? campaign.status,
+            for (var i = 0; i < campaigns.length; i++)
+              PortalPipelineRow(
+                initials: _heroInitials(campaigns[i].requester.displayName),
+                title: campaigns[i].projectTitle,
+                subtitle: campaigns[i].requester.displayName,
+                metaLabel:
+                    '${_shortDate(campaigns[i].startAt)} - ${_shortDate(campaigns[i].endAt)}',
+                status: campaigns[i].status,
+                tone: _pipelineTone(campaigns[i].status),
+                ctaLabel: 'View',
+                onCta: () =>
+                    Navigator.pushNamed(context, InfluencerRoutes.campaigns),
+                onTap: () =>
+                    Navigator.pushNamed(context, InfluencerRoutes.campaigns),
+                showDivider: i != 0,
               ),
         ],
       ),
     );
   }
+}
+
+CineTone _pipelineTone(String status) {
+  final normalized = status.toLowerCase();
+  if (['secured', 'accepted', 'confirmed'].contains(normalized)) {
+    return CineTone.positive;
+  }
+  if (['rejected', 'declined', 'cancelled'].contains(normalized)) {
+    return CineTone.critical;
+  }
+  if (['sent', 'pending', 'under_negotiation'].contains(normalized)) {
+    return CineTone.warning;
+  }
+  return CineTone.neutral;
 }
 
 Widget _field(
@@ -1247,30 +1348,6 @@ Widget _field(
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
-    ),
-  );
-}
-
-Widget _check(BuildContext context, bool done, String label) {
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      children: [
-        Icon(
-          done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
-          color: done ? context.appColors.success : context.appColors.iconMuted,
-          size: 19,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            style: AppTextStyles.smallMeta.copyWith(
-              color: context.appColors.textPrimary,
-            ),
-          ),
-        ),
-      ],
     ),
   );
 }

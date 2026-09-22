@@ -71,45 +71,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             dashboard.openSupportTickets;
         final queues = [
           _DashboardQueue(
-            label: 'KYC reviews',
+            label: 'KYC Reviews',
             count: dashboard.pendingKycCount,
             route: SuperAdminRoutes.verifications,
             icon: Icons.verified_user_outlined,
-            tone: AdminDecisionTone.warning,
-            detail:
-                '${dashboard.oldestPendingKycHours.toStringAsFixed(1)}h oldest',
+            tone: CineTone.warning,
+            description: '${dashboard.oldestPendingKycHours.toStringAsFixed(1)}'
+                'h oldest pending · identity checks',
+            actionLabel: 'Review',
           ),
           _DashboardQueue(
-            label: 'Payment proofs',
+            label: 'Payment Proofs',
             count: dashboard.pendingPaymentProofs,
             route: SuperAdminRoutes.paymentQueue,
             icon: Icons.receipt_long_outlined,
-            tone: AdminDecisionTone.info,
-            detail: 'Finance verification',
+            tone: CineTone.information,
+            description: 'Finance verification queue.',
+            actionLabel: 'Verify',
           ),
           _DashboardQueue(
             label: 'Moderation',
             count: dashboard.pendingModerationCases,
             route: SuperAdminRoutes.contentModeration,
             icon: Icons.policy_outlined,
-            tone: AdminDecisionTone.danger,
-            detail: 'Trust and safety',
+            tone: CineTone.critical,
+            description: 'Trust and safety review queue.',
+            actionLabel: 'Moderate',
           ),
           _DashboardQueue(
             label: 'Disputes',
             count: dashboard.openDisputes,
             route: SuperAdminRoutes.disputes,
             icon: Icons.gavel_outlined,
-            tone: AdminDecisionTone.danger,
-            detail: 'Open case files',
+            tone: CineTone.critical,
+            description: 'Open case files awaiting resolution.',
+            actionLabel: 'Resolve',
           ),
           _DashboardQueue(
             label: 'Support',
             count: dashboard.openSupportTickets,
             route: SuperAdminRoutes.support,
             icon: Icons.support_agent_outlined,
-            tone: AdminDecisionTone.warning,
-            detail: 'Member service',
+            tone: CineTone.warning,
+            description: 'Member service tickets open.',
+            actionLabel: 'Respond',
           ),
         ];
         return Column(
@@ -124,62 +129,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onRefreshTap: _refresh,
             ),
             const SizedBox(height: 14),
-            MetricStrip(
-              title: 'Platform health',
-              compact: true,
-              items: [
-                MetricStripItem(
-                  icon: Icons.groups_2_outlined,
-                  label: 'Platform users',
-                  value: '${dashboard.totalUsers}',
-                  tone: CineTone.positive,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    SuperAdminRoutes.users,
-                  ),
-                ),
-                MetricStripItem(
-                  icon: Icons.lock_outline_rounded,
-                  label: 'Secured bookings',
-                  value: '${dashboard.securedBookings}',
-                  tone: CineTone.information,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    SuperAdminRoutes.bookingsMonitor,
-                  ),
-                ),
-                MetricStripItem(
-                  icon: Icons.percent_rounded,
-                  label: 'Conversion',
-                  value:
-                      '${(dashboard.conversionRate * 100).toStringAsFixed(1)}%',
-                  tone: CineTone.positive,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    SuperAdminRoutes.analytics,
-                  ),
-                ),
-                MetricStripItem(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: 'Calculated fees',
-                  value: 'PKR ${_adminMoney(
-                    dashboard.calculatedPlatformFeesMinor ~/ 100,
-                  )}',
-                  tone: CineTone.warning,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    SuperAdminRoutes.fees,
-                  ),
-                ),
-              ],
-            ),
+            _AdminPulseStrip(dashboard: dashboard),
             const SizedBox(height: 14),
-            _ResponsiveGrid(
-              minTileWidth: 230,
-              childAspectRatio: 2.25,
-              children: [
-                for (final queue in queues) _DashboardQueueCard(queue: queue),
-              ],
+            _AdminQueueGrid(
+              queues: queues,
+              onReviewHubTap: () => Navigator.pushNamed(
+                context,
+                SuperAdminRoutes.reviewHub,
+              ),
             ),
             const SizedBox(height: 14),
             AdminSurface(
@@ -340,8 +297,9 @@ class _DashboardQueue {
   final int count;
   final String route;
   final IconData icon;
-  final AdminDecisionTone tone;
-  final String detail;
+  final CineTone tone;
+  final String description;
+  final String actionLabel;
 
   const _DashboardQueue({
     required this.label,
@@ -349,76 +307,141 @@ class _DashboardQueue {
     required this.route,
     required this.icon,
     required this.tone,
-    required this.detail,
+    required this.description,
+    required this.actionLabel,
   });
 }
 
-class _DashboardQueueCard extends StatelessWidget {
-  final _DashboardQueue queue;
+/// Quick-stat row for the platform-health numbers — dashboard-kit's
+/// [PortalQuickStatTile], matching the same shared component every other
+/// portal's dashboard uses for its top-line metrics. Values are the exact
+/// real figures the old [MetricStrip] rendered; only the presentation
+/// changed. Deltas are honest neutral labels (no trend data is computed
+/// for these platform totals), same convention as the DP portal's pulse
+/// strip.
+class _AdminPulseStrip extends StatelessWidget {
+  final AdminDashboardDto dashboard;
 
-  const _DashboardQueueCard({required this.queue});
+  const _AdminPulseStrip({required this.dashboard});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final tone = _dashboardToneColor(context, queue.tone);
-    return InkWell(
-      onTap: () => Navigator.pushNamed(context, queue.route),
-      borderRadius: BorderRadius.circular(8),
-      child: AdminSurface(
-        padding: EdgeInsets.zero,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 5,
-                decoration: BoxDecoration(
-                  color: tone,
-                  borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(8),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(queue.icon, color: tone, size: 23),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _text(context, queue.label, strong: true),
-                            _text(context, queue.detail),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '${queue.count}',
-                        style: AppTextStyles.metricNumberCompact.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: queue.count == 0 ? colors.success : tone,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+    final tiles = [
+      PortalQuickStatTile(
+        icon: Icons.groups_2_outlined,
+        value: '${dashboard.totalUsers}',
+        label: 'Platform users',
+        delta: 'Live now',
+        tone: CineTone.positive,
+        onTap: () => Navigator.pushNamed(context, SuperAdminRoutes.users),
+      ),
+      PortalQuickStatTile(
+        icon: Icons.lock_outline_rounded,
+        value: '${dashboard.securedBookings}',
+        label: 'Secured bookings',
+        delta: 'This cycle',
+        tone: CineTone.information,
+        onTap: () =>
+            Navigator.pushNamed(context, SuperAdminRoutes.bookingsMonitor),
+      ),
+      PortalQuickStatTile(
+        icon: Icons.percent_rounded,
+        value: '${(dashboard.conversionRate * 100).toStringAsFixed(1)}%',
+        label: 'Conversion',
+        delta: 'This cycle',
+        tone: CineTone.positive,
+        onTap: () => Navigator.pushNamed(context, SuperAdminRoutes.analytics),
+      ),
+      PortalQuickStatTile(
+        icon: Icons.account_balance_wallet_outlined,
+        value: 'PKR ${_adminMoney(
+          dashboard.calculatedPlatformFeesMinor ~/ 100,
+        )}',
+        label: 'Calculated fees',
+        delta: 'This cycle',
+        tone: CineTone.warning,
+        onTap: () => Navigator.pushNamed(context, SuperAdminRoutes.fees),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 9.0;
+        final columns = constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth < 700
+                ? 2
+                : 4;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tile in tiles) SizedBox(width: width, child: tile),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Operational-queues grid — dashboard-kit's [PortalModuleCard], replacing
+/// the bespoke [_DashboardQueueCard] left-bar tile with the same shortcut
+/// card shape every other portal's "modules" grid uses. Counts and routes
+/// are unchanged from the original queue cards; a zero count omits the
+/// badge instead of showing a "0" (same convention as the DP portal's
+/// module grid) since [PortalModuleCard] has no separate cleared-queue
+/// indicator dot.
+class _AdminQueueGrid extends StatelessWidget {
+  final List<_DashboardQueue> queues;
+  final VoidCallback onReviewHubTap;
+
+  const _AdminQueueGrid({
+    required this.queues,
+    required this.onReviewHubTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AdminSectionHeader(
+            title: 'Operational queues',
+            icon: Icons.fact_check_outlined,
+            action: 'Review hub',
+            onAction: onReviewHubTap,
           ),
-        ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const gap = AppSpacing.md;
+              final columns = (constraints.maxWidth / 216).floor().clamp(1, 3);
+              final width =
+                  (constraints.maxWidth - gap * (columns - 1)) / columns;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  for (final queue in queues)
+                    SizedBox(
+                      width: width,
+                      child: PortalModuleCard(
+                        icon: queue.icon,
+                        name: queue.label,
+                        count: queue.count > 0 ? queue.count : null,
+                        description: queue.description,
+                        actionLabel: queue.actionLabel,
+                        tone: queue.tone,
+                        onTap: () => Navigator.pushNamed(context, queue.route),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

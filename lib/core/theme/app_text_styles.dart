@@ -4,24 +4,25 @@ import 'app_colors.dart';
 
 /// CineConnect typography.
 ///
-/// Elegant serif for display / headings (Playfair Display),
-/// premium sans-serif for UI text (Inter), loaded via google_fonts.
+/// Editorial serif for hero/heading moments (Fraunces), premium sans-serif
+/// for UI text (Archivo — shared with the marketplace), loaded via
+/// google_fonts.
 ///
 /// Do not create ad-hoc TextStyles in screens — add a new named style
 /// here (or `.copyWith()` an existing one) so typography stays consistent.
 class AppTextStyles {
   AppTextStyles._();
 
-  static const String serif = 'PlayfairDisplay';
-  static const String sans = 'Inter';
-  static const String dashboard = 'Inter';
+  static const String serif = 'Fraunces';
+  static const String sans = 'Archivo';
+  static const String dashboard = 'Archivo';
 
   static TextStyle _sans(TextStyle style) =>
-      GoogleFonts.inter(textStyle: style);
+      GoogleFonts.archivo(textStyle: style);
   static TextStyle _dashboard(TextStyle style) =>
-      GoogleFonts.inter(textStyle: style);
+      GoogleFonts.archivo(textStyle: style);
   static TextStyle _editorial(TextStyle style) =>
-      GoogleFonts.newsreader(textStyle: style);
+      GoogleFonts.fraunces(textStyle: style);
 
   // ---- Display headings --------------------------------------------------
   static TextStyle get displayLarge => _dashboard(const TextStyle(
@@ -99,9 +100,12 @@ class AppTextStyles {
       ));
 
   // ---- Premium admin dashboard ------------------------------------------
-  static TextStyle get dashboardTitleStyle => _dashboard(const TextStyle(
+  /// Full-page title (e.g. [AdminScreenHeading]). Serif, matching the
+  /// dashboard-kit page-title treatment — not for section/eyebrow labels,
+  /// see [sectionHeaderStyle].
+  static TextStyle get dashboardTitleStyle => _editorial(const TextStyle(
         fontSize: 34,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
         height: 1.1,
         letterSpacing: 0,
         color: AppColors.textPrimary,
@@ -238,5 +242,19 @@ class AppTextStyles {
         fontSize: 24,
         fontWeight: FontWeight.w700,
         color: AppColors.gold,
+      ));
+
+  // ---- Dashboard-kit serif headings ---------------------------------------
+  /// Serif section heading reserved for the new dashboard-kit widgets
+  /// (hero card name, modules-grid/pipeline section titles, calendar month
+  /// label) — do NOT use for [sectionHeaderStyle]'s existing call sites
+  /// (all-caps eyebrow labels, nav-shell portal chips), where a serif
+  /// would misread.
+  static TextStyle get sectionSerifHeading => _editorial(const TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+        letterSpacing: -0.2,
+        color: AppColors.textPrimary,
       ));
 }

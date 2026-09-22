@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/analytics/analytics_widgets.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../routes/distribution_partner_routes.dart';
 import '../widgets/distribution_partner_components.dart';
@@ -132,6 +133,10 @@ class _DistributionDashboardData {
   }
 }
 
+/// Live distribution workspace: dashboard-kit hero (partner identity +
+/// active projects/revenue), a quick-stat tile row for the same live
+/// figures, then the primary-release detail alongside a "Next actions"
+/// module-card grid replacing the old plain button list.
 class _LiveDistributionDashboard extends StatelessWidget {
   final _DistributionDashboardData data;
   final VoidCallback onRefresh;
@@ -143,7 +148,6 @@ class _LiveDistributionDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final activeProjects = data.projects
         .where((item) => item.status != 'closed' && item.status != 'completed')
         .length;
@@ -152,34 +156,54 @@ class _LiveDistributionDashboard extends StatelessWidget {
     final revenue =
         data.reports.fold<int>(0, (sum, item) => sum + item.revenueMinor);
     final primary = data.projects.isEmpty ? null : data.projects.first;
+
+    final displayName = AuthScope.maybeOf(context)?.user?.displayName;
+    final name = (displayName == null || displayName.trim().isEmpty)
+        ? 'Distribution partner'
+        : displayName.trim();
+
     return Column(
       children: [
+        PortalHeroCard(
+          initials: _initialsFor(name),
+          name: name,
+          badgeLabel: 'Verified partner',
+          stats: [
+            PortalHeroStat(value: '$activeProjects', label: 'Active projects'),
+            PortalHeroStat(value: _money(revenue), label: 'Revenue'),
+          ],
+          ctaLabel: 'Refresh',
+          onCta: onRefresh,
+        ),
+        const SizedBox(height: 12),
         DistributionResponsiveGrid(
-          minWidth: 220,
           children: [
-            _MetricTile(
-              icon: Icons.hub_outlined,
-              label: 'Partner',
-              value: data.profile?.name ?? 'Profile pending',
-              color: colors.goldMid,
-            ),
-            _MetricTile(
+            PortalQuickStatTile(
               icon: Icons.movie_filter_outlined,
-              label: 'Active projects',
               value: '$activeProjects',
-              color: colors.infoBlue,
+              label: 'Active projects',
+              delta: '${data.projects.length} total',
+              tone: CineTone.information,
+              onTap: () => Navigator.pushNamed(
+                  context, DistributionPartnerRoutes.release),
             ),
-            _MetricTile(
+            PortalQuickStatTile(
               icon: Icons.people_alt_outlined,
-              label: 'Audience',
               value: '$audience',
-              color: colors.success,
+              label: 'Audience',
+              delta: 'Live database',
+              tone: CineTone.positive,
+              onTap: () => Navigator.pushNamed(
+                  context, DistributionPartnerRoutes.reports),
             ),
-            _MetricTile(
+            PortalQuickStatTile(
               icon: Icons.payments_outlined,
-              label: 'Revenue',
               value: _money(revenue),
-              color: colors.infoPurple,
+              label: 'Revenue',
+              delta: 'Live database',
+              tone: CineTone.premium,
+              onTap: () => Navigator.pushNamed(
+                  context, DistributionPartnerRoutes.reports),
             ),
           ],
         ),
@@ -225,25 +249,38 @@ class _LiveDistributionDashboard extends StatelessWidget {
           right: DistributionSectionCard(
             title: 'Next actions',
             icon: Icons.route_outlined,
-            child: Column(
+            child: DistributionResponsiveGrid(
+              minWidth: 200,
               children: [
-                _ActionRow(
+                PortalModuleCard(
                   icon: Icons.contacts_outlined,
-                  label: 'Contacts',
-                  value: '${data.contacts.length}',
-                  route: DistributionPartnerRoutes.contacts,
+                  name: 'Contacts',
+                  count: data.contacts.isEmpty ? null : data.contacts.length,
+                  description: 'Distributor contacts and outreach records.',
+                  actionLabel: 'Open contacts',
+                  tone: CineTone.information,
+                  onTap: () => Navigator.pushNamed(
+                      context, DistributionPartnerRoutes.contacts),
                 ),
-                _ActionRow(
+                PortalModuleCard(
                   icon: Icons.handshake_outlined,
-                  label: 'Coordination',
-                  value: '${data.projects.length} projects',
-                  route: DistributionPartnerRoutes.release,
+                  name: 'Coordination',
+                  count: data.projects.isEmpty ? null : data.projects.length,
+                  description: 'Release windows and handover checklists.',
+                  actionLabel: 'Open coordination',
+                  tone: CineTone.premium,
+                  onTap: () => Navigator.pushNamed(
+                      context, DistributionPartnerRoutes.release),
                 ),
-                _ActionRow(
+                PortalModuleCard(
                   icon: Icons.analytics_outlined,
-                  label: 'Reports',
-                  value: '${data.reports.length}',
-                  route: DistributionPartnerRoutes.reports,
+                  name: 'Reports',
+                  count: data.reports.isEmpty ? null : data.reports.length,
+                  description: 'Audience and revenue performance.',
+                  actionLabel: 'Open reports',
+                  tone: CineTone.warning,
+                  onTap: () => Navigator.pushNamed(
+                      context, DistributionPartnerRoutes.reports),
                 ),
               ],
             ),
@@ -254,58 +291,12 @@ class _LiveDistributionDashboard extends StatelessWidget {
   }
 }
 
-class _MetricTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _MetricTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return MetricActionCard(
-      item: MetricActionItem(
-        icon: icon,
-        value: value,
-        title: label,
-        subtitle: 'Live database',
-        accentColor: color,
-      ),
-    );
-  }
-}
-
-class _ActionRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final String route;
-
-  const _ActionRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.route,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: CoreSecondaryButton(
-        icon: icon,
-        label: '$label · $value',
-        compact: true,
-        onTap: () => Navigator.pushNamed(context, route),
-      ),
-    );
-  }
+String _initialsFor(String name) {
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 String _money(int minor) {

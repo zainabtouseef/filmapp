@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/analytics/analytics_widgets.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/contracts/contract_models.dart';
 import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../routes/legal_partner_routes.dart';
 import '../widgets/legal_live_widgets.dart';
 import '../widgets/legal_partner_components.dart';
@@ -86,34 +87,60 @@ class _LG01LegalDashboardScreenState extends State<LG01LegalDashboardScreen> {
                     final highRisk = data.reviews
                         .where((review) => review.risk.toLowerCase() == 'high')
                         .length;
+
+                    final displayName =
+                        AuthScope.maybeOf(context)?.user?.displayName;
+                    final name =
+                        (displayName == null || displayName.trim().isEmpty)
+                            ? 'Legal counsel'
+                            : displayName.trim();
+
                     return Column(
                       children: [
-                        MetricActionRail(
-                          items: [
-                            MetricActionItem(
+                        PortalHeroCard(
+                          initials: _initialsFor(name),
+                          name: name,
+                          badgeLabel: 'Verified counsel',
+                          stats: [
+                            PortalHeroStat(
+                              value: '${data.reviews.length}',
+                              label: 'Reviews',
+                            ),
+                            PortalHeroStat(
+                              value: '${data.contracts.length}',
+                              label: 'Contracts',
+                            ),
+                          ],
+                          ctaLabel: 'Refresh',
+                          onCta: _refresh,
+                        ),
+                        const SizedBox(height: 12),
+                        LegalResponsiveGrid(
+                          children: [
+                            PortalQuickStatTile(
                               icon: Icons.rate_review_outlined,
                               value: '${data.reviews.length}',
-                              title: 'Reviews',
-                              subtitle: '$openReviews open',
-                              accentColor: context.appColors.goldDark,
+                              label: 'Reviews',
+                              delta: '$openReviews open',
+                              tone: CineTone.premium,
                               onTap: () => Navigator.pushNamed(
                                 context,
                                 LegalPartnerRoutes.contractReview,
                               ),
                             ),
-                            MetricActionItem(
+                            PortalQuickStatTile(
                               icon: Icons.warning_amber_outlined,
                               value: '$highRisk',
-                              title: 'High risk',
-                              subtitle: 'Live reviews',
-                              accentColor: context.appColors.danger,
+                              label: 'High risk',
+                              delta: 'Live reviews',
+                              tone: CineTone.critical,
                             ),
-                            MetricActionItem(
+                            PortalQuickStatTile(
                               icon: Icons.description_outlined,
                               value: '${data.contracts.length}',
-                              title: 'Contracts',
-                              subtitle: 'Live records',
-                              accentColor: context.appColors.success,
+                              label: 'Contracts',
+                              delta: 'Live records',
+                              tone: CineTone.positive,
                               onTap: () => Navigator.pushNamed(
                                 context,
                                 LegalPartnerRoutes.billing,
@@ -138,22 +165,29 @@ class _LG01LegalDashboardScreenState extends State<LG01LegalDashboardScreen> {
                           right: LegalSectionCard(
                             title: 'Operational links',
                             icon: Icons.route_outlined,
-                            child: Column(
+                            child: LegalResponsiveGrid(
+                              minWidth: 200,
                               children: [
-                                CorePrimaryButton(
+                                PortalModuleCard(
                                   icon: Icons.rate_review_outlined,
-                                  label: 'Review queue',
-                                  compact: true,
+                                  name: 'Review queue',
+                                  count: openReviews > 0 ? openReviews : null,
+                                  description:
+                                      'Contract and template review requests.',
+                                  actionLabel: 'Open queue',
+                                  tone: CineTone.premium,
                                   onTap: () => Navigator.pushNamed(
                                     context,
                                     LegalPartnerRoutes.contractReview,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                CoreSecondaryButton(
+                                PortalModuleCard(
                                   icon: Icons.history_outlined,
-                                  label: 'History',
-                                  compact: true,
+                                  name: 'History',
+                                  description:
+                                      'Review history and billing records.',
+                                  actionLabel: 'Open history',
+                                  tone: CineTone.information,
                                   onTap: () => Navigator.pushNamed(
                                     context,
                                     LegalPartnerRoutes.billing,
@@ -181,4 +215,12 @@ class _LegalDashboardBundle {
     required this.reviews,
     required this.contracts,
   });
+}
+
+String _initialsFor(String name) {
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }

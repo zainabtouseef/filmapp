@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/analytics/analytics_widgets.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/insurance/insurance_controller.dart';
 import '../../../core/insurance/insurance_models.dart';
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../routes/insurance_partner_routes.dart';
 import '../widgets/insurance_partner_components.dart';
 
@@ -83,39 +84,65 @@ class _IN01InsuranceDashboardScreenState
                         .length;
                     final latestPolicy =
                         data.policies.isEmpty ? null : data.policies.first;
+
+                    final displayName =
+                        AuthScope.maybeOf(context)?.user?.displayName;
+                    final name =
+                        (displayName == null || displayName.trim().isEmpty)
+                            ? 'Insurance partner'
+                            : displayName.trim();
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        MetricActionRail(
-                          items: [
-                            MetricActionItem(
+                        PortalHeroCard(
+                          initials: _initialsFor(name),
+                          name: name,
+                          badgeLabel: 'Verified insurer',
+                          stats: [
+                            PortalHeroStat(
+                              value: '${data.dashboard.activePolicyCount}',
+                              label: 'Active policies',
+                            ),
+                            PortalHeroStat(
+                              value: '${data.dashboard.openClaims}',
+                              label: 'Open claims',
+                            ),
+                          ],
+                          ctaLabel: 'Refresh',
+                          onCta: _refresh,
+                        ),
+                        const SizedBox(height: 12),
+                        InsuranceResponsiveGrid(
+                          children: [
+                            PortalQuickStatTile(
                               icon: Icons.policy_outlined,
                               value: '${data.dashboard.activePolicyCount}',
-                              title: 'Active policies',
-                              subtitle: '${data.dashboard.policyCount} total',
-                              accentColor: context.appColors.success,
+                              label: 'Active policies',
+                              delta: '${data.dashboard.policyCount} total',
+                              tone: CineTone.positive,
                               onTap: () => Navigator.pushNamed(
                                 context,
                                 InsurancePartnerRoutes.records,
                               ),
                             ),
-                            MetricActionItem(
+                            PortalQuickStatTile(
                               icon: Icons.assignment_late_outlined,
                               value: '${data.dashboard.openClaims}',
-                              title: 'Open claims',
-                              subtitle: '${data.claims.length} total',
-                              accentColor: context.appColors.danger,
+                              label: 'Open claims',
+                              delta: '${data.claims.length} total',
+                              tone: CineTone.critical,
                               onTap: () => Navigator.pushNamed(
                                 context,
                                 InsurancePartnerRoutes.claims,
                               ),
                             ),
-                            MetricActionItem(
+                            PortalQuickStatTile(
                               icon: Icons.warning_amber_outlined,
                               value: '$highRisk',
-                              title: 'High risk',
-                              subtitle: 'Live policies',
-                              accentColor: context.appColors.goldDark,
+                              label: 'High risk',
+                              delta: 'Live policies',
+                              tone: CineTone.warning,
                             ),
                           ],
                         ),
@@ -138,24 +165,40 @@ class _IN01InsuranceDashboardScreenState
                             icon: Icons.route_outlined,
                             child: Column(
                               children: [
-                                CoreSecondaryButton(
-                                  icon: Icons.policy_outlined,
-                                  label: 'Open records',
-                                  compact: true,
-                                  onTap: () => Navigator.pushNamed(
-                                    context,
-                                    InsurancePartnerRoutes.records,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                CorePrimaryButton(
-                                  icon: Icons.assignment_late_outlined,
-                                  label: 'Open claims',
-                                  compact: true,
-                                  onTap: () => Navigator.pushNamed(
-                                    context,
-                                    InsurancePartnerRoutes.claims,
-                                  ),
+                                InsuranceResponsiveGrid(
+                                  minWidth: 200,
+                                  children: [
+                                    PortalModuleCard(
+                                      icon: Icons.policy_outlined,
+                                      name: 'Records',
+                                      count: data.policies.isEmpty
+                                          ? null
+                                          : data.policies.length,
+                                      description:
+                                          'Shoot insurance policies and coverage.',
+                                      actionLabel: 'Open records',
+                                      tone: CineTone.information,
+                                      onTap: () => Navigator.pushNamed(
+                                        context,
+                                        InsurancePartnerRoutes.records,
+                                      ),
+                                    ),
+                                    PortalModuleCard(
+                                      icon: Icons.assignment_late_outlined,
+                                      name: 'Claims',
+                                      count: data.dashboard.openClaims > 0
+                                          ? data.dashboard.openClaims
+                                          : null,
+                                      description:
+                                          'File and track claim decisions.',
+                                      actionLabel: 'Open claims',
+                                      tone: CineTone.premium,
+                                      onTap: () => Navigator.pushNamed(
+                                        context,
+                                        InsurancePartnerRoutes.claims,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 10),
                                 const InlineNotice(
@@ -250,4 +293,12 @@ class _LoadError extends StatelessWidget {
       ],
     );
   }
+}
+
+String _initialsFor(String name) {
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }

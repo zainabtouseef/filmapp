@@ -133,6 +133,12 @@ class _CardShellState extends State<CardShell> {
             width: _focused || widget.selected ? 1.4 : 1,
           ),
           boxShadow: [
+            // Top hairline highlight — dark mode only, matches the
+            // dashboard-kit's two-layer card shadow.
+            BoxShadow(
+              color: Colors.white.withValues(alpha: colors.isLight ? 0 : 0.04),
+              offset: const Offset(0, 1),
+            ),
             BoxShadow(
               color: colors.shadow.withValues(
                 alpha: colors.isLight
@@ -408,6 +414,47 @@ class CineStatusBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small numeric-count pill — e.g. the modules-grid card's "12 open"
+/// indicator. Distinct from [CineStatusBadge], which pairs an icon/dot
+/// with a text label rather than a bare count.
+class CountBadge extends StatelessWidget {
+  final int count;
+  final CineTone tone;
+  final Color? colorOverride;
+
+  const CountBadge({
+    super.key,
+    required this.count,
+    this.tone = CineTone.premium,
+    this.colorOverride,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final color = colorOverride ?? cineToneColor(context, tone);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Color.lerp(
+          colors.elevatedSurface,
+          color,
+          colors.isLight ? 0.055 : 0.12,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        '$count',
+        style: AppTextStyles.smallMeta.copyWith(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -1034,11 +1081,13 @@ class QuickActionItem {
 class QuickActionCard extends StatelessWidget {
   final QuickActionItem item;
   final bool primary;
+  final int descriptionMaxLines;
 
   const QuickActionCard({
     super.key,
     required this.item,
     this.primary = false,
+    this.descriptionMaxLines = 1,
   });
 
   @override
@@ -1071,7 +1120,7 @@ class QuickActionCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               item.description!,
-              maxLines: 1,
+              maxLines: descriptionMaxLines,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.smallMeta.copyWith(
                 color: colors.textSecondary,
@@ -1203,6 +1252,7 @@ class PriorityActionCard extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final VoidCallback? onTap;
+  final Widget? trailing;
 
   const PriorityActionCard({
     super.key,
@@ -1214,6 +1264,7 @@ class PriorityActionCard extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.onTap,
+    this.trailing,
   });
 
   @override
@@ -1255,17 +1306,19 @@ class PriorityActionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              CineStatusBadge(label: priority, tone: tone),
-              if (actionLabel != null) ...[
-                const SizedBox(height: 4),
-                TextButton(
-                    onPressed: onAction ?? onTap, child: Text(actionLabel!)),
-              ],
-            ],
-          ),
+          trailing ??
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  CineStatusBadge(label: priority, tone: tone),
+                  if (actionLabel != null) ...[
+                    const SizedBox(height: 4),
+                    TextButton(
+                        onPressed: onAction ?? onTap,
+                        child: Text(actionLabel!)),
+                  ],
+                ],
+              ),
         ],
       ),
     );
@@ -1938,13 +1991,24 @@ class EntityAvatar extends StatelessWidget {
   final ImageProvider<Object>? image;
   final String label;
   final double size;
+  final bool twoLetterInitials;
 
   const EntityAvatar({
     super.key,
     this.image,
     required this.label,
     this.size = 36,
+    this.twoLetterInitials = false,
   });
+
+  String get _initials {
+    final trimmed = label.trim();
+    if (trimmed.isEmpty) return '?';
+    if (!twoLetterInitials) return trimmed[0].toUpperCase();
+    final words = trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    final letters = words.take(2).map((w) => w[0].toUpperCase()).join();
+    return letters.isEmpty ? '?' : letters;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1958,7 +2022,7 @@ class EntityAvatar extends StatelessWidget {
         backgroundImage: image,
         child: image == null
             ? Text(
-                label.trim().isEmpty ? '?' : label.trim()[0].toUpperCase(),
+                _initials,
                 style: AppTextStyles.label.copyWith(color: colors.textPrimary),
               )
             : null,
