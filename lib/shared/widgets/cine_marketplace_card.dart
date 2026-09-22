@@ -1,20 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/theme/app_color_scheme.dart';
-import '../../core/theme/app_durations.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_text_styles.dart';
-import '../cards/cine_card_system.dart';
+/// Exact visual tokens from the supplied CineConnect Flow Reel HTML.
+class CineMarketplaceVisuals {
+  CineMarketplaceVisuals._();
 
-/// Shared, image-led marketplace presentation used by buyer portals.
+  static const background = Color(0xFF09090A);
+  static const surface = Color(0xFF141417);
+  static const raisedSurface = Color(0xFF1B1B1F);
+  static const ink = Color(0xFFF6F2EA);
+  static const secondary = Color(0xFFB6B0A6);
+  static const muted = Color(0xFF8C877E);
+  static const gold = Color(0xFFC49A3C);
+  static const goldLight = Color(0xFFF1DDA8);
+  static const border = Color(0x17FFFFFF);
+
+  static TextStyle archivo({
+    double? size,
+    FontWeight weight = FontWeight.w400,
+    Color color = ink,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.archivo(
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+}
+
+/// Shared, live-data marketplace card for every portal.
 ///
-/// The card accepts display-ready values from the API models. It deliberately
-/// owns no demo records or placeholder business copy, so every portal keeps the
-/// same live database source while sharing one visual hierarchy.
-///
-/// Presented as a single cinematic list row — thumbnail, name, meta, chevron —
-/// so the whole row opens the live profile, matching the marketplace flow
-/// across every portal that reuses this widget.
+/// The compact row, image treatment, typography, colors and motion follow the
+/// HTML reference. Existing shortlist, profile and booking actions remain
+/// available in a restrained action rail under the row.
 class CineMarketplaceCard extends StatefulWidget {
   final String title;
   final String kind;
@@ -36,11 +58,6 @@ class CineMarketplaceCard extends StatefulWidget {
   final VoidCallback? onProfile;
   final VoidCallback? onRequest;
   final Future<bool> Function()? onShortlist;
-
-  /// Stable identity shared with the destination profile route so its hero
-  /// image can morph out of this thumbnail. Leave null to skip the
-  /// shared-element transition (e.g. when the same id could render twice
-  /// on screen at once).
   final String? heroTag;
 
   const CineMarketplaceCard({
@@ -73,226 +90,149 @@ class CineMarketplaceCard extends StatefulWidget {
 }
 
 class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
+  bool _hovered = false;
+  bool _pressed = false;
   bool _shortlisted = false;
   bool _savingShortlist = false;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final accent = cineMarketplaceKindColor(context, widget.kind);
-    final verified = const {'approved', 'verified', 'published', 'active'}
-        .contains(widget.verificationStatus.toLowerCase());
-    final thumbSize = widget.featured ? 116.0 : 96.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        final imageSize = compact ? 82.0 : 112.0;
+        final verified = const {
+          'approved',
+          'verified',
+          'published',
+          'active',
+        }.contains(widget.verificationStatus.toLowerCase());
+        final active = (_hovered || _pressed) && !widget.busy;
 
-    return CardShell(
-      variant: CardVariant.media,
-      padding: EdgeInsets.zero,
-      radius: AppRadius.xl,
-      selected: _shortlisted,
-      tone: cineToneFromColor(context, accent),
-      semanticLabel: '${widget.title}, ${widget.category}',
-      onTap: widget.busy ? null : widget.onProfile,
-      child: Padding(
-        padding: EdgeInsets.all(widget.featured ? 16 : 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _MarketplaceThumb(
-                  imageUrl: widget.imageUrl,
-                  kind: widget.kind,
-                  accent: accent,
-                  size: thumbSize,
-                  heroTag: widget.heroTag,
+        return Semantics(
+          button: widget.onProfile != null,
+          label: '${widget.title}, ${widget.category}',
+          child: MouseRegion(
+            cursor: widget.busy || widget.onProfile == null
+                ? SystemMouseCursors.basic
+                : SystemMouseCursors.click,
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() {
+              _hovered = false;
+              _pressed = false;
+            }),
+            child: AnimatedScale(
+              scale: _pressed ? 0.994 : (_hovered ? 1.004 : 1),
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: CineMarketplaceVisuals.surface,
+                  borderRadius: BorderRadius.circular(compact ? 18 : 26),
+                  border: Border.all(
+                    color: active || _shortlisted
+                        ? CineMarketplaceVisuals.gold.withValues(alpha: 0.55)
+                        : CineMarketplaceVisuals.border,
+                  ),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: CineMarketplaceVisuals.gold
+                                .withValues(alpha: 0.10),
+                            blurRadius: 28,
+                            offset: const Offset(0, 12),
+                          ),
+                        ]
+                      : const [],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
+                child: Material(
+                  color: Colors.transparent,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            margin: const EdgeInsets.only(top: 4, right: 7),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: widget.available
-                                  ? colors.success
-                                  : colors.warning,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              widget.subtitle.trim().isEmpty
-                                  ? widget.category
-                                  : widget.subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.micro.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.1,
+                      InkWell(
+                        onTap: widget.busy ? null : widget.onProfile,
+                        onTapDown: widget.busy
+                            ? null
+                            : (_) => setState(() => _pressed = true),
+                        onTapCancel: widget.busy
+                            ? null
+                            : () => setState(() => _pressed = false),
+                        onTapUp: widget.busy
+                            ? null
+                            : (_) => setState(() => _pressed = false),
+                        splashColor:
+                            CineMarketplaceVisuals.gold.withValues(alpha: 0.08),
+                        highlightColor: Colors.transparent,
+                        child: Padding(
+                          padding: EdgeInsets.all(compact ? 10 : 14),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CineMarketplaceMediaFrame(
+                                imageUrl: widget.imageUrl,
+                                kind: widget.kind,
+                                width: imageSize,
+                                height: imageSize,
+                                radius: compact ? 13 : 19,
+                                heroTag: widget.heroTag,
                               ),
-                            ),
+                              SizedBox(width: compact ? 13 : 20),
+                              Expanded(
+                                child: _MarketplaceIdentity(
+                                  widget: widget,
+                                  compact: compact,
+                                  verified: verified,
+                                ),
+                              ),
+                              SizedBox(width: compact ? 5 : 12),
+                              Column(
+                                children: [
+                                  if (widget.onShortlist != null)
+                                    _ShortlistButton(
+                                      active: _shortlisted,
+                                      busy: widget.busy || _savingShortlist,
+                                      onTap: _toggleShortlist,
+                                    )
+                                  else
+                                    SizedBox(height: compact ? 30 : 36),
+                                  SizedBox(height: compact ? 8 : 16),
+                                  AnimatedSlide(
+                                    offset: Offset(active ? 0.10 : 0, 0),
+                                    duration: const Duration(milliseconds: 180),
+                                    curve: Curves.easeOutCubic,
+                                    child: Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: active
+                                          ? CineMarketplaceVisuals.gold
+                                          : const Color(0xFF5E5A54),
+                                      size: compact ? 23 : 29,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          if (widget.onShortlist != null)
-                            _ShortlistButton(
-                              active: _shortlisted,
-                              accent: accent,
-                              busy: widget.busy || _savingShortlist,
-                              onTap: _toggleShortlist,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        widget.title,
-                        maxLines: widget.featured ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.cardTitle.copyWith(
-                          color: colors.textPrimary,
-                          fontSize: widget.featured ? 22 : 18,
-                          height: 1.08,
-                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        widget.summary.trim().isEmpty
-                            ? 'Open the live profile for availability and production details.'
-                            : widget.summary,
-                        maxLines: widget.featured ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.smallMeta.copyWith(
-                          color: colors.textSecondary,
-                          height: 1.35,
-                        ),
+                      _MarketplaceActionRail(
+                        onProfile: widget.busy ? null : widget.onProfile,
+                        onRequest: widget.busy ? null : widget.onRequest,
+                        requestLabel: widget.allowsBargaining
+                            ? 'Make offer'
+                            : 'Request at price',
+                        compact: compact,
                       ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, top: 6),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.iconMuted,
-                    size: 22,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                CineStatusBadge(
-                  label: verified ? 'Verified' : widget.verificationStatus,
-                  tone: verified ? CineTone.positive : CineTone.warning,
-                  icon:
-                      verified ? Icons.verified_rounded : Icons.schedule_rounded,
-                  showDot: false,
-                ),
-                CineStatusBadge(
-                  label: widget.city,
-                  tone: CineTone.neutral,
-                  icon: Icons.location_on_outlined,
-                  showDot: false,
-                ),
-                CineStatusBadge(
-                  label: widget.rateLabel,
-                  tone: CineTone.premium,
-                  icon: Icons.payments_outlined,
-                  showDot: false,
-                ),
-                CineStatusBadge(
-                  label: switch (widget.pricingMode) {
-                    'fixed' => 'Fixed price',
-                    'on_request' => 'Bargain privately',
-                    _ => 'Offers welcome',
-                  },
-                  tone: widget.allowsBargaining
-                      ? CineTone.information
-                      : CineTone.neutral,
-                  icon: widget.allowsBargaining
-                      ? Icons.handshake_outlined
-                      : Icons.lock_outline_rounded,
-                  showDot: false,
-                ),
-                if (widget.trustScore != null)
-                  CineStatusBadge(
-                    label: 'Trust ${widget.trustScore}/100',
-                    tone: CineTone.information,
-                    icon: Icons.shield_outlined,
-                    showDot: false,
-                  )
-                else if (widget.rating > 0)
-                  CineStatusBadge(
-                    label: widget.rating.toStringAsFixed(1),
-                    tone: CineTone.premium,
-                    icon: Icons.star_rounded,
-                    showDot: false,
-                  ),
-              ],
-            ),
-            if (widget.tags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                widget.tags.take(widget.featured ? 5 : 3).join('  ·  '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.textTertiary,
-                  fontWeight: FontWeight.w700,
-                ),
               ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: widget.busy ? null : widget.onProfile,
-                    icon: const Icon(Icons.person_search_outlined, size: 16),
-                    label: const Text(
-                      'View profile',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: widget.busy ? null : widget.onRequest,
-                    icon: const Icon(Icons.send_rounded, size: 16),
-                    label: Text(
-                      widget.allowsBargaining
-                          ? 'Make offer'
-                          : 'Request at price',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: FilledButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                  ),
-                ),
-              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -313,59 +253,310 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
   }
 }
 
+class _MarketplaceIdentity extends StatelessWidget {
+  final CineMarketplaceCard widget;
+  final bool compact;
+  final bool verified;
+
+  const _MarketplaceIdentity({
+    required this.widget,
+    required this.compact,
+    required this.verified,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pricing = switch (widget.pricingMode) {
+      'fixed' => 'Fixed price',
+      'on_request' => 'Bargain privately',
+      _ => 'Offers welcome',
+    };
+    final role = widget.subtitle.trim().isEmpty
+        ? widget.category
+        : widget.subtitle.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.available
+                    ? CineMarketplaceVisuals.gold
+                    : CineMarketplaceVisuals.muted,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: CineMarketplaceVisuals.archivo(
+                  size: compact ? 17 : 24,
+                  weight: FontWeight.w700,
+                  height: 1.06,
+                ),
+              ),
+            ),
+            if (verified) ...[
+              const SizedBox(width: 5),
+              Icon(
+                Icons.verified_rounded,
+                color: CineMarketplaceVisuals.gold,
+                size: compact ? 15 : 18,
+              ),
+            ],
+          ],
+        ),
+        SizedBox(height: compact ? 6 : 8),
+        Text(
+          role,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: CineMarketplaceVisuals.archivo(
+            size: compact ? 12.5 : 16,
+            color: CineMarketplaceVisuals.secondary,
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 6),
+        Text(
+          widget.summary.trim().isEmpty
+              ? widget.category
+              : widget.summary.trim(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: CineMarketplaceVisuals.archivo(
+            size: compact ? 10.5 : 13,
+            color: CineMarketplaceVisuals.muted,
+          ),
+        ),
+        SizedBox(height: compact ? 7 : 10),
+        Wrap(
+          spacing: compact ? 10 : 14,
+          runSpacing: 5,
+          children: [
+            _MetaDatum(
+              icon: Icons.location_on_outlined,
+              label: widget.city,
+              compact: compact,
+            ),
+            _MetaDatum(
+              icon: Icons.payments_outlined,
+              label: _displayRate(widget.rateLabel),
+              compact: compact,
+              gold: true,
+            ),
+            _MetaDatum(
+              icon: widget.allowsBargaining
+                  ? Icons.handshake_outlined
+                  : Icons.lock_outline_rounded,
+              label: pricing,
+              compact: compact,
+            ),
+            if (widget.trustScore != null)
+              _MetaDatum(
+                icon: Icons.shield_outlined,
+                label: 'Trust ${widget.trustScore}/100',
+                compact: compact,
+              )
+            else if (widget.rating > 0)
+              _MetaDatum(
+                icon: Icons.star_rounded,
+                label: widget.rating.toStringAsFixed(1),
+                compact: compact,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _MetaDatum extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool compact;
+  final bool gold;
+
+  const _MetaDatum({
+    required this.icon,
+    required this.label,
+    required this.compact,
+    this.gold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        gold ? CineMarketplaceVisuals.gold : CineMarketplaceVisuals.muted;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: compact ? 12 : 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: CineMarketplaceVisuals.archivo(
+            size: compact ? 9.5 : 11.5,
+            weight: gold ? FontWeight.w600 : FontWeight.w500,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarketplaceActionRail extends StatelessWidget {
+  final VoidCallback? onProfile;
+  final VoidCallback? onRequest;
+  final String requestLabel;
+  final bool compact;
+
+  const _MarketplaceActionRail({
+    required this.onProfile,
+    required this.onRequest,
+    required this.requestLabel,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        compact ? 10 : 14,
+        compact ? 8 : 10,
+        compact ? 10 : 14,
+        compact ? 10 : 14,
+      ),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: CineMarketplaceVisuals.border)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onProfile,
+              icon: Icon(Icons.person_search_outlined, size: compact ? 15 : 17),
+              label: const Text('View profile'),
+              style: _outlinedStyle(compact),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    CineMarketplaceVisuals.gold,
+                    CineMarketplaceVisuals.goldLight,
+                    CineMarketplaceVisuals.gold,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(compact ? 12 : 15),
+              ),
+              child: FilledButton.icon(
+                onPressed: onRequest,
+                icon: Icon(Icons.chat_bubble_outline_rounded,
+                    size: compact ? 14 : 17),
+                label: Text(requestLabel),
+                style: _filledStyle(compact),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ButtonStyle _outlinedStyle(bool compact) => OutlinedButton.styleFrom(
+        foregroundColor: CineMarketplaceVisuals.gold,
+        side: const BorderSide(color: CineMarketplaceVisuals.gold),
+        padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(compact ? 12 : 15),
+        ),
+        textStyle: CineMarketplaceVisuals.archivo(
+          size: compact ? 11 : 13,
+          weight: FontWeight.w600,
+        ),
+      );
+
+  ButtonStyle _filledStyle(bool compact) => FilledButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        disabledBackgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF12100B),
+        shadowColor: Colors.transparent,
+        padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(compact ? 12 : 15),
+        ),
+        textStyle: CineMarketplaceVisuals.archivo(
+          size: compact ? 11 : 13,
+          weight: FontWeight.w700,
+        ),
+      );
+}
+
 class _ShortlistButton extends StatelessWidget {
   final bool active;
   final bool busy;
-  final Color accent;
   final VoidCallback onTap;
 
   const _ShortlistButton({
     required this.active,
     required this.busy,
-    required this.accent,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    // A plain GestureDetector nested inside the card's own InkWell-driven
-    // onTap would fight it for the same tap gesture. IconButton's InkResponse
-    // is the pattern Material itself uses for a tile's onTap + trailing
-    // action (see ListTile) and resolves that nesting correctly.
     return SizedBox(
-      width: 32,
-      height: 32,
+      width: 34,
+      height: 34,
       child: IconButton(
-        padding: EdgeInsets.zero,
-        visualDensity: VisualDensity.compact,
         tooltip: active ? 'Remove from shortlist' : 'Add to shortlist',
+        padding: EdgeInsets.zero,
         onPressed: busy ? null : onTap,
-        icon: AnimatedScale(
-          scale: active ? 1.1 : 1.0,
-          duration: AppDurations.press,
-          curve: AppDurations.standardCurve,
-          child: Icon(
-            active ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            size: 19,
-            color: active ? accent : colors.iconMuted,
+        icon: busy
+            ? const SizedBox(
+                width: 15,
+                height: 15,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  color: CineMarketplaceVisuals.gold,
+                ),
+              )
+            : Icon(
+                active ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                color: CineMarketplaceVisuals.gold,
+                size: 20,
+              ),
+        style: IconButton.styleFrom(
+          side: BorderSide(
+            color: CineMarketplaceVisuals.gold.withValues(alpha: 0.45),
           ),
+          backgroundColor: active
+              ? CineMarketplaceVisuals.gold.withValues(alpha: 0.12)
+              : CineMarketplaceVisuals.background.withValues(alpha: 0.55),
         ),
       ),
     );
   }
 }
 
-/// Lays out marketplace result cards as one continuous cinematic list, with
-/// each row cascading into place the way the marketplace list builds in.
+/// Staggers result rows upward in the same order as the reference animation.
 class CineMarketplaceResults extends StatefulWidget {
   final List<Widget> cards;
 
   const CineMarketplaceResults({super.key, required this.cards});
 
   @override
-  State<CineMarketplaceResults> createState() =>
-      _CineMarketplaceResultsState();
+  State<CineMarketplaceResults> createState() => _CineMarketplaceResultsState();
 }
 
 class _CineMarketplaceResultsState extends State<CineMarketplaceResults>
@@ -377,18 +568,9 @@ class _CineMarketplaceResultsState extends State<CineMarketplaceResults>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: _durationFor(widget.cards.length),
+      duration: const Duration(milliseconds: 760),
     )..forward();
   }
-
-  // Deliberately no didUpdateWidget restart: the caller rebuilds this widget
-  // with a freshly-mapped `cards` list on every keystroke while searching
-  // (new List instance each time, even when the matched set is unchanged),
-  // so restarting on any list-identity change would replay the stagger on
-  // every character typed. A category switch already gets a fresh entrance
-  // for free — it recreates this State via the FutureBuilder's loading ->
-  // data swap — so a single play-once-on-mount animation covers both cases
-  // without fighting search input.
 
   @override
   void dispose() {
@@ -396,14 +578,12 @@ class _CineMarketplaceResultsState extends State<CineMarketplaceResults>
     super.dispose();
   }
 
-  static Duration _durationFor(int count) =>
-      Duration(milliseconds: 320 + count.clamp(0, 8) * 70);
-
   @override
   Widget build(BuildContext context) {
     final cards = widget.cards;
     if (cards.isEmpty) return const SizedBox.shrink();
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final count = cards.length.clamp(1, 8);
     return Column(
       children: [
@@ -413,10 +593,10 @@ class _CineMarketplaceResultsState extends State<CineMarketplaceResults>
           else
             _RevealRow(
               controller: _controller,
-              start: (index / count) * 0.6,
+              start: (index / count) * 0.52,
               child: cards[index],
             ),
-          if (index != cards.length - 1) const SizedBox(height: 12),
+          if (index != cards.length - 1) const SizedBox(height: 10),
         ],
       ],
     );
@@ -440,7 +620,7 @@ class _RevealRow extends StatelessWidget {
       parent: controller,
       curve: Interval(
         start.clamp(0.0, 1.0),
-        (start + 0.45).clamp(0.0, 1.0),
+        (start + 0.42).clamp(0.0, 1.0),
         curve: Curves.easeOutCubic,
       ),
     );
@@ -449,7 +629,7 @@ class _RevealRow extends StatelessWidget {
       builder: (context, _) => Opacity(
         opacity: curved.value,
         child: Transform.translate(
-          offset: Offset(0, (1 - curved.value) * 18),
+          offset: Offset(0, (1 - curved.value) * 23),
           child: child,
         ),
       ),
@@ -458,40 +638,46 @@ class _RevealRow extends StatelessWidget {
   }
 }
 
-class _MarketplaceThumb extends StatelessWidget {
+/// Reusable image frame for marketplace rows, profiles and galleries.
+class CineMarketplaceMediaFrame extends StatelessWidget {
   final String? imageUrl;
   final String kind;
-  final Color accent;
-  final double size;
+  final double width;
+  final double height;
+  final double radius;
   final String? heroTag;
+  final BoxFit fit;
 
-  const _MarketplaceThumb({
+  const CineMarketplaceMediaFrame({
+    super.key,
     required this.imageUrl,
     required this.kind,
-    required this.accent,
-    required this.size,
-    required this.heroTag,
+    required this.width,
+    required this.height,
+    required this.radius,
+    this.heroTag,
+    this.fit = BoxFit.cover,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final source = imageUrl?.trim() ?? '';
-    final visual = ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.xl - 3),
+    final fallback = _MarketplacePlate(kind: kind);
+    final media = ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
-        width: size,
-        height: size,
+        width: width,
+        height: height,
         child: source.isEmpty
-            ? _MarketplaceFallback(kind: kind, accent: accent)
+            ? fallback
             : Stack(
                 fit: StackFit.expand,
                 children: [
-                  _MarketplaceFallback(kind: kind, accent: accent),
+                  fallback,
                   Image.network(
                     source,
                     webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                    fit: BoxFit.cover,
+                    fit: fit,
                     alignment: {'actor', 'model', 'influencer'}.contains(kind)
                         ? Alignment.topCenter
                         : Alignment.center,
@@ -503,72 +689,86 @@ class _MarketplaceThumb extends StatelessWidget {
               ),
       ),
     );
-    final framed = Container(
-      padding: const EdgeInsets.all(1),
+    final framed = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: CineMarketplaceVisuals.border),
       ),
-      child: visual,
+      child: media,
     );
-    final tag = heroTag;
-    if (tag == null) return framed;
-    return Hero(tag: tag, child: framed);
+    if (heroTag == null) return framed;
+    return Hero(tag: heroTag!, child: framed);
   }
 }
 
-class _MarketplaceFallback extends StatelessWidget {
+class _MarketplacePlate extends StatelessWidget {
   final String kind;
-  final Color accent;
 
-  const _MarketplaceFallback({required this.kind, required this.accent});
+  const _MarketplacePlate({required this.kind});
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final tones = _tonesForKind(kind);
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.lerp(colors.surface, accent, colors.isLight ? 0.12 : 0.22)!,
-            colors.softSurface,
-            Color.lerp(colors.surface, accent, colors.isLight ? 0.24 : 0.34)!,
-          ],
+        gradient: RadialGradient(
+          center: const Alignment(-0.45, -0.72),
+          radius: 1.25,
+          colors: tones,
         ),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -24,
-            top: -30,
-            child: Icon(
-              cineMarketplaceKindIcon(kind),
-              size: 190,
-              color: accent.withValues(alpha: 0.10),
-            ),
-          ),
-          Center(
-            child: Container(
-              width: 74,
-              height: 74,
-              decoration: BoxDecoration(
-                color: colors.elevatedSurface.withValues(alpha: 0.72),
-                shape: BoxShape.circle,
-                border: Border.all(color: accent.withValues(alpha: 0.35)),
-              ),
-              child: Icon(
-                cineMarketplaceKindIcon(kind),
-                color: accent,
-                size: 34,
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: CustomPaint(painter: const _FilmTexturePainter()),
     );
   }
+}
+
+class _FilmTexturePainter extends CustomPainter {
+  const _FilmTexturePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line = Paint()
+      ..color = Colors.white.withValues(alpha: 0.045)
+      ..strokeWidth = 1;
+    for (double x = -size.height; x < size.width + size.height; x += 26) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x - size.height * 0.48, size.height),
+        line,
+      );
+    }
+    final shade = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.transparent, Color(0x99000000)],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, shade);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+List<Color> _tonesForKind(String kind) {
+  return switch (kind.toLowerCase()) {
+    'actor' => const [Color(0xFF413A30), Color(0xFF15141A)],
+    'model' => const [Color(0xFF44352C), Color(0xFF16130F)],
+    'influencer' => const [Color(0xFF463A3A), Color(0xFF161112)],
+    'crew' => const [Color(0xFF3D3830), Color(0xFF141313)],
+    'location' => const [Color(0xFF2F3A37), Color(0xFF121418)],
+    'equipment' => const [Color(0xFF333A44), Color(0xFF111319)],
+    'agency' => const [Color(0xFF2C3640), Color(0xFF101317)],
+    'distribution' => const [Color(0xFF463A3A), Color(0xFF161112)],
+    _ => const [Color(0xFF37342F), Color(0xFF131317)],
+  };
+}
+
+String _displayRate(String value) {
+  return value.replaceAllMapped(
+    RegExp(r'(?<=\d)k\b'),
+    (_) => 'K',
+  );
 }
 
 IconData cineMarketplaceKindIcon(String kind) {
@@ -586,16 +786,5 @@ IconData cineMarketplaceKindIcon(String kind) {
 }
 
 Color cineMarketplaceKindColor(BuildContext context, String kind) {
-  final colors = context.appColors;
-  return switch (kind.toLowerCase()) {
-    'actor' => colors.success,
-    'model' => colors.infoPurple,
-    'influencer' => colors.goldDark,
-    'crew' => colors.infoBlue,
-    'location' => colors.success,
-    'equipment' => colors.warning,
-    'agency' => colors.infoPurple,
-    'distribution' => colors.danger,
-    _ => colors.goldDark,
-  };
+  return CineMarketplaceVisuals.gold;
 }

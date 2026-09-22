@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_durations.dart';
-import '../../core/theme/app_text_styles.dart';
+import 'cine_marketplace_card.dart';
 
 /// A shared, image-led presentation for actor and model profiles.
 ///
@@ -50,16 +49,12 @@ class TalentProfileShowcase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 720;
         final heroHeight = compact ? 520.0 : 430.0;
         final imageUrl =
             coverUrl?.trim().isNotEmpty == true ? coverUrl : portraitUrl;
-        final showInsetPortrait = portraitUrl?.trim().isNotEmpty == true &&
-            coverUrl?.trim().isNotEmpty == true &&
-            portraitUrl != coverUrl;
         final heroImage = _ShowcaseImage(
           imageUrl: imageUrl,
           fallbackLabel: _initials(name),
@@ -70,144 +65,78 @@ class TalentProfileShowcase extends StatelessWidget {
           key: const ValueKey('talent-profile-showcase'),
           tween: Tween(begin: 0, end: 1),
           duration: AppDurations.pageEntrance,
-          curve: AppDurations.standardCurve,
+          curve: Curves.easeOutCubic,
           builder: (context, reveal, child) => Opacity(
             opacity: reveal,
-            child: Transform.scale(
-              scale: 0.985 + (0.015 * reveal),
-              alignment: Alignment.center,
+            child: Transform.translate(
+              offset: Offset(0, (1 - reveal) * 20),
               child: child,
             ),
           ),
           child: Container(
-          height: heroHeight,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: colors.goldMid.withValues(alpha: 0.55)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black
-                    .withValues(alpha: colors.isLight ? 0.13 : 0.30),
-                blurRadius: 30,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              heroTag == null ? heroImage : Hero(tag: heroTag!, child: heroImage),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: compact ? Alignment.topCenter : Alignment.centerLeft,
-                    end: compact
-                        ? Alignment.bottomCenter
-                        : Alignment.centerRight,
-                    colors: compact
-                        ? const [
-                            Color(0x12000000),
-                            Color(0x72000000),
-                            Color(0xF014171C),
-                          ]
-                        : const [
-                            Color(0x2B000000),
-                            Color(0x7A080B10),
-                            Color(0xF014171C),
-                          ],
-                    stops: compact
-                        ? const [0.0, 0.50, 0.78]
-                        : const [0.0, 0.47, 0.73],
-                  ),
+            height: heroHeight,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: CineMarketplaceVisuals.surface,
+              borderRadius: BorderRadius.circular(compact ? 22 : 28),
+              border: Border.all(color: CineMarketplaceVisuals.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.36),
+                  blurRadius: 34,
+                  offset: const Offset(0, 18),
                 ),
-              ),
-              Positioned(
-                top: 18,
-                left: 18,
-                right: 18,
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _ShowcasePill(
-                      icon: Icons.auto_awesome_rounded,
-                      label: badge,
-                      emphasized: true,
-                    ),
-                    if (verified)
-                      const _ShowcasePill(
-                        icon: Icons.verified_rounded,
-                        label: 'Identity verified',
-                      ),
-                  ],
-                ),
-              ),
-              if (showInsetPortrait && !compact)
-                Positioned(
-                  left: 24,
-                  bottom: 24,
-                  child: Container(
-                    width: 190,
-                    height: 246,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: colors.goldLight, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.shadow,
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
+              ],
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                heroTag == null
+                    ? heroImage
+                    : Hero(tag: heroTag!, child: heroImage),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x12000000),
+                        Color(0x3D000000),
+                        Color(0xEF09090A),
                       ],
-                    ),
-                    child: _ShowcaseImage(
-                      imageUrl: portraitUrl,
-                      fallbackLabel: _initials(name),
+                      stops: [0.0, 0.44, 1.0],
                     ),
                   ),
                 ),
-              if (showInsetPortrait && compact)
                 Positioned(
-                  left: 20,
-                  top: 62,
-                  child: Container(
-                    width: 112,
-                    height: 144,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: colors.goldLight,
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.shadow,
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
+                  top: compact ? 16 : 20,
+                  left: compact ? 16 : 22,
+                  right: compact ? 16 : 22,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: _ShowcasePill(
+                          icon: Icons.auto_awesome_rounded,
+                          label: badge,
+                          emphasized: true,
                         ),
-                      ],
-                    ),
-                    child: _ShowcaseImage(
-                      imageUrl: portraitUrl,
-                      fallbackLabel: _initials(name),
-                    ),
+                      ),
+                      const Spacer(),
+                      if (verified)
+                        const _ShowcasePill(
+                          icon: Icons.verified_rounded,
+                          label: 'Identity verified',
+                        ),
+                    ],
                   ),
                 ),
-              Positioned(
-                left: compact ? 20 : (showInsetPortrait ? 238 : 28),
-                right: compact ? 20 : 28,
-                bottom: compact ? 22 : 26,
-                child: Align(
-                  alignment:
-                      compact ? Alignment.bottomLeft : Alignment.bottomRight,
+                Positioned(
+                  left: compact ? 20 : 30,
+                  right: compact ? 20 : 30,
+                  bottom: compact ? 20 : 26,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: compact ? double.infinity : 560,
-                    ),
+                    constraints: const BoxConstraints(maxWidth: 760),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -216,37 +145,56 @@ class TalentProfileShowcase extends StatelessWidget {
                           role.toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.micro.copyWith(
-                            color: colors.goldLight,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.7,
+                          style: CineMarketplaceVisuals.archivo(
+                            size: compact ? 10.5 : 12,
+                            weight: FontWeight.w700,
+                            color: CineMarketplaceVisuals.goldLight,
+                            letterSpacing: 2.8,
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        Text(
-                          name.trim().isEmpty ? 'Your professional name' : name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.heroSerifNumber.copyWith(
-                            color: Colors.white,
-                            fontSize: compact ? 34 : 43,
-                            height: 1.02,
-                          ),
+                        const SizedBox(height: 7),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                name.trim().isEmpty
+                                    ? 'Your professional name'
+                                    : name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: CineMarketplaceVisuals.archivo(
+                                  size: compact ? 35 : 48,
+                                  weight: FontWeight.w800,
+                                  height: 0.98,
+                                  letterSpacing: -1.5,
+                                ),
+                              ),
+                            ),
+                            if (verified) ...[
+                              const SizedBox(width: 9),
+                              Icon(
+                                Icons.verified_rounded,
+                                color: CineMarketplaceVisuals.gold,
+                                size: compact ? 20 : 24,
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Text(
                           summary.trim().isEmpty
                               ? 'Add a memorable positioning statement that tells buyers what makes this profile right for their production.'
                               : summary,
                           maxLines: compact ? 3 : 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.smallMeta.copyWith(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            height: 1.42,
-                            fontSize: compact ? 13 : 14,
+                          style: CineMarketplaceVisuals.archivo(
+                            size: compact ? 12.5 : 14,
+                            color: CineMarketplaceVisuals.secondary,
+                            height: 1.4,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Wrap(
                           spacing: 7,
                           runSpacing: 7,
@@ -290,9 +238,8 @@ class TalentProfileShowcase extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         );
       },
@@ -315,7 +262,6 @@ class TalentProfileGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
-    final colors = context.appColors;
     final videoCount = items.where((item) => item.isVideo).length;
     final kindLabel = videoCount == items.length
         ? '${items.length} ${items.length == 1 ? 'video' : 'videos'}'
@@ -343,9 +289,11 @@ class TalentProfileGallery extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: AppTextStyles.sectionTitle.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 22,
+                style: CineMarketplaceVisuals.archivo(
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: CineMarketplaceVisuals.gold,
+                  letterSpacing: 3,
                 ),
               ),
             ),
@@ -359,13 +307,17 @@ class TalentProfileGallery extends StatelessWidget {
                   children: [
                     Text(
                       'More',
-                      style: AppTextStyles.smallMeta.copyWith(
-                        color: colors.goldDark,
-                        fontWeight: FontWeight.w800,
+                      style: CineMarketplaceVisuals.archivo(
+                        size: 11,
+                        color: CineMarketplaceVisuals.gold,
+                        weight: FontWeight.w700,
                       ),
                     ),
-                    Icon(Icons.chevron_right_rounded,
-                        color: colors.goldDark, size: 18),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: CineMarketplaceVisuals.gold,
+                      size: 18,
+                    ),
                   ],
                 ),
               ),
@@ -375,11 +327,14 @@ class TalentProfileGallery extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           'Open a frame to review the work at full size.',
-          style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+          style: CineMarketplaceVisuals.archivo(
+            size: 12,
+            color: CineMarketplaceVisuals.muted,
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 292,
+          height: 278,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: items.length,
@@ -412,16 +367,16 @@ class _GalleryStripTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        width: 226,
+        width: 210,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: colors.border),
+          color: CineMarketplaceVisuals.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: CineMarketplaceVisuals.border),
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -458,9 +413,10 @@ class _GalleryStripTile extends StatelessWidget {
                 item.label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.cardLabel.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
+                style: CineMarketplaceVisuals.archivo(
+                  size: 12,
+                  color: CineMarketplaceVisuals.ink,
+                  weight: FontWeight.w700,
                 ),
               ),
             ),
@@ -529,9 +485,8 @@ class TalentGalleryViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Scaffold(
-      backgroundColor: colors.background,
+      backgroundColor: CineMarketplaceVisuals.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,8 +497,10 @@ class TalentGalleryViewer extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.arrow_back_rounded,
-                        color: colors.textPrimary),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: CineMarketplaceVisuals.ink,
+                    ),
                   ),
                   const SizedBox(width: 2),
                   Expanded(
@@ -555,18 +512,18 @@ class TalentGalleryViewer extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.cardTitle.copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
+                          style: CineMarketplaceVisuals.archivo(
+                            size: 20,
+                            weight: FontWeight.w800,
                           ),
                         ),
                         Text(
                           countLabel.toUpperCase(),
-                          style: AppTextStyles.micro.copyWith(
-                            color: colors.goldDark,
+                          style: CineMarketplaceVisuals.archivo(
+                            size: 9.5,
+                            color: CineMarketplaceVisuals.gold,
                             letterSpacing: 3,
-                            fontWeight: FontWeight.w700,
+                            weight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -636,8 +593,12 @@ class _GalleryMasonry extends StatelessWidget {
                             child: _GalleryTile(
                               item: items[index],
                               heroTag: 'gallery-item-$title-$index',
-                              aspectRatio: const [1.15, 0.85, 1.0, 0.72]
-                                  [index % 4],
+                              aspectRatio: const [
+                                1.15,
+                                0.85,
+                                1.0,
+                                0.72
+                              ][index % 4],
                               delay: index,
                               onOpenOriginal: onOpenOriginal,
                             ),
@@ -671,8 +632,8 @@ class _GalleryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final tile = AspectRatio(
       aspectRatio: aspectRatio,
       child: InkWell(
@@ -682,14 +643,15 @@ class _GalleryTile extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colors.border),
+            border: Border.all(color: CineMarketplaceVisuals.border),
           ),
           child: Stack(
             fit: StackFit.expand,
             children: [
               Hero(
                 tag: heroTag,
-                child: _ShowcaseImage(imageUrl: item.imageUrl, fallbackLabel: 'CC'),
+                child: _ShowcaseImage(
+                    imageUrl: item.imageUrl, fallbackLabel: 'CC'),
               ),
               if (item.isVideo) ...[
                 const DecoratedBox(
@@ -726,12 +688,10 @@ class _GalleryTile extends StatelessWidget {
                     item.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      shadows: const [
-                        Shadow(color: Colors.black, blurRadius: 6),
-                      ],
+                    style: CineMarketplaceVisuals.archivo(
+                      size: 11,
+                      color: CineMarketplaceVisuals.ink,
+                      weight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -781,25 +741,25 @@ class _ShowcaseImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final url = imageUrl;
     final fallback = DecoratedBox(
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: const Alignment(-0.3, -0.6),
           radius: 1.1,
-          colors: [
-            Color.lerp(colors.goldDark, colors.background, 0.35)!,
-            colors.background,
+          colors: const [
+            Color(0xFF44392A),
+            CineMarketplaceVisuals.background,
           ],
         ),
       ),
       child: Center(
         child: Text(
           fallbackLabel,
-          style: AppTextStyles.heroSerifNumber.copyWith(
-            color: Colors.white.withValues(alpha: 0.86),
-            fontSize: 58,
+          style: CineMarketplaceVisuals.archivo(
+            size: 58,
+            weight: FontWeight.w800,
+            color: CineMarketplaceVisuals.ink.withValues(alpha: 0.86),
           ),
         ),
       ),
@@ -828,17 +788,23 @@ class _ShowcasePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       constraints: const BoxConstraints(maxWidth: 230),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        gradient: emphasized ? colors.goldGradient : null,
+        gradient: emphasized
+            ? const LinearGradient(
+                colors: [
+                  CineMarketplaceVisuals.gold,
+                  CineMarketplaceVisuals.goldLight,
+                ],
+              )
+            : null,
         color: emphasized ? null : Colors.black.withValues(alpha: 0.52),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: emphasized
-              ? colors.goldLight
+              ? CineMarketplaceVisuals.goldLight
               : Colors.white.withValues(alpha: 0.18),
         ),
       ),
@@ -848,7 +814,9 @@ class _ShowcasePill extends StatelessWidget {
           Icon(
             icon,
             size: 15,
-            color: emphasized ? colors.onGold : Colors.white,
+            color: emphasized
+                ? const Color(0xFF17130A)
+                : CineMarketplaceVisuals.ink,
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -856,9 +824,12 @@ class _ShowcasePill extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption.copyWith(
-                color: emphasized ? colors.onGold : Colors.white,
-                fontWeight: FontWeight.w800,
+              style: CineMarketplaceVisuals.archivo(
+                size: 11,
+                color: emphasized
+                    ? const Color(0xFF17130A)
+                    : CineMarketplaceVisuals.ink,
+                weight: FontWeight.w700,
               ),
             ),
           ),

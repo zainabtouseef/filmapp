@@ -129,19 +129,48 @@ class _BR09BrandMarketplaceScreenState
         .where((project) =>
             !{'archived', 'cancelled', 'completed'}.contains(project.status))
         .toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TourTarget(
-          id: 'brand:demo:working-project',
-          child: BrandSectionCard(
-            title: 'Discover verified production resources',
-            icon: Icons.travel_explore_outlined,
-            selected: true,
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        compact ? 14 : 28,
+        compact ? 24 : 34,
+        compact ? 14 : 28,
+        30,
+      ),
+      decoration: BoxDecoration(
+        color: CineMarketplaceVisuals.background,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: CineMarketplaceVisuals.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CINECONNECT',
+            style: CineMarketplaceVisuals.archivo(
+              size: compact ? 10.5 : 12,
+              weight: FontWeight.w700,
+              color: CineMarketplaceVisuals.gold,
+              letterSpacing: compact ? 3.2 : 4.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Marketplace',
+            style: CineMarketplaceVisuals.archivo(
+              size: compact ? 37 : 54,
+              weight: FontWeight.w700,
+              height: 0.98,
+              letterSpacing: -1.7,
+            ),
+          ),
+          const SizedBox(height: 22),
+          TourTarget(
+            id: 'brand:demo:working-project',
             child: Column(
               children: [
-                BrandSearchField(
-                  hintText: 'Search by name, skill, city or equipment...',
+                _BrandMarketplaceSearch(
                   onChanged: (value) {
                     _query = value;
                     _searchTimer?.cancel();
@@ -150,54 +179,66 @@ class _BR09BrandMarketplaceScreenState
                       _load,
                     );
                   },
+                  onRefresh:
+                      _loading ? null : () => _load(includeProjects: true),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        key: ValueKey(_projectId),
-                        initialValue: _projectId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Working project',
-                          prefixIcon: Icon(Icons.movie_creation_outlined),
-                        ),
-                        items: [
-                          for (final project in activeProjects)
-                            DropdownMenuItem(
-                              value: project.publicId,
-                              child: Text(
-                                project.title,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _projectId = value),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: ValueKey(_projectId),
+                  initialValue: _projectId,
+                  isExpanded: true,
+                  dropdownColor: CineMarketplaceVisuals.surface,
+                  style: CineMarketplaceVisuals.archivo(size: 13),
+                  iconEnabledColor: CineMarketplaceVisuals.gold,
+                  decoration: InputDecoration(
+                    labelText: 'Working project',
+                    labelStyle: CineMarketplaceVisuals.archivo(
+                      size: 11.5,
+                      color: CineMarketplaceVisuals.muted,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.movie_creation_outlined,
+                      color: CineMarketplaceVisuals.gold,
+                    ),
+                    filled: true,
+                    fillColor: CineMarketplaceVisuals.surface,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: CineMarketplaceVisuals.border,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton.filledTonal(
-                      tooltip: 'Refresh marketplace',
-                      onPressed:
-                          _loading ? null : () => _load(includeProjects: true),
-                      icon: const Icon(Icons.refresh_rounded),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: CineMarketplaceVisuals.gold,
+                      ),
                     ),
+                  ),
+                  items: [
+                    for (final project in activeProjects)
+                      DropdownMenuItem(
+                        value: project.publicId,
+                        child: Text(
+                          project.title,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                   ],
+                  onChanged: (value) => setState(() => _projectId = value),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
                       for (final category in _brandDiscoveryCategories)
                         Padding(
-                          padding: const EdgeInsets.only(right: 7),
-                          child: FilterChip(
-                            label: Text(category),
-                            selected: _category == category,
-                            onSelected: (_) {
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _BrandMarketplaceChip(
+                            label: category,
+                            active: _category == category,
+                            onTap: () {
                               setState(() => _category = category);
                               _load();
                             },
@@ -209,64 +250,64 @@ class _BR09BrandMarketplaceScreenState
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        if (_error != null) ...[
-          InlineNotice(
-            message: _error!,
-            icon: Icons.warning_amber_rounded,
-            tone: CoreStatusTone.warning,
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          if (_error != null) ...[
+            InlineNotice(
+              message: _error!,
+              icon: Icons.warning_amber_rounded,
+              tone: CoreStatusTone.warning,
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (_loading && !_loaded)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_items.isEmpty)
+            CoreEmptyState(
+              icon: Icons.manage_search_outlined,
+              title: 'No live listings match',
+              message:
+                  'Try another category or search. Only published, approved resources are shown.',
+              actionLabel: 'Refresh',
+              onAction: _load,
+            )
+          else
+            TourTarget(
+              id: 'brand:demo:discovery-results',
+              child: CineMarketplaceResults(
+                cards: [
+                  for (final entry in _items.indexed)
+                    CineMarketplaceCard(
+                      title: entry.$2.title,
+                      kind: entry.$2.kind,
+                      category: entry.$2.category,
+                      subtitle: entry.$2.subtitle,
+                      summary: entry.$2.summary,
+                      city: entry.$2.cityName,
+                      rateLabel: entry.$2.rateLabel,
+                      pricingMode: entry.$2.pricingMode,
+                      allowsBargaining: entry.$2.allowsBargaining,
+                      verificationStatus: entry.$2.verificationStatus,
+                      imageUrl: entry.$2.coverImageUrl,
+                      tags: entry.$2.tags,
+                      available: entry.$2.available,
+                      rating: entry.$2.ratingAverage.toDouble(),
+                      trustScore: entry.$2.trustMetrics?.score,
+                      busy: _loading,
+                      featured: entry.$1 == 0,
+                      onProfile: () => _showProfile(entry.$2),
+                      onShortlist: () => _shortlist(entry.$2),
+                      onRequest: () => _request(entry.$2),
+                    ),
+                ],
+              ),
+            ),
         ],
-        if (_loading && !_loaded)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (_items.isEmpty)
-          CoreEmptyState(
-            icon: Icons.manage_search_outlined,
-            title: 'No live listings match',
-            message:
-                'Try another category or search. Only published, approved resources are shown.',
-            actionLabel: 'Refresh',
-            onAction: _load,
-          )
-        else
-          TourTarget(
-            id: 'brand:demo:discovery-results',
-            child: CineMarketplaceResults(
-              cards: [
-                for (final entry in _items.indexed)
-                  CineMarketplaceCard(
-                    title: entry.$2.title,
-                    kind: entry.$2.kind,
-                    category: entry.$2.category,
-                    subtitle: entry.$2.subtitle,
-                    summary: entry.$2.summary,
-                    city: entry.$2.cityName,
-                    rateLabel: entry.$2.rateLabel,
-                    pricingMode: entry.$2.pricingMode,
-                    allowsBargaining: entry.$2.allowsBargaining,
-                    verificationStatus: entry.$2.verificationStatus,
-                    imageUrl: entry.$2.coverImageUrl,
-                    tags: entry.$2.tags,
-                    available: entry.$2.available,
-                    rating: entry.$2.ratingAverage.toDouble(),
-                    trustScore: entry.$2.trustMetrics?.score,
-                    busy: _loading,
-                    featured: entry.$1 == 0,
-                    onProfile: () => _showProfile(entry.$2),
-                    onShortlist: () => _shortlist(entry.$2),
-                    onRequest: () => _request(entry.$2),
-                  ),
-              ],
-            ),
-          ),
-      ],
+      ),
     );
   }
 
@@ -435,6 +476,139 @@ class _BR09BrandMarketplaceScreenState
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _BrandMarketplaceSearch extends StatelessWidget {
+  final ValueChanged<String> onChanged;
+  final VoidCallback? onRefresh;
+
+  const _BrandMarketplaceSearch({
+    required this.onChanged,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: CineMarketplaceVisuals.surface,
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(color: CineMarketplaceVisuals.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.search_rounded,
+                  size: 21,
+                  color: CineMarketplaceVisuals.muted,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    onChanged: onChanged,
+                    cursorColor: CineMarketplaceVisuals.gold,
+                    style: CineMarketplaceVisuals.archivo(size: 13.5),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      hintText: 'Search name, skill, city or equipment…',
+                      hintStyle: CineMarketplaceVisuals.archivo(
+                        size: 13.5,
+                        color: CineMarketplaceVisuals.muted,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Tooltip(
+          message: 'Refresh marketplace',
+          child: Material(
+            color: CineMarketplaceVisuals.gold,
+            borderRadius: BorderRadius.circular(17),
+            child: InkWell(
+              onTap: onRefresh,
+              borderRadius: BorderRadius.circular(17),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: onRefresh == null
+                    ? const Padding(
+                        padding: EdgeInsets.all(18),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF17130A),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.refresh_rounded,
+                        color: Color(0xFF17130A),
+                        size: 21,
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BrandMarketplaceChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _BrandMarketplaceChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: active
+          ? CineMarketplaceVisuals.gold
+          : Colors.white.withValues(alpha: 0.035),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 190),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: active
+                  ? CineMarketplaceVisuals.gold
+                  : CineMarketplaceVisuals.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: CineMarketplaceVisuals.archivo(
+              size: 11.5,
+              weight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active
+                  ? const Color(0xFF17130A)
+                  : CineMarketplaceVisuals.secondary,
+            ),
+          ),
+        ),
       ),
     );
   }
