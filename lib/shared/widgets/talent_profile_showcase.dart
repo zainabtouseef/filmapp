@@ -77,9 +77,10 @@ class TalentProfileShowcase extends StatelessWidget {
             height: heroHeight,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: CineMarketplaceVisuals.surface,
+              color: CineMarketplaceVisuals.of(context).surface,
               borderRadius: BorderRadius.circular(compact ? 22 : 28),
-              border: Border.all(color: CineMarketplaceVisuals.border),
+              border:
+                  Border.all(color: CineMarketplaceVisuals.of(context).border),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.36),
@@ -145,10 +146,10 @@ class TalentProfileShowcase extends StatelessWidget {
                           role.toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: CineMarketplaceVisuals.archivo(
+                          style: CineMarketplaceVisuals.of(context).archivo(
                             size: compact ? 10.5 : 12,
                             weight: FontWeight.w700,
-                            color: CineMarketplaceVisuals.goldLight,
+                            color: CineMarketplaceVisuals.of(context).goldLight,
                             letterSpacing: 2.8,
                           ),
                         ),
@@ -163,7 +164,8 @@ class TalentProfileShowcase extends StatelessWidget {
                                     : name,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: CineMarketplaceVisuals.archivo(
+                                style:
+                                    CineMarketplaceVisuals.of(context).archivo(
                                   size: compact ? 35 : 48,
                                   weight: FontWeight.w800,
                                   height: 0.98,
@@ -175,7 +177,7 @@ class TalentProfileShowcase extends StatelessWidget {
                               const SizedBox(width: 9),
                               Icon(
                                 Icons.verified_rounded,
-                                color: CineMarketplaceVisuals.gold,
+                                color: CineMarketplaceVisuals.of(context).gold,
                                 size: compact ? 20 : 24,
                               ),
                             ],
@@ -188,9 +190,9 @@ class TalentProfileShowcase extends StatelessWidget {
                               : summary,
                           maxLines: compact ? 3 : 2,
                           overflow: TextOverflow.ellipsis,
-                          style: CineMarketplaceVisuals.archivo(
+                          style: CineMarketplaceVisuals.of(context).archivo(
                             size: compact ? 12.5 : 14,
-                            color: CineMarketplaceVisuals.secondary,
+                            color: CineMarketplaceVisuals.of(context).secondary,
                             height: 1.4,
                           ),
                         ),
@@ -289,10 +291,10 @@ class TalentProfileGallery extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: CineMarketplaceVisuals.archivo(
+                style: CineMarketplaceVisuals.of(context).archivo(
                   size: 12,
                   weight: FontWeight.w700,
-                  color: CineMarketplaceVisuals.gold,
+                  color: CineMarketplaceVisuals.of(context).gold,
                   letterSpacing: 3,
                 ),
               ),
@@ -307,15 +309,15 @@ class TalentProfileGallery extends StatelessWidget {
                   children: [
                     Text(
                       'More',
-                      style: CineMarketplaceVisuals.archivo(
+                      style: CineMarketplaceVisuals.of(context).archivo(
                         size: 11,
-                        color: CineMarketplaceVisuals.gold,
+                        color: CineMarketplaceVisuals.of(context).gold,
                         weight: FontWeight.w700,
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right_rounded,
-                      color: CineMarketplaceVisuals.gold,
+                      color: CineMarketplaceVisuals.of(context).gold,
                       size: 18,
                     ),
                   ],
@@ -327,9 +329,9 @@ class TalentProfileGallery extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           'Open a frame to review the work at full size.',
-          style: CineMarketplaceVisuals.archivo(
+          style: CineMarketplaceVisuals.of(context).archivo(
             size: 12,
-            color: CineMarketplaceVisuals.muted,
+            color: CineMarketplaceVisuals.of(context).muted,
           ),
         ),
         const SizedBox(height: 12),
@@ -374,9 +376,9 @@ class _GalleryStripTile extends StatelessWidget {
         width: 210,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: CineMarketplaceVisuals.surface,
+          color: CineMarketplaceVisuals.of(context).surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: CineMarketplaceVisuals.border),
+          border: Border.all(color: CineMarketplaceVisuals.of(context).border),
         ),
         child: Stack(
           fit: StackFit.expand,
@@ -413,9 +415,9 @@ class _GalleryStripTile extends StatelessWidget {
                 item.label,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: CineMarketplaceVisuals.archivo(
+                style: CineMarketplaceVisuals.of(context).archivo(
                   size: 12,
-                  color: CineMarketplaceVisuals.ink,
+                  color: CineMarketplaceVisuals.of(context).ink,
                   weight: FontWeight.w700,
                 ),
               ),
@@ -486,7 +488,7 @@ class TalentGalleryViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CineMarketplaceVisuals.background,
+      backgroundColor: CineMarketplaceVisuals.of(context).background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,9 +499,9 @@ class TalentGalleryViewer extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.arrow_back_rounded,
-                      color: CineMarketplaceVisuals.ink,
+                      color: CineMarketplaceVisuals.of(context).ink,
                     ),
                   ),
                   const SizedBox(width: 2),
@@ -512,16 +514,16 @@ class TalentGalleryViewer extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: CineMarketplaceVisuals.archivo(
+                          style: CineMarketplaceVisuals.of(context).archivo(
                             size: 20,
                             weight: FontWeight.w800,
                           ),
                         ),
                         Text(
                           countLabel.toUpperCase(),
-                          style: CineMarketplaceVisuals.archivo(
+                          style: CineMarketplaceVisuals.of(context).archivo(
                             size: 9.5,
-                            color: CineMarketplaceVisuals.gold,
+                            color: CineMarketplaceVisuals.of(context).gold,
                             letterSpacing: 3,
                             weight: FontWeight.w700,
                           ),
@@ -643,7 +645,8 @@ class _GalleryTile extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: CineMarketplaceVisuals.border),
+            border:
+                Border.all(color: CineMarketplaceVisuals.of(context).border),
           ),
           child: Stack(
             fit: StackFit.expand,
@@ -688,9 +691,9 @@ class _GalleryTile extends StatelessWidget {
                     item.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: CineMarketplaceVisuals.archivo(
+                    style: CineMarketplaceVisuals.of(context).archivo(
                       size: 11,
-                      color: CineMarketplaceVisuals.ink,
+                      color: CineMarketplaceVisuals.of(context).ink,
                       weight: FontWeight.w700,
                     ),
                   ),
@@ -747,19 +750,24 @@ class _ShowcaseImage extends StatelessWidget {
         gradient: RadialGradient(
           center: const Alignment(-0.3, -0.6),
           radius: 1.1,
-          colors: const [
-            Color(0xFF44392A),
-            CineMarketplaceVisuals.background,
+          colors: [
+            Color.lerp(
+              CineMarketplaceVisuals.of(context).gold,
+              CineMarketplaceVisuals.of(context).background,
+              CineMarketplaceVisuals.of(context).isLight ? 0.72 : 0.45,
+            )!,
+            CineMarketplaceVisuals.of(context).background,
           ],
         ),
       ),
       child: Center(
         child: Text(
           fallbackLabel,
-          style: CineMarketplaceVisuals.archivo(
+          style: CineMarketplaceVisuals.of(context).archivo(
             size: 58,
             weight: FontWeight.w800,
-            color: CineMarketplaceVisuals.ink.withValues(alpha: 0.86),
+            color:
+                CineMarketplaceVisuals.of(context).ink.withValues(alpha: 0.86),
           ),
         ),
       ),
@@ -792,19 +800,13 @@ class _ShowcasePill extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 230),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        gradient: emphasized
-            ? const LinearGradient(
-                colors: [
-                  CineMarketplaceVisuals.gold,
-                  CineMarketplaceVisuals.goldLight,
-                ],
-              )
-            : null,
+        gradient:
+            emphasized ? CineMarketplaceVisuals.of(context).goldGradient : null,
         color: emphasized ? null : Colors.black.withValues(alpha: 0.52),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: emphasized
-              ? CineMarketplaceVisuals.goldLight
+              ? CineMarketplaceVisuals.of(context).goldLight
               : Colors.white.withValues(alpha: 0.18),
         ),
       ),
@@ -815,8 +817,8 @@ class _ShowcasePill extends StatelessWidget {
             icon,
             size: 15,
             color: emphasized
-                ? const Color(0xFF17130A)
-                : CineMarketplaceVisuals.ink,
+                ? CineMarketplaceVisuals.of(context).onGold
+                : CineMarketplaceVisuals.of(context).ink,
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -824,11 +826,11 @@ class _ShowcasePill extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: CineMarketplaceVisuals.archivo(
+              style: CineMarketplaceVisuals.of(context).archivo(
                 size: 11,
                 color: emphasized
-                    ? const Color(0xFF17130A)
-                    : CineMarketplaceVisuals.ink,
+                    ? CineMarketplaceVisuals.of(context).onGold
+                    : CineMarketplaceVisuals.of(context).ink,
                 weight: FontWeight.w700,
               ),
             ),

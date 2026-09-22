@@ -139,26 +139,26 @@ class _BR09BrandMarketplaceScreenState
         30,
       ),
       decoration: BoxDecoration(
-        color: CineMarketplaceVisuals.background,
+        color: CineMarketplaceVisuals.of(context).background,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: CineMarketplaceVisuals.border),
+        border: Border.all(color: CineMarketplaceVisuals.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'CINECONNECT',
-            style: CineMarketplaceVisuals.archivo(
+            style: CineMarketplaceVisuals.of(context).archivo(
               size: compact ? 10.5 : 12,
               weight: FontWeight.w700,
-              color: CineMarketplaceVisuals.gold,
+              color: CineMarketplaceVisuals.of(context).gold,
               letterSpacing: compact ? 3.2 : 4.5,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Marketplace',
-            style: CineMarketplaceVisuals.archivo(
+            style: CineMarketplaceVisuals.of(context).archivo(
               size: compact ? 37 : 54,
               weight: FontWeight.w700,
               height: 0.98,
@@ -187,31 +187,31 @@ class _BR09BrandMarketplaceScreenState
                   key: ValueKey(_projectId),
                   initialValue: _projectId,
                   isExpanded: true,
-                  dropdownColor: CineMarketplaceVisuals.surface,
-                  style: CineMarketplaceVisuals.archivo(size: 13),
-                  iconEnabledColor: CineMarketplaceVisuals.gold,
+                  dropdownColor: CineMarketplaceVisuals.of(context).surface,
+                  style: CineMarketplaceVisuals.of(context).archivo(size: 13),
+                  iconEnabledColor: CineMarketplaceVisuals.of(context).gold,
                   decoration: InputDecoration(
                     labelText: 'Working project',
-                    labelStyle: CineMarketplaceVisuals.archivo(
+                    labelStyle: CineMarketplaceVisuals.of(context).archivo(
                       size: 11.5,
-                      color: CineMarketplaceVisuals.muted,
+                      color: CineMarketplaceVisuals.of(context).muted,
                     ),
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.movie_creation_outlined,
-                      color: CineMarketplaceVisuals.gold,
+                      color: CineMarketplaceVisuals.of(context).gold,
                     ),
                     filled: true,
-                    fillColor: CineMarketplaceVisuals.surface,
+                    fillColor: CineMarketplaceVisuals.of(context).surface,
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: CineMarketplaceVisuals.border,
+                      borderSide: BorderSide(
+                        color: CineMarketplaceVisuals.of(context).border,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: CineMarketplaceVisuals.gold,
+                      borderSide: BorderSide(
+                        color: CineMarketplaceVisuals.of(context).gold,
                       ),
                     ),
                   ),
@@ -499,30 +499,32 @@ class _BrandMarketplaceSearch extends StatelessWidget {
             height: 56,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: CineMarketplaceVisuals.surface,
+              color: CineMarketplaceVisuals.of(context).surface,
               borderRadius: BorderRadius.circular(17),
-              border: Border.all(color: CineMarketplaceVisuals.border),
+              border:
+                  Border.all(color: CineMarketplaceVisuals.of(context).border),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.search_rounded,
                   size: 21,
-                  color: CineMarketplaceVisuals.muted,
+                  color: CineMarketplaceVisuals.of(context).muted,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     onChanged: onChanged,
-                    cursorColor: CineMarketplaceVisuals.gold,
-                    style: CineMarketplaceVisuals.archivo(size: 13.5),
+                    cursorColor: CineMarketplaceVisuals.of(context).gold,
+                    style:
+                        CineMarketplaceVisuals.of(context).archivo(size: 13.5),
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       hintText: 'Search name, skill, city or equipment…',
-                      hintStyle: CineMarketplaceVisuals.archivo(
+                      hintStyle: CineMarketplaceVisuals.of(context).archivo(
                         size: 13.5,
-                        color: CineMarketplaceVisuals.muted,
+                        color: CineMarketplaceVisuals.of(context).muted,
                       ),
                     ),
                   ),
@@ -535,7 +537,7 @@ class _BrandMarketplaceSearch extends StatelessWidget {
         Tooltip(
           message: 'Refresh marketplace',
           child: Material(
-            color: CineMarketplaceVisuals.gold,
+            color: CineMarketplaceVisuals.of(context).gold,
             borderRadius: BorderRadius.circular(17),
             child: InkWell(
               onTap: onRefresh,
@@ -544,16 +546,16 @@ class _BrandMarketplaceSearch extends StatelessWidget {
                 width: 56,
                 height: 56,
                 child: onRefresh == null
-                    ? const Padding(
-                        padding: EdgeInsets.all(18),
+                    ? Padding(
+                        padding: const EdgeInsets.all(18),
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Color(0xFF17130A),
+                          color: CineMarketplaceVisuals.of(context).onGold,
                         ),
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.refresh_rounded,
-                        color: Color(0xFF17130A),
+                        color: CineMarketplaceVisuals.of(context).onGold,
                         size: 21,
                       ),
               ),
@@ -580,8 +582,8 @@ class _BrandMarketplaceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: active
-          ? CineMarketplaceVisuals.gold
-          : Colors.white.withValues(alpha: 0.035),
+          ? CineMarketplaceVisuals.of(context).gold
+          : CineMarketplaceVisuals.of(context).surface,
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -594,18 +596,18 @@ class _BrandMarketplaceChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: active
-                  ? CineMarketplaceVisuals.gold
-                  : CineMarketplaceVisuals.border,
+                  ? CineMarketplaceVisuals.of(context).gold
+                  : CineMarketplaceVisuals.of(context).border,
             ),
           ),
           child: Text(
             label,
-            style: CineMarketplaceVisuals.archivo(
+            style: CineMarketplaceVisuals.of(context).archivo(
               size: 11.5,
               weight: active ? FontWeight.w700 : FontWeight.w500,
               color: active
-                  ? const Color(0xFF17130A)
-                  : CineMarketplaceVisuals.secondary,
+                  ? CineMarketplaceVisuals.of(context).onGold
+                  : CineMarketplaceVisuals.of(context).secondary,
             ),
           ),
         ),

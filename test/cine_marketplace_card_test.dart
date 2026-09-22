@@ -1,9 +1,54 @@
 import 'package:cineconnect/core/theme/app_theme.dart';
+import 'package:cineconnect/core/theme/app_color_scheme.dart';
 import 'package:cineconnect/shared/widgets/cine_marketplace_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('card surface follows the active application theme',
+      (tester) async {
+    Widget build(ThemeData theme) => MaterialApp(
+          theme: theme,
+          home: const Scaffold(
+            body: SizedBox(
+              width: 600,
+              child: CineMarketplaceCard(
+                title: 'Theme-aware listing',
+                kind: 'actor',
+                category: 'Actors',
+                subtitle: 'Actor',
+                summary: 'Connected marketplace profile.',
+                city: 'Lahore',
+                rateLabel: 'PKR 100k',
+                verificationStatus: 'approved',
+                imageUrl: null,
+                tags: [],
+                available: true,
+                rating: 4.8,
+                trustScore: 90,
+                busy: false,
+                featured: false,
+              ),
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(build(AppTheme.light));
+    var surface = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('cine-marketplace-card-surface')),
+    );
+    expect((surface.decoration! as BoxDecoration).color,
+        CineThemeColors.light.card);
+
+    await tester.pumpWidget(build(AppTheme.dark));
+    await tester.pumpAndSettle();
+    surface = tester.widget<AnimatedContainer>(
+      find.byKey(const ValueKey('cine-marketplace-card-surface')),
+    );
+    expect((surface.decoration! as BoxDecoration).color,
+        CineThemeColors.dark.card);
+  });
+
   testWidgets('renders live marketplace fields and connected actions',
       (tester) async {
     var shortlistCalls = 0;

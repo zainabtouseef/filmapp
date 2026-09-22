@@ -1,31 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Exact visual tokens from the supplied CineConnect Flow Reel HTML.
+import '../../core/theme/app_color_scheme.dart';
+
+/// Theme-aware visual tokens derived from the supplied CineConnect Flow Reel.
+///
+/// The spacing, type scale, gold accents and motion stay consistent while the
+/// surfaces and contrast follow the application's active light or dark theme.
 class CineMarketplaceVisuals {
   CineMarketplaceVisuals._();
 
-  static const background = Color(0xFF09090A);
-  static const surface = Color(0xFF141417);
-  static const raisedSurface = Color(0xFF1B1B1F);
-  static const ink = Color(0xFFF6F2EA);
-  static const secondary = Color(0xFFB6B0A6);
-  static const muted = Color(0xFF8C877E);
-  static const gold = Color(0xFFC49A3C);
-  static const goldLight = Color(0xFFF1DDA8);
-  static const border = Color(0x17FFFFFF);
+  static CineMarketplacePalette of(BuildContext context) {
+    return CineMarketplacePalette(context.appColors);
+  }
+}
 
-  static TextStyle archivo({
+@immutable
+class CineMarketplacePalette {
+  final CineThemeColors _app;
+
+  const CineMarketplacePalette(this._app);
+
+  bool get isLight => _app.isLight;
+  Color get background => _app.background;
+  Color get surface => _app.card;
+  Color get raisedSurface => _app.elevatedSurface;
+  Color get ink => _app.textPrimary;
+  Color get secondary => _app.textSecondary;
+  Color get muted => _app.textTertiary;
+  Color get gold => _app.goldMid;
+  Color get goldLight => _app.goldLight;
+  Color get border => _app.border;
+  Color get onGold => _app.onGold;
+  Color get shadow => _app.shadow;
+
+  LinearGradient get goldGradient => _app.goldGradient;
+
+  TextStyle archivo({
     double? size,
     FontWeight weight = FontWeight.w400,
-    Color color = ink,
+    Color? color,
     double? height,
     double? letterSpacing,
   }) {
     return GoogleFonts.archivo(
       fontSize: size,
       fontWeight: weight,
-      color: color,
+      color: color ?? ink,
       height: height,
       letterSpacing: letterSpacing,
     );
@@ -126,21 +147,25 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
               child: AnimatedContainer(
+                key: const ValueKey('cine-marketplace-card-surface'),
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: CineMarketplaceVisuals.surface,
+                  color: CineMarketplaceVisuals.of(context).surface,
                   borderRadius: BorderRadius.circular(compact ? 18 : 26),
                   border: Border.all(
                     color: active || _shortlisted
-                        ? CineMarketplaceVisuals.gold.withValues(alpha: 0.55)
-                        : CineMarketplaceVisuals.border,
+                        ? CineMarketplaceVisuals.of(context)
+                            .gold
+                            .withValues(alpha: 0.55)
+                        : CineMarketplaceVisuals.of(context).border,
                   ),
                   boxShadow: active
                       ? [
                           BoxShadow(
-                            color: CineMarketplaceVisuals.gold
+                            color: CineMarketplaceVisuals.of(context)
+                                .gold
                                 .withValues(alpha: 0.10),
                             blurRadius: 28,
                             offset: const Offset(0, 12),
@@ -163,8 +188,9 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
                         onTapUp: widget.busy
                             ? null
                             : (_) => setState(() => _pressed = false),
-                        splashColor:
-                            CineMarketplaceVisuals.gold.withValues(alpha: 0.08),
+                        splashColor: CineMarketplaceVisuals.of(context)
+                            .gold
+                            .withValues(alpha: 0.08),
                         highlightColor: Colors.transparent,
                         child: Padding(
                           padding: EdgeInsets.all(compact ? 10 : 14),
@@ -206,8 +232,10 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
                                     child: Icon(
                                       Icons.chevron_right_rounded,
                                       color: active
-                                          ? CineMarketplaceVisuals.gold
-                                          : const Color(0xFF5E5A54),
+                                          ? CineMarketplaceVisuals.of(context)
+                                              .gold
+                                          : CineMarketplaceVisuals.of(context)
+                                              .muted,
                                       size: compact ? 23 : 29,
                                     ),
                                   ),
@@ -285,8 +313,8 @@ class _MarketplaceIdentity extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.available
-                    ? CineMarketplaceVisuals.gold
-                    : CineMarketplaceVisuals.muted,
+                    ? CineMarketplaceVisuals.of(context).gold
+                    : CineMarketplaceVisuals.of(context).muted,
               ),
             ),
             const SizedBox(width: 7),
@@ -295,7 +323,7 @@ class _MarketplaceIdentity extends StatelessWidget {
                 widget.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: CineMarketplaceVisuals.archivo(
+                style: CineMarketplaceVisuals.of(context).archivo(
                   size: compact ? 17 : 24,
                   weight: FontWeight.w700,
                   height: 1.06,
@@ -306,7 +334,7 @@ class _MarketplaceIdentity extends StatelessWidget {
               const SizedBox(width: 5),
               Icon(
                 Icons.verified_rounded,
-                color: CineMarketplaceVisuals.gold,
+                color: CineMarketplaceVisuals.of(context).gold,
                 size: compact ? 15 : 18,
               ),
             ],
@@ -317,9 +345,9 @@ class _MarketplaceIdentity extends StatelessWidget {
           role,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: CineMarketplaceVisuals.archivo(
+          style: CineMarketplaceVisuals.of(context).archivo(
             size: compact ? 12.5 : 16,
-            color: CineMarketplaceVisuals.secondary,
+            color: CineMarketplaceVisuals.of(context).secondary,
           ),
         ),
         SizedBox(height: compact ? 4 : 6),
@@ -329,9 +357,9 @@ class _MarketplaceIdentity extends StatelessWidget {
               : widget.summary.trim(),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: CineMarketplaceVisuals.archivo(
+          style: CineMarketplaceVisuals.of(context).archivo(
             size: compact ? 10.5 : 13,
-            color: CineMarketplaceVisuals.muted,
+            color: CineMarketplaceVisuals.of(context).muted,
           ),
         ),
         SizedBox(height: compact ? 7 : 10),
@@ -391,8 +419,9 @@ class _MetaDatum extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        gold ? CineMarketplaceVisuals.gold : CineMarketplaceVisuals.muted;
+    final color = gold
+        ? CineMarketplaceVisuals.of(context).gold
+        : CineMarketplaceVisuals.of(context).muted;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -400,7 +429,7 @@ class _MetaDatum extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: CineMarketplaceVisuals.archivo(
+          style: CineMarketplaceVisuals.of(context).archivo(
             size: compact ? 9.5 : 11.5,
             weight: gold ? FontWeight.w600 : FontWeight.w500,
             color: color,
@@ -433,8 +462,9 @@ class _MarketplaceActionRail extends StatelessWidget {
         compact ? 10 : 14,
         compact ? 10 : 14,
       ),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: CineMarketplaceVisuals.border)),
+      decoration: BoxDecoration(
+        border: Border(
+            top: BorderSide(color: CineMarketplaceVisuals.of(context).border)),
       ),
       child: Row(
         children: [
@@ -443,20 +473,14 @@ class _MarketplaceActionRail extends StatelessWidget {
               onPressed: onProfile,
               icon: Icon(Icons.person_search_outlined, size: compact ? 15 : 17),
               label: const Text('View profile'),
-              style: _outlinedStyle(compact),
+              style: _outlinedStyle(context, compact),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    CineMarketplaceVisuals.gold,
-                    CineMarketplaceVisuals.goldLight,
-                    CineMarketplaceVisuals.gold,
-                  ],
-                ),
+                gradient: CineMarketplaceVisuals.of(context).goldGradient,
                 borderRadius: BorderRadius.circular(compact ? 12 : 15),
               ),
               child: FilledButton.icon(
@@ -464,7 +488,7 @@ class _MarketplaceActionRail extends StatelessWidget {
                 icon: Icon(Icons.chat_bubble_outline_rounded,
                     size: compact ? 14 : 17),
                 label: Text(requestLabel),
-                style: _filledStyle(compact),
+                style: _filledStyle(context, compact),
               ),
             ),
           ),
@@ -473,29 +497,31 @@ class _MarketplaceActionRail extends StatelessWidget {
     );
   }
 
-  ButtonStyle _outlinedStyle(bool compact) => OutlinedButton.styleFrom(
-        foregroundColor: CineMarketplaceVisuals.gold,
-        side: const BorderSide(color: CineMarketplaceVisuals.gold),
+  ButtonStyle _outlinedStyle(BuildContext context, bool compact) =>
+      OutlinedButton.styleFrom(
+        foregroundColor: CineMarketplaceVisuals.of(context).gold,
+        side: BorderSide(color: CineMarketplaceVisuals.of(context).gold),
         padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(compact ? 12 : 15),
         ),
-        textStyle: CineMarketplaceVisuals.archivo(
+        textStyle: CineMarketplaceVisuals.of(context).archivo(
           size: compact ? 11 : 13,
           weight: FontWeight.w600,
         ),
       );
 
-  ButtonStyle _filledStyle(bool compact) => FilledButton.styleFrom(
+  ButtonStyle _filledStyle(BuildContext context, bool compact) =>
+      FilledButton.styleFrom(
         backgroundColor: Colors.transparent,
         disabledBackgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF12100B),
+        foregroundColor: CineMarketplaceVisuals.of(context).onGold,
         shadowColor: Colors.transparent,
         padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(compact ? 12 : 15),
         ),
-        textStyle: CineMarketplaceVisuals.archivo(
+        textStyle: CineMarketplaceVisuals.of(context).archivo(
           size: compact ? 11 : 13,
           weight: FontWeight.w700,
         ),
@@ -523,26 +549,29 @@ class _ShortlistButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         onPressed: busy ? null : onTap,
         icon: busy
-            ? const SizedBox(
+            ? SizedBox(
                 width: 15,
                 height: 15,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.6,
-                  color: CineMarketplaceVisuals.gold,
+                  color: CineMarketplaceVisuals.of(context).gold,
                 ),
               )
             : Icon(
                 active ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                color: CineMarketplaceVisuals.gold,
+                color: CineMarketplaceVisuals.of(context).gold,
                 size: 20,
               ),
         style: IconButton.styleFrom(
           side: BorderSide(
-            color: CineMarketplaceVisuals.gold.withValues(alpha: 0.45),
+            color:
+                CineMarketplaceVisuals.of(context).gold.withValues(alpha: 0.45),
           ),
           backgroundColor: active
-              ? CineMarketplaceVisuals.gold.withValues(alpha: 0.12)
-              : CineMarketplaceVisuals.background.withValues(alpha: 0.55),
+              ? CineMarketplaceVisuals.of(context).gold.withValues(alpha: 0.12)
+              : CineMarketplaceVisuals.of(context)
+                  .background
+                  .withValues(alpha: 0.55),
         ),
       ),
     );
@@ -692,7 +721,7 @@ class CineMarketplaceMediaFrame extends StatelessWidget {
     final framed = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: CineMarketplaceVisuals.border),
+        border: Border.all(color: CineMarketplaceVisuals.of(context).border),
       ),
       child: media,
     );
@@ -786,5 +815,5 @@ IconData cineMarketplaceKindIcon(String kind) {
 }
 
 Color cineMarketplaceKindColor(BuildContext context, String kind) {
-  return CineMarketplaceVisuals.gold;
+  return CineMarketplaceVisuals.of(context).gold;
 }
