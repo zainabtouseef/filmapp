@@ -131,16 +131,10 @@ class _DashboardBody extends StatelessWidget {
         .where((inspection) => inspection.status != 'confirmed')
         .toList();
     final recentBookings = data.bookings.take(3).toList();
+    // "Inventory" is dropped here — it's already shown as a hero fact in
+    // the `ProviderWorkspaceHero` above, so repeating it as a tile too was
+    // redundant.
     final metrics = [
-      MediaMetric(
-        label: 'Inventory',
-        value: '${data.items.length}',
-        delta:
-            '${data.items.where((item) => item.status == 'available').length} available',
-        icon: Icons.videocam_outlined,
-        tone: MediaTone.blue,
-        route: MediaEquipmentRoutes.inventory,
-      ),
       MediaMetric(
         label: 'Requests',
         value: '${openRequests.length}',

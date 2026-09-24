@@ -292,18 +292,12 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
               title: 'Influencer marketplace pricing',
             ),
             const SizedBox(height: 12),
-            _QuickStatsRow(
-              followers: followers,
-              packagesCount: packages.length,
-              campaignOffers: activeCampaigns.length,
-              secured: secured,
-            ),
-            const SizedBox(height: 14),
             DPTwoColumn(
               left: _HeroMediaKitCard(
                 profile: data.profile,
                 talent: data.talent,
                 secured: secured,
+                campaignOffers: activeCampaigns.length,
               ),
               right: _NextBestActions(
                 hasInfluencerCategory:
@@ -1049,86 +1043,17 @@ class InfluencerAnalyticsScreen extends StatelessWidget {
   }
 }
 
-class _QuickStatsRow extends StatelessWidget {
-  final int followers;
-  final int packagesCount;
-  final int campaignOffers;
-  final int secured;
-
-  const _QuickStatsRow({
-    required this.followers,
-    required this.packagesCount,
-    required this.campaignOffers,
-    required this.secured,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tiles = [
-      PortalQuickStatTile(
-        icon: Icons.groups_2_outlined,
-        value: followers == 0 ? 'Add' : _shortNumber(followers),
-        label: 'Audience',
-        delta: 'Live now',
-        tone: CineTone.premium,
-        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
-      ),
-      PortalQuickStatTile(
-        icon: Icons.sell_outlined,
-        value: '$packagesCount',
-        label: 'Packages',
-        delta: 'Saved profile',
-        tone: CineTone.information,
-        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.packages),
-      ),
-      PortalQuickStatTile(
-        icon: Icons.campaign_outlined,
-        value: '$campaignOffers',
-        label: 'Campaign offers',
-        delta: 'Live inbox',
-        tone: CineTone.warning,
-        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.campaigns),
-      ),
-      PortalQuickStatTile(
-        icon: Icons.verified_outlined,
-        value: '$secured',
-        label: 'Secured work',
-        delta: 'This cycle',
-        tone: CineTone.positive,
-        onTap: () => Navigator.pushNamed(context, InfluencerRoutes.analytics),
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 9.0;
-        final columns = constraints.maxWidth < 360
-            ? 1
-            : constraints.maxWidth < 700
-                ? 2
-                : 4;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final tile in tiles) SizedBox(width: width, child: tile),
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _HeroMediaKitCard extends StatelessWidget {
   final UserProfile profile;
   final TalentProfile talent;
   final int secured;
+  final int campaignOffers;
 
   const _HeroMediaKitCard({
     required this.profile,
     required this.talent,
     required this.secured,
+    required this.campaignOffers,
   });
 
   @override
@@ -1150,6 +1075,10 @@ class _HeroMediaKitCard extends StatelessWidget {
         PortalHeroStat(
           value: '$secured',
           label: 'Secured work',
+        ),
+        PortalHeroStat(
+          value: '$campaignOffers',
+          label: 'Campaign offers',
         ),
       ],
       ctaLabel: 'Improve media kit',

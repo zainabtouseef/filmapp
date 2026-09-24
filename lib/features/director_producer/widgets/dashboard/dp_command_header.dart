@@ -48,6 +48,10 @@ class DPCommandHeader extends StatelessWidget {
             ),
             label: 'Committed',
           ),
+          PortalHeroStat(
+            value: '${summary.securedBookings}',
+            label: 'Bookings secured',
+          ),
         ],
         ctaLabel: 'New Project',
         onCta: () => Navigator.pushNamed(

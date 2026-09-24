@@ -180,15 +180,9 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         .where((item) =>
             item.status == 'submitted' || item.status == 'revision_requested')
         .length;
+    // "Live opportunities" now lives in the hero's stat strip, so it's
+    // dropped here to avoid duplicating it.
     final metrics = [
-      BrandMetric(
-        label: 'Live opportunities',
-        value: '$openOpportunities',
-        delta: '${_opportunities.length} total briefs',
-        icon: Icons.campaign_outlined,
-        tone: BrandTone.gold,
-        route: BrandSponsorRoutes.composer,
-      ),
       BrandMetric(
         label: 'Applications',
         value: '${_applications.length}',
@@ -219,6 +213,8 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
     final demoProject = isBrandDemoAccount(_auth)
         ? selectBrandDemoProject(_productionDashboard?.projects ?? const [])
         : null;
+    // "Confirmed bookings" and "Committed budget" now live in the hero's
+    // 3-stat strip, so they're dropped here to avoid duplicating them.
     final productionMetrics = [
       BrandMetric(
         label: 'Active projects',
@@ -229,34 +225,12 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         route: BrandSponsorRoutes.projects,
       ),
       BrandMetric(
-        label: 'Confirmed bookings',
-        value: '${production?.securedBookings ?? 0}',
-        delta: 'Accepted and secured resources',
-        icon: Icons.verified_outlined,
-        tone: BrandTone.green,
-        route: BrandSponsorRoutes.bookings,
-      ),
-      BrandMetric(
         label: 'Production actions',
         value: '${production?.attentionCount ?? 0}',
         delta: 'Requests and payments needing attention',
         icon: Icons.priority_high_rounded,
         tone: BrandTone.purple,
         route: BrandSponsorRoutes.bookings,
-      ),
-      BrandMetric(
-        label: 'Committed budget',
-        value: brandMoney(
-          production?.committedBudgetMinor,
-          currency: production?.currency ?? 'PKR',
-        ),
-        delta: brandMoney(
-          production?.pendingPaymentMinor,
-          currency: production?.currency ?? 'PKR',
-        ),
-        icon: Icons.account_balance_wallet_outlined,
-        tone: BrandTone.blue,
-        route: BrandSponsorRoutes.payments,
       ),
     ];
     return Column(
@@ -286,6 +260,10 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
               ),
               label: 'Committed budget',
             ),
+            PortalHeroStat(
+              value: '${production?.securedBookings ?? 0}',
+              label: 'Confirmed bookings',
+            ),
           ],
           ctaLabel: 'New opportunity',
           onCta: () =>
@@ -311,9 +289,10 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
           const SizedBox(height: 14),
         ],
-        _BrandQuickStatRow(metrics: productionMetrics),
-        const SizedBox(height: 14),
-        _BrandQuickStatRow(metrics: metrics),
+        // A single combined row (the earlier two rows duplicated two of
+        // these values in the hero's stat strip above; those two moved
+        // up there and the rest are consolidated here).
+        _BrandQuickStatRow(metrics: [...productionMetrics, ...metrics]),
         const SizedBox(height: 14),
         BrandTwoColumn(
           left: BrandSectionCard(

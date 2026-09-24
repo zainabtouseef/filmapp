@@ -112,17 +112,19 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
         const SizedBox(height: 12),
         _OpportunityShortcutStrip(castingFuture: _castingFuture),
         const SizedBox(height: 12),
-        ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Talent Snapshot',
-            icon: Icons.auto_awesome_outlined,
-            actionText: 'Edit profile',
-            onActionTap: () =>
-                Navigator.pushNamed(context, ActorTalentRoutes.profile),
-            selected: _profileFuture == null,
-            child: _TalentSnapshotContent(future: _profileFuture),
-          ),
-          right: _BookingCalendarSection(future: _opportunitiesFuture),
+        ActorSectionCard(
+          title: 'Talent Snapshot',
+          icon: Icons.auto_awesome_outlined,
+          actionText: 'Edit profile',
+          onActionTap: () =>
+              Navigator.pushNamed(context, ActorTalentRoutes.profile),
+          selected: _profileFuture == null,
+          child: _TalentSnapshotContent(future: _profileFuture),
+        ),
+        const SizedBox(height: 12),
+        _TalentWidgetGridSection(
+          profileFuture: _profileFuture,
+          opportunitiesFuture: _opportunitiesFuture,
         ),
         const SizedBox(height: 12),
         const _TalentKpiStrip(),
@@ -279,6 +281,10 @@ class _TalentHeroCard extends StatelessWidget {
         PortalHeroStat(
           value: '$awaitingResponse',
           label: 'Awaiting your response',
+        ),
+        PortalHeroStat(
+          value: '${upcoming.length}',
+          label: 'Upcoming bookings',
         ),
       ],
       ctaLabel: ctaLabel,
@@ -638,19 +644,7 @@ class _TalentSnapshotContent extends StatelessWidget {
           );
         }
         final data = snapshot.data!;
-        final completeness = _profileCompleteness(
-          data.talentProfile,
-          data.userProfile,
-        );
-        return ActorTwoColumn(
-          left: _IdentityCard(snapshot: data),
-          right: PortalRingMetricCard(
-            progress: completeness / 100,
-            value: '$completeness%',
-            label: 'Profile completeness',
-            tone: completeness >= 80 ? CineTone.positive : CineTone.premium,
-          ),
-        );
+        return _IdentityCard(snapshot: data);
       },
     );
   }
@@ -740,8 +734,12 @@ class _IdentityCard extends StatelessWidget {
 /// actions sections, no fabricated sample events.
 class _BookingCalendarSection extends StatefulWidget {
   final Future<List<Booking>>? future;
+  final bool decorated;
 
-  const _BookingCalendarSection({required this.future});
+  const _BookingCalendarSection({
+    required this.future,
+    this.decorated = true,
+  });
 
   @override
   State<_BookingCalendarSection> createState() =>
@@ -830,6 +828,77 @@ class _BookingCalendarSectionState extends State<_BookingCalendarSection> {
       days: days,
       onPrevMonth: () => _shiftMonth(-1),
       onNextMonth: () => _shiftMonth(1),
+      decorated: widget.decorated,
+    );
+  }
+}
+
+/// macOS-widget-style grid: a live clock, a profile-completeness ring, and
+/// the booking calendar (real `Booking.startAt` dates) — all frosted-glass,
+/// fixed-size widgets that cascade in together, replacing the previous
+/// ring-metric-card + calendar layout.
+class _TalentWidgetGridSection extends StatelessWidget {
+  final Future<_TalentProfileSnapshot>? profileFuture;
+  final Future<List<Booking>>? opportunitiesFuture;
+
+  const _TalentWidgetGridSection({
+    required this.profileFuture,
+    required this.opportunitiesFuture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PortalStaggeredReveal(
+      children: [
+        const PortalLiveClockWidget(),
+        _ProfileCompletenessRing(future: profileFuture),
+        PortalGlassWidgetCard(
+          width: 340,
+          child: _BookingCalendarSection(
+            future: opportunitiesFuture,
+            decorated: false,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileCompletenessRing extends StatelessWidget {
+  final Future<_TalentProfileSnapshot>? future;
+
+  const _ProfileCompletenessRing({required this.future});
+
+  @override
+  Widget build(BuildContext context) {
+    if (future == null) {
+      return const PortalGlassRingWidget(
+        progress: 0,
+        value: '—',
+        label: 'Profile\ncompleteness',
+      );
+    }
+    return FutureBuilder<_TalentProfileSnapshot>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            !snapshot.hasData) {
+          return const PortalGlassRingWidget(
+            progress: 0,
+            value: '—',
+            label: 'Profile\ncompleteness',
+          );
+        }
+        final data = snapshot.data!;
+        final completeness =
+            _profileCompleteness(data.talentProfile, data.userProfile);
+        return PortalGlassRingWidget(
+          progress: completeness / 100,
+          value: '$completeness%',
+          label: 'Profile\ncompleteness',
+          tone: completeness >= 80 ? CineTone.positive : CineTone.premium,
+        );
+      },
     );
   }
 }
@@ -879,14 +948,10 @@ class _TalentKpiStripState extends State<_TalentKpiStrip> {
           );
         }
         final data = snapshot.data!;
+        // "Pending offers" is dropped here — it's a subset of the hero's
+        // own "Awaiting your response" figure (auditions + pending offers),
+        // so keeping both would just show overlapping counts.
         final tiles = [
-          PortalQuickStatTile(
-            icon: Icons.handshake_outlined,
-            value: '${data.pendingOffers}',
-            label: 'Pending offers',
-            delta: 'Live count',
-            tone: CineTone.information,
-          ),
           PortalQuickStatTile(
             icon: Icons.lock_outline,
             value: CineFormat.currency(
@@ -924,7 +989,7 @@ class _TalentKpiStripState extends State<_TalentKpiStrip> {
                 ? 1
                 : constraints.maxWidth < 700
                     ? 2
-                    : 4;
+                    : 3;
             final width =
                 (constraints.maxWidth - gap * (columns - 1)) / columns;
             return Wrap(

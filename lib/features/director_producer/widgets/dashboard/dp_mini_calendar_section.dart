@@ -24,8 +24,13 @@ const _monthNames = [
 /// no fabricated/sample data.
 class DPMiniCalendarSection extends StatefulWidget {
   final DirectorDashboard dashboard;
+  final bool decorated;
 
-  const DPMiniCalendarSection({super.key, required this.dashboard});
+  const DPMiniCalendarSection({
+    super.key,
+    required this.dashboard,
+    this.decorated = true,
+  });
 
   @override
   State<DPMiniCalendarSection> createState() => _DPMiniCalendarSectionState();
@@ -86,6 +91,7 @@ class _DPMiniCalendarSectionState extends State<DPMiniCalendarSection> {
       days: days,
       onPrevMonth: () => _shiftMonth(-1),
       onNextMonth: () => _shiftMonth(1),
+      decorated: widget.decorated,
     );
   }
 }

@@ -71,7 +71,13 @@ void main() {
     setViewport(tester, size: const Size(390, 844));
 
     await tester.pumpWidget(actorApp(route: ActorTalentRoutes.dashboard));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    // Bounded pumps rather than pumpAndSettle(): the dashboard now carries
+    // intentionally continuous decorative motion (the hero's rotating
+    // ring, the live clock widget), which never lets pumpAndSettle's
+    // "no more scheduled frames" condition resolve — the same reason
+    // every other test in this file uses a fixed-duration pump.
+    await tester.pump(const Duration(milliseconds: 500));
     final menuButton = tester.widget<InkWell>(
       find.descendant(
         of: find.byTooltip('Menu'),
@@ -79,7 +85,8 @@ void main() {
       ),
     );
     menuButton.onTap!();
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Portfolio'), findsWidgets);
     expect(find.text('Contracts'), findsOneWidget);

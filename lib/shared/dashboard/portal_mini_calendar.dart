@@ -36,6 +36,11 @@ class PortalMiniCalendar extends StatelessWidget {
   final VoidCallback? onPrevMonth;
   final VoidCallback? onNextMonth;
 
+  /// Wrap in the standard [CardShell] chrome (default). Pass `false` when
+  /// embedding inside another surface (e.g. [PortalGlassWidgetCard]) that
+  /// already provides its own background/border.
+  final bool decorated;
+
   const PortalMiniCalendar({
     super.key,
     required this.monthLabel,
@@ -43,52 +48,60 @@ class PortalMiniCalendar extends StatelessWidget {
     required this.days,
     this.onPrevMonth,
     this.onNextMonth,
+    this.decorated = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return CardShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                monthLabel,
-                style: AppTextStyles.sectionSerifHeading
-                    .copyWith(color: colors.textPrimary),
-              ),
-              const Spacer(),
-              _NavButton(icon: Icons.chevron_left_rounded, onTap: onPrevMonth),
-              const SizedBox(width: 6),
-              _NavButton(icon: Icons.chevron_right_rounded, onTap: onNextMonth),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          GridView.count(
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Text(
+              monthLabel,
+              style: AppTextStyles.sectionSerifHeading
+                  .copyWith(color: colors.textPrimary, fontSize: 15),
+            ),
+            const Spacer(),
+            _NavButton(icon: Icons.chevron_left_rounded, onTap: onPrevMonth),
+            const SizedBox(width: 6),
+            _NavButton(icon: Icons.chevron_right_rounded, onTap: onNextMonth),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // A fixed, compact aspect ratio — GridView.count's implicit 1.0
+        // default made cells scale their HEIGHT off the (often very wide)
+        // parent width, ballooning the whole grid with empty space.
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 2,
-            crossAxisSpacing: 2,
-            children: [
-              for (final name in dayNames)
-                Center(
-                  child: Text(
-                    name,
-                    style: AppTextStyles.micro.copyWith(
-                      color: colors.textTertiary,
-                      fontSize: 9.5,
-                    ),
+            mainAxisSpacing: 1,
+            crossAxisSpacing: 1,
+            childAspectRatio: 1.25,
+          ),
+          children: [
+            for (final name in dayNames)
+              Center(
+                child: Text(
+                  name,
+                  style: AppTextStyles.micro.copyWith(
+                    color: colors.textTertiary,
+                    fontSize: 9,
                   ),
                 ),
-              for (final day in days) _DayCell(day: day),
-            ],
-          ),
-        ],
-      ),
+              ),
+            for (final day in days) _DayCell(day: day),
+          ],
+        ),
+      ],
     );
+    if (!decorated) return body;
+    return CardShell(child: body);
   }
 }
 

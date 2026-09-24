@@ -171,41 +171,14 @@ class _LiveDistributionDashboard extends StatelessWidget {
           stats: [
             PortalHeroStat(value: '$activeProjects', label: 'Active projects'),
             PortalHeroStat(value: _money(revenue), label: 'Revenue'),
+            PortalHeroStat(value: '$audience', label: 'Audience'),
           ],
           ctaLabel: 'Refresh',
           onCta: onRefresh,
         ),
         const SizedBox(height: 12),
-        DistributionResponsiveGrid(
-          children: [
-            PortalQuickStatTile(
-              icon: Icons.movie_filter_outlined,
-              value: '$activeProjects',
-              label: 'Active projects',
-              delta: '${data.projects.length} total',
-              tone: CineTone.information,
-              onTap: () => Navigator.pushNamed(
-                  context, DistributionPartnerRoutes.release),
-            ),
-            PortalQuickStatTile(
-              icon: Icons.people_alt_outlined,
-              value: '$audience',
-              label: 'Audience',
-              delta: 'Live database',
-              tone: CineTone.positive,
-              onTap: () => Navigator.pushNamed(
-                  context, DistributionPartnerRoutes.reports),
-            ),
-            PortalQuickStatTile(
-              icon: Icons.payments_outlined,
-              value: _money(revenue),
-              label: 'Revenue',
-              delta: 'Live database',
-              tone: CineTone.premium,
-              onTap: () => Navigator.pushNamed(
-                  context, DistributionPartnerRoutes.reports),
-            ),
-          ],
+        const PortalStaggeredReveal(
+          children: [PortalLiveClockWidget()],
         ),
         const SizedBox(height: 12),
         DistributionTwoColumn(

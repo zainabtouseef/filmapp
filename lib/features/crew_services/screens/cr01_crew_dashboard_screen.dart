@@ -9,7 +9,6 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/profile/profile_models.dart';
-import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
@@ -149,8 +148,8 @@ class _CR01CrewDashboardScreenState extends State<CR01CrewDashboardScreen> {
 }
 
 /// Live crew workspace body — dashboard-kit composition: hero → quick stat
-/// tiles → (earnings ring + availability calendar) → production pipeline +
-/// action-required rail.
+/// tiles → widget grid (clock + earnings ring + availability calendar) →
+/// production pipeline + action-required rail.
 class _CrewDashboardBody extends StatelessWidget {
   final _CrewDashboardData data;
 
@@ -170,23 +169,10 @@ class _CrewDashboardBody extends StatelessWidget {
         data.contracts.where((contract) => !contract.isSigned).toList();
     final availableDays =
         data.availability.where((entry) => entry.status == 'available').length;
+    // "Requests" now lives in the hero's own stat strip, and "Confirmed"
+    // is an exact duplicate of the hero's "Active projects" figure — both
+    // dropped here to avoid showing the same counts twice.
     final metrics = [
-      CrewMetric(
-        label: 'Requests',
-        value: '${openRequests.length}',
-        delta: openRequests.isEmpty ? 'Inbox clear' : 'Response needed',
-        icon: Icons.move_to_inbox_outlined,
-        tone: CrewTone.gold,
-        route: CrewServicesRoutes.requests,
-      ),
-      CrewMetric(
-        label: 'Confirmed',
-        value: '${confirmed.length}',
-        delta: 'Active projects',
-        icon: Icons.movie_filter_outlined,
-        tone: CrewTone.green,
-        route: CrewServicesRoutes.requests,
-      ),
       CrewMetric(
         label: 'Available',
         value: '$availableDays',
@@ -217,88 +203,85 @@ class _CrewDashboardBody extends StatelessWidget {
     final pipelineBookings =
         {...openRequests, ...confirmed, ...data.bookings}.take(4).toList();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= AppBreakpoints.tablet;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _CrewHero(data: data, confirmedCount: confirmed.length),
-            const SizedBox(height: 14),
-            _CrewQuickStats(metrics: metrics),
-            const SizedBox(height: 14),
-            _CrewMetricsAndCalendar(wide: wide, data: data),
-            const SizedBox(height: 14),
-            CrewTwoColumn(
-              left: CrewSectionCard(
-                title: 'Production Pipeline',
-                icon: Icons.movie_creation_outlined,
-                actionText: 'View all',
-                onActionTap: () =>
-                    Navigator.pushNamed(context, CrewServicesRoutes.requests),
-                selected: pipelineBookings.isNotEmpty,
-                child: pipelineBookings.isEmpty
-                    ? const CoreEmptyState(
-                        icon: Icons.movie_filter_outlined,
-                        title: 'Ready for the next production',
-                        message:
-                            'Open projects and direct crew requests will appear here as soon as a director connects.',
-                      )
-                    : Column(
-                        children: [
-                          for (var i = 0; i < pipelineBookings.length; i++)
-                            _BookingPipelineRow(
-                              booking: pipelineBookings[i],
-                              showDivider: i != 0,
-                            ),
-                        ],
-                      ),
-              ),
-              right: CrewSectionCard(
-                title: 'Action required',
-                icon: Icons.priority_high_rounded,
-                child: Column(
-                  children: [
-                    PortalAttentionRow(
-                      kindLabel: 'Requests',
-                      title: '${openRequests.length} open request(s)',
-                      meta: 'Review project scope, dates and fees',
-                      icon: Icons.move_to_inbox_outlined,
-                      tone: openRequests.isEmpty
-                          ? CineTone.positive
-                          : CineTone.warning,
-                      onTap: () => Navigator.pushNamed(
-                          context, CrewServicesRoutes.requests),
-                    ),
-                    const SizedBox(height: 10),
-                    PortalAttentionRow(
-                      kindLabel: 'Contracts',
-                      title: '${unsigned.length} unsigned contract(s)',
-                      meta: 'Review terms and signature progress',
-                      icon: Icons.draw_outlined,
-                      tone: unsigned.isEmpty
-                          ? CineTone.positive
-                          : CineTone.warning,
-                      onTap: () => Navigator.pushNamed(
-                          context, CrewServicesRoutes.contracts),
-                    ),
-                    const SizedBox(height: 10),
-                    PortalAttentionRow(
-                      kindLabel: 'Opportunities',
-                      title: 'Open opportunities',
-                      meta: 'Pitch your services to active productions',
-                      icon: Icons.travel_explore_outlined,
-                      tone: CineTone.information,
-                      onTap: () => Navigator.pushNamed(
-                          context, CrewServicesRoutes.opportunities),
-                    ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _CrewHero(
+          data: data,
+          confirmedCount: confirmed.length,
+          openRequestsCount: openRequests.length,
+        ),
+        const SizedBox(height: 14),
+        _CrewQuickStats(metrics: metrics),
+        const SizedBox(height: 14),
+        _CrewWidgetGridSection(data: data),
+        const SizedBox(height: 14),
+        CrewTwoColumn(
+          left: CrewSectionCard(
+            title: 'Production Pipeline',
+            icon: Icons.movie_creation_outlined,
+            actionText: 'View all',
+            onActionTap: () =>
+                Navigator.pushNamed(context, CrewServicesRoutes.requests),
+            selected: pipelineBookings.isNotEmpty,
+            child: pipelineBookings.isEmpty
+                ? const CoreEmptyState(
+                    icon: Icons.movie_filter_outlined,
+                    title: 'Ready for the next production',
+                    message:
+                        'Open projects and direct crew requests will appear here as soon as a director connects.',
+                  )
+                : Column(
+                    children: [
+                      for (var i = 0; i < pipelineBookings.length; i++)
+                        _BookingPipelineRow(
+                          booking: pipelineBookings[i],
+                          showDivider: i != 0,
+                        ),
+                    ],
+                  ),
+          ),
+          right: CrewSectionCard(
+            title: 'Action required',
+            icon: Icons.priority_high_rounded,
+            child: Column(
+              children: [
+                PortalAttentionRow(
+                  kindLabel: 'Requests',
+                  title: '${openRequests.length} open request(s)',
+                  meta: 'Review project scope, dates and fees',
+                  icon: Icons.move_to_inbox_outlined,
+                  tone: openRequests.isEmpty
+                      ? CineTone.positive
+                      : CineTone.warning,
+                  onTap: () =>
+                      Navigator.pushNamed(context, CrewServicesRoutes.requests),
                 ),
-              ),
+                const SizedBox(height: 10),
+                PortalAttentionRow(
+                  kindLabel: 'Contracts',
+                  title: '${unsigned.length} unsigned contract(s)',
+                  meta: 'Review terms and signature progress',
+                  icon: Icons.draw_outlined,
+                  tone: unsigned.isEmpty ? CineTone.positive : CineTone.warning,
+                  onTap: () => Navigator.pushNamed(
+                      context, CrewServicesRoutes.contracts),
+                ),
+                const SizedBox(height: 10),
+                PortalAttentionRow(
+                  kindLabel: 'Opportunities',
+                  title: 'Open opportunities',
+                  meta: 'Pitch your services to active productions',
+                  icon: Icons.travel_explore_outlined,
+                  tone: CineTone.information,
+                  onTap: () => Navigator.pushNamed(
+                      context, CrewServicesRoutes.opportunities),
+                ),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -309,8 +292,13 @@ class _CrewDashboardBody extends StatelessWidget {
 class _CrewHero extends StatelessWidget {
   final _CrewDashboardData data;
   final int confirmedCount;
+  final int openRequestsCount;
 
-  const _CrewHero({required this.data, required this.confirmedCount});
+  const _CrewHero({
+    required this.data,
+    required this.confirmedCount,
+    required this.openRequestsCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -324,6 +312,10 @@ class _CrewHero extends StatelessWidget {
         PortalHeroStat(
           value: crewMoney(data.payments.creditMinor ~/ 100),
           label: 'Verified earnings',
+        ),
+        PortalHeroStat(
+          value: '$openRequestsCount',
+          label: 'Open requests',
         ),
       ],
       ctaLabel: 'Edit public profile',
@@ -374,15 +366,15 @@ class _CrewQuickStats extends StatelessWidget {
   }
 }
 
-/// Earnings ring (real credit/pending-release payment totals) beside the
-/// availability calendar (real `AvailabilityEntry.startAt` dates) — side by
-/// side on wide layouts, stacked on compact ones. Mirrors the
-/// director_producer dashboard's payments-ring + mini-calendar pairing.
-class _CrewMetricsAndCalendar extends StatelessWidget {
-  final bool wide;
+/// macOS-widget-style grid: a live clock, an earnings-progress ring (real
+/// credit/pending-release payment totals), and the availability calendar
+/// (real `AvailabilityEntry.startAt` dates) — all frosted-glass, fixed-size
+/// widgets that cascade in together, rather than a stretched ring card
+/// beside a full-width calendar.
+class _CrewWidgetGridSection extends StatelessWidget {
   final _CrewDashboardData data;
 
-  const _CrewMetricsAndCalendar({required this.wide, required this.data});
+  const _CrewWidgetGridSection({required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -391,29 +383,22 @@ class _CrewMetricsAndCalendar extends StatelessWidget {
     final total = credit + pending;
     final progress = total == 0 ? 0.0 : credit / total;
 
-    final ringCard = PortalRingMetricCard(
-      progress: progress,
-      value: crewMoney(credit ~/ 100),
-      label: 'Earnings cleared this cycle',
-      tone: CineTone.premium,
-    );
-    final calendar = _CrewAvailabilityCalendar(availability: data.availability);
-
-    if (!wide) {
-      return Column(
-        children: [
-          ringCard,
-          const SizedBox(height: 14),
-          calendar,
-        ],
-      );
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalStaggeredReveal(
       children: [
-        Expanded(flex: 2, child: ringCard),
-        const SizedBox(width: 14),
-        Expanded(flex: 3, child: calendar),
+        const PortalLiveClockWidget(),
+        PortalGlassRingWidget(
+          progress: progress,
+          value: crewMoney(credit ~/ 100),
+          label: 'Earnings cleared\nthis cycle',
+          tone: CineTone.premium,
+        ),
+        PortalGlassWidgetCard(
+          width: 340,
+          child: _CrewAvailabilityCalendar(
+            availability: data.availability,
+            decorated: false,
+          ),
+        ),
       ],
     );
   }
@@ -439,8 +424,12 @@ const _monthNames = [
 /// fabricated/sample data.
 class _CrewAvailabilityCalendar extends StatefulWidget {
   final List<AvailabilityEntry> availability;
+  final bool decorated;
 
-  const _CrewAvailabilityCalendar({required this.availability});
+  const _CrewAvailabilityCalendar({
+    required this.availability,
+    this.decorated = true,
+  });
 
   @override
   State<_CrewAvailabilityCalendar> createState() =>
@@ -502,6 +491,7 @@ class _CrewAvailabilityCalendarState extends State<_CrewAvailabilityCalendar> {
       days: days,
       onPrevMonth: () => _shiftMonth(-1),
       onNextMonth: () => _shiftMonth(1),
+      decorated: widget.decorated,
     );
   }
 }

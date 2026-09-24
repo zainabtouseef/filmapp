@@ -122,8 +122,9 @@ class _AgencyDashboardData {
   }
 }
 
-/// Live agency workspace body — dashboard-kit composition: hero → quick
-/// stat tiles → commission ring → audition pipeline + action-required rail.
+/// Live agency workspace body — dashboard-kit composition: hero → widget
+/// grid (clock + commission ring) → audition pipeline + action-required
+/// rail.
 class _LiveAgencyDashboard extends StatelessWidget {
   final _AgencyDashboardData data;
   final VoidCallback onRefresh;
@@ -158,63 +159,24 @@ class _LiveAgencyDashboard extends StatelessWidget {
           profile: data.profile,
           roster: data.roster,
           activeAuditions: activeAuditions,
+          pendingCommissionMinor: pendingCommissionMinor,
           onRefresh: onRefresh,
         ),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            const gap = 9.0;
-            final columns = constraints.maxWidth < 360
-                ? 1
-                : constraints.maxWidth < 700
-                    ? 2
-                    : 3;
-            final width =
-                (constraints.maxWidth - gap * (columns - 1)) / columns;
-            final tiles = [
-              PortalQuickStatTile(
-                icon: Icons.people_alt_outlined,
-                value: '${data.roster.length}',
-                label: 'Roster',
-                delta: 'Live now',
-                tone: CineTone.information,
-                onTap: () =>
-                    Navigator.pushNamed(context, CastingAgencyRoutes.roster),
-              ),
-              PortalQuickStatTile(
-                icon: Icons.local_activity_outlined,
-                value: '$activeAuditions',
-                label: 'Active auditions',
-                delta: 'Live now',
-                tone: CineTone.positive,
-                onTap: () =>
-                    Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
-              ),
-              PortalQuickStatTile(
-                icon: Icons.payments_outlined,
-                value: _money(pendingCommissionMinor),
-                label: 'Pending commission',
-                delta: 'This cycle',
-                tone: CineTone.warning,
-                onTap: () => Navigator.pushNamed(
-                    context, CastingAgencyRoutes.commission),
-              ),
-            ];
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final tile in tiles) SizedBox(width: width, child: tile),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        PortalRingMetricCard(
-          progress: commissionProgress,
-          value: _money(paidCommissionMinor),
-          label: 'Commission collected',
-          tone: CineTone.premium,
+        // Live clock + commission ring, cascading in as frosted-glass
+        // widgets — replaces the old standalone ring card. No calendar
+        // widget here: this dashboard has no real event/date data to back
+        // one without fabricating it.
+        PortalStaggeredReveal(
+          children: [
+            const PortalLiveClockWidget(),
+            PortalGlassRingWidget(
+              progress: commissionProgress,
+              value: _money(paidCommissionMinor),
+              label: 'Commission\ncollected',
+              tone: CineTone.premium,
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         AgencyTwoColumn(
@@ -299,12 +261,14 @@ class _AgencyHero extends StatelessWidget {
   final AgencyProfileDto? profile;
   final List<AgencyTalentDto> roster;
   final int activeAuditions;
+  final int pendingCommissionMinor;
   final VoidCallback onRefresh;
 
   const _AgencyHero({
     required this.profile,
     required this.roster,
     required this.activeAuditions,
+    required this.pendingCommissionMinor,
     required this.onRefresh,
   });
 
@@ -323,6 +287,10 @@ class _AgencyHero extends StatelessWidget {
       stats: [
         PortalHeroStat(value: '${roster.length}', label: 'Roster'),
         PortalHeroStat(value: '$activeAuditions', label: 'Active auditions'),
+        PortalHeroStat(
+          value: _money(pendingCommissionMinor),
+          label: 'Pending commission',
+        ),
       ],
       ctaLabel: 'Open audition inbox',
       onCta: () => Navigator.pushNamed(context, CastingAgencyRoutes.auditions),

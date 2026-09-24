@@ -19,7 +19,6 @@ import '../widgets/dashboard/dp_financial_centre.dart';
 import '../widgets/dashboard/dp_mini_calendar_section.dart';
 import '../widgets/dashboard/dp_priority_actions.dart';
 import '../widgets/dashboard/dp_project_deck.dart';
-import '../widgets/dashboard/dp_pulse_strip.dart';
 import '../widgets/dashboard/dp_today_timeline.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -86,9 +85,7 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
                   displayName: displayName,
                 ),
                 const SizedBox(height: 14),
-                DPPulseStrip(summary: dashboard.summary),
-                const SizedBox(height: 14),
-                _MetricsAndCalendarSection(wide: wide, dashboard: dashboard),
+                _WidgetGridSection(dashboard: dashboard),
                 const SizedBox(height: 14),
                 _ModulesSection(dashboard: dashboard),
                 const SizedBox(height: 14),
@@ -105,17 +102,14 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   }
 }
 
-/// Ring metric (real payment-progress data) beside the mini calendar
-/// (real event dates from `dashboard.timeline`) — side by side on wide
-/// layouts, stacked on compact ones.
-class _MetricsAndCalendarSection extends StatelessWidget {
-  final bool wide;
+/// macOS-widget-style grid: a live clock, a payments-progress ring, and
+/// the mini calendar (real event dates from `dashboard.timeline`) — all
+/// frosted-glass, fixed-size widgets that cascade in together, rather
+/// than full-width stat cards.
+class _WidgetGridSection extends StatelessWidget {
   final DirectorDashboard dashboard;
 
-  const _MetricsAndCalendarSection({
-    required this.wide,
-    required this.dashboard,
-  });
+  const _WidgetGridSection({required this.dashboard});
 
   @override
   Widget build(BuildContext context) {
@@ -125,29 +119,22 @@ class _MetricsAndCalendarSection extends StatelessWidget {
     final total = paid + pending;
     final progress = total == 0 ? 0.0 : paid / total;
 
-    final ringCard = PortalRingMetricCard(
-      progress: progress,
-      value: CineFormat.currency(paid, compact: true),
-      label: 'Payments cleared this cycle',
-      tone: CineTone.premium,
-    );
-    final calendar = DPMiniCalendarSection(dashboard: dashboard);
-
-    if (!wide) {
-      return Column(
-        children: [
-          ringCard,
-          const SizedBox(height: 14),
-          calendar,
-        ],
-      );
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalStaggeredReveal(
       children: [
-        Expanded(flex: 2, child: ringCard),
-        const SizedBox(width: 14),
-        Expanded(flex: 3, child: calendar),
+        const PortalLiveClockWidget(),
+        PortalGlassRingWidget(
+          progress: progress,
+          value: CineFormat.currency(paid, compact: true),
+          label: 'Payments cleared\nthis cycle',
+          tone: CineTone.premium,
+        ),
+        PortalGlassWidgetCard(
+          width: 340,
+          child: DPMiniCalendarSection(
+            dashboard: dashboard,
+            decorated: false,
+          ),
+        ),
       ],
     );
   }

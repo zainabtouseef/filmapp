@@ -110,43 +110,17 @@ class _LG01LegalDashboardScreenState extends State<LG01LegalDashboardScreen> {
                               value: '${data.contracts.length}',
                               label: 'Contracts',
                             ),
+                            PortalHeroStat(
+                              value: '$highRisk',
+                              label: 'High risk',
+                            ),
                           ],
                           ctaLabel: 'Refresh',
                           onCta: _refresh,
                         ),
                         const SizedBox(height: 12),
-                        LegalResponsiveGrid(
-                          children: [
-                            PortalQuickStatTile(
-                              icon: Icons.rate_review_outlined,
-                              value: '${data.reviews.length}',
-                              label: 'Reviews',
-                              delta: '$openReviews open',
-                              tone: CineTone.premium,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                LegalPartnerRoutes.contractReview,
-                              ),
-                            ),
-                            PortalQuickStatTile(
-                              icon: Icons.warning_amber_outlined,
-                              value: '$highRisk',
-                              label: 'High risk',
-                              delta: 'Live reviews',
-                              tone: CineTone.critical,
-                            ),
-                            PortalQuickStatTile(
-                              icon: Icons.description_outlined,
-                              value: '${data.contracts.length}',
-                              label: 'Contracts',
-                              delta: 'Live records',
-                              tone: CineTone.positive,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                LegalPartnerRoutes.billing,
-                              ),
-                            ),
-                          ],
+                        const PortalStaggeredReveal(
+                          children: [PortalLiveClockWidget()],
                         ),
                         const SizedBox(height: 12),
                         LegalTwoColumn(

@@ -108,43 +108,17 @@ class _IN01InsuranceDashboardScreenState
                               value: '${data.dashboard.openClaims}',
                               label: 'Open claims',
                             ),
+                            PortalHeroStat(
+                              value: '$highRisk',
+                              label: 'High risk',
+                            ),
                           ],
                           ctaLabel: 'Refresh',
                           onCta: _refresh,
                         ),
                         const SizedBox(height: 12),
-                        InsuranceResponsiveGrid(
-                          children: [
-                            PortalQuickStatTile(
-                              icon: Icons.policy_outlined,
-                              value: '${data.dashboard.activePolicyCount}',
-                              label: 'Active policies',
-                              delta: '${data.dashboard.policyCount} total',
-                              tone: CineTone.positive,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                InsurancePartnerRoutes.records,
-                              ),
-                            ),
-                            PortalQuickStatTile(
-                              icon: Icons.assignment_late_outlined,
-                              value: '${data.dashboard.openClaims}',
-                              label: 'Open claims',
-                              delta: '${data.claims.length} total',
-                              tone: CineTone.critical,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                InsurancePartnerRoutes.claims,
-                              ),
-                            ),
-                            PortalQuickStatTile(
-                              icon: Icons.warning_amber_outlined,
-                              value: '$highRisk',
-                              label: 'High risk',
-                              delta: 'Live policies',
-                              tone: CineTone.warning,
-                            ),
-                          ],
+                        const PortalStaggeredReveal(
+                          children: [PortalLiveClockWidget()],
                         ),
                         const SizedBox(height: 12),
                         InsuranceTwoColumn(
