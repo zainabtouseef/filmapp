@@ -247,7 +247,7 @@ void main() {
 
   test('web startup cache-busts releases and has a renderer fallback', () {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
-    expect(index, contains("releaseVersion = '20260924-fast-start-v12'"));
+    expect(index, contains("releaseVersion = '20260924-fast-start-v13'"));
     expect(
       index,
       contains(r'mainJsPath = `${build.mainJsPath}?v=${requestVersion}`'),
@@ -260,6 +260,8 @@ void main() {
     );
     expect(index, contains("searchParams.set('cc-recovery', releaseVersion)"));
     expect(index, contains('window.location.replace(recoveryUrl.toString())'));
+    expect(index, contains('self.dartDeferredLibraryMultiLoader'));
+    expect(index, contains("chunkUrl.searchParams.set('v', requestVersion)"));
     expect(index, isNot(contains('serviceWorkerSettings')));
     expect(index, contains('navigator.serviceWorker.getRegistrations()'));
     expect(index, contains('registration.unregister()'));

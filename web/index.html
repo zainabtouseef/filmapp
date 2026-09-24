@@ -104,7 +104,7 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20260924-fast-start-v12';
+    const releaseVersion = '20260924-fast-start-v13';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;
@@ -114,6 +114,41 @@
         build.mainJsPath = `${build.mainJsPath}?v=${requestVersion}`;
       }
     }
+
+    // dart2js names deferred portal chunks with stable numeric filenames.
+    // Attach the release ID so a new deployment can never reuse a chunk from
+    // an older app version while returning visits still use their cache.
+    self.dartDeferredLibraryMultiLoader = (uris, success, failure) => {
+      let pending = uris.length;
+      let settled = false;
+      if (pending === 0) {
+        success();
+        return;
+      }
+      const loaded = () => {
+        if (settled) return;
+        pending -= 1;
+        if (pending === 0) {
+          settled = true;
+          success();
+        }
+      };
+      const failed = (event) => {
+        if (settled) return;
+        settled = true;
+        const source = event?.target?.src ?? 'a deferred portal chunk';
+        failure(new Error(`Could not load ${source}`));
+      };
+      for (const uri of uris) {
+        const chunkUrl = new URL(uri, document.baseURI);
+        chunkUrl.searchParams.set('v', requestVersion);
+        const script = document.createElement('script');
+        script.src = chunkUrl.toString();
+        script.onload = loaded;
+        script.onerror = failed;
+        document.head.appendChild(script);
+      }
+    };
 
     const bootScreen = document.getElementById('cc-boot-screen');
     const bootMessage = document.getElementById('cc-boot-message');

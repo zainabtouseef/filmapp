@@ -102,14 +102,17 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   }
 }
 
-/// macOS-widget-style grid: a live clock, a payments-progress ring, and
-/// the mini calendar (real event dates from `dashboard.timeline`) — all
-/// frosted-glass, fixed-size widgets that cascade in together, rather
-/// than full-width stat cards.
+/// macOS-widget-style grid: a live clock + payments ring (with an
+/// animated glow filling the space beneath their shorter pair), the mini
+/// calendar (real event dates from `dashboard.timeline`), and a preview
+/// of today's real production pipeline — all frosted-glass, fixed-size
+/// widgets that cascade in together, rather than full-width stat cards.
 class _WidgetGridSection extends StatelessWidget {
   final DirectorDashboard dashboard;
 
   const _WidgetGridSection({required this.dashboard});
+
+  static const _clockRingWidth = 168.0 * 2 + 14;
 
   @override
   Widget build(BuildContext context) {
@@ -119,20 +122,166 @@ class _WidgetGridSection extends StatelessWidget {
     final total = paid + pending;
     final progress = total == 0 ? 0.0 : paid / total;
 
+    final now = DateTime.now();
+    final todayEvents = dashboard.timeline.where((event) {
+      final startsAt = event.startsAt;
+      return startsAt != null &&
+          startsAt.year == now.year &&
+          startsAt.month == now.month &&
+          startsAt.day == now.day;
+    }).toList()
+      ..sort((a, b) => a.startsAt!.compareTo(b.startsAt!));
+
     return PortalStaggeredReveal(
       children: [
-        const PortalLiveClockWidget(),
-        PortalGlassRingWidget(
-          progress: progress,
-          value: CineFormat.currency(paid, compact: true),
-          label: 'Payments cleared\nthis cycle',
-          tone: CineTone.premium,
+        SizedBox(
+          width: _clockRingWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const PortalLiveClockWidget(),
+                  const SizedBox(width: 14),
+                  PortalGlassRingWidget(
+                    progress: progress,
+                    value: CineFormat.currency(paid, compact: true),
+                    label: 'Payments cleared\nthis cycle',
+                    tone: CineTone.premium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+            ],
+          ),
         ),
         PortalGlassWidgetCard(
           width: 340,
           child: DPMiniCalendarSection(
             dashboard: dashboard,
             decorated: false,
+          ),
+        ),
+        SizedBox(
+          width: 340,
+          child: _TodayPipelineWidget(events: todayEvents),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact preview of today's real production timeline — the same
+/// `dashboard.timeline` data the full "Today's Production Timeline"
+/// section (below) shows in detail; this is a glanceable summary, not a
+/// duplicate data source.
+class _TodayPipelineWidget extends StatelessWidget {
+  final List<DirectorTimelineItem> events;
+
+  const _TodayPipelineWidget({required this.events});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return PortalGlassWidgetCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Text(
+                "Today's pipeline",
+                style: AppTextStyles.sectionSerifHeading
+                    .copyWith(color: colors.textPrimary, fontSize: 15),
+              ),
+              const Spacer(),
+              if (events.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colors.goldSoft,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${events.length}',
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: colors.goldDark,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (events.isEmpty)
+            Text(
+              'No production events scheduled today.',
+              style:
+                  AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+            )
+          else
+            for (var i = 0; i < events.length.clamp(0, 3); i++) ...[
+              if (i != 0) const SizedBox(height: 10),
+              _TodayPipelineRow(event: events[i]),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayPipelineRow extends StatelessWidget {
+  final DirectorTimelineItem event;
+
+  const _TodayPipelineRow({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final time = event.startsAt;
+    final timeLabel = time == null
+        ? '--:--'
+        : '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 42,
+          child: Text(
+            timeLabel,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.goldDark,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                event.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.cardTitle
+                    .copyWith(fontSize: 12.5, color: colors.textPrimary),
+              ),
+              Text(
+                event.projectTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ),
       ],
