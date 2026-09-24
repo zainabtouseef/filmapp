@@ -101,18 +101,19 @@
     {{flutter_js}}
     {{flutter_build_config}}
 
-    // Flutter's generated service-worker version changes with every build.
-    // Reuse it for the app bundle URL so browsers cannot keep running an
-    // earlier deployment after the server has been updated.
-    const buildVersion = {{flutter_service_worker_version}};
-    // This release suffix intentionally changes when the production shell or
-    // cache policy changes. Flutter's bundle filename is stable, so a unique
-    // request URL guarantees that an existing browser cannot reuse the prior
-    // day's main.dart.js response.
-    const releaseVersion = `${buildVersion}-20260922-startup-v8`;
+    // Flutter no longer generates a service-worker version when PWA caching is
+    // disabled, so keep an explicit release ID for the stable bundle filename.
+    // Bump this for every production release.
+    const releaseVersion = '20260924-entity-profile-v9';
+    const pageUrl = new URL(window.location.href);
+    const recoveryMode =
+      pageUrl.searchParams.get('cc-recovery') === releaseVersion;
+    const requestVersion = recoveryMode
+      ? `${releaseVersion}-${Date.now()}`
+      : releaseVersion;
     for (const build of _flutter.buildConfig.builds) {
       if (build.mainJsPath) {
-        build.mainJsPath = `${build.mainJsPath}?v=${releaseVersion}`;
+        build.mainJsPath = `${build.mainJsPath}?v=${requestVersion}`;
       }
     }
 
@@ -120,6 +121,7 @@
     const bootMessage = document.getElementById('cc-boot-message');
     const bootReload = document.getElementById('cc-boot-reload');
     let firstFrameRendered = false;
+    let recoveryStarted = false;
     let bootObserver;
 
     const finishBoot = () => {
@@ -127,12 +129,31 @@
       firstFrameRendered = true;
       bootObserver?.disconnect();
       bootScreen.remove();
+      if (recoveryMode) {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('cc-recovery');
+        cleanUrl.searchParams.delete('cc-bust');
+        window.history.replaceState(
+          null,
+          '',
+          `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`,
+        );
+      }
     };
 
     const showBootFailure = () => {
       if (firstFrameRendered) return;
       if (document.querySelector('flutter-view')) {
         finishBoot();
+        return;
+      }
+      if (!recoveryMode && !recoveryStarted) {
+        recoveryStarted = true;
+        bootMessage.textContent = 'Optimizing startup for this browser…';
+        const recoveryUrl = new URL(window.location.href);
+        recoveryUrl.searchParams.set('cc-recovery', releaseVersion);
+        recoveryUrl.searchParams.set('cc-bust', Date.now().toString());
+        window.location.replace(recoveryUrl.toString());
         return;
       }
       bootMessage.textContent = 'The portal is taking longer than expected.';
@@ -150,6 +171,8 @@
     }, true);
 
     const clearLegacyWebCache = async () => {
+      const wasControlled =
+        'serviceWorker' in navigator && navigator.serviceWorker.controller;
       try {
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
@@ -164,27 +187,27 @@
       } catch (error) {
         console.warn('Could not clear a legacy Flutter cache.', error);
       }
+      return Boolean(wasControlled);
     };
 
     const startFlutter = async () => {
-      // Older releases installed a Flutter service worker. Clear it before the
-      // application requests stable asset names so Safari cannot combine old
-      // cached files with the current main bundle.
-      await Promise.race([
-        clearLegacyWebCache(),
-        new Promise((resolve) => window.setTimeout(resolve, 2000)),
-      ]);
+      // Clear obsolete workers in the background so Safari's worker APIs can
+      // never hold the application entrypoint. If an old worker controls this
+      // page, the compatibility reload opens a clean network navigation.
+      clearLegacyWebCache().then((wasControlled) => {
+        if (wasControlled && !firstFrameRendered) showBootFailure();
+      });
 
-      // Keep the renderer on the application origin. This removes a third-party
-      // network dependency from the first frame and makes startup reliable on
-      // networks where Google-hosted CanvasKit is slow or unavailable.
+      // Start with same-origin CanvasKit. The one-time compatibility reload
+      // falls back to Flutter's engine-versioned CDN if local renderer loading
+      // fails or stalls on a particular browser/network combination.
       await _flutter.loader.load({
-        config: { canvasKitBaseUrl: 'canvaskit/' },
+        config: recoveryMode ? {} : { canvasKitBaseUrl: 'canvaskit/' },
       });
     };
 
     Promise.resolve(startFlutter()).catch(showBootFailure);
-    window.setTimeout(showBootFailure, 30000);
+    window.setTimeout(showBootFailure, 20000);
   </script>
   <script src="director_tutorial.js?v=20260813-35" defer></script>
 </body>

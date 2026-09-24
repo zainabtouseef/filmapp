@@ -730,6 +730,18 @@ class CineMarketplaceMediaFrame extends StatelessWidget {
   }
 }
 
+/// Public alias so other "entity card" contexts (project cards, booking
+/// cards, etc. outside the marketplace) can reuse the exact same
+/// tone-gradient + film-grain fallback plate.
+class CineTonePlate extends StatelessWidget {
+  final String kind;
+
+  const CineTonePlate({super.key, required this.kind});
+
+  @override
+  Widget build(BuildContext context) => _MarketplacePlate(kind: kind);
+}
+
 class _MarketplacePlate extends StatelessWidget {
   final String kind;
 

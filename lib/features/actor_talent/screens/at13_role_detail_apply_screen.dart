@@ -317,6 +317,8 @@ class _RoleHero extends StatelessWidget {
           title: role.project.title,
           badge: role.project.projectType,
           fallbackIcon: Icons.movie_filter_outlined,
+          heroTag: 'casting-role-cover-${role.publicId}',
+          plateKind: role.project.projectType,
         ),
         right: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

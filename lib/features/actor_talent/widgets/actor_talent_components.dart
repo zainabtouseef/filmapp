@@ -6,6 +6,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart' show CineTonePlate;
 import '../../../shared/widgets/status_chip.dart';
 import '../models/actor_talent_models.dart';
 
@@ -539,6 +540,8 @@ class ActorMediaFrame extends StatelessWidget {
   final IconData fallbackIcon;
   final double aspectRatio;
   final bool compact;
+  final String? heroTag;
+  final String? plateKind;
 
   const ActorMediaFrame({
     super.key,
@@ -548,29 +551,35 @@ class ActorMediaFrame extends StatelessWidget {
     required this.fallbackIcon,
     this.aspectRatio = 16 / 9,
     this.compact = false,
+    this.heroTag,
+    this.plateKind,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final radius = compact ? 12.0 : 16.0;
-    return AspectRatio(
+    final fallback = plateKind != null
+        ? CineTonePlate(kind: plateKind!)
+        : _MediaFallback(icon: fallbackIcon);
+    final frameWidget = AspectRatio(
       aspectRatio: aspectRatio,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              imageUrl,
-              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-              fit: BoxFit.cover,
-              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
-                  wasSynchronouslyLoaded || frame != null
-                      ? child
-                      : _MediaFallback(icon: fallbackIcon),
-              errorBuilder: (_, __, ___) => _MediaFallback(icon: fallbackIcon),
-            ),
+            if (imageUrl.trim().isEmpty)
+              fallback
+            else
+              Image.network(
+                imageUrl,
+                webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                fit: BoxFit.cover,
+                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) =>
+                    wasSynchronouslyLoaded || frame != null ? child : fallback,
+                errorBuilder: (_, __, ___) => fallback,
+              ),
             DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.all(color: colors.border),
@@ -635,6 +644,8 @@ class ActorMediaFrame extends StatelessWidget {
         ),
       ),
     );
+    if (heroTag == null) return frameWidget;
+    return Hero(tag: heroTag!, child: frameWidget);
   }
 }
 

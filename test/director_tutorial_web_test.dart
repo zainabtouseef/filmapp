@@ -239,8 +239,17 @@ void main() {
     );
   });
 
-  test('web startup uses same-origin rendering and clears legacy caches', () {
+  test('web startup cache-busts releases and has a renderer fallback', () {
+    expect(index, isNot(contains('{{flutter_service_worker_version}}')));
+    expect(index, contains("releaseVersion = '20260924-entity-profile-v9'"));
+    expect(
+      index,
+      contains(r'mainJsPath = `${build.mainJsPath}?v=${requestVersion}`'),
+    );
     expect(index, contains("canvasKitBaseUrl: 'canvaskit/'"));
+    expect(index, contains('config: recoveryMode ? {}'));
+    expect(index, contains("searchParams.set('cc-recovery', releaseVersion)"));
+    expect(index, contains('window.location.replace(recoveryUrl.toString())'));
     expect(index, isNot(contains('serviceWorkerSettings')));
     expect(index, contains('navigator.serviceWorker.getRegistrations()'));
     expect(index, contains('registration.unregister()'));
@@ -251,6 +260,6 @@ void main() {
     expect(index, contains('window.requestAnimationFrame(finishBoot)'));
     expect(index, contains('Loading CineConnect…'));
     expect(index, contains('Reload portal'));
-    expect(index, contains('window.setTimeout(showBootFailure, 30000)'));
+    expect(index, contains('window.setTimeout(showBootFailure, 20000)'));
   });
 }

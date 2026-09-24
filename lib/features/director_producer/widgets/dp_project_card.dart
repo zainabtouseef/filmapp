@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart' show CineTonePlate;
 import '../models/dp_project.dart';
 import 'dp_budget_health_bar.dart';
 import 'dp_glass_card.dart';
@@ -41,29 +42,26 @@ class DPProjectCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (project.coverImageUrl?.isNotEmpty == true) ...[
-              ClipRRect(
+            Hero(
+              tag: 'project-cover-${project.id}',
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
                 child: AspectRatio(
                   aspectRatio: 16 / 7,
-                  child: Image.network(
-                    project.coverImageUrl!,
-                    webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                    fit: BoxFit.cover,
-                    semanticLabel: '${project.title} project cover',
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: colors.softSurface,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.movie_creation_outlined,
-                        color: colors.iconMuted,
-                      ),
-                    ),
-                  ),
+                  child: (project.coverImageUrl?.isNotEmpty ?? false)
+                      ? Image.network(
+                          project.coverImageUrl!,
+                          webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                          fit: BoxFit.cover,
+                          semanticLabel: '${project.title} project cover',
+                          errorBuilder: (context, error, stackTrace) =>
+                              CineTonePlate(kind: project.type),
+                        )
+                      : CineTonePlate(kind: project.type),
                 ),
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
+            const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

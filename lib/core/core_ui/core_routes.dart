@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_breakpoints.dart';
+import '../theme/app_durations.dart';
 import '../../screens/dashboard_screen.dart';
 import '../../features/actor_talent/routes/actor_talent_routes.dart';
 import '../../features/actor_talent/screens/actor_talent_portal_screen.dart';
@@ -392,9 +393,53 @@ class CoreRoutes {
       );
     }
 
+    final canonicalRouteName = directorDeepLink?.routeName ??
+        generalPublicDeepLink?.routeName ??
+        actorDeepLink?.routeName ??
+        routeSettings.name;
+    if (_heroRevealRoutes.contains(canonicalRouteName)) {
+      return _heroRevealRoute(page, routeSettings);
+    }
+
     return MaterialPageRoute(
       builder: (_) => page,
       settings: routeSettings,
+    );
+  }
+
+  /// Routes that open a detail/profile screen from a card with a matching
+  /// `Hero` tag — these get a plain fade (no competing slide) so the Hero
+  /// flight itself reads as the transition, timed by [AppDurations.heroReveal].
+  static const _heroRevealRoutes = {
+    MarketplaceRoutes.profile,
+    DirectorProducerRoutes.profile,
+    DirectorProducerRoutes.projectDetail,
+    GeneralPublicRoutes.profile,
+    ActorTalentRoutes.roleDetail,
+  };
+
+  static Route<dynamic> _heroRevealRoute(
+    Widget page,
+    RouteSettings settings,
+  ) {
+    return PageRouteBuilder<void>(
+      settings: settings,
+      transitionDuration: AppDurations.heroReveal,
+      reverseTransitionDuration: AppDurations.heroReveal,
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.98, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
   }
 

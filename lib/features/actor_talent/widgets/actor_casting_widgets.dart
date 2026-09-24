@@ -54,6 +54,8 @@ class ActorCastingRoleCard extends StatelessWidget {
                   badge: _deadline(role.applicationDueAt),
                   fallbackIcon: Icons.movie_filter_outlined,
                   compact: true,
+                  heroTag: 'casting-role-cover-${role.publicId}',
+                  plateKind: role.project.projectType,
                 ),
                 const SizedBox(height: 11),
                 Row(

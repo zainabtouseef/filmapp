@@ -15,9 +15,12 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
+import '../../../shared/entity_profile/entity_profile_kit.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../../general_public/routes/general_public_routes.dart';
+
+const _kProfileTabs = ['Overview', 'Work', 'Details', 'Media'];
 
 class DPStakeholderProfileScreen extends StatefulWidget {
   final String? candidateId;
@@ -43,6 +46,7 @@ class DPStakeholderProfileScreen extends StatefulWidget {
 class _DPStakeholderProfileScreenState
     extends State<DPStakeholderProfileScreen> {
   Future<Object>? _future;
+  int _tabIndex = 0;
 
   @override
   void didChangeDependencies() {
@@ -131,55 +135,47 @@ class _DPStakeholderProfileScreenState
                 type: type,
                 heroTag: 'marketplace-profile-${widget.candidateId}',
               ),
+              const SizedBox(height: 18),
+              EntityProfileTabs(
+                tabs: _kProfileTabs,
+                currentIndex: _tabIndex,
+                onChanged: (index) => setState(() => _tabIndex = index),
+              ),
               const SizedBox(height: 14),
-              _LiveDirectorDiscoveryProfile(item: data, candidate: candidate),
-              const SizedBox(height: 14),
+              _LiveDirectorDiscoveryProfile(
+                item: data,
+                candidate: candidate,
+                tabIndex: _tabIndex,
+              ),
+              const SizedBox(height: 20),
               if (!widget.browseOnly)
-                DPGlassCard(
-                  selected: true,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: DPHolographicButton(
-                          label: candidate.marketplaceListingId == null
-                              ? 'Provider action pending'
-                              : 'Shortlist to project',
-                          icon: candidate.marketplaceListingId == null
-                              ? Icons.link_off_rounded
-                              : Icons.favorite_border_rounded,
-                          onTap: candidate.marketplaceListingId == null
-                              ? () => _showProviderActionPending(
-                                    context,
-                                    candidate,
-                                  )
-                              : () => _showShortlistHint(context, candidate),
-                          secondary: true,
-                        ),
-                      ),
-                      if (candidate.marketplaceListingId != null) ...[
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: DPHolographicButton(
-                            label: 'Select / Send Request',
-                            icon: Icons.send_rounded,
-                            onTap: () async {
-                              if (!await ensureKycApproved(context)) return;
-                              if (!context.mounted) return;
-                              Navigator.pushNamed(
-                                context,
-                                DirectorProducerRoutes.bookingRequest,
-                                arguments: {
-                                  'candidateId': candidate.marketplaceListingId,
-                                  'projectId': widget.projectId,
-                                  'category': type,
-                                },
-                              );
+                EntityStickyActionBar(
+                  secondaryLabel: candidate.marketplaceListingId == null
+                      ? 'Provider action pending'
+                      : 'Shortlist',
+                  secondaryIcon: candidate.marketplaceListingId == null
+                      ? Icons.link_off_rounded
+                      : Icons.favorite_border_rounded,
+                  onSecondary: candidate.marketplaceListingId == null
+                      ? () => _showProviderActionPending(context, candidate)
+                      : () => _showShortlistHint(context, candidate),
+                  primaryLabel: 'Select / Send Request',
+                  primaryIcon: Icons.send_rounded,
+                  onPrimary: candidate.marketplaceListingId == null
+                      ? null
+                      : () async {
+                          if (!await ensureKycApproved(context)) return;
+                          if (!context.mounted) return;
+                          Navigator.pushNamed(
+                            context,
+                            DirectorProducerRoutes.bookingRequest,
+                            arguments: {
+                              'candidateId': candidate.marketplaceListingId,
+                              'projectId': widget.projectId,
+                              'category': type,
                             },
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                          );
+                        },
                 ),
             ],
           );
@@ -200,51 +196,46 @@ class _DPStakeholderProfileScreenState
               type: type,
               heroTag: 'marketplace-profile-${widget.candidateId}',
             ),
+            const SizedBox(height: 18),
+            EntityProfileTabs(
+              tabs: _kProfileTabs,
+              currentIndex: _tabIndex,
+              onChanged: (index) => setState(() => _tabIndex = index),
+            ),
             const SizedBox(height: 14),
-            _LiveListingProfile(listing: listing, candidate: candidate),
-            const SizedBox(height: 14),
+            _LiveListingProfile(
+              listing: listing,
+              candidate: candidate,
+              tabIndex: _tabIndex,
+            ),
+            const SizedBox(height: 20),
             if (!widget.browseOnly)
-              DPGlassCard(
-                selected: true,
-                child: Row(
-                  children: [
-                    if (!widget.publicBuyerMode) ...[
-                      Expanded(
-                        child: DPHolographicButton(
-                          label: 'Shortlist to project',
-                          icon: Icons.favorite_border_rounded,
-                          onTap: () => _showShortlistHint(context, candidate),
-                          secondary: true,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                    ],
-                    Expanded(
-                      child: DPHolographicButton(
-                        label: 'Select / Send Request',
-                        icon: Icons.send_rounded,
-                        onTap: () async {
-                          if (!widget.publicBuyerMode &&
-                              !await ensureKycApproved(context)) {
-                            return;
-                          }
-                          if (!context.mounted) return;
-                          Navigator.pushNamed(
-                            context,
-                            widget.publicBuyerMode
-                                ? GeneralPublicRoutes.bookingRequest
-                                : DirectorProducerRoutes.bookingRequest,
-                            arguments: {
-                              'candidateId': candidate.id,
-                              'projectId': widget.projectId,
-                              'category': type,
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+              EntityStickyActionBar(
+                secondaryLabel: 'Shortlist',
+                secondaryIcon: Icons.favorite_border_rounded,
+                onSecondary: widget.publicBuyerMode
+                    ? null
+                    : () => _showShortlistHint(context, candidate),
+                primaryLabel: 'Select / Send Request',
+                primaryIcon: Icons.send_rounded,
+                onPrimary: () async {
+                  if (!widget.publicBuyerMode &&
+                      !await ensureKycApproved(context)) {
+                    return;
+                  }
+                  if (!context.mounted) return;
+                  Navigator.pushNamed(
+                    context,
+                    widget.publicBuyerMode
+                        ? GeneralPublicRoutes.bookingRequest
+                        : DirectorProducerRoutes.bookingRequest,
+                    arguments: {
+                      'candidateId': candidate.id,
+                      'projectId': widget.projectId,
+                      'category': type,
+                    },
+                  );
+                },
               ),
           ],
         );
@@ -404,10 +395,12 @@ class _ProfileHero extends StatelessWidget {
 class _LiveListingProfile extends StatelessWidget {
   final MarketplaceListing listing;
   final DpCandidate candidate;
+  final int tabIndex;
 
   const _LiveListingProfile({
     required this.listing,
     required this.candidate,
+    required this.tabIndex,
   });
 
   @override
@@ -416,80 +409,79 @@ class _LiveListingProfile extends StatelessWidget {
         .where((item) => item.file?.publicUrl != null)
         .take(6)
         .toList();
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _ProfileSection(
-            title: 'Live profile summary',
-            icon: Icons.badge_outlined,
-            children: [
-              dpText(context, listing.summary),
-              const SizedBox(height: 12),
-              DPDetailRow(label: 'Listing type', value: candidate.category),
-              DPDetailRow(label: 'City', value: candidate.city),
-              DPDetailRow(label: 'Rate', value: candidate.rateRange),
-              DPDetailRow(
-                label: 'Pricing choice',
-                value: switch (candidate.pricingMode) {
-                  'fixed' => 'Fixed public price',
-                  'on_request' => 'Private price · bargaining',
-                  _ => 'Public starting price · bargaining',
-                },
-              ),
-              DPDetailRow(label: 'Owner', value: listing.ownerName),
-              DPDetailRow(
-                label: 'Verification',
-                value: listing.verificationStatus,
-              ),
-            ],
-          ),
-          right: _ProfileSection(
-            title: 'Booking readiness',
-            icon: Icons.event_available_outlined,
-            children: [
-              DPDetailRow(
-                label: 'Availability',
-                value: candidate.available
-                    ? 'Available for selected dates'
-                    : 'Limited dates',
-              ),
-              DPDetailRow(
-                label: 'Contact policy',
-                value: 'Phone/address reveal after booking visibility rules',
-              ),
-              DPDetailRow(
-                label: 'Source',
-                value: 'Live marketplace database',
-              ),
-            ],
-          ),
+    return switch (tabIndex) {
+      1 => listing.mediaKit != null
+          ? _VerifiedMediaKitSection(mediaKit: listing.mediaKit!)
+          : const DPEmptyState(
+              icon: Icons.workspace_premium_outlined,
+              title: 'No media kit yet',
+              message: 'This provider has not published a media kit.',
+            ),
+      2 => _ProfileSection(
+          title: 'Booking readiness',
+          icon: Icons.event_available_outlined,
+          children: [
+            DPDetailRow(
+              label: 'Availability',
+              value: candidate.available
+                  ? 'Available for selected dates'
+                  : 'Limited dates',
+            ),
+            DPDetailRow(
+              label: 'Contact policy',
+              value: 'Phone/address reveal after booking visibility rules',
+            ),
+            const DPDetailRow(
+              label: 'Source',
+              value: 'Live marketplace database',
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        if (listing.mediaKit != null) ...[
-          _VerifiedMediaKitSection(mediaKit: listing.mediaKit!),
-          const SizedBox(height: 12),
-        ],
-        if (media.isEmpty)
-          const DPEmptyState(
-            icon: Icons.photo_library_outlined,
-            title: 'No public gallery yet',
-            message:
-                'This listing has no approved public media attached in the database.',
-          )
-        else
-          _LiveGallerySection(media: media),
-      ],
-    );
+      3 => media.isEmpty
+          ? const DPEmptyState(
+              icon: Icons.photo_library_outlined,
+              title: 'No public gallery yet',
+              message:
+                  'This listing has no approved public media attached in the database.',
+            )
+          : _LiveGallerySection(media: media),
+      _ => _ProfileSection(
+          title: 'Live profile summary',
+          icon: Icons.badge_outlined,
+          children: [
+            dpText(context, listing.summary),
+            const SizedBox(height: 12),
+            DPDetailRow(label: 'Listing type', value: candidate.category),
+            DPDetailRow(label: 'City', value: candidate.city),
+            DPDetailRow(label: 'Rate', value: candidate.rateRange),
+            DPDetailRow(
+              label: 'Pricing choice',
+              value: switch (candidate.pricingMode) {
+                'fixed' => 'Fixed public price',
+                'on_request' => 'Private price · bargaining',
+                _ => 'Public starting price · bargaining',
+              },
+            ),
+            DPDetailRow(label: 'Owner', value: listing.ownerName),
+            DPDetailRow(
+              label: 'Verification',
+              value: listing.verificationStatus,
+            ),
+          ],
+        ),
+    };
   }
 }
 
 class _LiveDirectorDiscoveryProfile extends StatelessWidget {
   final DirectorDiscoveryItem item;
   final DpCandidate candidate;
+  final int tabIndex;
 
   const _LiveDirectorDiscoveryProfile({
     required this.item,
     required this.candidate,
+    required this.tabIndex,
   });
 
   @override
@@ -497,94 +489,101 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
     final sections = item.sections.where((section) {
       return section.rows.any((row) => row.value.trim().isNotEmpty);
     }).toList();
-    return Column(
-      children: [
-        DPTwoColumn(
-          left: _ProfileSection(
-            title: 'Live provider summary',
-            icon: Icons.storefront_outlined,
-            children: [
-              dpText(context, item.summary),
+    return switch (tabIndex) {
+      1 => Column(
+          children: [
+            if (item.kind == 'actor' || item.kind == 'model') ...[
+              _ResumeSection(resumeFile: item.resumeFile),
               const SizedBox(height: 12),
-              DPDetailRow(label: 'Provider type', value: candidate.category),
-              DPDetailRow(label: 'City', value: candidate.city),
-              DPDetailRow(label: 'Rate', value: candidate.rateRange),
-              DPDetailRow(
-                label: 'Pricing choice',
-                value: switch (candidate.pricingMode) {
-                  'fixed' => 'Fixed public price',
-                  'on_request' => 'Private price · bargaining',
-                  _ => 'Public starting price · bargaining',
-                },
-              ),
-              DPDetailRow(label: 'Owner', value: item.ownerName ?? 'Not shown'),
-              DPDetailRow(
-                label: 'Verification',
-                value: item.verificationStatus,
-              ),
             ],
-          ),
-          right: _ProfileSection(
-            title: 'Director readiness',
-            icon: Icons.fact_check_outlined,
-            children: [
-              DPDetailRow(
-                label: 'Availability',
-                value: candidate.available
-                    ? 'Marked available in provider database'
-                    : 'Limited or pending status',
-              ),
-              const DPDetailRow(
-                label: 'Booking status',
-                value:
-                    'Profile view only until provider record is linked to a marketplace listing.',
-              ),
-              const DPDetailRow(
-                label: 'Source',
-                value: 'Live provider-specific Director discovery database',
-              ),
+            if (item.mediaKit != null) ...[
+              _VerifiedMediaKitSection(mediaKit: item.mediaKit!),
+              const SizedBox(height: 12),
             ],
-          ),
+            for (final section in sections) ...[
+              _ProfileSection(
+                title: section.title,
+                icon: Icons.info_outline_rounded,
+                children: [
+                  if (section.rows.isEmpty)
+                    const DPEmptyState(
+                      icon: Icons.info_outline_rounded,
+                      title: 'No details yet',
+                      message:
+                          'This provider has not filled this section in the database.',
+                    )
+                  else
+                    for (final row in section.rows)
+                      DPDetailRow(label: row.label, value: row.value),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (item.mediaKit == null &&
+                sections.isEmpty &&
+                item.kind != 'actor' &&
+                item.kind != 'model')
+              const DPEmptyState(
+                icon: Icons.work_outline_rounded,
+                title: 'No work details yet',
+                message: 'This provider has not added portfolio details.',
+              ),
+          ],
         ),
-        const SizedBox(height: 12),
-        if (item.kind == 'actor' || item.kind == 'model') ...[
-          _ResumeSection(resumeFile: item.resumeFile),
-          const SizedBox(height: 12),
-        ],
-        if (item.mediaKit != null) ...[
-          _VerifiedMediaKitSection(mediaKit: item.mediaKit!),
-          const SizedBox(height: 12),
-        ],
-        for (final section in sections) ...[
-          _ProfileSection(
-            title: section.title,
-            icon: Icons.info_outline_rounded,
-            children: [
-              if (section.rows.isEmpty)
-                const DPEmptyState(
-                  icon: Icons.info_outline_rounded,
-                  title: 'No details yet',
-                  message:
-                      'This provider has not filled this section in the database.',
-                )
-              else
-                for (final row in section.rows)
-                  DPDetailRow(label: row.label, value: row.value),
-            ],
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (item.media.isEmpty)
-          const DPEmptyState(
-            icon: Icons.photo_library_outlined,
-            title: 'No public gallery yet',
-            message:
-                'This provider has no approved public media attached in the database.',
-          )
-        else
-          _LiveGallerySection(media: item.media),
-      ],
-    );
+      2 => _ProfileSection(
+          title: 'Director readiness',
+          icon: Icons.fact_check_outlined,
+          children: [
+            DPDetailRow(
+              label: 'Availability',
+              value: candidate.available
+                  ? 'Marked available in provider database'
+                  : 'Limited or pending status',
+            ),
+            const DPDetailRow(
+              label: 'Booking status',
+              value:
+                  'Profile view only until provider record is linked to a marketplace listing.',
+            ),
+            const DPDetailRow(
+              label: 'Source',
+              value: 'Live provider-specific Director discovery database',
+            ),
+          ],
+        ),
+      3 => item.media.isEmpty
+          ? const DPEmptyState(
+              icon: Icons.photo_library_outlined,
+              title: 'No public gallery yet',
+              message:
+                  'This provider has no approved public media attached in the database.',
+            )
+          : _LiveGallerySection(media: item.media),
+      _ => _ProfileSection(
+          title: 'Live provider summary',
+          icon: Icons.storefront_outlined,
+          children: [
+            dpText(context, item.summary),
+            const SizedBox(height: 12),
+            DPDetailRow(label: 'Provider type', value: candidate.category),
+            DPDetailRow(label: 'City', value: candidate.city),
+            DPDetailRow(label: 'Rate', value: candidate.rateRange),
+            DPDetailRow(
+              label: 'Pricing choice',
+              value: switch (candidate.pricingMode) {
+                'fixed' => 'Fixed public price',
+                'on_request' => 'Private price · bargaining',
+                _ => 'Public starting price · bargaining',
+              },
+            ),
+            DPDetailRow(label: 'Owner', value: item.ownerName ?? 'Not shown'),
+            DPDetailRow(
+              label: 'Verification',
+              value: item.verificationStatus,
+            ),
+          ],
+        ),
+    };
   }
 }
 

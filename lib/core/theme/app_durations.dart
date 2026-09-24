@@ -41,5 +41,9 @@ class AppDurations {
   /// One full loop of the hero card's rotating gold ring accent.
   static const heroRingRotation = Duration(seconds: 6);
 
+  /// Card → detail-profile page transition, timed to let a `Hero` image's
+  /// flight read as a deliberate morph rather than a rushed default push.
+  static const heroReveal = Duration(milliseconds: 480);
+
   static const Curve standardCurve = Curves.easeOutCubic;
 }

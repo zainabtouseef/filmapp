@@ -22,6 +22,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart'
     show EntityAvatar, AvatarStack;
 import '../../../shared/scheduling/meeting_negotiation_panel.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart' show CineTonePlate;
 import '../models/dp_booking.dart';
 import '../models/dp_contract.dart';
 import '../models/dp_payment.dart';
@@ -429,18 +430,24 @@ class _ProjectHeader extends StatelessWidget {
         children: [
           LayoutBuilder(
             builder: (context, constraints) {
-              final poster = Container(
-                width: 74,
-                height: 92,
-                decoration: BoxDecoration(
+              final poster = Hero(
+                tag: 'project-cover-${project.id}',
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  gradient: colors.goldGradient,
-                  border: Border.all(color: colors.border),
-                ),
-                child: Icon(
-                  Icons.movie_filter_rounded,
-                  color: colors.onGold,
-                  size: 34,
+                  child: SizedBox(
+                    width: 74,
+                    height: 92,
+                    child: (project.coverImageUrl?.isNotEmpty ?? false)
+                        ? Image.network(
+                            project.coverImageUrl!,
+                            webHtmlElementStrategy:
+                                WebHtmlElementStrategy.prefer,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                CineTonePlate(kind: project.type),
+                          )
+                        : CineTonePlate(kind: project.type),
+                  ),
                 ),
               );
               final titleBlock = Column(
