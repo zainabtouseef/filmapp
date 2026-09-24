@@ -113,6 +113,7 @@ class _WidgetGridSection extends StatelessWidget {
   const _WidgetGridSection({required this.dashboard});
 
   static const _clockRingWidth = 168.0 * 2 + 14;
+  static const _calendarPipelineWidth = 340.0 * 2 + 14;
 
   @override
   Widget build(BuildContext context) {
@@ -168,16 +169,33 @@ class _WidgetGridSection extends StatelessWidget {
             ),
           ),
         ),
-        PortalGlassWidgetCard(
-          width: 340,
-          child: DPMiniCalendarSection(
-            dashboard: dashboard,
-            decorated: false,
+        // Calendar + today's pipeline are grouped as a single Wrap item
+        // so they can never be split across rows — pipeline must always
+        // render immediately beside the calendar, never wrapping away
+        // to its own row under a different column.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: _calendarPipelineWidth,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PortalGlassWidgetCard(
+                  width: 340,
+                  child: DPMiniCalendarSection(
+                    dashboard: dashboard,
+                    decorated: false,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                SizedBox(
+                  width: 340,
+                  child: _TodayPipelineWidget(events: todayEvents),
+                ),
+              ],
+            ),
           ),
-        ),
-        SizedBox(
-          width: 340,
-          child: _TodayPipelineWidget(events: todayEvents),
         ),
       ],
     );

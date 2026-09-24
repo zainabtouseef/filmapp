@@ -249,7 +249,7 @@ void main() {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
     expect(
       index,
-      contains("releaseVersion = '20260924-dashboard-widgets-v14'"),
+      contains("releaseVersion = '20260925-director-layout-v15'"),
     );
     expect(
       index,
