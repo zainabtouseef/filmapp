@@ -14,7 +14,7 @@ const _goldBright = Color(0xFFE9C77B);
 const _goldSoft = Color(0xFFD9B36B);
 const _subtitleGrey = Color(0xFF6B655A);
 
-const _totalDuration = Duration(milliseconds: 3400);
+const _totalDuration = Duration(milliseconds: 1800);
 
 // Phase boundaries as fractions of the compact splash timeline.
 const double _p1End = 0.26; // light sweep + icons emerge

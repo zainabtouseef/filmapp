@@ -4,36 +4,52 @@ import '../theme/app_breakpoints.dart';
 import '../theme/app_durations.dart';
 import '../../screens/dashboard_screen.dart';
 import '../../features/actor_talent/routes/actor_talent_routes.dart';
-import '../../features/actor_talent/screens/actor_talent_portal_screen.dart';
+import '../../features/actor_talent/screens/actor_talent_portal_screen.dart'
+    deferred as actor_portal;
 import '../../features/brand_sponsors/routes/brand_sponsor_routes.dart';
-import '../../features/brand_sponsors/screens/brand_sponsor_portal_screen.dart';
+import '../../features/brand_sponsors/screens/brand_sponsor_portal_screen.dart'
+    deferred as brand_portal;
 import '../../features/casting_agency/routes/casting_agency_routes.dart';
-import '../../features/casting_agency/screens/casting_agency_portal_screen.dart';
+import '../../features/casting_agency/screens/casting_agency_portal_screen.dart'
+    deferred as agency_portal;
 import '../../features/crew_services/routes/crew_services_routes.dart';
-import '../../features/crew_services/screens/crew_services_portal_screen.dart';
+import '../../features/crew_services/screens/crew_services_portal_screen.dart'
+    deferred as crew_portal;
 import '../../features/director_producer/routes/director_producer_routes.dart';
-import '../../features/director_producer/screens/director_producer_portal_screen.dart';
+import '../../features/director_producer/screens/director_producer_portal_screen.dart'
+    deferred as director_portal;
 import '../../features/distribution_partner/routes/distribution_partner_routes.dart';
-import '../../features/distribution_partner/screens/distribution_partner_portal_screen.dart';
+import '../../features/distribution_partner/screens/distribution_partner_portal_screen.dart'
+    deferred as distribution_portal;
 import '../../features/general_public/routes/general_public_routes.dart';
-import '../../features/general_public/screens/general_public_portal_screen.dart';
+import '../../features/general_public/screens/general_public_portal_screen.dart'
+    deferred as public_portal;
 import '../../features/influencer/routes/influencer_routes.dart';
-import '../../features/influencer/screens/influencer_portal_screen.dart';
+import '../../features/influencer/screens/influencer_portal_screen.dart'
+    deferred as influencer_portal;
 import '../../features/insurance_partner/routes/insurance_partner_routes.dart';
-import '../../features/insurance_partner/screens/insurance_partner_portal_screen.dart';
+import '../../features/insurance_partner/screens/insurance_partner_portal_screen.dart'
+    deferred as insurance_portal;
 import '../../features/legal_partner/routes/legal_partner_routes.dart';
-import '../../features/legal_partner/screens/legal_partner_portal_screen.dart';
+import '../../features/legal_partner/screens/legal_partner_portal_screen.dart'
+    deferred as legal_portal;
 import '../../features/location_owner/routes/location_owner_routes.dart';
-import '../../features/location_owner/screens/location_owner_portal_screen.dart';
+import '../../features/location_owner/screens/location_owner_portal_screen.dart'
+    deferred as location_portal;
 import '../../features/media_equipment/routes/media_equipment_routes.dart';
-import '../../features/media_equipment/screens/media_equipment_portal_screen.dart';
+import '../../features/media_equipment/screens/media_equipment_portal_screen.dart'
+    deferred as equipment_portal;
 import '../../features/model_extension/routes/model_extension_routes.dart';
-import '../../features/model_extension/screens/model_extension_portal_screen.dart';
+import '../../features/model_extension/screens/model_extension_portal_screen.dart'
+    deferred as model_portal;
 import '../../features/role_portals/routes/role_portal_routes.dart';
-import '../../features/role_portals/screens/role_portal_screen.dart';
+import '../../features/role_portals/screens/role_portal_screen.dart'
+    deferred as role_portal;
 import '../../features/super_admin/routes/super_admin_routes.dart';
-import '../../features/super_admin/screens/super_admin_screens.dart';
-import '../../shared/marketplace/marketplace_portal_screen.dart';
+import '../../features/super_admin/screens/super_admin_screens.dart'
+    deferred as admin_portal;
+import '../../shared/marketplace/marketplace_portal_screen.dart'
+    deferred as marketplace_portal;
 import '../../shared/marketplace/marketplace_routes.dart';
 import '../core_booking/screens/booking_chat_screen.dart';
 import '../core_contract/screens/contract_viewer_screen.dart';
@@ -83,6 +99,160 @@ class CoreRoutes {
   static const maintenance = '/utility/maintenance';
   static const dashboard = '/portal/dashboard';
 
+  static final _marketplaceLibrary =
+      _DeferredLibrary(marketplace_portal.loadLibrary);
+  static final _directorLibrary = _DeferredLibrary(director_portal.loadLibrary);
+  static final _publicLibrary = _DeferredLibrary(public_portal.loadLibrary);
+  static final _influencerLibrary =
+      _DeferredLibrary(influencer_portal.loadLibrary);
+  static final _actorLibrary = _DeferredLibrary(actor_portal.loadLibrary);
+  static final _modelLibrary = _DeferredLibrary(model_portal.loadLibrary);
+  static final _locationLibrary = _DeferredLibrary(location_portal.loadLibrary);
+  static final _equipmentLibrary =
+      _DeferredLibrary(equipment_portal.loadLibrary);
+  static final _crewLibrary = _DeferredLibrary(crew_portal.loadLibrary);
+  static final _agencyLibrary = _DeferredLibrary(agency_portal.loadLibrary);
+  static final _brandLibrary = _DeferredLibrary(brand_portal.loadLibrary);
+  static final _legalLibrary = _DeferredLibrary(legal_portal.loadLibrary);
+  static final _insuranceLibrary =
+      _DeferredLibrary(insurance_portal.loadLibrary);
+  static final _distributionLibrary =
+      _DeferredLibrary(distribution_portal.loadLibrary);
+  static final _roleLibrary = _DeferredLibrary(role_portal.loadLibrary);
+  static final _adminLibrary = _DeferredLibrary(admin_portal.loadLibrary);
+
+  static Widget _marketplacePage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _marketplaceLibrary,
+        builder: () => marketplace_portal.MarketplacePortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _directorPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _directorLibrary,
+        builder: () => director_portal.DirectorProducerPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _publicPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _publicLibrary,
+        builder: () => public_portal.GeneralPublicPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _influencerPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _influencerLibrary,
+        builder: () => influencer_portal.InfluencerPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _actorPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _actorLibrary,
+        builder: () => actor_portal.ActorTalentPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _modelPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _modelLibrary,
+        builder: () => model_portal.ModelExtensionPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _locationPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _locationLibrary,
+        builder: () => location_portal.LocationOwnerPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _equipmentPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _equipmentLibrary,
+        builder: () => equipment_portal.MediaEquipmentPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _crewPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _crewLibrary,
+        builder: () => crew_portal.CrewServicesPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _agencyPage(String routeName) => _DeferredRouteScreen(
+        library: _agencyLibrary,
+        builder: () => agency_portal.CastingAgencyPortalScreen(
+          routeName: routeName,
+        ),
+      );
+
+  static Widget _brandPage(String routeName) => _DeferredRouteScreen(
+        library: _brandLibrary,
+        builder: () => brand_portal.BrandSponsorPortalScreen(
+          routeName: routeName,
+        ),
+      );
+
+  static Widget _legalPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _legalLibrary,
+        builder: () => legal_portal.LegalPartnerPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
+  static Widget _insurancePage(String routeName) => _DeferredRouteScreen(
+        library: _insuranceLibrary,
+        builder: () => insurance_portal.InsurancePartnerPortalScreen(
+          routeName: routeName,
+        ),
+      );
+
+  static Widget _distributionPage(String routeName) => _DeferredRouteScreen(
+        library: _distributionLibrary,
+        builder: () => distribution_portal.DistributionPartnerPortalScreen(
+          routeName: routeName,
+        ),
+      );
+
+  static Widget _rolePage(String routeName) => _DeferredRouteScreen(
+        library: _roleLibrary,
+        builder: () => role_portal.RolePortalScreen(routeName: routeName),
+      );
+
+  static Widget _adminPage(String routeName, Object? arguments) =>
+      _DeferredRouteScreen(
+        library: _adminLibrary,
+        builder: () => admin_portal.SuperAdminPortalScreen(
+          routeName: routeName,
+          arguments: arguments,
+        ),
+      );
+
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
     final generalPublicDeepLink = _generalPublicDeepLink(routeSettings.name);
@@ -95,9 +265,9 @@ class CoreRoutes {
     switch (routeSettings.name) {
       case MarketplaceRoutes.browse:
       case MarketplaceRoutes.profile:
-        page = MarketplacePortalScreen(
-          routeName: routeSettings.name ?? MarketplaceRoutes.browse,
-          arguments: routeSettings.arguments,
+        page = _marketplacePage(
+          routeSettings.name ?? MarketplaceRoutes.browse,
+          routeSettings.arguments,
         );
       case splash:
         page = const SplashScreen();
@@ -198,9 +368,9 @@ class CoreRoutes {
       case dashboard:
         page = const DashboardScreen();
       case _ when directorDeepLink != null:
-        page = DirectorProducerPortalScreen(
-          routeName: directorDeepLink.routeName,
-          arguments: {
+        page = _directorPage(
+          directorDeepLink.routeName,
+          {
             ...directorDeepLink.arguments,
             if (routeSettings.arguments is Map)
               ...(routeSettings.arguments! as Map),
@@ -209,9 +379,9 @@ class CoreRoutes {
           },
         );
       case _ when generalPublicDeepLink != null:
-        page = GeneralPublicPortalScreen(
-          routeName: generalPublicDeepLink.routeName,
-          arguments: {
+        page = _publicPage(
+          generalPublicDeepLink.routeName,
+          {
             ...generalPublicDeepLink.arguments,
             if (routeSettings.arguments is Map)
               ...(routeSettings.arguments! as Map),
@@ -220,14 +390,14 @@ class CoreRoutes {
           },
         );
       case _ when influencerDeepLink != null:
-        page = InfluencerPortalScreen(
-          routeName: influencerDeepLink.routeName,
-          arguments: routeSettings.arguments,
+        page = _influencerPage(
+          influencerDeepLink.routeName,
+          routeSettings.arguments,
         );
       case _ when actorDeepLink != null:
-        page = ActorTalentPortalScreen(
-          routeName: actorDeepLink.routeName,
-          arguments: {
+        page = _actorPage(
+          actorDeepLink.routeName,
+          {
             ...actorDeepLink.arguments,
             if (routeSettings.arguments is Map)
               ...(routeSettings.arguments! as Map),
@@ -257,77 +427,71 @@ class CoreRoutes {
       case DirectorProducerRoutes.room:
       case DirectorProducerRoutes.reports:
       case DirectorProducerRoutes.cinePlanner:
-        page = DirectorProducerPortalScreen(
-          routeName: routeSettings.name ?? DirectorProducerRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _directorPage(
+          routeSettings.name ?? DirectorProducerRoutes.home,
+          routeSettings.arguments,
         );
       case _ when GeneralPublicRoutes.allRoutes.contains(routeSettings.name):
-        page = GeneralPublicPortalScreen(
-          routeName: routeSettings.name ?? GeneralPublicRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _publicPage(
+          routeSettings.name ?? GeneralPublicRoutes.home,
+          routeSettings.arguments,
         );
       case _ when InfluencerRoutes.allRoutes.contains(routeSettings.name):
-        page = InfluencerPortalScreen(
-          routeName: routeSettings.name ?? InfluencerRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _influencerPage(
+          routeSettings.name ?? InfluencerRoutes.home,
+          routeSettings.arguments,
         );
       case _ when ActorTalentRoutes.allRoutes.contains(routeSettings.name):
-        page = ActorTalentPortalScreen(
-          routeName: routeSettings.name ?? ActorTalentRoutes.dashboard,
-          arguments: routeSettings.arguments,
+        page = _actorPage(
+          routeSettings.name ?? ActorTalentRoutes.dashboard,
+          routeSettings.arguments,
         );
       case _ when ModelExtensionRoutes.allRoutes.contains(routeSettings.name):
-        page = ModelExtensionPortalScreen(
-          routeName: routeSettings.name ?? ModelExtensionRoutes.categories,
-          arguments: routeSettings.arguments,
+        page = _modelPage(
+          routeSettings.name ?? ModelExtensionRoutes.categories,
+          routeSettings.arguments,
         );
       case _ when LocationOwnerRoutes.allRoutes.contains(routeSettings.name):
-        page = LocationOwnerPortalScreen(
-          routeName: routeSettings.name ?? LocationOwnerRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _locationPage(
+          routeSettings.name ?? LocationOwnerRoutes.home,
+          routeSettings.arguments,
         );
       case _ when MediaEquipmentRoutes.allRoutes.contains(routeSettings.name):
-        page = MediaEquipmentPortalScreen(
-          routeName: routeSettings.name ?? MediaEquipmentRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _equipmentPage(
+          routeSettings.name ?? MediaEquipmentRoutes.home,
+          routeSettings.arguments,
         );
       case _ when CrewServicesRoutes.allRoutes.contains(routeSettings.name):
-        page = CrewServicesPortalScreen(
-          routeName: routeSettings.name ?? CrewServicesRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _crewPage(
+          routeSettings.name ?? CrewServicesRoutes.home,
+          routeSettings.arguments,
         );
       case _ when CastingAgencyRoutes.allRoutes.contains(routeSettings.name):
-        page = CastingAgencyPortalScreen(
-          routeName: routeSettings.name ?? CastingAgencyRoutes.home,
-        );
+        page = _agencyPage(routeSettings.name ?? CastingAgencyRoutes.home);
       case _ when BrandSponsorRoutes.allRoutes.contains(routeSettings.name):
-        page = BrandSponsorPortalScreen(
-          routeName: routeSettings.name ?? BrandSponsorRoutes.home,
-        );
+        page = _brandPage(routeSettings.name ?? BrandSponsorRoutes.home);
       case _ when LegalPartnerRoutes.allRoutes.contains(routeSettings.name):
-        page = LegalPartnerPortalScreen(
-          routeName: routeSettings.name ?? LegalPartnerRoutes.home,
-          arguments: routeSettings.arguments,
+        page = _legalPage(
+          routeSettings.name ?? LegalPartnerRoutes.home,
+          routeSettings.arguments,
         );
       case _ when InsurancePartnerRoutes.allRoutes.contains(routeSettings.name):
-        page = InsurancePartnerPortalScreen(
-          routeName: routeSettings.name ?? InsurancePartnerRoutes.home,
+        page = _insurancePage(
+          routeSettings.name ?? InsurancePartnerRoutes.home,
         );
       case _
           when DistributionPartnerRoutes.allRoutes.contains(routeSettings.name):
-        page = DistributionPartnerPortalScreen(
-          routeName: routeSettings.name ?? DistributionPartnerRoutes.home,
+        page = _distributionPage(
+          routeSettings.name ?? DistributionPartnerRoutes.home,
         );
       case _ when RolePortalRoutes.allRoutes.contains(routeSettings.name):
-        page = RolePortalScreen(
-          routeName: routeSettings.name ?? RolePortalRoutes.talentHome,
-        );
+        page = _rolePage(routeSettings.name ?? RolePortalRoutes.talentHome);
       case SuperAdminRoutes.loginDemo:
         page = const LoginScreen();
       case _ when superAdminDeepLink != null:
-        page = SuperAdminPortalScreen(
-          routeName: superAdminDeepLink.routeName,
-          arguments: {
+        page = _adminPage(
+          superAdminDeepLink.routeName,
+          {
             ...superAdminDeepLink.arguments,
             if (routeSettings.arguments is Map)
               ...(routeSettings.arguments! as Map),
@@ -362,9 +526,9 @@ class CoreRoutes {
       case SuperAdminRoutes.broadcasts:
       case SuperAdminRoutes.auditLogs:
       case SuperAdminRoutes.analytics:
-        page = SuperAdminPortalScreen(
-          routeName: routeSettings.name ?? SuperAdminRoutes.dashboard,
-          arguments: routeSettings.arguments,
+        page = _adminPage(
+          routeSettings.name ?? SuperAdminRoutes.dashboard,
+          routeSettings.arguments,
         );
       default:
         page = const CoreErrorScreen(
@@ -673,4 +837,108 @@ class _SuperAdminDeepLink {
   final Map<String, Object?> arguments;
 
   const _SuperAdminDeepLink(this.routeName, {this.arguments = const {}});
+}
+
+class _DeferredLibrary {
+  _DeferredLibrary(this._loader);
+
+  final Future<dynamic> Function() _loader;
+  Future<void>? _pending;
+  bool _loaded = false;
+
+  bool get isLoaded => _loaded;
+
+  Future<void> load() {
+    if (_loaded) return Future<void>.value();
+    return _pending ??= _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      await _loader();
+      _loaded = true;
+    } finally {
+      if (!_loaded) _pending = null;
+    }
+  }
+}
+
+class _DeferredRouteScreen extends StatefulWidget {
+  const _DeferredRouteScreen({
+    required this.library,
+    required this.builder,
+  });
+
+  final _DeferredLibrary library;
+  final Widget Function() builder;
+
+  @override
+  State<_DeferredRouteScreen> createState() => _DeferredRouteScreenState();
+}
+
+class _DeferredRouteScreenState extends State<_DeferredRouteScreen> {
+  late Future<void> _loadFuture;
+  Widget? _page;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFuture = widget.library.load();
+  }
+
+  void _retry() {
+    setState(() {
+      _loadFuture = widget.library.load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.library.isLoaded) return _page ??= widget.builder();
+
+    return FutureBuilder<void>(
+      future: _loadFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            !snapshot.hasError) {
+          return _page ??= widget.builder();
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'We could not open this portal.',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: _retry,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Try again'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: 12),
+                const Text('Opening your portal…'),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

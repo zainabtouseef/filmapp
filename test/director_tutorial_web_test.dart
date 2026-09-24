@@ -6,6 +6,12 @@ void main() {
   final script = File('web/director_tutorial.js').readAsStringSync();
   final styles = File('web/director_tutorial.css').readAsStringSync();
   final index = File('web/index.html').readAsStringSync();
+  final routes = File(
+    'lib/core/core_ui/core_routes.dart',
+  ).readAsStringSync();
+  final splash = File(
+    'lib/core/core_ui/screens/splash_screen.dart',
+  ).readAsStringSync();
   final shell = File(
     'lib/features/director_producer/widgets/dp_shell.dart',
   ).readAsStringSync();
@@ -241,13 +247,17 @@ void main() {
 
   test('web startup cache-busts releases and has a renderer fallback', () {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
-    expect(index, contains("releaseVersion = '20260924-glass-dashboard-v11'"));
+    expect(index, contains("releaseVersion = '20260924-fast-start-v12'"));
     expect(
       index,
       contains(r'mainJsPath = `${build.mainJsPath}?v=${requestVersion}`'),
     );
     expect(index, contains("canvasKitBaseUrl: 'canvaskit/'"));
-    expect(index, contains('config: recoveryMode ? {}'));
+    expect(
+      index,
+      contains(
+          "config: recoveryMode ? { canvasKitBaseUrl: 'canvaskit/' } : {}"),
+    );
     expect(index, contains("searchParams.set('cc-recovery', releaseVersion)"));
     expect(index, contains('window.location.replace(recoveryUrl.toString())'));
     expect(index, isNot(contains('serviceWorkerSettings')));
@@ -260,8 +270,16 @@ void main() {
     expect(index, contains('window.requestAnimationFrame(finishBoot)'));
     expect(index, contains('Loading CineConnect…'));
     expect(index, contains('Reload portal'));
-    expect(index, contains('window.setTimeout(showSlowBoot, 20000)'));
-    expect(index, contains('window.setTimeout(showManualReload, 90000)'));
+    expect(index, contains('window.setTimeout(showSlowBoot, 12000)'));
+    expect(index, contains('window.setTimeout(showManualReload, 45000)'));
     expect(index, isNot(contains('setTimeout(showBootFailure')));
+  });
+
+  test('startup defers portal code and keeps the splash compact', () {
+    expect(
+        RegExp(r'deferred as \w+_portal;').allMatches(routes), hasLength(16));
+    expect(routes, contains('class _DeferredRouteScreen'));
+    expect(routes, contains('await _loader();'));
+    expect(splash, contains('Duration(milliseconds: 1800)'));
   });
 }
