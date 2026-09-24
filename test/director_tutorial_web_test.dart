@@ -241,7 +241,7 @@ void main() {
 
   test('web startup cache-busts releases and has a renderer fallback', () {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
-    expect(index, contains("releaseVersion = '20260924-glass-dashboard-v10'"));
+    expect(index, contains("releaseVersion = '20260924-glass-dashboard-v11'"));
     expect(
       index,
       contains(r'mainJsPath = `${build.mainJsPath}?v=${requestVersion}`'),
@@ -260,6 +260,8 @@ void main() {
     expect(index, contains('window.requestAnimationFrame(finishBoot)'));
     expect(index, contains('Loading CineConnect…'));
     expect(index, contains('Reload portal'));
-    expect(index, contains('window.setTimeout(showBootFailure, 20000)'));
+    expect(index, contains('window.setTimeout(showSlowBoot, 20000)'));
+    expect(index, contains('window.setTimeout(showManualReload, 90000)'));
+    expect(index, isNot(contains('setTimeout(showBootFailure')));
   });
 }

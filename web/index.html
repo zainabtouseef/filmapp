@@ -104,13 +104,11 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20260924-glass-dashboard-v10';
+    const releaseVersion = '20260924-glass-dashboard-v11';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;
-    const requestVersion = recoveryMode
-      ? `${releaseVersion}-${Date.now()}`
-      : releaseVersion;
+    const requestVersion = releaseVersion;
     for (const build of _flutter.buildConfig.builds) {
       if (build.mainJsPath) {
         build.mainJsPath = `${build.mainJsPath}?v=${requestVersion}`;
@@ -160,6 +158,26 @@
       bootReload.style.display = 'block';
     };
 
+    const showSlowBoot = () => {
+      if (firstFrameRendered) return;
+      if (document.querySelector('flutter-view')) {
+        finishBoot();
+        return;
+      }
+      // A slow connection must never restart a partially downloaded bundle.
+      bootMessage.textContent = 'Loading CineConnect on this connection…';
+    };
+
+    const showManualReload = () => {
+      if (firstFrameRendered) return;
+      if (document.querySelector('flutter-view')) {
+        finishBoot();
+        return;
+      }
+      bootMessage.textContent = 'The portal is still loading.';
+      bootReload.style.display = 'block';
+    };
+
     window.addEventListener('flutter-first-frame', finishBoot, { once: true });
     bootObserver = new MutationObserver(() => {
       if (!document.querySelector('flutter-view')) return;
@@ -200,14 +218,15 @@
 
       // Start with same-origin CanvasKit. The one-time compatibility reload
       // falls back to Flutter's engine-versioned CDN if local renderer loading
-      // fails or stalls on a particular browser/network combination.
+      // fails on a particular browser/network combination.
       await _flutter.loader.load({
         config: recoveryMode ? {} : { canvasKitBaseUrl: 'canvaskit/' },
       });
     };
 
     Promise.resolve(startFlutter()).catch(showBootFailure);
-    window.setTimeout(showBootFailure, 20000);
+    window.setTimeout(showSlowBoot, 20000);
+    window.setTimeout(showManualReload, 90000);
   </script>
   <script src="director_tutorial.js?v=20260813-35" defer></script>
 </body>
