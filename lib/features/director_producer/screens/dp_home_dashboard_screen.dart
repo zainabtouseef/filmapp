@@ -134,26 +134,38 @@ class _WidgetGridSection extends StatelessWidget {
 
     return PortalStaggeredReveal(
       children: [
-        SizedBox(
-          width: _clockRingWidth,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const PortalLiveClockWidget(),
-                  const SizedBox(width: 14),
-                  PortalGlassRingWidget(
-                    progress: progress,
-                    value: CineFormat.currency(paid, compact: true),
-                    label: 'Payments cleared\nthis cycle',
-                    tone: CineTone.premium,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              PortalGlassFireWidget(width: _clockRingWidth, height: 118),
-            ],
+        // FittedBox: PortalStaggeredReveal lays children out in a Wrap,
+        // which clamps an oversized child's declared width down to
+        // whatever room is left instead of letting it overflow onto a
+        // new line — without this, the inner Row's two 168px widgets
+        // (350px combined) overflow on narrow viewports. FittedBox
+        // measures the group at its natural size first and only scales
+        // it down uniformly if the available width is tighter; it's a
+        // no-op on any layout wide enough to fit it.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: _clockRingWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const PortalLiveClockWidget(),
+                    const SizedBox(width: 14),
+                    PortalGlassRingWidget(
+                      progress: progress,
+                      value: CineFormat.currency(paid, compact: true),
+                      label: 'Payments cleared\nthis cycle',
+                      tone: CineTone.premium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+              ],
+            ),
           ),
         ),
         PortalGlassWidgetCard(

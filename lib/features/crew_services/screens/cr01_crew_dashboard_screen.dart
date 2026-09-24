@@ -376,6 +376,8 @@ class _CrewWidgetGridSection extends StatelessWidget {
 
   const _CrewWidgetGridSection({required this.data});
 
+  static const _clockRingWidth = 168.0 * 2 + 14;
+
   @override
   Widget build(BuildContext context) {
     final credit = data.payments.creditMinor;
@@ -385,12 +387,38 @@ class _CrewWidgetGridSection extends StatelessWidget {
 
     return PortalStaggeredReveal(
       children: [
-        const PortalLiveClockWidget(),
-        PortalGlassRingWidget(
-          progress: progress,
-          value: crewMoney(credit ~/ 100),
-          label: 'Earnings cleared\nthis cycle',
-          tone: CineTone.premium,
+        // FittedBox: guards against the narrowest mobile widths, where the
+        // shell's content column can be tighter than the clock+ring's
+        // combined natural width — that would otherwise clamp the
+        // SizedBox and overflow the Row inside it. scaleDown measures the
+        // group at full size first and only shrinks it (uniformly, no
+        // clipping) when space is tight — a no-op on any layout wide
+        // enough to fit it natively.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: _clockRingWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const PortalLiveClockWidget(),
+                    const SizedBox(width: 14),
+                    PortalGlassRingWidget(
+                      progress: progress,
+                      value: crewMoney(credit ~/ 100),
+                      label: 'Earnings cleared\nthis cycle',
+                      tone: CineTone.premium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+              ],
+            ),
+          ),
         ),
         PortalGlassWidgetCard(
           width: 340,

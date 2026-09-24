@@ -846,12 +846,39 @@ class _TalentWidgetGridSection extends StatelessWidget {
     required this.opportunitiesFuture,
   });
 
+  static const _clockRingWidth = 168.0 * 2 + 14;
+
   @override
   Widget build(BuildContext context) {
     return PortalStaggeredReveal(
       children: [
-        const PortalLiveClockWidget(),
-        _ProfileCompletenessRing(future: profileFuture),
+        // FittedBox: on the narrowest mobile widths the shell's content
+        // column can be tighter than the clock+ring's combined natural
+        // width, which would otherwise clamp the SizedBox and overflow the
+        // Row inside it. scaleDown measures the group at full size first
+        // and only shrinks it (uniformly, no clipping) when space is
+        // tight — a no-op on any layout wide enough to fit it natively.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: _clockRingWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const PortalLiveClockWidget(),
+                    const SizedBox(width: 14),
+                    _ProfileCompletenessRing(future: profileFuture),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+              ],
+            ),
+          ),
+        ),
         PortalGlassWidgetCard(
           width: 340,
           child: _BookingCalendarSection(

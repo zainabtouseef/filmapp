@@ -247,7 +247,10 @@ void main() {
 
   test('web startup cache-busts releases and has a renderer fallback', () {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
-    expect(index, contains("releaseVersion = '20260924-fast-start-v13'"));
+    expect(
+      index,
+      contains("releaseVersion = '20260924-dashboard-widgets-v14'"),
+    );
     expect(
       index,
       contains(r'mainJsPath = `${build.mainJsPath}?v=${requestVersion}`'),
