@@ -57,10 +57,11 @@ or across every portal where the pattern exists.
 | Backend mypy | Passed: 66 source files |
 | Backend unit tests | Passed: 30 tests |
 | Backend integration tests | Planner and cover assertions added; 3 tests skip locally because MySQL/Redis integration services are not configured |
-| Flutter web production build | Pending final release run |
-| Production health/database/Redis | Pending deployment verification |
-| Live frontend release marker and bootstrap | Pending deployment verification |
-| Git commit/push | Pending final release run |
+| Flutter web production build | Passed with the production API base URL and release marker `20260926-unified-ux-v17` |
+| Production health/database/Redis | Passed: live readiness returned API, MySQL, and Redis `ok`; API, worker, and scheduler show no deployment errors |
+| Live frontend release marker and bootstrap | Passed: HTTPS served the v17 marker and 3.59 MB bundle; isolated headless Chrome rendered the login page without the slow-loading overlay |
+| Authenticated production smoke | Passed: Director demo login plus dashboard, schedule, projects, and Actors marketplace requests returned HTTP 200; the smoke session was revoked |
+| Git commit/push | Passed: release commit `e1c1068` pushed to `origin/feature/marketplace-pricing-visibility` |
 
 ## Items that require external inputs
 
@@ -82,12 +83,10 @@ being represented by demo behaviour.
 
 ## Deployment record
 
-This section is updated after the final production deployment and Git push.
-
 | Field | Value |
 |---|---|
 | Git branch | `feature/marketplace-pricing-visibility` |
-| Git commit | Pending |
+| Git commit | `e1c1068` (deployed release code) |
 | Frontend release | `20260926-unified-ux-v17` |
-| Backend restart | Pending |
-| Domain verification | Pending |
+| Backend restart | API, worker, and scheduler running image `cineconnect-prod-api:e1c1068` |
+| Domain verification | Passed at `https://cine.nalexustechnologies.com`; marker, bundle, browser render, health, login, dashboard, planner schedule, projects, and marketplace verified |
