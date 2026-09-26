@@ -2,7 +2,7 @@
 
 Date: 2026-09-26  
 Specification: `CineConnect_Unified_Portal_UX_UI_Improvement_Specification.docx`  
-Release: `20260926-unified-ux-v17`  
+Release: `20260926-floating-bubbles-v18`
 Production domain: `https://cine.nalexustechnologies.com`
 
 This file treats the attached document as the product specification. The user's
@@ -44,6 +44,7 @@ or across every portal where the pattern exists.
 | Shared UI | About action, Logout placement, moving filter rail, persisted marketplace preference, skeletons, responsive header corrections | Flutter static analysis and widget suite |
 | Director UX | Console feed, workflow labels, planner add flow, marketplace controls/grouping, profile privacy, shortlist comparison/bulk actions, negotiation context | Flutter tests and live API integration paths |
 | Cross-portal UX | Equivalent status/category/range rails migrated across business and partner portals; shared chip fallback retained for form option selectors | Portal widget tests at desktop and compact widths |
+| Dashboard animation | Connected the new floating bubble treatment to the shared portal hero, making it available across every dashboard that uses the unified hero; reduced-motion mode renders it statically | Flutter analysis, full widget suite, and exact live-bundle verification |
 | Backend | Schedule event read/write/audit integration and project cover validation contract | Ruff, mypy, unit tests, integration test additions |
 | Production safety | Fake OTP/demo role login and fake Trust & Safety report target removed | Static analysis and tests |
 
@@ -57,11 +58,11 @@ or across every portal where the pattern exists.
 | Backend mypy | Passed: 66 source files |
 | Backend unit tests | Passed: 30 tests |
 | Backend integration tests | Planner and cover assertions added; 3 tests skip locally because MySQL/Redis integration services are not configured |
-| Flutter web production build | Passed with the production API base URL and release marker `20260926-unified-ux-v17` |
+| Flutter web production build | Passed with the production API base URL and release marker `20260926-floating-bubbles-v18` |
 | Production health/database/Redis | Passed: live readiness returned API, MySQL, and Redis `ok`; API, worker, and scheduler show no deployment errors |
-| Live frontend release marker and bootstrap | Passed: HTTPS served the v17 marker and 3.59 MB bundle; isolated headless Chrome rendered the login page without the slow-loading overlay |
+| Live frontend release marker and bootstrap | Passed: HTTPS served the v18 marker and 3.59 MB bundle; its SHA-256 matched the tested local build, and isolated headless Chrome rendered the login page without the slow-loading overlay |
 | Authenticated production smoke | Passed: Director demo login plus dashboard, schedule, projects, and Actors marketplace requests returned HTTP 200; the smoke session was revoked |
-| Git commit/push | Passed: release commit `e1c1068` pushed to `origin/feature/marketplace-pricing-visibility` |
+| Git commit/push | Passed: release commits through `aa9ab07` pushed to `origin/feature/marketplace-pricing-visibility` |
 
 ## Items that require external inputs
 
@@ -86,7 +87,7 @@ being represented by demo behaviour.
 | Field | Value |
 |---|---|
 | Git branch | `feature/marketplace-pricing-visibility` |
-| Git commit | `e1c1068` (deployed release code) |
-| Frontend release | `20260926-unified-ux-v17` |
+| Git commit | `aa9ab07` (deployed frontend); `e1c1068` (deployed backend) |
+| Frontend release | `20260926-floating-bubbles-v18` |
 | Backend restart | API, worker, and scheduler running image `cineconnect-prod-api:e1c1068` |
 | Domain verification | Passed at `https://cine.nalexustechnologies.com`; marker, bundle, browser render, health, login, dashboard, planner schedule, projects, and marketplace verified |
