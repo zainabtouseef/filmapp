@@ -8,6 +8,7 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
+import 'portal_floating_bubbles.dart';
 
 /// A single stat shown in the hero card's translucent stat strip
 /// (e.g. "20 · Productions").
@@ -93,108 +94,118 @@ class _PortalHeroCardState extends State<PortalHeroCard>
               borderRadius: BorderRadius.circular(widget.radius),
             ),
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+            child: Stack(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                const Positioned.fill(
+                  child: PortalFloatingBubbles(count: 5),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _InitialsBadge(initials: widget.initials),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.sectionSerifHeading.copyWith(
-                              fontSize: 20,
-                              color: colors.textPrimary,
-                            ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _InitialsBadge(initials: widget.initials),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style:
+                                    AppTextStyles.sectionSerifHeading.copyWith(
+                                  fontSize: 20,
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              _VerifiedPill(label: widget.badgeLabel),
+                            ],
                           ),
-                          const SizedBox(height: 5),
-                          _VerifiedPill(label: widget.badgeLabel),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: 11,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.isLight
+                            ? Colors.white.withValues(alpha: 0.5)
+                            : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(AppRadius.panel),
+                      ),
+                      child: Row(
+                        children: [
+                          for (final stat in widget.stats)
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.only(left: 10),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    left: BorderSide(
+                                      color: colors.goldMid,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      stat.value,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTextStyles.cardTitle.copyWith(
+                                        fontSize: 18,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      stat.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTextStyles.smallMeta.copyWith(
+                                        color: colors.textSecondary,
+                                        fontSize: 10.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: 11,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.isLight
-                        ? Colors.white.withValues(alpha: 0.5)
-                        : Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(AppRadius.panel),
-                  ),
-                  child: Row(
-                    children: [
-                      for (final stat in widget.stats)
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
                         Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.only(left: 10),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                left:
-                                    BorderSide(color: colors.goldMid, width: 2),
-                              ),
+                          child: FilledButton(
+                            onPressed: widget.onCta,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colors.card,
+                              foregroundColor: colors.textPrimary,
+                              shape: const StadiumBorder(),
+                              minimumSize: const Size.fromHeight(42),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  stat.value,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.cardTitle.copyWith(
-                                    fontSize: 18,
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
-                                Text(
-                                  stat.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.smallMeta.copyWith(
-                                    color: colors.textSecondary,
-                                    fontSize: 10.5,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            child: Text(widget.ctaLabel),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: widget.onCta,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: colors.card,
-                          foregroundColor: colors.textPrimary,
-                          shape: const StadiumBorder(),
-                          minimumSize: const Size.fromHeight(42),
+                        const SizedBox(width: AppSpacing.sm),
+                        _SecondaryIconButton(
+                          icon: widget.secondaryIcon,
+                          onTap: widget.onSecondary,
                         ),
-                        child: Text(widget.ctaLabel),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _SecondaryIconButton(
-                      icon: widget.secondaryIcon,
-                      onTap: widget.onSecondary,
+                      ],
                     ),
                   ],
                 ),
