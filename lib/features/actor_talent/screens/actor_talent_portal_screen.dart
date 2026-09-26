@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../routes/actor_talent_routes.dart';
+import '../widgets/actor_full_walkthrough_steps.dart';
 import '../widgets/actor_talent_shell.dart';
 import 'at01_talent_dashboard_screen.dart';
 import 'at02_profile_builder_screen.dart';
@@ -38,6 +39,8 @@ class ActorTalentPortalScreen extends StatelessWidget {
       title: title,
       screenId: screenId,
       workspaceLayout: true,
+      fullWalkthroughSteps: actorFullWalkthroughSteps,
+      fullWalkthroughTourId: actorFullWalkthroughTourId,
       child: _screenFor(routeName),
     );
   }

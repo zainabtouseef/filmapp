@@ -4,6 +4,7 @@ import '../../../core/casting/casting_controller.dart';
 import '../../../core/casting/casting_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_casting_widgets.dart';
@@ -51,84 +52,90 @@ class _AT14ApplicationsScreenState extends State<AT14ApplicationsScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ActorSearchFilterBar(
-          query: _query,
-          onQueryChanged: (value) => setState(() => _query = value),
-          filters: const ['All', 'Active', 'Auditions', 'Offers', 'Closed'],
-          selectedFilter: _filter,
-          onFilterChanged: (value) => setState(() => _filter = value),
+        TourTarget(
+          id: 'actor.applications.searchFilter',
+          child: ActorSearchFilterBar(
+            query: _query,
+            onQueryChanged: (value) => setState(() => _query = value),
+            filters: const ['All', 'Active', 'Auditions', 'Offers', 'Closed'],
+            selectedFilter: _filter,
+            onFilterChanged: (value) => setState(() => _filter = value),
+          ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title:
-              widget.auditionsOnly ? 'Auditions & Callbacks' : 'Applications',
-          icon: widget.auditionsOnly
-              ? Icons.video_camera_front_outlined
-              : Icons.assignment_outlined,
-          actionText: 'Refresh',
-          onActionTap: _reload,
-          child: FutureBuilder<List<CastingApplication>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Column(
+        TourTarget(
+          id: 'actor.applications.list',
+          child: ActorSectionCard(
+            title:
+                widget.auditionsOnly ? 'Auditions & Callbacks' : 'Applications',
+            icon: widget.auditionsOnly
+                ? Icons.video_camera_front_outlined
+                : Icons.assignment_outlined,
+            actionText: 'Refresh',
+            onActionTap: _reload,
+            child: FutureBuilder<List<CastingApplication>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Column(
+                    children: [
+                      SkeletonCard(height: 120),
+                      SizedBox(height: 10),
+                      SkeletonCard(height: 120),
+                    ],
+                  );
+                }
+                if (snapshot.hasError) {
+                  return CoreEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Applications unavailable',
+                    message: snapshot.error is ApiException
+                        ? (snapshot.error! as ApiException).message
+                        : 'Could not load your application tracker.',
+                    actionLabel: 'Try again',
+                    onAction: _reload,
+                  );
+                }
+                final rows = (snapshot.data ?? const <CastingApplication>[])
+                    .where(_matchesFilter)
+                    .toList();
+                if (rows.isEmpty) {
+                  return CoreEmptyState(
+                    icon: widget.auditionsOnly
+                        ? Icons.video_camera_front_outlined
+                        : Icons.assignment_add,
+                    title: widget.auditionsOnly
+                        ? 'No upcoming auditions'
+                        : 'No $_filter applications',
+                    message: widget.auditionsOnly
+                        ? 'Audition requests, self-tapes and callbacks appear here.'
+                        : 'Browse live roles and submit an application to start tracking it.',
+                    actionLabel: widget.auditionsOnly ? null : 'Discover roles',
+                    onAction: widget.auditionsOnly
+                        ? null
+                        : () => Navigator.pushNamed(
+                              context,
+                              ActorTalentRoutes.opportunities,
+                            ),
+                  );
+                }
+                return Column(
                   children: [
-                    SkeletonCard(height: 120),
-                    SizedBox(height: 10),
-                    SkeletonCard(height: 120),
-                  ],
-                );
-              }
-              if (snapshot.hasError) {
-                return CoreEmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Applications unavailable',
-                  message: snapshot.error is ApiException
-                      ? (snapshot.error! as ApiException).message
-                      : 'Could not load your application tracker.',
-                  actionLabel: 'Try again',
-                  onAction: _reload,
-                );
-              }
-              final rows = (snapshot.data ?? const <CastingApplication>[])
-                  .where(_matchesFilter)
-                  .toList();
-              if (rows.isEmpty) {
-                return CoreEmptyState(
-                  icon: widget.auditionsOnly
-                      ? Icons.video_camera_front_outlined
-                      : Icons.assignment_add,
-                  title: widget.auditionsOnly
-                      ? 'No upcoming auditions'
-                      : 'No $_filter applications',
-                  message: widget.auditionsOnly
-                      ? 'Audition requests, self-tapes and callbacks appear here.'
-                      : 'Browse live roles and submit an application to start tracking it.',
-                  actionLabel: widget.auditionsOnly ? null : 'Discover roles',
-                  onAction: widget.auditionsOnly
-                      ? null
-                      : () => Navigator.pushNamed(
-                            context,
-                            ActorTalentRoutes.opportunities,
-                          ),
-                );
-              }
-              return Column(
-                children: [
-                  for (var index = 0; index < rows.length; index++) ...[
-                    ActorCastingApplicationCard(
-                      application: rows[index],
-                      onOpen: () => Navigator.pushNamed(
-                        context,
-                        ActorTalentRoutes.applicationDetail,
-                        arguments: rows[index].publicId,
+                    for (var index = 0; index < rows.length; index++) ...[
+                      ActorCastingApplicationCard(
+                        application: rows[index],
+                        onOpen: () => Navigator.pushNamed(
+                          context,
+                          ActorTalentRoutes.applicationDetail,
+                          arguments: rows[index].publicId,
+                        ),
                       ),
-                    ),
-                    if (index != rows.length - 1) const SizedBox(height: 10),
+                      if (index != rows.length - 1) const SizedBox(height: 10),
+                    ],
                   ],
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ],

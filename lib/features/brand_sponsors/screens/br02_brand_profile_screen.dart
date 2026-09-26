@@ -10,6 +10,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/brand_sponsor_models.dart';
@@ -153,257 +154,273 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
     }
     final colors = context.appColors;
     return BrandTwoColumn(
-      left: BrandSectionCard(
-        title: _profile == null ? 'Create brand identity' : 'Brand identity',
-        icon: Icons.business_center_outlined,
-        selected: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            BrandMediaFrame(
-              imageUrl: _logoUrl,
-              title: _name.text.trim().isEmpty ? 'Brand name' : _name.text,
-              badge: _category.text.trim().isEmpty
-                  ? 'Organization category'
-                  : _category.text,
-              fallbackIcon: Icons.campaign_outlined,
-              aspectRatio: 16 / 8.5,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                BrandLiveStatusChip(
-                  status: _profile?.trustStatus ?? 'profile_required',
-                ),
-                if (_logoFileName != null)
-                  StatusChip(
-                    label: 'NEW LOGO',
-                    icon: Icons.image_outlined,
-                    color: colors.infoBlue,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            CoreTextField(
-              controller: _name,
-              label: 'Legal or trading name',
-              icon: Icons.business_outlined,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _category,
-              label: 'Industry category',
-              icon: Icons.category_outlined,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _representative,
-              label: 'Authorized representative',
-              icon: Icons.person_outline_rounded,
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _description,
-              label: 'Organization and sponsorship description',
-              icon: Icons.notes_outlined,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _website,
-              label: 'Website',
-              icon: Icons.language_outlined,
-              keyboardType: TextInputType.url,
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              key: ValueKey(_cityId),
-              initialValue: _cityId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Primary city',
-                prefixIcon: Icon(Icons.location_city_outlined),
+      left: TourTarget(
+        id: 'brand.profile.identityForm',
+        child: BrandSectionCard(
+          title: _profile == null ? 'Create brand identity' : 'Brand identity',
+          icon: Icons.business_center_outlined,
+          selected: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              BrandMediaFrame(
+                imageUrl: _logoUrl,
+                title: _name.text.trim().isEmpty ? 'Brand name' : _name.text,
+                badge: _category.text.trim().isEmpty
+                    ? 'Organization category'
+                    : _category.text,
+                fallbackIcon: Icons.campaign_outlined,
+                aspectRatio: 16 / 8.5,
               ),
-              items: [
-                for (final city in _cities)
-                  DropdownMenuItem(
-                    value: city.publicId,
-                    child: Text(
-                      city.name,
-                      overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  BrandLiveStatusChip(
+                    status: _profile?.trustStatus ?? 'profile_required',
+                  ),
+                  if (_logoFileName != null)
+                    StatusChip(
+                      label: 'NEW LOGO',
+                      icon: Icons.image_outlined,
+                      color: colors.infoBlue,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              CoreTextField(
+                controller: _name,
+                label: 'Legal or trading name',
+                icon: Icons.business_outlined,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _category,
+                label: 'Industry category',
+                icon: Icons.category_outlined,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _representative,
+                label: 'Authorized representative',
+                icon: Icons.person_outline_rounded,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _description,
+                label: 'Organization and sponsorship description',
+                icon: Icons.notes_outlined,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 10),
+              CoreTextField(
+                controller: _website,
+                label: 'Website',
+                icon: Icons.language_outlined,
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                key: ValueKey(_cityId),
+                initialValue: _cityId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Primary city',
+                  prefixIcon: Icon(Icons.location_city_outlined),
+                ),
+                items: [
+                  for (final city in _cities)
+                    DropdownMenuItem(
+                      value: city.publicId,
+                      child: Text(
+                        city.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _cityId = value),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: CoreTextField(
+                      controller: _instagram,
+                      label: 'Instagram',
+                      icon: Icons.camera_alt_outlined,
                     ),
                   ),
-              ],
-              onChanged: (value) => setState(() => _cityId = value),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: CoreTextField(
-                    controller: _instagram,
-                    label: 'Instagram',
-                    icon: Icons.camera_alt_outlined,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: CoreTextField(
+                      controller: _linkedin,
+                      label: 'LinkedIn',
+                      icon: Icons.work_outline_rounded,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CoreTextField(
-                    controller: _linkedin,
-                    label: 'LinkedIn',
-                    icon: Icons.work_outline_rounded,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            UploadCard(
-              title: _uploading ? 'Uploading logo...' : 'Brand logo',
-              subtitle: _logoFileName ??
-                  (_logoUrl.isEmpty
-                      ? 'Upload a square PNG, JPG or WebP'
-                      : 'Current logo is connected'),
-              uploaded: _logoFileName != null || _logoUrl.isNotEmpty,
-              onTap: _uploading ? null : _pickLogo,
-            ),
-            if (_error != null) ...[
+                ],
+              ),
               const SizedBox(height: 10),
-              InlineNotice(
-                message: _error!,
-                icon: Icons.error_outline_rounded,
-                tone: CoreStatusTone.danger,
+              TourTarget(
+                id: 'brand.profile.logo',
+                child: UploadCard(
+                  title: _uploading ? 'Uploading logo...' : 'Brand logo',
+                  subtitle: _logoFileName ??
+                      (_logoUrl.isEmpty
+                          ? 'Upload a square PNG, JPG or WebP'
+                          : 'Current logo is connected'),
+                  uploaded: _logoFileName != null || _logoUrl.isNotEmpty,
+                  onTap: _uploading ? null : _pickLogo,
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                InlineNotice(
+                  message: _error!,
+                  icon: Icons.error_outline_rounded,
+                  tone: CoreStatusTone.danger,
+                ),
+              ],
+              const SizedBox(height: 14),
+              CorePrimaryButton(
+                icon: Icons.save_outlined,
+                label: _saving ? 'Saving...' : 'Save brand profile',
+                onTap: _saving ? null : _save,
               ),
             ],
-            const SizedBox(height: 14),
-            CorePrimaryButton(
-              icon: Icons.save_outlined,
-              label: _saving ? 'Saving...' : 'Save brand profile',
-              onTap: _saving ? null : _save,
-            ),
-          ],
+          ),
         ),
       ),
       right: Column(
         children: [
-          BrandSectionCard(
-            title: 'Organization trust',
-            icon: Icons.verified_user_outlined,
-            tone: BrandTone.green,
-            child: Column(
-              children: [
-                BrandInfoRow(
-                  icon: Icons.verified_outlined,
-                  label: 'KYB status',
-                  value: readableBrandStatus(
-                    _profile?.trustStatus ?? 'not_started',
+          TourTarget(
+            id: 'brand.profile.trust',
+            child: BrandSectionCard(
+              title: 'Organization trust',
+              icon: Icons.verified_user_outlined,
+              tone: BrandTone.green,
+              child: Column(
+                children: [
+                  BrandInfoRow(
+                    icon: Icons.verified_outlined,
+                    label: 'KYB status',
+                    value: readableBrandStatus(
+                      _profile?.trustStatus ?? 'not_started',
+                    ),
                   ),
-                ),
-                BrandInfoRow(
-                  icon: Icons.account_circle_outlined,
-                  label: 'Representative',
-                  value: _representative.text.trim().isEmpty
-                      ? 'Not set'
-                      : _representative.text,
-                ),
-                BrandInfoRow(
-                  icon: Icons.image_outlined,
-                  label: 'Logo',
-                  value: _logoUrl.isEmpty && _logoFileId == null
-                      ? 'Missing'
-                      : 'Connected',
-                ),
-                BrandInfoRow(
-                  icon: Icons.email_outlined,
-                  label: 'Account email',
-                  value: _auth?.user?.email ?? 'Not available',
-                ),
-                BrandInfoRow(
-                  icon: Icons.location_city_outlined,
-                  label: 'Primary city',
-                  value: _publicProfile?.city?.name ?? 'Not set',
-                ),
-                const SizedBox(height: 10),
-                CoreSecondaryButton(
-                  icon: Icons.verified_user_outlined,
-                  label: 'Open verification',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    CoreRoutes.kyc,
-                    arguments: 'Brand / Sponsor',
+                  BrandInfoRow(
+                    icon: Icons.account_circle_outlined,
+                    label: 'Representative',
+                    value: _representative.text.trim().isEmpty
+                        ? 'Not set'
+                        : _representative.text,
                   ),
-                ),
-              ],
+                  BrandInfoRow(
+                    icon: Icons.image_outlined,
+                    label: 'Logo',
+                    value: _logoUrl.isEmpty && _logoFileId == null
+                        ? 'Missing'
+                        : 'Connected',
+                  ),
+                  BrandInfoRow(
+                    icon: Icons.email_outlined,
+                    label: 'Account email',
+                    value: _auth?.user?.email ?? 'Not available',
+                  ),
+                  BrandInfoRow(
+                    icon: Icons.location_city_outlined,
+                    label: 'Primary city',
+                    value: _publicProfile?.city?.name ?? 'Not set',
+                  ),
+                  const SizedBox(height: 10),
+                  CoreSecondaryButton(
+                    icon: Icons.verified_user_outlined,
+                    label: 'Open verification',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      CoreRoutes.kyc,
+                      arguments: 'Brand / Sponsor',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          BrandSectionCard(
-            title: 'Billing identity',
-            icon: Icons.receipt_long_outlined,
-            tone: BrandTone.blue,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Billing details are tokenized by the backend and are not returned to the portal after saving.',
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                    height: 1.35,
+          TourTarget(
+            id: 'brand.profile.billing',
+            child: BrandSectionCard(
+              title: 'Billing identity',
+              icon: Icons.receipt_long_outlined,
+              tone: BrandTone.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Billing details are tokenized by the backend and are not returned to the portal after saving.',
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.35,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: _billingDetails,
-                  label: 'Replace billing details (optional)',
-                  icon: Icons.lock_outline_rounded,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 8),
-                InlineNotice(
-                  message:
-                      'Use organization billing details only. Campaign payments remain in the payment schedule and ledger.',
-                  icon: Icons.security_outlined,
-                  tone: CoreStatusTone.info,
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: _billingDetails,
+                    label: 'Replace billing details (optional)',
+                    icon: Icons.lock_outline_rounded,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  InlineNotice(
+                    message:
+                        'Use organization billing details only. Campaign payments remain in the payment schedule and ledger.',
+                    icon: Icons.security_outlined,
+                    tone: CoreStatusTone.info,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          BrandSectionCard(
-            title: 'Profile readiness',
-            icon: Icons.checklist_outlined,
-            tone: BrandTone.purple,
-            child: Column(
-              children: [
-                _ReadinessRow(
-                  label: 'Organization name',
-                  complete: _name.text.trim().length >= 2,
-                ),
-                _ReadinessRow(
-                  label: 'Industry category',
-                  complete: _category.text.trim().isNotEmpty,
-                ),
-                _ReadinessRow(
-                  label: 'Representative',
-                  complete: _representative.text.trim().isNotEmpty,
-                ),
-                _ReadinessRow(
-                  label: 'Sponsorship description',
-                  complete: _description.text.trim().length >= 20,
-                ),
-                _ReadinessRow(
-                  label: 'Brand logo',
-                  complete: _logoUrl.isNotEmpty || _logoFileId != null,
-                ),
-                _ReadinessRow(
-                  label: 'Website and city',
-                  complete: _website.text.trim().isNotEmpty && _cityId != null,
-                ),
-              ],
+          TourTarget(
+            id: 'brand.profile.readiness',
+            child: BrandSectionCard(
+              title: 'Profile readiness',
+              icon: Icons.checklist_outlined,
+              tone: BrandTone.purple,
+              child: Column(
+                children: [
+                  _ReadinessRow(
+                    label: 'Organization name',
+                    complete: _name.text.trim().length >= 2,
+                  ),
+                  _ReadinessRow(
+                    label: 'Industry category',
+                    complete: _category.text.trim().isNotEmpty,
+                  ),
+                  _ReadinessRow(
+                    label: 'Representative',
+                    complete: _representative.text.trim().isNotEmpty,
+                  ),
+                  _ReadinessRow(
+                    label: 'Sponsorship description',
+                    complete: _description.text.trim().length >= 20,
+                  ),
+                  _ReadinessRow(
+                    label: 'Brand logo',
+                    complete: _logoUrl.isNotEmpty || _logoFileId != null,
+                  ),
+                  _ReadinessRow(
+                    label: 'Website and city',
+                    complete:
+                        _website.text.trim().isNotEmpty && _cityId != null,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

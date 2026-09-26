@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/opportunities/opportunity_inbox_screen.dart';
 import '../routes/crew_services_routes.dart';
 
@@ -10,11 +11,14 @@ class CR08OpportunitiesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const OpportunityInboxScreen(
-      category: 'crew',
-      sectionTitle: 'Open Crew Requests',
-      emptyMessage: 'New crew requirements from directors will appear here.',
-      detailRoute: CrewServicesRoutes.opportunityApplicationDetail,
+    return const TourTarget(
+      id: 'crew.opportunities.screen',
+      child: OpportunityInboxScreen(
+        category: 'crew',
+        sectionTitle: 'Open Crew Requests',
+        emptyMessage: 'New crew requirements from directors will appear here.',
+        detailRoute: CrewServicesRoutes.opportunityApplicationDetail,
+      ),
     );
   }
 }

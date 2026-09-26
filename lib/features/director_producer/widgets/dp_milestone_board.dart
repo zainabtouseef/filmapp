@@ -4,6 +4,7 @@ import '../../../core/core_payment/screens/payment_proof_screen.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../models/dp_payment.dart';
 import 'dp_glass_card.dart';
 import 'dp_holographic_button.dart';
@@ -63,9 +64,15 @@ void openPaymentProofSheet(BuildContext context, String milestoneId) {
 class DPMilestoneBoard extends StatelessWidget {
   final List<DpPayment> payments;
 
+  /// When true, wraps the first "Due" milestone's proof action with a
+  /// `TourTarget` so the guided tour can spotlight a real, single proof
+  /// button instead of one per (repeated) milestone card.
+  final bool highlightFirstDue;
+
   const DPMilestoneBoard({
     super.key,
     required this.payments,
+    this.highlightFirstDue = false,
   });
 
   static const columns = ['Due', 'Proof Uploaded', 'Verified', 'Rejected'];
@@ -90,6 +97,8 @@ class DPMilestoneBoard extends StatelessWidget {
                     items: payments
                         .where((payment) => payment.status == columns[index])
                         .toList(),
+                    highlightFirstItem:
+                        highlightFirstDue && columns[index] == 'Due',
                   ),
                 ),
                 if (index != columns.length - 1) const SizedBox(width: 12),
@@ -115,10 +124,12 @@ Color _columnColor(BuildContext context, String title) {
 class _MilestoneColumn extends StatelessWidget {
   final String title;
   final List<DpPayment> items;
+  final bool highlightFirstItem;
 
   const _MilestoneColumn({
     required this.title,
     required this.items,
+    this.highlightFirstItem = false,
   });
 
   @override
@@ -138,10 +149,15 @@ class _MilestoneColumn extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          for (final item in items)
+          for (final (index, item) in items.indexed)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _MilestoneCard(item: item, title: title, color: color),
+              child: _MilestoneCard(
+                item: item,
+                title: title,
+                color: color,
+                wrapProofButton: highlightFirstItem && index == 0,
+              ),
             ),
           if (items.isEmpty)
             Text(
@@ -159,11 +175,13 @@ class _MilestoneCard extends StatelessWidget {
   final DpPayment item;
   final String title;
   final Color color;
+  final bool wrapProofButton;
 
   const _MilestoneCard({
     required this.item,
     required this.title,
     required this.color,
+    this.wrapProofButton = false,
   });
 
   @override
@@ -206,18 +224,22 @@ class _MilestoneCard extends StatelessWidget {
           ),
           if (title == 'Due') ...[
             const SizedBox(height: 10),
-            DPHolographicButton(
-              label: 'Upload Proof',
-              icon: Icons.upload_file_rounded,
-              onTap: () => openPaymentProofSheet(context, item.id),
+            _wrapIfNeeded(
+              DPHolographicButton(
+                label: 'Upload Proof',
+                icon: Icons.upload_file_rounded,
+                onTap: () => openPaymentProofSheet(context, item.id),
+              ),
             ),
           ] else if (title == 'Rejected') ...[
             const SizedBox(height: 10),
-            DPHolographicButton(
-              label: 'Resubmit Proof',
-              icon: Icons.refresh_rounded,
-              secondary: true,
-              onTap: () => openPaymentProofSheet(context, item.id),
+            _wrapIfNeeded(
+              DPHolographicButton(
+                label: 'Resubmit Proof',
+                icon: Icons.refresh_rounded,
+                secondary: true,
+                onTap: () => openPaymentProofSheet(context, item.id),
+              ),
             ),
           ] else ...[
             const SizedBox(height: 10),
@@ -247,5 +269,11 @@ class _MilestoneCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _wrapIfNeeded(Widget child) {
+    return wrapProofButton
+        ? TourTarget(id: 'dp.payments.proofButton', child: child)
+        : child;
   }
 }

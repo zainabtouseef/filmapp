@@ -8,6 +8,8 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_local_step_sync.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/location_owner_models.dart';
@@ -24,7 +26,18 @@ class LO02LocationListingWizardScreen extends StatefulWidget {
 }
 
 class _LO02LocationListingWizardScreenState
-    extends State<LO02LocationListingWizardScreen> {
+    extends State<LO02LocationListingWizardScreen>
+    with TourLocalStepSync<LO02LocationListingWizardScreen> {
+  @override
+  String get tourRouteName => LocationOwnerRoutes.listing;
+
+  @override
+  void applyTourLocalStep(Object localStep) {
+    if (localStep is int && localStep != _step) {
+      setState(() => _step = localStep);
+    }
+  }
+
   final _name = TextEditingController();
   final _city = TextEditingController();
   final _area = TextEditingController();
@@ -144,7 +157,10 @@ class _LO02LocationListingWizardScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            StepWizardIndicator(currentStep: _step - 1, totalSteps: 3),
+            TourTarget(
+              id: 'location.wizard.progress',
+              child: StepWizardIndicator(currentStep: _step - 1, totalSteps: 3),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -278,11 +294,14 @@ class _LO02LocationListingWizardScreenState
                   value: 'Managed separately',
                 ),
                 const SizedBox(height: 8),
-                CorePrimaryButton(
-                  icon: Icons.publish_outlined,
-                  label: _saving ? 'Publishing...' : 'Publish property',
-                  compact: true,
-                  onTap: _saving ? null : () => _save(publish: true),
+                TourTarget(
+                  id: 'location.wizard.publish',
+                  child: CorePrimaryButton(
+                    icon: Icons.publish_outlined,
+                    label: _saving ? 'Publishing...' : 'Publish property',
+                    compact: true,
+                    onTap: _saving ? null : () => _save(publish: true),
+                  ),
                 ),
               ],
             ),
@@ -296,38 +315,47 @@ class _LO02LocationListingWizardScreenState
     return switch (_step) {
       1 => Column(
           children: [
-            CoreTextField(
-              controller: _name,
-              label: 'Property name',
-              icon: Icons.location_city_outlined,
-              onChanged: (_) => setState(() {}),
+            TourTarget(
+              id: 'location.wizard.name',
+              child: CoreTextField(
+                controller: _name,
+                label: 'Property name',
+                icon: Icons.location_city_outlined,
+                onChanged: (_) => setState(() {}),
+              ),
             ),
             const SizedBox(height: 10),
-            CoreDropdownField<String>(
-              value: _type,
-              values: const [
-                'Home',
-                'Studio',
-                'Office',
-                'Farm',
-                'Restaurant',
-                'Rooftop',
-                'Other',
-              ],
-              label: 'Property type',
-              icon: Icons.category_outlined,
-              onChanged: (value) {
-                if (value != null) setState(() => _type = value);
-              },
+            TourTarget(
+              id: 'location.wizard.type',
+              child: CoreDropdownField<String>(
+                value: _type,
+                values: const [
+                  'Home',
+                  'Studio',
+                  'Office',
+                  'Farm',
+                  'Restaurant',
+                  'Rooftop',
+                  'Other',
+                ],
+                label: 'Property type',
+                icon: Icons.category_outlined,
+                onChanged: (value) {
+                  if (value != null) setState(() => _type = value);
+                },
+              ),
             ),
             const SizedBox(height: 10),
-            UploadCard(
-              title: _uploading ? 'Uploading photos...' : 'Property photos',
-              subtitle: _mediaNames.isEmpty
-                  ? 'Add clear daylight and night images'
-                  : _mediaNames.join(', '),
-              uploaded: _mediaNames.isNotEmpty,
-              onTap: _uploading ? null : _pickMedia,
+            TourTarget(
+              id: 'location.wizard.photos',
+              child: UploadCard(
+                title: _uploading ? 'Uploading photos...' : 'Property photos',
+                subtitle: _mediaNames.isEmpty
+                    ? 'Add clear daylight and night images'
+                    : _mediaNames.join(', '),
+                uploaded: _mediaNames.isNotEmpty,
+                onTap: _uploading ? null : _pickMedia,
+              ),
             ),
           ],
         ),
@@ -340,43 +368,58 @@ class _LO02LocationListingWizardScreenState
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 10),
-            CoreTextField(
-              controller: _area,
-              label: 'Public area',
-              icon: Icons.map_outlined,
-              onChanged: (_) => setState(() {}),
+            TourTarget(
+              id: 'location.wizard.area',
+              child: CoreTextField(
+                controller: _area,
+                label: 'Public area',
+                icon: Icons.map_outlined,
+                onChanged: (_) => setState(() {}),
+              ),
             ),
             const SizedBox(height: 10),
-            CoreTextField(
-              controller: _exactAddress,
-              label: _propertyId == null
-                  ? 'Exact address'
-                  : 'Replace exact address (optional)',
-              icon: Icons.lock_outline_rounded,
+            TourTarget(
+              id: 'location.wizard.address',
+              child: CoreTextField(
+                controller: _exactAddress,
+                label: _propertyId == null
+                    ? 'Exact address'
+                    : 'Replace exact address (optional)',
+                icon: Icons.lock_outline_rounded,
+              ),
             ),
             const SizedBox(height: 10),
-            CoreTextField(
-              controller: _description,
-              label: 'Production description',
-              icon: Icons.notes_outlined,
-              maxLines: 3,
+            TourTarget(
+              id: 'location.wizard.description',
+              child: CoreTextField(
+                controller: _description,
+                label: 'Production description',
+                icon: Icons.notes_outlined,
+                maxLines: 3,
+              ),
             ),
           ],
         ),
       _ => Column(
           children: [
-            CoreTextField(
-              controller: _spaces,
-              label: 'Shoot spaces',
-              icon: Icons.dashboard_customize_outlined,
-              maxLines: 2,
+            TourTarget(
+              id: 'location.wizard.spaces',
+              child: CoreTextField(
+                controller: _spaces,
+                label: 'Shoot spaces',
+                icon: Icons.dashboard_customize_outlined,
+                maxLines: 2,
+              ),
             ),
             const SizedBox(height: 10),
-            CoreTextField(
-              controller: _capacity,
-              label: 'Maximum crew capacity',
-              icon: Icons.groups_2_outlined,
-              keyboardType: TextInputType.number,
+            TourTarget(
+              id: 'location.wizard.capacity',
+              child: CoreTextField(
+                controller: _capacity,
+                label: 'Maximum crew capacity',
+                icon: Icons.groups_2_outlined,
+                keyboardType: TextInputType.number,
+              ),
             ),
             const SizedBox(height: 10),
             CoreTextField(
@@ -385,12 +428,15 @@ class _LO02LocationListingWizardScreenState
               icon: Icons.local_parking_outlined,
               keyboardType: TextInputType.number,
             ),
-            SwitchListTile.adaptive(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              value: _powerBackup,
-              onChanged: (value) => setState(() => _powerBackup = value),
-              title: const Text('Power backup available'),
+            TourTarget(
+              id: 'location.wizard.amenities',
+              child: SwitchListTile.adaptive(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: _powerBackup,
+                onChanged: (value) => setState(() => _powerBackup = value),
+                title: const Text('Power backup available'),
+              ),
             ),
             SwitchListTile.adaptive(
               dense: true,

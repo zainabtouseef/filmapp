@@ -8,6 +8,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../models/brand_sponsor_models.dart';
@@ -151,37 +152,40 @@ class _BR07PaymentsRecordsScreenState extends State<BR07PaymentsRecordsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: brandMoney(debit),
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Recorded spend',
-              subtitle: '${_ledger.length} ledger entries',
-              accentColor: context.appColors.success,
-            ),
-            MetricActionItem(
-              value: brandMoney(pendingRelease),
-              icon: Icons.pending_actions_outlined,
-              title: 'Pending release',
-              subtitle: '$pendingCount milestones',
-              accentColor: context.appColors.goldDark,
-            ),
-            MetricActionItem(
-              value: '$releasedCount',
-              icon: Icons.verified_outlined,
-              title: 'Released milestones',
-              subtitle: '${allMilestones.length} total',
-              accentColor: context.appColors.infoBlue,
-            ),
-            MetricActionItem(
-              value: '${accepted.length}',
-              icon: Icons.policy_outlined,
-              title: 'Accepted deals',
-              subtitle: 'Rights records',
-              accentColor: context.appColors.infoPurple,
-            ),
-          ],
+        TourTarget(
+          id: 'brand.payments.metrics',
+          child: MetricActionRail(
+            items: [
+              MetricActionItem(
+                value: brandMoney(debit),
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Recorded spend',
+                subtitle: '${_ledger.length} ledger entries',
+                accentColor: context.appColors.success,
+              ),
+              MetricActionItem(
+                value: brandMoney(pendingRelease),
+                icon: Icons.pending_actions_outlined,
+                title: 'Pending release',
+                subtitle: '$pendingCount milestones',
+                accentColor: context.appColors.goldDark,
+              ),
+              MetricActionItem(
+                value: '$releasedCount',
+                icon: Icons.verified_outlined,
+                title: 'Released milestones',
+                subtitle: '${allMilestones.length} total',
+                accentColor: context.appColors.infoBlue,
+              ),
+              MetricActionItem(
+                value: '${accepted.length}',
+                icon: Icons.policy_outlined,
+                title: 'Accepted deals',
+                subtitle: 'Rights records',
+                accentColor: context.appColors.infoPurple,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         BrandTwoColumn(
@@ -194,30 +198,38 @@ class _BR07PaymentsRecordsScreenState extends State<BR07PaymentsRecordsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BrandSearchField(
-                  hintText: 'Search milestone, booking or status',
-                  onChanged: (value) => setState(() => _query = value),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                TourTarget(
+                  id: 'brand.payments.search',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final filter in const [
-                        'All',
-                        'Due',
-                        'Pending verification',
-                        'Released',
-                        'Issue',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: CoreChip(
-                            label: filter,
-                            selected: _filter == filter,
-                            onTap: () => setState(() => _filter = filter),
-                          ),
+                      BrandSearchField(
+                        hintText: 'Search milestone, booking or status',
+                        onChanged: (value) => setState(() => _query = value),
+                      ),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final filter in const [
+                              'All',
+                              'Due',
+                              'Pending verification',
+                              'Released',
+                              'Issue',
+                            ])
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: CoreChip(
+                                  label: filter,
+                                  selected: _filter == filter,
+                                  onTap: () => setState(() => _filter = filter),
+                                ),
+                              ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -243,83 +255,97 @@ class _BR07PaymentsRecordsScreenState extends State<BR07PaymentsRecordsScreen> {
                             }),
                   )
                 else
-                  for (final row in milestones)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _LivePaymentRow(
-                        row: row,
-                        onPay: _payableStatuses.contains(row.milestone.status)
-                            ? () => Navigator.pushNamed(
-                                  context,
-                                  CoreRoutes.paymentProof,
-                                  arguments: row.milestone.publicId,
-                                )
-                            : null,
-                        onLedger: () =>
-                            Navigator.pushNamed(context, CoreRoutes.ledger),
-                        onIssue: () => Navigator.pushNamed(
-                          context,
-                          CoreRoutes.report,
-                          arguments: {
-                            'reason': 'Brand payment issue',
-                            'entity_type': 'payment_milestone',
-                            'entity_id': row.milestone.publicId,
-                          },
-                        ),
-                      ),
+                  TourTarget(
+                    id: 'brand.payments.milestones',
+                    child: Column(
+                      children: [
+                        for (final row in milestones)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _LivePaymentRow(
+                              row: row,
+                              onPay: _payableStatuses
+                                      .contains(row.milestone.status)
+                                  ? () => Navigator.pushNamed(
+                                        context,
+                                        CoreRoutes.paymentProof,
+                                        arguments: row.milestone.publicId,
+                                      )
+                                  : null,
+                              onLedger: () => Navigator.pushNamed(
+                                  context, CoreRoutes.ledger),
+                              onIssue: () => Navigator.pushNamed(
+                                context,
+                                CoreRoutes.report,
+                                arguments: {
+                                  'reason': 'Brand payment issue',
+                                  'entity_type': 'payment_milestone',
+                                  'entity_id': row.milestone.publicId,
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
               ],
             ),
           ),
           right: Column(
             children: [
-              BrandSectionCard(
-                title: 'Accepted usage rights',
-                icon: Icons.policy_outlined,
-                tone: BrandTone.purple,
-                child: accepted.isEmpty
-                    ? Text(
-                        'No accepted sponsorship terms are on record.',
-                        style: AppTextStyles.body.copyWith(
-                          color: context.appColors.textSecondary,
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          for (final application in accepted.take(4))
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _UsageRightsRow(
-                                application: application,
+              TourTarget(
+                id: 'brand.payments.rights',
+                child: BrandSectionCard(
+                  title: 'Accepted usage rights',
+                  icon: Icons.policy_outlined,
+                  tone: BrandTone.purple,
+                  child: accepted.isEmpty
+                      ? Text(
+                          'No accepted sponsorship terms are on record.',
+                          style: AppTextStyles.body.copyWith(
+                            color: context.appColors.textSecondary,
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (final application in accepted.take(4))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _UsageRightsRow(
+                                  application: application,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
+                ),
               ),
               const SizedBox(height: 12),
-              BrandSectionCard(
-                title: 'Recent ledger',
-                icon: Icons.receipt_long_outlined,
-                tone: BrandTone.green,
-                actionText: 'View all',
-                onActionTap: () =>
-                    Navigator.pushNamed(context, CoreRoutes.ledger),
-                child: _ledger.isEmpty
-                    ? Text(
-                        'No ledger entries have been recorded.',
-                        style: AppTextStyles.body.copyWith(
-                          color: context.appColors.textSecondary,
+              TourTarget(
+                id: 'brand.payments.ledger',
+                child: BrandSectionCard(
+                  title: 'Recent ledger',
+                  icon: Icons.receipt_long_outlined,
+                  tone: BrandTone.green,
+                  actionText: 'View all',
+                  onActionTap: () =>
+                      Navigator.pushNamed(context, CoreRoutes.ledger),
+                  child: _ledger.isEmpty
+                      ? Text(
+                          'No ledger entries have been recorded.',
+                          style: AppTextStyles.body.copyWith(
+                            color: context.appColors.textSecondary,
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (final entry in _ledger.take(5))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _LedgerRow(entry: entry),
+                              ),
+                          ],
                         ),
-                      )
-                    : Column(
-                        children: [
-                          for (final entry in _ledger.take(5))
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _LedgerRow(entry: entry),
-                            ),
-                        ],
-                      ),
+                ),
               ),
             ],
           ),

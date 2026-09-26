@@ -183,94 +183,101 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        BrandResponsiveGrid(
-          minWidth: 190,
-          children: [
-            _MetricTile(
-              label: 'Active projects',
-              value: '$active',
-              icon: Icons.movie_creation_outlined,
-            ),
-            _MetricTile(
-              label: 'Open requirements',
-              value:
-                  '${_projects.fold<int>(0, (sum, row) => sum + row.requirementCount)}',
-              icon: Icons.checklist_outlined,
-            ),
-            _MetricTile(
-              label: 'Pending requests',
-              value: '$pending',
-              icon: Icons.send_time_extension_outlined,
-            ),
-            _MetricTile(
-              label: 'Confirmed bookings',
-              value: '$confirmed',
-              icon: Icons.verified_outlined,
-            ),
-          ],
+        TourTarget(
+          id: 'brand.projects.metrics',
+          child: BrandResponsiveGrid(
+            minWidth: 190,
+            children: [
+              _MetricTile(
+                label: 'Active projects',
+                value: '$active',
+                icon: Icons.movie_creation_outlined,
+              ),
+              _MetricTile(
+                label: 'Open requirements',
+                value:
+                    '${_projects.fold<int>(0, (sum, row) => sum + row.requirementCount)}',
+                icon: Icons.checklist_outlined,
+              ),
+              _MetricTile(
+                label: 'Pending requests',
+                value: '$pending',
+                icon: Icons.send_time_extension_outlined,
+              ),
+              _MetricTile(
+                label: 'Confirmed bookings',
+                value: '$confirmed',
+                icon: Icons.verified_outlined,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         BrandTwoColumn(
-          left: BrandSectionCard(
-            title: 'Campaign projects',
-            icon: Icons.workspaces_outline,
-            selected: true,
-            actionText: 'New project',
-            onActionTap: _createProject,
-            child: Column(
-              children: [
-                BrandSearchField(
-                  hintText: 'Search project, type or city...',
-                  onChanged: (value) => setState(() => _query = value),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final status in const [
-                        'All',
-                        'Draft',
-                        'Active',
-                        'Paused',
-                        'Completed',
-                        'Archived',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 7),
-                          child: FilterChip(
-                            label: Text(status),
-                            selected: _status == status,
-                            onSelected: (_) => setState(() => _status = status),
-                          ),
-                        ),
-                    ],
+          left: TourTarget(
+            id: 'brand.projects.list',
+            child: BrandSectionCard(
+              title: 'Campaign projects',
+              icon: Icons.workspaces_outline,
+              selected: true,
+              actionText: 'New project',
+              onActionTap: _createProject,
+              child: Column(
+                children: [
+                  BrandSearchField(
+                    hintText: 'Search project, type or city...',
+                    onChanged: (value) => setState(() => _query = value),
                   ),
-                ),
-                const SizedBox(height: 8),
-                if (_visibleProjects.isEmpty)
-                  CoreEmptyState(
-                    icon: Icons.movie_filter_outlined,
-                    title: _projects.isEmpty
-                        ? 'No brand projects yet'
-                        : 'No matching projects',
-                    message: _projects.isEmpty
-                        ? 'Create a campaign project to connect talent, crew, locations and equipment.'
-                        : 'Try a different search or status filter.',
-                    actionLabel: _projects.isEmpty ? 'Create project' : null,
-                    onAction: _projects.isEmpty ? _createProject : null,
-                  )
-                else
-                  for (final project in _visibleProjects)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _ProjectRow(
-                        project: project,
-                        selected: project.publicId == _selected?.publicId,
-                        onTap: () => _selectProject(project.publicId),
-                      ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final status in const [
+                          'All',
+                          'Draft',
+                          'Active',
+                          'Paused',
+                          'Completed',
+                          'Archived',
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 7),
+                            child: FilterChip(
+                              label: Text(status),
+                              selected: _status == status,
+                              onSelected: (_) =>
+                                  setState(() => _status = status),
+                            ),
+                          ),
+                      ],
                     ),
-              ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_visibleProjects.isEmpty)
+                    CoreEmptyState(
+                      icon: Icons.movie_filter_outlined,
+                      title: _projects.isEmpty
+                          ? 'No brand projects yet'
+                          : 'No matching projects',
+                      message: _projects.isEmpty
+                          ? 'Create a campaign project to connect talent, crew, locations and equipment.'
+                          : 'Try a different search or status filter.',
+                      actionLabel: _projects.isEmpty ? 'Create project' : null,
+                      onAction: _projects.isEmpty ? _createProject : null,
+                    )
+                  else
+                    for (final project in _visibleProjects)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _ProjectRow(
+                          project: project,
+                          selected: project.publicId == _selected?.publicId,
+                          onTap: () => _selectProject(project.publicId),
+                        ),
+                      ),
+                ],
+              ),
             ),
           ),
           right: _selected == null
@@ -285,9 +292,9 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
                   ),
                 )
               : TourTarget(
-                  id: 'brand:demo:project-brief',
+                  id: 'brand.projects.brief',
                   child: TourTarget(
-                    id: 'brand:demo:requirements',
+                    id: 'brand.projects.requirements',
                     child: _ProjectDetail(
                       project: _selected!,
                       bookings: _selectedBookings,
@@ -649,80 +656,91 @@ class _ProjectDetail extends StatelessWidget {
                 trailing: BrandLiveStatusChip(status: requirement.status),
               ),
           const SizedBox(height: 12),
-          Text(
-            'Attached production resources',
-            style: AppTextStyles.cardLabel.copyWith(
-              color: context.appColors.textPrimary,
-              fontWeight: FontWeight.w800,
+          TourTarget(
+            id: 'brand.projects.resources',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Attached production resources',
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: context.appColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                if (candidateCount == 0)
+                  const Text(
+                    'No resources shortlisted yet. Use Discover to build the production team.',
+                  )
+                else
+                  for (final board in shortlists)
+                    for (final item in board.items)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          _categoryIcon(item.listing.listingType),
+                          color: context.appColors.goldDark,
+                        ),
+                        title: Text(item.listing.title),
+                        subtitle: Text(
+                          '${readableBrandStatus(item.listing.listingType)} · ${item.listing.cityName}',
+                        ),
+                        trailing: BrandLiveStatusChip(status: item.status),
+                      ),
+                if (selectedResources.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  InlineNotice(
+                    message:
+                        '${selectedResources.length} production resource${selectedResources.length == 1 ? '' : 's'} selected for this project.',
+                    icon: Icons.groups_2_outlined,
+                    tone: CoreStatusTone.success,
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          if (candidateCount == 0)
-            const Text(
-              'No resources shortlisted yet. Use Discover to build the production team.',
-            )
-          else
-            for (final board in shortlists)
-              for (final item in board.items)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    _categoryIcon(item.listing.listingType),
-                    color: context.appColors.goldDark,
-                  ),
-                  title: Text(item.listing.title),
-                  subtitle: Text(
-                    '${readableBrandStatus(item.listing.listingType)} · ${item.listing.cityName}',
-                  ),
-                  trailing: BrandLiveStatusChip(status: item.status),
-                ),
-          if (selectedResources.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            InlineNotice(
-              message:
-                  '${selectedResources.length} production resource${selectedResources.length == 1 ? '' : 's'} selected for this project.',
-              icon: Icons.groups_2_outlined,
-              tone: CoreStatusTone.success,
-            ),
-          ],
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: busy ? null : onEdit,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit'),
-              ),
-              FilledButton.icon(
-                onPressed: busy || project.status == 'active'
-                    ? null
-                    : () => onStatus('active'),
-                icon: const Icon(Icons.publish_outlined),
-                label: const Text('Publish'),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy ? null : onDuplicate,
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text('Duplicate'),
-              ),
-              OutlinedButton.icon(
-                onPressed: busy || project.status == 'archived'
-                    ? null
-                    : () => onStatus('archived'),
-                icon: const Icon(Icons.archive_outlined),
-                label: const Text('Archive'),
-              ),
-              TextButton.icon(
-                onPressed: busy || project.status == 'cancelled'
-                    ? null
-                    : () => onStatus('cancelled'),
-                icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel'),
-              ),
-            ],
+          TourTarget(
+            id: 'brand.projects.actions',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: busy ? null : onEdit,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                ),
+                FilledButton.icon(
+                  onPressed: busy || project.status == 'active'
+                      ? null
+                      : () => onStatus('active'),
+                  icon: const Icon(Icons.publish_outlined),
+                  label: const Text('Publish'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : onDuplicate,
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Duplicate'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: busy || project.status == 'archived'
+                      ? null
+                      : () => onStatus('archived'),
+                  icon: const Icon(Icons.archive_outlined),
+                  label: const Text('Archive'),
+                ),
+                TextButton.icon(
+                  onPressed: busy || project.status == 'cancelled'
+                      ? null
+                      : () => onStatus('cancelled'),
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel'),
+                ),
+              ],
+            ),
           ),
         ],
       ),

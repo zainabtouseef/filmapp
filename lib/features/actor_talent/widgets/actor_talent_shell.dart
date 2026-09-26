@@ -9,6 +9,8 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/nav_tour_builder.dart';
 import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_models.dart';
+import '../../../core/tour/tour_preferences_store.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
@@ -182,6 +184,14 @@ class ActorTalentShell extends StatefulWidget {
   final List<String> navRoutes;
   final List<CineBottomNavDestination> navDestinations;
   final List<ActorShellMenuEntry> menuEntries;
+
+  /// A bespoke, detailed full-walkthrough tour (per-field `TourTarget`s,
+  /// real navigation between screens) to use instead of the generic
+  /// nav-item tour auto-generated from [menuEntries]. When null, the
+  /// "Take the tour" trigger falls back to [buildNavTourSteps].
+  final List<TourStep>? fullWalkthroughSteps;
+  final String? fullWalkthroughTourId;
+
   final Map<String, int> bottomIndexOverrides;
   final bool workspaceLayout;
   final String workspaceTitle;
@@ -205,6 +215,8 @@ class ActorTalentShell extends StatefulWidget {
     this.navRoutes = ActorTalentRoutes.primaryNav,
     this.navDestinations = _actorBottomDestinations,
     this.menuEntries = _actorMenuEntries,
+    this.fullWalkthroughSteps,
+    this.fullWalkthroughTourId,
     this.bottomIndexOverrides = _actorBottomIndexOverrides,
     this.workspaceLayout = false,
     this.workspaceTitle = 'Talent Workspace',
@@ -280,6 +292,8 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
         navRoutes: widget.navRoutes,
         navDestinations: widget.navDestinations,
         menuEntries: widget.menuEntries,
+        fullWalkthroughSteps: widget.fullWalkthroughSteps,
+        fullWalkthroughTourId: widget.fullWalkthroughTourId,
         bottomIndexOverrides: widget.bottomIndexOverrides,
         workspaceTitle: widget.workspaceTitle,
         workspaceSectionLabel: widget.workspaceSectionLabel,
@@ -382,6 +396,8 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
   final List<String> navRoutes;
   final List<CineBottomNavDestination> navDestinations;
   final List<ActorShellMenuEntry> menuEntries;
+  final List<TourStep>? fullWalkthroughSteps;
+  final String? fullWalkthroughTourId;
   final Map<String, int> bottomIndexOverrides;
   final String workspaceTitle;
   final String workspaceSectionLabel;
@@ -401,6 +417,8 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
     required this.navRoutes,
     required this.navDestinations,
     required this.menuEntries,
+    this.fullWalkthroughSteps,
+    this.fullWalkthroughTourId,
     required this.bottomIndexOverrides,
     required this.workspaceTitle,
     required this.workspaceSectionLabel,
@@ -426,13 +444,26 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
         searchHint: workspaceSearchHint,
         searchRoute: workspaceSearchRoute,
         profileRoute: workspaceProfileRoute,
-        onTourTap: () => _startActorNavTour(
-          context,
-          tourId: _tourIdFor(portalLabel),
-          navRoutes: navRoutes,
-          navDestinations: navDestinations,
-          menuEntries: menuEntries,
-        ),
+        onTourTap: () {
+          final steps = fullWalkthroughSteps;
+          if (steps != null) {
+            TourScope.of(context).start(
+              steps,
+              tourId: fullWalkthroughTourId ?? _tourIdFor(portalLabel),
+              replaceRoutes: true,
+              onFinished: () => TourPreferencesStore()
+                  .markSeen(fullWalkthroughTourId ?? _tourIdFor(portalLabel)),
+            );
+            return;
+          }
+          _startActorNavTour(
+            context,
+            tourId: _tourIdFor(portalLabel),
+            navRoutes: navRoutes,
+            navDestinations: navDestinations,
+            menuEntries: menuEntries,
+          );
+        },
       ),
       sideNavBuilder: (context, currentRoute, onRouteTap) =>
           _ActorWorkspaceSidebar(

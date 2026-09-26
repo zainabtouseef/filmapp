@@ -136,46 +136,55 @@ class _DPStakeholderProfileScreenState
                 heroTag: 'marketplace-profile-${widget.candidateId}',
               ),
               const SizedBox(height: 18),
-              EntityProfileTabs(
-                tabs: _kProfileTabs,
-                currentIndex: _tabIndex,
-                onChanged: (index) => setState(() => _tabIndex = index),
+              EntityReveal(
+                step: 0,
+                child: EntityProfileTabs(
+                  tabs: _kProfileTabs,
+                  currentIndex: _tabIndex,
+                  onChanged: (index) => setState(() => _tabIndex = index),
+                ),
               ),
               const SizedBox(height: 14),
-              _LiveDirectorDiscoveryProfile(
-                item: data,
-                candidate: candidate,
-                tabIndex: _tabIndex,
+              EntityReveal(
+                step: 1,
+                child: _LiveDirectorDiscoveryProfile(
+                  item: data,
+                  candidate: candidate,
+                  tabIndex: _tabIndex,
+                ),
               ),
               const SizedBox(height: 20),
               if (!widget.browseOnly)
-                EntityStickyActionBar(
-                  secondaryLabel: candidate.marketplaceListingId == null
-                      ? 'Provider action pending'
-                      : 'Shortlist',
-                  secondaryIcon: candidate.marketplaceListingId == null
-                      ? Icons.link_off_rounded
-                      : Icons.favorite_border_rounded,
-                  onSecondary: candidate.marketplaceListingId == null
-                      ? () => _showProviderActionPending(context, candidate)
-                      : () => _showShortlistHint(context, candidate),
-                  primaryLabel: 'Select / Send Request',
-                  primaryIcon: Icons.send_rounded,
-                  onPrimary: candidate.marketplaceListingId == null
-                      ? null
-                      : () async {
-                          if (!await ensureKycApproved(context)) return;
-                          if (!context.mounted) return;
-                          Navigator.pushNamed(
-                            context,
-                            DirectorProducerRoutes.bookingRequest,
-                            arguments: {
-                              'candidateId': candidate.marketplaceListingId,
-                              'projectId': widget.projectId,
-                              'category': type,
-                            },
-                          );
-                        },
+                EntityReveal(
+                  step: 2,
+                  child: EntityStickyActionBar(
+                    secondaryLabel: candidate.marketplaceListingId == null
+                        ? 'Provider action pending'
+                        : 'Shortlist',
+                    secondaryIcon: candidate.marketplaceListingId == null
+                        ? Icons.link_off_rounded
+                        : Icons.favorite_border_rounded,
+                    onSecondary: candidate.marketplaceListingId == null
+                        ? () => _showProviderActionPending(context, candidate)
+                        : () => _showShortlistHint(context, candidate),
+                    primaryLabel: 'Select / Send Request',
+                    primaryIcon: Icons.send_rounded,
+                    onPrimary: candidate.marketplaceListingId == null
+                        ? null
+                        : () async {
+                            if (!await ensureKycApproved(context)) return;
+                            if (!context.mounted) return;
+                            Navigator.pushNamed(
+                              context,
+                              DirectorProducerRoutes.bookingRequest,
+                              arguments: {
+                                'candidateId': candidate.marketplaceListingId,
+                                'projectId': widget.projectId,
+                                'category': type,
+                              },
+                            );
+                          },
+                  ),
                 ),
             ],
           );
@@ -197,45 +206,54 @@ class _DPStakeholderProfileScreenState
               heroTag: 'marketplace-profile-${widget.candidateId}',
             ),
             const SizedBox(height: 18),
-            EntityProfileTabs(
-              tabs: _kProfileTabs,
-              currentIndex: _tabIndex,
-              onChanged: (index) => setState(() => _tabIndex = index),
+            EntityReveal(
+              step: 0,
+              child: EntityProfileTabs(
+                tabs: _kProfileTabs,
+                currentIndex: _tabIndex,
+                onChanged: (index) => setState(() => _tabIndex = index),
+              ),
             ),
             const SizedBox(height: 14),
-            _LiveListingProfile(
-              listing: listing,
-              candidate: candidate,
-              tabIndex: _tabIndex,
+            EntityReveal(
+              step: 1,
+              child: _LiveListingProfile(
+                listing: listing,
+                candidate: candidate,
+                tabIndex: _tabIndex,
+              ),
             ),
             const SizedBox(height: 20),
             if (!widget.browseOnly)
-              EntityStickyActionBar(
-                secondaryLabel: 'Shortlist',
-                secondaryIcon: Icons.favorite_border_rounded,
-                onSecondary: widget.publicBuyerMode
-                    ? null
-                    : () => _showShortlistHint(context, candidate),
-                primaryLabel: 'Select / Send Request',
-                primaryIcon: Icons.send_rounded,
-                onPrimary: () async {
-                  if (!widget.publicBuyerMode &&
-                      !await ensureKycApproved(context)) {
-                    return;
-                  }
-                  if (!context.mounted) return;
-                  Navigator.pushNamed(
-                    context,
-                    widget.publicBuyerMode
-                        ? GeneralPublicRoutes.bookingRequest
-                        : DirectorProducerRoutes.bookingRequest,
-                    arguments: {
-                      'candidateId': candidate.id,
-                      'projectId': widget.projectId,
-                      'category': type,
-                    },
-                  );
-                },
+              EntityReveal(
+                step: 2,
+                child: EntityStickyActionBar(
+                  secondaryLabel: 'Shortlist',
+                  secondaryIcon: Icons.favorite_border_rounded,
+                  onSecondary: widget.publicBuyerMode
+                      ? null
+                      : () => _showShortlistHint(context, candidate),
+                  primaryLabel: 'Select / Send Request',
+                  primaryIcon: Icons.send_rounded,
+                  onPrimary: () async {
+                    if (!widget.publicBuyerMode &&
+                        !await ensureKycApproved(context)) {
+                      return;
+                    }
+                    if (!context.mounted) return;
+                    Navigator.pushNamed(
+                      context,
+                      widget.publicBuyerMode
+                          ? GeneralPublicRoutes.bookingRequest
+                          : DirectorProducerRoutes.bookingRequest,
+                      arguments: {
+                        'candidateId': candidate.id,
+                        'projectId': widget.projectId,
+                        'category': type,
+                      },
+                    );
+                  },
+                ),
               ),
           ],
         );
@@ -674,7 +692,6 @@ class _VerifiedMediaKitSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return DPSectionCard(
       title: mediaKit.headline,
       icon: Icons.verified_user_outlined,
@@ -699,21 +716,15 @@ class _VerifiedMediaKitSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 28,
+            runSpacing: 14,
             children: [
               for (final metric in mediaKit.metrics)
-                _MediaKitMetricTile(metric: metric),
+                EntityMetricBlock(value: metric.value, label: metric.label),
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            'Reels & featured media',
-            style: AppTextStyles.cardLabel.copyWith(
-              color: colors.textPrimary,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          const EntitySectionLabel(label: 'Reels & featured media'),
           const SizedBox(height: 8),
           if (mediaKit.reels.isEmpty)
             const DPEmptyState(
@@ -776,50 +787,6 @@ class _VerifiedMediaKitSection extends StatelessWidget {
               ],
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MediaKitMetricTile extends StatelessWidget {
-  final MediaKitMetric metric;
-
-  const _MediaKitMetricTile({required this.metric});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      width: 148,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-        gradient: colors.inactiveChipGradient,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            metric.value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.metricNumberCompact.copyWith(
-              color: colors.textPrimary,
-              fontSize: 20,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            metric.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
       ),
     );

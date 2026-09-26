@@ -6,6 +6,7 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../widgets/crew_services_components.dart';
@@ -56,43 +57,46 @@ class _CR05RequestsNegotiationScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CrewSectionCard(
-          title: 'Crew Request Inbox',
-          icon: Icons.move_to_inbox_outlined,
-          selected: true,
-          child: Column(
-            children: [
-              TextField(
-                onChanged: (value) => setState(() => _query = value),
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded),
-                  hintText: 'Search request, producer, project, status...',
+        TourTarget(
+          id: 'crew.requests.searchFilter',
+          child: CrewSectionCard(
+            title: 'Crew Request Inbox',
+            icon: Icons.move_to_inbox_outlined,
+            selected: true,
+            child: Column(
+              children: [
+                TextField(
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search_rounded),
+                    hintText: 'Search request, producer, project, status...',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final filter in const [
-                      'All',
-                      'New',
-                      'Negotiation',
-                      'Secured',
-                      'Closed',
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CoreChip(
-                          label: filter,
-                          selected: _filter == filter,
-                          onTap: () => setState(() => _filter = filter),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final filter in const [
+                        'All',
+                        'New',
+                        'Negotiation',
+                        'Secured',
+                        'Closed',
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: CoreChip(
+                            label: filter,
+                            selected: _filter == filter,
+                            onTap: () => setState(() => _filter = filter),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -122,36 +126,43 @@ class _CR05RequestsNegotiationScreenState
                   .toList();
               final rows = all.where(_matches).toList();
               if (rows.isEmpty) {
-                return CoreEmptyState(
-                  icon: Icons.inbox_outlined,
-                  title:
-                      all.isEmpty ? 'No crew requests yet' : 'No matching requests',
-                  message: all.isEmpty
-                      ? 'Published service profile and portfolio will receive Director booking requests here.'
-                      : 'Change the search or status filter.',
-                  actionLabel: all.isNotEmpty ? 'Clear filters' : null,
-                  onAction: all.isNotEmpty
-                      ? () => setState(() {
-                            _query = '';
-                            _filter = 'All';
-                          })
-                      : null,
+                return TourTarget(
+                  id: 'crew.requests.list',
+                  child: CoreEmptyState(
+                    icon: Icons.inbox_outlined,
+                    title: all.isEmpty
+                        ? 'No crew requests yet'
+                        : 'No matching requests',
+                    message: all.isEmpty
+                        ? 'Published service profile and portfolio will receive Director booking requests here.'
+                        : 'Change the search or status filter.',
+                    actionLabel: all.isNotEmpty ? 'Clear filters' : null,
+                    onAction: all.isNotEmpty
+                        ? () => setState(() {
+                              _query = '';
+                              _filter = 'All';
+                            })
+                        : null,
+                  ),
                 );
               }
-              return CrewResponsiveGrid(
-                minWidth: 320,
-                children: [
-                  for (final booking in rows)
-                    _LiveRequestCard(
-                      booking: booking,
-                      busy: _busyId == booking.publicId,
-                      onDetails: () => _showDetails(booking),
-                      onAccept: () => _accept(booking),
-                      onCounter: () => _showCounter(booking),
-                      onReject: () => _showReject(booking),
-                      onChat: () => _openChat(booking),
-                    ),
-                ],
+              return TourTarget(
+                id: 'crew.requests.list',
+                child: CrewResponsiveGrid(
+                  minWidth: 320,
+                  children: [
+                    for (final booking in rows)
+                      _LiveRequestCard(
+                        booking: booking,
+                        busy: _busyId == booking.publicId,
+                        onDetails: () => _showDetails(booking),
+                        onAccept: () => _accept(booking),
+                        onCounter: () => _showCounter(booking),
+                        onReject: () => _showReject(booking),
+                        onChat: () => _openChat(booking),
+                      ),
+                  ],
+                ),
               );
             },
           ),

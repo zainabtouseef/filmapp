@@ -4,6 +4,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../shared/cards/cine_card_system.dart';
@@ -87,38 +88,47 @@ class _LiveReputation extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ActorSectionCard(
-          title: 'Public Reputation',
-          icon: Icons.stars_outlined,
-          tone: data.reviewCount == 0 ? ActorTone.blue : ActorTone.gold,
-          child: _RatingSummary(
-            rating: data.ratingAverage,
-            reviewCount: data.reviewCount,
+        TourTarget(
+          id: 'actor.reputation.rating',
+          child: ActorSectionCard(
+            title: 'Public Reputation',
+            icon: Icons.stars_outlined,
+            tone: data.reviewCount == 0 ? ActorTone.blue : ActorTone.gold,
+            child: _RatingSummary(
+              rating: data.ratingAverage,
+              reviewCount: data.reviewCount,
+            ),
           ),
         ),
         const SizedBox(height: 12),
         ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Published Reviews',
-            icon: Icons.rate_review_outlined,
-            child: data.reviews.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    title: 'No published reviews',
-                    message:
-                        'Reviews appear after a secured booking is completed.',
-                  )
-                : Column(
-                    children: [
-                      for (var i = 0; i < data.reviews.length; i++)
-                        _LiveReviewCard(
-                          review: data.reviews[i],
-                          showDivider: i != data.reviews.length - 1,
-                        ),
-                    ],
-                  ),
+          left: TourTarget(
+            id: 'actor.reputation.reviews',
+            child: ActorSectionCard(
+              title: 'Published Reviews',
+              icon: Icons.rate_review_outlined,
+              child: data.reviews.isEmpty
+                  ? const CoreEmptyState(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      title: 'No published reviews',
+                      message:
+                          'Reviews appear after a secured booking is completed.',
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < data.reviews.length; i++)
+                          _LiveReviewCard(
+                            review: data.reviews[i],
+                            showDivider: i != data.reviews.length - 1,
+                          ),
+                      ],
+                    ),
+            ),
           ),
-          right: const _ReputationGuidance(),
+          right: const TourTarget(
+            id: 'actor.reputation.guidance',
+            child: _ReputationGuidance(),
+          ),
         ),
       ],
     );

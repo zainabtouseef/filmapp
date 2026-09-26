@@ -102,29 +102,32 @@ class _BR11BrandBookingsScreenState extends State<BR11BrandBookingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BrandResponsiveGrid(
-          minWidth: 220,
-          children: [
-            _RequestMetric(
-              label: 'Pending requests',
-              value: pending,
-              icon: Icons.send_time_extension_outlined,
-            ),
-            _RequestMetric(
-              label: 'Confirmed bookings',
-              value: confirmed,
-              icon: Icons.verified_outlined,
-            ),
-            _RequestMetric(
-              label: 'Closed requests',
-              value: closed,
-              icon: Icons.inventory_2_outlined,
-            ),
-          ],
+        TourTarget(
+          id: 'brand.bookings.metrics',
+          child: BrandResponsiveGrid(
+            minWidth: 220,
+            children: [
+              _RequestMetric(
+                label: 'Pending requests',
+                value: pending,
+                icon: Icons.send_time_extension_outlined,
+              ),
+              _RequestMetric(
+                label: 'Confirmed bookings',
+                value: confirmed,
+                icon: Icons.verified_outlined,
+              ),
+              _RequestMetric(
+                label: 'Closed requests',
+                value: closed,
+                icon: Icons.inventory_2_outlined,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         TourTarget(
-          id: 'brand:demo:booking-pipeline',
+          id: 'brand.bookings.filters',
           child: BrandSectionCard(
             title: 'Requests and bookings',
             icon: Icons.handshake_outlined,
@@ -205,7 +208,7 @@ class _BR11BrandBookingsScreenState extends State<BR11BrandBookingsScreen> {
           )
         else
           TourTarget(
-            id: 'brand:demo:request-results',
+            id: 'brand.bookings.results',
             child: BrandResponsiveGrid(
               minWidth: 330,
               children: [

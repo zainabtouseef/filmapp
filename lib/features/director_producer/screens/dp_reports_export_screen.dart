@@ -7,6 +7,7 @@ import '../../../core/analytics/csv_download.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -79,58 +80,64 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
                       'Generate a bookings, ledger, or dispute export to populate this screen from the database.',
                 );
               }
-              return DPResponsiveGrid(
-                minWidth: 320,
-                children: reports.map((report) {
-                  return _ReportCard(
-                    title: '${_titleCase(report.exportType)} Export',
-                    project: report.publicId,
-                    sections: [
-                      report.exportType.replaceAll('_', ' '),
-                      '${report.rowCount} rows',
-                    ],
-                    date: report.completedAt ?? report.requestedAt,
-                    status: _titleCase(report.status),
-                    exportType: report.exportType,
-                  );
-                }).toList(),
+              return TourTarget(
+                id: 'dp.reports.list',
+                child: DPResponsiveGrid(
+                  minWidth: 320,
+                  children: reports.map((report) {
+                    return _ReportCard(
+                      title: '${_titleCase(report.exportType)} Export',
+                      project: report.publicId,
+                      sections: [
+                        report.exportType.replaceAll('_', ' '),
+                        '${report.rowCount} rows',
+                      ],
+                      date: report.completedAt ?? report.requestedAt,
+                      status: _titleCase(report.status),
+                      exportType: report.exportType,
+                    );
+                  }).toList(),
+                ),
               );
             },
           ),
         const SizedBox(height: 14),
-        DPSectionCard(
-          title: 'Export Builder',
-          icon: Icons.ios_share_rounded,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: const [
-              _BuilderExportChip(
-                exportType: 'bookings',
-                label: 'Bookings',
-                tone: DpTone.info,
-              ),
-              _BuilderExportChip(
-                exportType: 'contracts',
-                label: 'Contracts',
-                tone: DpTone.info,
-              ),
-              _BuilderExportChip(
-                exportType: 'ledger',
-                label: 'Payments',
-                tone: DpTone.warning,
-              ),
-              _BuilderExportChip(
-                exportType: 'schedule',
-                label: 'Schedule',
-                tone: DpTone.success,
-              ),
-              _BuilderExportChip(
-                exportType: 'room_files',
-                label: 'Room files',
-                tone: DpTone.neutral,
-              ),
-            ],
+        TourTarget(
+          id: 'dp.reports.exportBuilder',
+          child: DPSectionCard(
+            title: 'Export Builder',
+            icon: Icons.ios_share_rounded,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: const [
+                _BuilderExportChip(
+                  exportType: 'bookings',
+                  label: 'Bookings',
+                  tone: DpTone.info,
+                ),
+                _BuilderExportChip(
+                  exportType: 'contracts',
+                  label: 'Contracts',
+                  tone: DpTone.info,
+                ),
+                _BuilderExportChip(
+                  exportType: 'ledger',
+                  label: 'Payments',
+                  tone: DpTone.warning,
+                ),
+                _BuilderExportChip(
+                  exportType: 'schedule',
+                  label: 'Schedule',
+                  tone: DpTone.success,
+                ),
+                _BuilderExportChip(
+                  exportType: 'room_files',
+                  label: 'Room files',
+                  tone: DpTone.neutral,
+                ),
+              ],
+            ),
           ),
         ),
       ],

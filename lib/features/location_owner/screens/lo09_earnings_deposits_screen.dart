@@ -8,6 +8,7 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/payments/payment_trust_timeline.dart';
@@ -105,37 +106,41 @@ class _LO09EarningsDepositsScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: _minorMoney(credits),
-              icon: Icons.payments_outlined,
-              title: 'Incoming ledger',
-              subtitle: 'All credits',
-              accentColor: colors.success,
-            ),
-            MetricActionItem(
-              value: _minorMoney(data.dashboard.pendingReleaseMinor),
-              icon: Icons.lock_clock_outlined,
-              title: 'Pending release',
-              subtitle: 'Admin-controlled',
-              accentColor: colors.goldMid,
-            ),
-            MetricActionItem(
-              value: _minorMoney(verified),
-              icon: Icons.verified_outlined,
-              title: 'Verified entries',
-              subtitle: 'Posted or released',
-              accentColor: colors.infoBlue,
-            ),
-            MetricActionItem(
-              value: '$disputed',
-              icon: Icons.report_problem_outlined,
-              title: 'Disputed entries',
-              subtitle: 'Needs review',
-              accentColor: disputed > 0 ? colors.danger : colors.textSecondary,
-            ),
-          ],
+        TourTarget(
+          id: 'location.earnings.snapshot',
+          child: MetricActionRail(
+            items: [
+              MetricActionItem(
+                value: _minorMoney(credits),
+                icon: Icons.payments_outlined,
+                title: 'Incoming ledger',
+                subtitle: 'All credits',
+                accentColor: colors.success,
+              ),
+              MetricActionItem(
+                value: _minorMoney(data.dashboard.pendingReleaseMinor),
+                icon: Icons.lock_clock_outlined,
+                title: 'Pending release',
+                subtitle: 'Admin-controlled',
+                accentColor: colors.goldMid,
+              ),
+              MetricActionItem(
+                value: _minorMoney(verified),
+                icon: Icons.verified_outlined,
+                title: 'Verified entries',
+                subtitle: 'Posted or released',
+                accentColor: colors.infoBlue,
+              ),
+              MetricActionItem(
+                value: '$disputed',
+                icon: Icons.report_problem_outlined,
+                title: 'Disputed entries',
+                subtitle: 'Needs review',
+                accentColor:
+                    disputed > 0 ? colors.danger : colors.textSecondary,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
@@ -148,53 +153,65 @@ class _LO09EarningsDepositsScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final filter in [
-                        'All',
-                        'Pending',
-                        'Verified',
-                        'Disputed',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: CoreChip(
-                            label: filter,
-                            selected: _filter == filter,
-                            onTap: () => setState(() => _filter = filter),
+                TourTarget(
+                  id: 'location.earnings.filters',
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final filter in [
+                          'All',
+                          'Pending',
+                          'Verified',
+                          'Disputed',
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: CoreChip(
+                              label: filter,
+                              selected: _filter == filter,
+                              onTap: () => setState(() => _filter = filter),
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (rows.isEmpty)
-                  const CoreEmptyState(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'No matching ledger entries',
-                    message:
-                        'Verified booking payments and release events will appear here.',
-                  )
-                else
-                  for (final row in rows)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _LedgerRow(item: row),
-                    ),
+                TourTarget(
+                  id: 'location.earnings.ledger',
+                  child: rows.isEmpty
+                      ? const CoreEmptyState(
+                          icon: Icons.receipt_long_outlined,
+                          title: 'No matching ledger entries',
+                          message:
+                              'Verified booking payments and release events will appear here.',
+                        )
+                      : Column(
+                          children: [
+                            for (final row in rows)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _LedgerRow(item: row),
+                              ),
+                          ],
+                        ),
+                ),
               ],
             ),
           ),
           right: Column(
             children: [
-              LocationSectionCard(
-                title: 'Payment trust timeline',
-                icon: Icons.account_tree_outlined,
-                tone: LocationTone.blue,
-                child: PaymentTrustTimeline(
-                  schedules: data.dashboard.schedules,
-                  audience: PaymentTimelineAudience.provider,
+              TourTarget(
+                id: 'location.earnings.timeline',
+                child: LocationSectionCard(
+                  title: 'Payment trust timeline',
+                  icon: Icons.account_tree_outlined,
+                  tone: LocationTone.blue,
+                  child: PaymentTrustTimeline(
+                    schedules: data.dashboard.schedules,
+                    audience: PaymentTimelineAudience.provider,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -219,13 +236,17 @@ class _LO09EarningsDepositsScreenState
                               '${account.accountMasked} · ${readableLocationStatus(account.status)}',
                         ),
                     const SizedBox(height: 8),
-                    CoreSecondaryButton(
-                      icon: Icons.science_outlined,
-                      label: _addingAccount
-                          ? 'Adding...'
-                          : 'Add test payout account',
-                      compact: true,
-                      onTap: _addingAccount ? null : () => _addSandboxAccount(),
+                    TourTarget(
+                      id: 'location.earnings.payout',
+                      child: CoreSecondaryButton(
+                        icon: Icons.science_outlined,
+                        label: _addingAccount
+                            ? 'Adding...'
+                            : 'Add test payout account',
+                        compact: true,
+                        onTap:
+                            _addingAccount ? null : () => _addSandboxAccount(),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CoreSecondaryButton(

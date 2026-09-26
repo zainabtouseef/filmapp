@@ -8,6 +8,7 @@ import '../../../core/casting/casting_controller.dart';
 import '../../../core/casting/casting_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
@@ -81,122 +82,135 @@ class _AT06OpportunityInboxScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ActorSearchFilterBar(
-          query: _query,
-          onQueryChanged: (value) {
-            _query = value;
-            _searchDebounce?.cancel();
-            _searchDebounce = Timer(
-              const Duration(milliseconds: 350),
-              _reload,
-            );
-          },
-          filters: const [
-            'All',
-            'Self-tape',
-            'Online',
-            'In person',
-            'Saved',
-          ],
-          selectedFilter: _filter,
-          onFilterChanged: (value) {
-            _filter = value;
-            _reload();
-          },
-        ),
-        const SizedBox(height: 12),
-        ActorSectionCard(
-          title: _filter == 'Saved' ? 'Saved Roles' : 'Casting Calls',
-          icon: _filter == 'Saved'
-              ? Icons.bookmarks_outlined
-              : Icons.manage_search_outlined,
-          actionText: 'Refresh',
-          onActionTap: _reload,
-          child: FutureBuilder<CastingRolePage>(
-            future: _rolesFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const _RoleSkeletons();
-              }
-              if (snapshot.hasError) {
-                return CoreEmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Casting roles unavailable',
-                  message: snapshot.error is ApiException
-                      ? (snapshot.error! as ApiException).message
-                      : 'Could not load casting calls. Check your connection.',
-                  actionLabel: 'Try again',
-                  onAction: _reload,
-                );
-              }
-              final roles = snapshot.data?.roles ?? const <CastingRole>[];
-              if (roles.isEmpty) {
-                return CoreEmptyState(
-                  icon: _filter == 'Saved'
-                      ? Icons.bookmark_add_outlined
-                      : Icons.search_off_rounded,
-                  title: _filter == 'Saved'
-                      ? 'No saved roles'
-                      : 'No matching roles',
-                  message: _filter == 'Saved'
-                      ? 'Save a casting call to compare it here later.'
-                      : 'Try a different search or check again when productions publish new roles.',
-                  actionLabel: _filter == 'Saved' ? 'Browse roles' : null,
-                  onAction: _filter == 'Saved'
-                      ? () {
-                          _filter = 'All';
-                          _reload();
-                        }
-                      : null,
-                );
-              }
-              final page = snapshot.data!;
-              return Column(
-                children: [
-                  ActorResponsiveGrid(
-                    minWidth: 285,
-                    children: [
-                      for (final role in roles)
-                        ActorCastingRoleCard(
-                          role: role,
-                          onOpen: () => Navigator.pushNamed(
-                            context,
-                            role.applicationId == null
-                                ? ActorTalentRoutes.roleDetail
-                                : ActorTalentRoutes.applicationDetail,
-                            arguments: role.applicationId ?? role.publicId,
-                          ),
-                          onSave: () => _toggleSaved(role),
-                        ),
-                    ],
-                  ),
-                  if (roles.length < page.total) ...[
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: 190,
-                      child: CoreSecondaryButton(
-                        icon: Icons.expand_more_rounded,
-                        label:
-                            _loadingMore ? 'Loading roles' : 'Load more roles',
-                        compact: true,
-                        onTap: _loadingMore ? null : () => _loadMore(page),
-                      ),
-                    ),
-                  ],
-                ],
+        TourTarget(
+          id: 'actor.opportunities.searchFilter',
+          child: ActorSearchFilterBar(
+            query: _query,
+            onQueryChanged: (value) {
+              _query = value;
+              _searchDebounce?.cancel();
+              _searchDebounce = Timer(
+                const Duration(milliseconds: 350),
+                _reload,
               );
+            },
+            filters: const [
+              'All',
+              'Self-tape',
+              'Online',
+              'In person',
+              'Saved',
+            ],
+            selectedFilter: _filter,
+            onFilterChanged: (value) {
+              _filter = value;
+              _reload();
             },
           ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Direct Offers',
-          icon: Icons.local_activity_outlined,
-          actionText: 'Bookings',
-          onActionTap: () =>
-              Navigator.pushNamed(context, ActorTalentRoutes.bookings),
-          tone: ActorTone.green,
-          child: _DirectOffers(future: _offersFuture),
+        TourTarget(
+          id: 'actor.opportunities.castingCalls',
+          child: ActorSectionCard(
+            title: _filter == 'Saved' ? 'Saved Roles' : 'Casting Calls',
+            icon: _filter == 'Saved'
+                ? Icons.bookmarks_outlined
+                : Icons.manage_search_outlined,
+            actionText: 'Refresh',
+            onActionTap: _reload,
+            child: FutureBuilder<CastingRolePage>(
+              future: _rolesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const _RoleSkeletons();
+                }
+                if (snapshot.hasError) {
+                  return CoreEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Casting roles unavailable',
+                    message: snapshot.error is ApiException
+                        ? (snapshot.error! as ApiException).message
+                        : 'Could not load casting calls. Check your connection.',
+                    actionLabel: 'Try again',
+                    onAction: _reload,
+                  );
+                }
+                final roles = snapshot.data?.roles ?? const <CastingRole>[];
+                if (roles.isEmpty) {
+                  return CoreEmptyState(
+                    icon: _filter == 'Saved'
+                        ? Icons.bookmark_add_outlined
+                        : Icons.search_off_rounded,
+                    title: _filter == 'Saved'
+                        ? 'No saved roles'
+                        : 'No matching roles',
+                    message: _filter == 'Saved'
+                        ? 'Save a casting call to compare it here later.'
+                        : 'Try a different search or check again when productions publish new roles.',
+                    actionLabel: _filter == 'Saved' ? 'Browse roles' : null,
+                    onAction: _filter == 'Saved'
+                        ? () {
+                            _filter = 'All';
+                            _reload();
+                          }
+                        : null,
+                  );
+                }
+                final page = snapshot.data!;
+                return Column(
+                  children: [
+                    TourTarget(
+                      id: 'actor.opportunities.roleGrid',
+                      child: ActorResponsiveGrid(
+                        minWidth: 285,
+                        children: [
+                          for (final role in roles)
+                            ActorCastingRoleCard(
+                              role: role,
+                              onOpen: () => Navigator.pushNamed(
+                                context,
+                                role.applicationId == null
+                                    ? ActorTalentRoutes.roleDetail
+                                    : ActorTalentRoutes.applicationDetail,
+                                arguments: role.applicationId ?? role.publicId,
+                              ),
+                              onSave: () => _toggleSaved(role),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (roles.length < page.total) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: 190,
+                        child: CoreSecondaryButton(
+                          icon: Icons.expand_more_rounded,
+                          label: _loadingMore
+                              ? 'Loading roles'
+                              : 'Load more roles',
+                          compact: true,
+                          onTap: _loadingMore ? null : () => _loadMore(page),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TourTarget(
+          id: 'actor.opportunities.directOffers',
+          child: ActorSectionCard(
+            title: 'Direct Offers',
+            icon: Icons.local_activity_outlined,
+            actionText: 'Bookings',
+            onActionTap: () =>
+                Navigator.pushNamed(context, ActorTalentRoutes.bookings),
+            tone: ActorTone.green,
+            child: _DirectOffers(future: _offersFuture),
+          ),
         ),
       ],
     );

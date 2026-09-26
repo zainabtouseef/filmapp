@@ -6,6 +6,7 @@ import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/actor_talent_models.dart';
 import '../widgets/actor_talent_components.dart';
@@ -53,114 +54,129 @@ class _AT04AvailabilityCalendarScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _DateStrip(
-                selectedDate: selectedDate,
-                statuses: _dateStatuses(),
-                onSelected: (date) => setState(() => selectedDate = date),
+              TourTarget(
+                id: 'actor.availability.dateStrip',
+                child: _DateStrip(
+                  selectedDate: selectedDate,
+                  statuses: _dateStatuses(),
+                  onSelected: (date) => setState(() => selectedDate = date),
+                ),
               ),
               const SizedBox(height: 12),
-              _Legend(),
+              TourTarget(
+                id: 'actor.availability.legend',
+                child: _Legend(),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Availability Entries',
-          icon: Icons.cloud_done_outlined,
-          actionText: hasLiveAvailability ? 'Refresh' : null,
-          onActionTap: _refreshAvailability,
-          child: hasLiveAvailability
-              ? FutureBuilder<List<booking_models.AvailabilityEntry>>(
-                  future: _availabilityFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CoreEmptyState(
-                        icon: Icons.hourglass_top_rounded,
-                        title: 'Loading availability',
-                        message: 'Fetching your server calendar.',
-                      );
-                    }
-                    final rows = snapshot.data ?? const [];
-                    if (snapshot.hasError) {
+        TourTarget(
+          id: 'actor.availability.entries',
+          child: ActorSectionCard(
+            title: 'Availability Entries',
+            icon: Icons.cloud_done_outlined,
+            actionText: hasLiveAvailability ? 'Refresh' : null,
+            onActionTap: _refreshAvailability,
+            child: hasLiveAvailability
+                ? FutureBuilder<List<booking_models.AvailabilityEntry>>(
+                    future: _availabilityFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CoreEmptyState(
+                          icon: Icons.hourglass_top_rounded,
+                          title: 'Loading availability',
+                          message: 'Fetching your server calendar.',
+                        );
+                      }
+                      final rows = snapshot.data ?? const [];
+                      if (snapshot.hasError) {
+                        return Column(
+                          children: [
+                            const CoreEmptyState(
+                              icon: Icons.cloud_off_outlined,
+                              title: 'Could not load availability',
+                              message: 'Check your connection and try again.',
+                            ),
+                            const SizedBox(height: 8),
+                            CoreSecondaryButton(
+                              icon: Icons.refresh_rounded,
+                              label: 'Try again',
+                              compact: true,
+                              onTap: _refreshAvailability,
+                            ),
+                          ],
+                        );
+                      }
+                      if (rows.isEmpty) {
+                        return const CoreEmptyState(
+                          icon: Icons.event_available_outlined,
+                          title: 'No live entries yet',
+                          message: 'Use Edit on a selected day to save one.',
+                        );
+                      }
                       return Column(
                         children: [
-                          const CoreEmptyState(
-                            icon: Icons.cloud_off_outlined,
-                            title: 'Could not load availability',
-                            message: 'Check your connection and try again.',
-                          ),
-                          const SizedBox(height: 8),
-                          CoreSecondaryButton(
-                            icon: Icons.refresh_rounded,
-                            label: 'Try again',
-                            compact: true,
-                            onTap: _refreshAvailability,
-                          ),
+                          for (final row in rows.take(5))
+                            ActorInfoRow(
+                              icon: row.status == 'booked'
+                                  ? Icons.lock_clock_outlined
+                                  : Icons.event_available_outlined,
+                              label: row.status,
+                              value:
+                                  '${DateFormat('MMM d, h:mm a').format(row.startAt.toLocal())} - ${DateFormat('MMM d, h:mm a').format(row.endAt.toLocal())}',
+                            ),
                         ],
                       );
-                    }
-                    if (rows.isEmpty) {
-                      return const CoreEmptyState(
-                        icon: Icons.event_available_outlined,
-                        title: 'No live entries yet',
-                        message: 'Use Edit on a selected day to save one.',
-                      );
-                    }
-                    return Column(
-                      children: [
-                        for (final row in rows.take(5))
-                          ActorInfoRow(
-                            icon: row.status == 'booked'
-                                ? Icons.lock_clock_outlined
-                                : Icons.event_available_outlined,
-                            label: row.status,
-                            value:
-                                '${DateFormat('MMM d, h:mm a').format(row.startAt.toLocal())} - ${DateFormat('MMM d, h:mm a').format(row.endAt.toLocal())}',
-                          ),
-                      ],
-                    );
-                  },
-                )
-              : const CoreEmptyState(
-                  icon: Icons.lock_outline_rounded,
-                  title: 'Sign in to manage availability',
-                  message:
-                      'Calendar entries are saved and loaded from the server.',
-                ),
+                    },
+                  )
+                : const CoreEmptyState(
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Sign in to manage availability',
+                    message:
+                        'Calendar entries are saved and loaded from the server.',
+                  ),
+          ),
         ),
         const SizedBox(height: 12),
         ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Selected Day Agenda',
-            icon: Icons.event_note_outlined,
-            actionText: hasLiveAvailability ? 'Edit' : null,
-            onActionTap: hasLiveAvailability
-                ? () => _openStatusSheet(context, selectedDate)
-                : null,
-            child: _Agenda(
-              date: selectedDate,
-              status: _statusForDate(selectedDate),
+          left: TourTarget(
+            id: 'actor.availability.agenda',
+            child: ActorSectionCard(
+              title: 'Selected Day Agenda',
+              icon: Icons.event_note_outlined,
+              actionText: hasLiveAvailability ? 'Edit' : null,
+              onActionTap: hasLiveAvailability
+                  ? () => _openStatusSheet(context, selectedDate)
+                  : null,
+              child: _Agenda(
+                date: selectedDate,
+                status: _statusForDate(selectedDate),
+              ),
             ),
           ),
-          right: ActorSectionCard(
-            title: 'Travel Limits',
-            icon: Icons.flight_takeoff_outlined,
-            tone: ActorTone.blue,
-            child: Column(
-              children: [
-                const CoreEmptyState(
-                  icon: Icons.flight_takeoff_outlined,
-                  title: 'Travel preferences need live profile fields',
-                  message:
-                      'No dummy city/radius values are shown. Connect profile travel preferences when the backend exposes them.',
-                ),
-                const SizedBox(height: 8),
-                ActorInfoRow(
-                  icon: Icons.lock_clock_outlined,
-                  label: 'Secured bookings',
-                  value: _securedBookingCount().toString(),
-                ),
-              ],
+          right: TourTarget(
+            id: 'actor.availability.travel',
+            child: ActorSectionCard(
+              title: 'Travel Limits',
+              icon: Icons.flight_takeoff_outlined,
+              tone: ActorTone.blue,
+              child: Column(
+                children: [
+                  const CoreEmptyState(
+                    icon: Icons.flight_takeoff_outlined,
+                    title: 'Travel preferences need live profile fields',
+                    message:
+                        'No dummy city/radius values are shown. Connect profile travel preferences when the backend exposes them.',
+                  ),
+                  const SizedBox(height: 8),
+                  ActorInfoRow(
+                    icon: Icons.lock_clock_outlined,
+                    label: 'Secured bookings',
+                    value: _securedBookingCount().toString(),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

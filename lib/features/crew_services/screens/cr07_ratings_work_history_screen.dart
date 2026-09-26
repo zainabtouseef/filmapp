@@ -7,6 +7,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../shared/cards/glass_section_card.dart';
@@ -139,68 +140,77 @@ class _ReputationBody extends StatelessWidget {
             fallbackIcon: Icons.groups_2_outlined,
             aspectRatio: 16 / 9,
           ),
-          right: CrewSectionCard(
-            title: 'Verified reputation',
-            icon: Icons.workspace_premium_outlined,
-            selected: true,
-            child: Column(
-              children: [
-                _RatingScore(reviews: data.reviews),
-                const SizedBox(height: 14),
-                CrewInfoRow(
-                  icon: Icons.fact_check_outlined,
-                  label: 'Completed projects',
-                  value: '$completed',
-                ),
-                CrewInfoRow(
-                  icon: Icons.movie_filter_outlined,
-                  label: 'Recorded bookings',
-                  value: '${data.bookings.length}',
-                ),
-                CrewInfoRow(
-                  icon: Icons.visibility_outlined,
-                  label: 'Profile visibility',
-                  value: data.profile.visibility,
-                ),
-              ],
+          right: TourTarget(
+            id: 'crew.ratings.score',
+            child: CrewSectionCard(
+              title: 'Verified reputation',
+              icon: Icons.workspace_premium_outlined,
+              selected: true,
+              child: Column(
+                children: [
+                  _RatingScore(reviews: data.reviews),
+                  const SizedBox(height: 14),
+                  CrewInfoRow(
+                    icon: Icons.fact_check_outlined,
+                    label: 'Completed projects',
+                    value: '$completed',
+                  ),
+                  CrewInfoRow(
+                    icon: Icons.movie_filter_outlined,
+                    label: 'Recorded bookings',
+                    value: '${data.bookings.length}',
+                  ),
+                  CrewInfoRow(
+                    icon: Icons.visibility_outlined,
+                    label: 'Profile visibility',
+                    value: data.profile.visibility,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
         CrewTwoColumn(
-          left: CrewSectionCard(
-            title: 'Director reviews',
-            icon: Icons.reviews_outlined,
-            child: data.reviews.reviews.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.star_outline_rounded,
-                    title: 'No published reviews yet',
-                    message:
-                        'Reviews can be submitted only against completed bookings and appear here after moderation.',
-                  )
-                : Column(
-                    children: [
-                      for (final review in data.reviews.reviews)
-                        _ReviewCard(review: review),
-                    ],
-                  ),
+          left: TourTarget(
+            id: 'crew.ratings.reviews',
+            child: CrewSectionCard(
+              title: 'Director reviews',
+              icon: Icons.reviews_outlined,
+              child: data.reviews.reviews.isEmpty
+                  ? const CoreEmptyState(
+                      icon: Icons.star_outline_rounded,
+                      title: 'No published reviews yet',
+                      message:
+                          'Reviews can be submitted only against completed bookings and appear here after moderation.',
+                    )
+                  : Column(
+                      children: [
+                        for (final review in data.reviews.reviews)
+                          _ReviewCard(review: review),
+                      ],
+                    ),
+            ),
           ),
-          right: CrewSectionCard(
-            title: 'Work history',
-            icon: Icons.history_rounded,
-            child: data.bookings.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.work_history_outlined,
-                    title: 'No verified projects yet',
-                    message:
-                        'Accepted and completed crew bookings create an auditable work history.',
-                  )
-                : Column(
-                    children: [
-                      for (final booking in data.bookings)
-                        _HistoryRow(booking: booking),
-                    ],
-                  ),
+          right: TourTarget(
+            id: 'crew.ratings.history',
+            child: CrewSectionCard(
+              title: 'Work history',
+              icon: Icons.history_rounded,
+              child: data.bookings.isEmpty
+                  ? const CoreEmptyState(
+                      icon: Icons.work_history_outlined,
+                      title: 'No verified projects yet',
+                      message:
+                          'Accepted and completed crew bookings create an auditable work history.',
+                    )
+                  : Column(
+                      children: [
+                        for (final booking in data.bookings)
+                          _HistoryRow(booking: booking),
+                      ],
+                    ),
+            ),
           ),
         ),
       ],

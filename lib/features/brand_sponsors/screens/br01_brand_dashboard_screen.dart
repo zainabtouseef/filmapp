@@ -12,6 +12,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../models/brand_sponsor_models.dart';
@@ -19,7 +20,7 @@ import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_sponsor_live.dart';
-import '../widgets/brand_sponsor_shell.dart' show startBrandTour;
+import '../widgets/brand_sponsor_shell.dart' show startBrandFullWalkthrough;
 
 class BR01BrandDashboardScreen extends StatefulWidget {
   const BR01BrandDashboardScreen({super.key});
@@ -244,30 +245,33 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        PortalHeroCard(
-          initials: _brandInitials(_profile!.name),
-          name: _profile!.name,
-          badgeLabel: readableBrandStatus(_profile!.trustStatus),
-          stats: [
-            PortalHeroStat(
-              value: '$openOpportunities',
-              label: 'Live opportunities',
-            ),
-            PortalHeroStat(
-              value: brandMoney(
-                production?.committedBudgetMinor,
-                currency: production?.currency ?? 'PKR',
+        TourTarget(
+          id: 'brand.dashboard.hero',
+          child: PortalHeroCard(
+            initials: _brandInitials(_profile!.name),
+            name: _profile!.name,
+            badgeLabel: readableBrandStatus(_profile!.trustStatus),
+            stats: [
+              PortalHeroStat(
+                value: '$openOpportunities',
+                label: 'Live opportunities',
               ),
-              label: 'Committed budget',
-            ),
-            PortalHeroStat(
-              value: '${production?.securedBookings ?? 0}',
-              label: 'Confirmed bookings',
-            ),
-          ],
-          ctaLabel: 'New opportunity',
-          onCta: () =>
-              Navigator.pushNamed(context, BrandSponsorRoutes.composer),
+              PortalHeroStat(
+                value: brandMoney(
+                  production?.committedBudgetMinor,
+                  currency: production?.currency ?? 'PKR',
+                ),
+                label: 'Committed budget',
+              ),
+              PortalHeroStat(
+                value: '${production?.securedBookings ?? 0}',
+                label: 'Confirmed bookings',
+              ),
+            ],
+            ctaLabel: 'New opportunity',
+            onCta: () =>
+                Navigator.pushNamed(context, BrandSponsorRoutes.composer),
+          ),
         ),
         const SizedBox(height: 14),
         if (demoProject != null) ...[
@@ -285,7 +289,7 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                     {'accepted', 'secured', 'completed'}
                         .contains(booking.status))
                 .length,
-            onPlay: () => startBrandTour(context),
+            onPlay: () => startBrandFullWalkthrough(context),
           ),
           const SizedBox(height: 14),
         ],
@@ -295,79 +299,88 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         _BrandQuickStatRow(metrics: [...productionMetrics, ...metrics]),
         const SizedBox(height: 14),
         BrandTwoColumn(
-          left: BrandSectionCard(
-            title: active == null ? 'Opportunity portfolio' : 'Active brief',
-            icon: Icons.campaign_outlined,
-            selected: true,
-            child: active == null
-                ? CoreEmptyState(
-                    icon: Icons.campaign_outlined,
-                    title: 'No opportunities yet',
-                    message:
-                        'Create a clear brief with budget, usage, eligibility and deliverables.',
-                    actionLabel: 'Create opportunity',
-                    onAction: () => Navigator.pushNamed(
-                      context,
-                      BrandSponsorRoutes.composer,
-                    ),
-                  )
-                : _ActiveOpportunity(
-                    opportunity: active,
-                    onApplications: () {
-                      Navigator.pushNamed(
+          left: TourTarget(
+            id: 'brand.dashboard.activeBrief',
+            child: BrandSectionCard(
+              title: active == null ? 'Opportunity portfolio' : 'Active brief',
+              icon: Icons.campaign_outlined,
+              selected: true,
+              child: active == null
+                  ? CoreEmptyState(
+                      icon: Icons.campaign_outlined,
+                      title: 'No opportunities yet',
+                      message:
+                          'Create a clear brief with budget, usage, eligibility and deliverables.',
+                      actionLabel: 'Create opportunity',
+                      onAction: () => Navigator.pushNamed(
                         context,
-                        BrandSponsorRoutes.applications,
-                      );
-                    },
-                  ),
+                        BrandSponsorRoutes.composer,
+                      ),
+                    )
+                  : _ActiveOpportunity(
+                      opportunity: active,
+                      onApplications: () {
+                        Navigator.pushNamed(
+                          context,
+                          BrandSponsorRoutes.applications,
+                        );
+                      },
+                    ),
+            ),
           ),
           right: Column(
             children: [
-              BrandSectionCard(
-                title: 'Action required',
-                icon: Icons.priority_high_rounded,
-                tone: BrandTone.purple,
-                child: _ActionQueue(
-                  applications: pendingApplications,
-                  deliverables: reviewDeliverables,
-                  draftOpportunities: _opportunities
-                      .where((item) => item.status == 'draft')
-                      .length,
+              TourTarget(
+                id: 'brand.dashboard.actionQueue',
+                child: BrandSectionCard(
+                  title: 'Action required',
+                  icon: Icons.priority_high_rounded,
+                  tone: BrandTone.purple,
+                  child: _ActionQueue(
+                    applications: pendingApplications,
+                    deliverables: reviewDeliverables,
+                    draftOpportunities: _opportunities
+                        .where((item) => item.status == 'draft')
+                        .length,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              BrandSectionCard(
-                title: 'Organization readiness',
-                icon: Icons.verified_user_outlined,
-                tone: BrandTone.green,
-                child: Column(
-                  children: [
-                    BrandInfoRow(
-                      icon: Icons.business_outlined,
-                      label: 'Organization',
-                      value: _profile!.name,
-                    ),
-                    BrandInfoRow(
-                      icon: Icons.category_outlined,
-                      label: 'Category',
-                      value: _profile!.category ?? 'Not set',
-                    ),
-                    BrandInfoRow(
-                      icon: Icons.verified_outlined,
-                      label: 'KYB status',
-                      value: readableBrandStatus(_profile!.trustStatus),
-                    ),
-                    const SizedBox(height: 8),
-                    CoreSecondaryButton(
-                      icon: Icons.edit_outlined,
-                      label: 'Review brand profile',
-                      compact: true,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        BrandSponsorRoutes.profile,
+              TourTarget(
+                id: 'brand.dashboard.readiness',
+                child: BrandSectionCard(
+                  title: 'Organization readiness',
+                  icon: Icons.verified_user_outlined,
+                  tone: BrandTone.green,
+                  child: Column(
+                    children: [
+                      BrandInfoRow(
+                        icon: Icons.business_outlined,
+                        label: 'Organization',
+                        value: _profile!.name,
                       ),
-                    ),
-                  ],
+                      BrandInfoRow(
+                        icon: Icons.category_outlined,
+                        label: 'Category',
+                        value: _profile!.category ?? 'Not set',
+                      ),
+                      BrandInfoRow(
+                        icon: Icons.verified_outlined,
+                        label: 'KYB status',
+                        value: readableBrandStatus(_profile!.trustStatus),
+                      ),
+                      const SizedBox(height: 8),
+                      CoreSecondaryButton(
+                        icon: Icons.edit_outlined,
+                        label: 'Review brand profile',
+                        compact: true,
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          BrandSponsorRoutes.profile,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

@@ -10,6 +10,7 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -161,15 +162,18 @@ class _LO07CheckInInspectionScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CoreDropdownField<String>(
-                value: booking.publicId,
-                values: data.bookings.map((item) => item.publicId).toList(),
-                label: 'Accepted booking',
-                icon: Icons.movie_creation_outlined,
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _selectedBookingId = value);
-                },
+              TourTarget(
+                id: 'location.checkin.bookingPicker',
+                child: CoreDropdownField<String>(
+                  value: booking.publicId,
+                  values: data.bookings.map((item) => item.publicId).toList(),
+                  label: 'Accepted booking',
+                  icon: Icons.movie_creation_outlined,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _selectedBookingId = value);
+                  },
+                ),
               ),
               const SizedBox(height: 12),
               LinearProgressIndicator(
@@ -211,13 +215,16 @@ class _LO07CheckInInspectionScreenState
               ),
               if (inspection == null) ...[
                 const SizedBox(height: 12),
-                CorePrimaryButton(
-                  icon: Icons.play_arrow_rounded,
-                  label: _busy ? 'Starting...' : 'Start check-in record',
-                  compact: true,
-                  onTap: _busy
-                      ? null
-                      : () => _startInspection(booking, data.property!),
+                TourTarget(
+                  id: 'location.checkin.start',
+                  child: CorePrimaryButton(
+                    icon: Icons.play_arrow_rounded,
+                    label: _busy ? 'Starting...' : 'Start check-in record',
+                    compact: true,
+                    onTap: _busy
+                        ? null
+                        : () => _startInspection(booking, data.property!),
+                  ),
                 ),
               ],
             ],
@@ -225,45 +232,48 @@ class _LO07CheckInInspectionScreenState
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
-          left: LocationResponsiveGrid(
-            minWidth: 300,
-            children: [
-              if (spaces.isEmpty)
-                LocationSectionCard(
-                  title: 'Inspection areas',
-                  icon: Icons.dashboard_customize_outlined,
-                  child: CoreEmptyState(
-                    icon: Icons.add_box_outlined,
-                    title: 'No shoot spaces defined',
-                    message:
-                        'Add production areas to the property before check-in.',
-                    actionLabel: 'Edit property',
-                    onAction: () => Navigator.pushNamed(
-                      context,
-                      LocationOwnerRoutes.listing,
+          left: TourTarget(
+            id: 'location.checkin.areas',
+            child: LocationResponsiveGrid(
+              minWidth: 300,
+              children: [
+                if (spaces.isEmpty)
+                  LocationSectionCard(
+                    title: 'Inspection areas',
+                    icon: Icons.dashboard_customize_outlined,
+                    child: CoreEmptyState(
+                      icon: Icons.add_box_outlined,
+                      title: 'No shoot spaces defined',
+                      message:
+                          'Add production areas to the property before check-in.',
+                      actionLabel: 'Edit property',
+                      onAction: () => Navigator.pushNamed(
+                        context,
+                        LocationOwnerRoutes.listing,
+                      ),
                     ),
-                  ),
-                )
-              else
-                for (final space in spaces)
-                  _LiveInspectionAreaCard(
-                    area: space['name'] as String? ?? 'Property area',
-                    item: _itemFor(
-                      inspection,
-                      space['name'] as String? ?? '',
+                  )
+                else
+                  for (final space in spaces)
+                    _LiveInspectionAreaCard(
+                      area: space['name'] as String? ?? 'Property area',
+                      item: _itemFor(
+                        inspection,
+                        space['name'] as String? ?? '',
+                      ),
+                      locked: inspection == null || ownerConfirmed,
+                      busy: _busyArea == (space['name'] as String? ?? ''),
+                      onCapture: () => _captureArea(
+                        inspection!,
+                        space['name'] as String? ?? 'Property area',
+                      ),
+                      onIssue: () => _reportAreaIssue(
+                        inspection!,
+                        space['name'] as String? ?? 'Property area',
+                      ),
                     ),
-                    locked: inspection == null || ownerConfirmed,
-                    busy: _busyArea == (space['name'] as String? ?? ''),
-                    onCapture: () => _captureArea(
-                      inspection!,
-                      space['name'] as String? ?? 'Property area',
-                    ),
-                    onIssue: () => _reportAreaIssue(
-                      inspection!,
-                      space['name'] as String? ?? 'Property area',
-                    ),
-                  ),
-            ],
+              ],
+            ),
           ),
           right: LocationSectionCard(
             title: 'Handover review',
@@ -302,22 +312,25 @@ class _LO07CheckInInspectionScreenState
                   ),
                 ),
                 const SizedBox(height: 12),
-                CorePrimaryButton(
-                  icon: Icons.verified_outlined,
-                  label: ownerConfirmed
-                      ? 'Owner confirmed'
-                      : _busy
-                          ? 'Confirming...'
-                          : 'Confirm handover',
-                  compact: true,
-                  onTap: inspection == null || ownerConfirmed || _busy
-                      ? null
-                      : captured < total
-                          ? () => locationSnack(
-                                context,
-                                'Capture every property area first',
-                              )
-                          : () => _confirmInspection(inspection),
+                TourTarget(
+                  id: 'location.checkin.confirm',
+                  child: CorePrimaryButton(
+                    icon: Icons.verified_outlined,
+                    label: ownerConfirmed
+                        ? 'Owner confirmed'
+                        : _busy
+                            ? 'Confirming...'
+                            : 'Confirm handover',
+                    compact: true,
+                    onTap: inspection == null || ownerConfirmed || _busy
+                        ? null
+                        : captured < total
+                            ? () => locationSnack(
+                                  context,
+                                  'Capture every property area first',
+                                )
+                            : () => _confirmInspection(inspection),
+                  ),
                 ),
               ],
             ),

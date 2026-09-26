@@ -2,8 +2,8 @@ import 'package:cineconnect/core/theme/app_theme.dart';
 import 'package:cineconnect/core/theme/theme_controller.dart';
 import 'package:cineconnect/core/tour/tour_controller.dart';
 import 'package:cineconnect/features/brand_sponsors/routes/brand_sponsor_routes.dart';
+import 'package:cineconnect/features/brand_sponsors/widgets/brand_full_walkthrough_steps.dart';
 import 'package:cineconnect/features/brand_sponsors/widgets/brand_sponsor_shell.dart';
-import 'package:cineconnect/features/brand_sponsors/widgets/brand_tour_steps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,21 +22,26 @@ void main() {
       brandSponsorMenuEntries.map((item) => item.route),
       containsAll(BrandSponsorRoutes.allRoutes),
     );
-    expect(brandTourSteps, hasLength(10));
+    expect(brandFullWalkthroughSteps, hasLength(52));
     expect(
-      brandTourSteps.map((step) => step.title),
+      brandFullWalkthroughSteps.map((step) => step.title),
       containsAll([
-        'Meet the project',
-        '1. Register the production',
-        '2. Register every requirement',
-        '3. Keep discovery project-scoped',
-        '4. Evaluate the complete profile',
-        '5. Compare one production team',
-        '6. Follow every response',
-        '7. Negotiate and communicate',
-        '8. Return to the production truth',
-        'The connected flow is complete',
+        'Read the workspace hero',
+        'Set the organization identity',
+        'Register a campaign project',
+        'Set the campaign budget',
+        'Review a proposal',
+        'Evaluate a full profile',
+        'Compare shortlisted candidates',
+        'Manage a booking request',
+        'Structure the payment schedule',
+        'Review submitted proof',
+        'Reconcile the ledger',
       ]),
+    );
+    expect(
+      brandFullWalkthroughSteps.map((step) => step.routeName).toSet(),
+      containsAll(BrandSponsorRoutes.allRoutes),
     );
   });
 
@@ -77,13 +82,13 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('brand-demo-launcher')), findsOneWidget);
-    expect(find.text('Project demo'), findsOneWidget);
+    expect(find.text('Demo'), findsOneWidget);
     expect(find.byTooltip('Notifications'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.byKey(const ValueKey('brand-demo-launcher')));
     await tester.pump();
     expect(tour.isActive, isTrue);
-    expect(tour.activeTourId, brandTourId);
+    expect(tour.activeTourId, brandFullWalkthroughTourId);
   });
 }

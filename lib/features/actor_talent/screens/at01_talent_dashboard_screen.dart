@@ -13,6 +13,7 @@ import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
@@ -104,37 +105,55 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _TalentHeroSection(
-          profileFuture: _profileFuture,
-          opportunitiesFuture: _opportunitiesFuture,
-          castingFuture: _castingFuture,
+        TourTarget(
+          id: 'actor.dashboard.hero',
+          child: _TalentHeroSection(
+            profileFuture: _profileFuture,
+            opportunitiesFuture: _opportunitiesFuture,
+            castingFuture: _castingFuture,
+          ),
         ),
         const SizedBox(height: 12),
         _OpportunityShortcutStrip(castingFuture: _castingFuture),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Talent Snapshot',
-          icon: Icons.auto_awesome_outlined,
-          actionText: 'Edit profile',
-          onActionTap: () =>
-              Navigator.pushNamed(context, ActorTalentRoutes.profile),
-          selected: _profileFuture == null,
-          child: _TalentSnapshotContent(future: _profileFuture),
+        TourTarget(
+          id: 'actor.dashboard.snapshot',
+          child: ActorSectionCard(
+            title: 'Talent Snapshot',
+            icon: Icons.auto_awesome_outlined,
+            actionText: 'Edit profile',
+            onActionTap: () =>
+                Navigator.pushNamed(context, ActorTalentRoutes.profile),
+            selected: _profileFuture == null,
+            child: _TalentSnapshotContent(future: _profileFuture),
+          ),
         ),
         const SizedBox(height: 12),
-        _TalentWidgetGridSection(
-          profileFuture: _profileFuture,
-          opportunitiesFuture: _opportunitiesFuture,
+        TourTarget(
+          id: 'actor.dashboard.widgets',
+          child: _TalentWidgetGridSection(
+            profileFuture: _profileFuture,
+            opportunitiesFuture: _opportunitiesFuture,
+          ),
         ),
         const SizedBox(height: 12),
-        const _TalentKpiStrip(),
+        const TourTarget(
+          id: 'actor.dashboard.kpis',
+          child: _TalentKpiStrip(),
+        ),
         const SizedBox(height: 12),
-        _CastingDashboardOverview(future: _castingFuture),
+        TourTarget(
+          id: 'actor.dashboard.castingOverview',
+          child: _CastingDashboardOverview(future: _castingFuture),
+        ),
         const SizedBox(height: 12),
         ActorTwoColumn(
-          left: _PendingWork(
-            future: _opportunitiesFuture,
-            onRefresh: _refreshOpportunities,
+          left: TourTarget(
+            id: 'actor.dashboard.priorityActions',
+            child: _PendingWork(
+              future: _opportunitiesFuture,
+              onRefresh: _refreshOpportunities,
+            ),
           ),
           right: _DashboardSideRail(profileFuture: _profileFuture),
         ),
@@ -444,23 +463,27 @@ class _ShortcutGrid extends StatelessWidget {
       ),
     ];
 
-    return ActorSectionCard(
-      title: 'Quick Access',
-      icon: Icons.dashboard_customize_rounded,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const gap = AppSpacing.md;
-          final columns = (constraints.maxWidth / 230).floor().clamp(1, 3);
-          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (final module in modules)
-                SizedBox(width: width, child: module),
-            ],
-          );
-        },
+    return TourTarget(
+      id: 'actor.dashboard.quickAccess',
+      child: ActorSectionCard(
+        title: 'Quick Access',
+        icon: Icons.dashboard_customize_rounded,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = AppSpacing.md;
+            final columns = (constraints.maxWidth / 230).floor().clamp(1, 3);
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final module in modules)
+                  SizedBox(width: width, child: module),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -847,46 +870,81 @@ class _TalentWidgetGridSection extends StatelessWidget {
   });
 
   static const _clockRingWidth = 168.0 * 2 + 14;
+  static const _calendarWidth = 340.0;
+
+  /// Below this, there's room for both groups side by side exactly as
+  /// designed. Above it, don't leave the clock group pinned at its fixed
+  /// width with dead space beside it — let each group fill the row.
+  static const _sideBySideThreshold = _clockRingWidth + 14 + _calendarWidth;
 
   @override
   Widget build(BuildContext context) {
-    return PortalStaggeredReveal(
+    final clockRingRow = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // FittedBox: on the narrowest mobile widths the shell's content
-        // column can be tighter than the clock+ring's combined natural
-        // width, which would otherwise clamp the SizedBox and overflow the
-        // Row inside it. scaleDown measures the group at full size first
-        // and only shrinks it (uniformly, no clipping) when space is
-        // tight — a no-op on any layout wide enough to fit it natively.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: _clockRingWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+        const PortalLiveClockWidget(),
+        const SizedBox(width: 14),
+        _ProfileCompletenessRing(future: profileFuture),
+      ],
+    );
+    final calendarCard = PortalGlassWidgetCard(
+      width: _calendarWidth,
+      child: _BookingCalendarSection(
+        future: opportunitiesFuture,
+        decorated: false,
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+
+        if (width >= _sideBySideThreshold) {
+          return PortalStaggeredReveal(
+            children: [
+              SizedBox(
+                width: _clockRingWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const PortalLiveClockWidget(),
-                    const SizedBox(width: 14),
-                    _ProfileCompletenessRing(future: profileFuture),
+                    clockRingRow,
+                    const SizedBox(height: 14),
+                    PortalGlassFireWidget(width: _clockRingWidth, height: 118),
                   ],
                 ),
-                const SizedBox(height: 14),
-                PortalGlassFireWidget(width: _clockRingWidth, height: 118),
-              ],
+              ),
+              calendarCard,
+            ],
+          );
+        }
+
+        // Not enough room for both groups side by side: each group fills
+        // the actual available width instead of sitting pinned at a fixed
+        // pixel size with dead space left beside it.
+        final clockRingGroup = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: width < _clockRingWidth
+                  ? FittedBox(fit: BoxFit.scaleDown, child: clockRingRow)
+                  : clockRingRow,
             ),
-          ),
-        ),
-        PortalGlassWidgetCard(
-          width: 340,
-          child: _BookingCalendarSection(
-            future: opportunitiesFuture,
-            decorated: false,
-          ),
-        ),
-      ],
+            const SizedBox(height: 14),
+            PortalGlassFireWidget(width: width, height: 118),
+          ],
+        );
+
+        return PortalStaggeredReveal(
+          children: [
+            SizedBox(width: width, child: clockRingGroup),
+            Center(
+              child: width < _calendarWidth
+                  ? FittedBox(fit: BoxFit.scaleDown, child: calendarCard)
+                  : calendarCard,
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1146,96 +1204,102 @@ class _DashboardSideRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ActorSectionCard(
-          title: 'Manage Your Profile',
-          icon: Icons.tune_rounded,
-          tone: ActorTone.purple,
-          child: const ActorTaskRail(
-            tasks: [
-              ActorTask(
-                id: 'portfolio',
-                title: 'Portfolio',
-                subtitle: 'Photos, showreel, self-tapes',
-                route: ActorTalentRoutes.portfolio,
-                icon: Icons.video_library_outlined,
-                tone: ActorTone.blue,
-              ),
-              ActorTask(
-                id: 'calendar',
-                title: 'Calendar',
-                subtitle: 'Availability',
-                route: ActorTalentRoutes.calendar,
-                icon: Icons.calendar_month_outlined,
-                tone: ActorTone.gold,
-              ),
-              ActorTask(
-                id: 'rates',
-                title: 'Rates',
-                subtitle: 'Day rate & terms',
-                route: ActorTalentRoutes.rates,
-                icon: Icons.price_change_outlined,
-                tone: ActorTone.green,
-              ),
-              ActorTask(
-                id: 'safety',
-                title: 'Safety',
-                subtitle: 'Privacy & support',
-                route: ActorTalentRoutes.safety,
-                icon: Icons.health_and_safety_outlined,
-                tone: ActorTone.purple,
-              ),
-            ],
+        TourTarget(
+          id: 'actor.dashboard.manageProfile',
+          child: ActorSectionCard(
+            title: 'Manage Your Profile',
+            icon: Icons.tune_rounded,
+            tone: ActorTone.purple,
+            child: const ActorTaskRail(
+              tasks: [
+                ActorTask(
+                  id: 'portfolio',
+                  title: 'Portfolio',
+                  subtitle: 'Photos, showreel, self-tapes',
+                  route: ActorTalentRoutes.portfolio,
+                  icon: Icons.video_library_outlined,
+                  tone: ActorTone.blue,
+                ),
+                ActorTask(
+                  id: 'calendar',
+                  title: 'Calendar',
+                  subtitle: 'Availability',
+                  route: ActorTalentRoutes.calendar,
+                  icon: Icons.calendar_month_outlined,
+                  tone: ActorTone.gold,
+                ),
+                ActorTask(
+                  id: 'rates',
+                  title: 'Rates',
+                  subtitle: 'Day rate & terms',
+                  route: ActorTalentRoutes.rates,
+                  icon: Icons.price_change_outlined,
+                  tone: ActorTone.green,
+                ),
+                ActorTask(
+                  id: 'safety',
+                  title: 'Safety',
+                  subtitle: 'Privacy & support',
+                  route: ActorTalentRoutes.safety,
+                  icon: Icons.health_and_safety_outlined,
+                  tone: ActorTone.purple,
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Reputation Snapshot',
-          icon: Icons.stars_outlined,
-          actionText: 'Reviews',
-          onActionTap: () =>
-              Navigator.pushNamed(context, ActorTalentRoutes.reputation),
-          child: FutureBuilder<_TalentProfileSnapshot>(
-            future: profileFuture,
-            builder: (context, snapshot) {
-              if (profileFuture != null &&
-                  snapshot.connectionState == ConnectionState.waiting) {
-                return const SkeletonCard(
-                  height: 112,
-                  density: CardDensity.compact,
+        TourTarget(
+          id: 'actor.dashboard.reputationSnapshot',
+          child: ActorSectionCard(
+            title: 'Reputation Snapshot',
+            icon: Icons.stars_outlined,
+            actionText: 'Reviews',
+            onActionTap: () =>
+                Navigator.pushNamed(context, ActorTalentRoutes.reputation),
+            child: FutureBuilder<_TalentProfileSnapshot>(
+              future: profileFuture,
+              builder: (context, snapshot) {
+                if (profileFuture != null &&
+                    snapshot.connectionState == ConnectionState.waiting) {
+                  return const SkeletonCard(
+                    height: 112,
+                    density: CardDensity.compact,
+                  );
+                }
+                if (profileFuture != null && snapshot.hasError) {
+                  return const CoreEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Rating unavailable',
+                    message: 'Open Reviews to retry.',
+                  );
+                }
+                final profile = snapshot.data?.userProfile;
+                return Column(
+                  children: [
+                    ActorInfoRow(
+                      icon: Icons.star_outline_rounded,
+                      label: 'Public rating',
+                      value: profile == null
+                          ? 'No live profile'
+                          : profile.reviewCount == 0
+                              ? 'No reviews yet'
+                              : '${profile.ratingAverage.toStringAsFixed(1)} / 5 · ${profile.reviewCount} reviews',
+                    ),
+                    const ActorInfoRow(
+                      icon: Icons.schedule_rounded,
+                      label: 'Response habit',
+                      value: 'Reply before expiry',
+                    ),
+                    const ActorInfoRow(
+                      icon: Icons.workspace_premium_outlined,
+                      label: 'Trust setup',
+                      value: 'KYC and safety',
+                    ),
+                  ],
                 );
-              }
-              if (profileFuture != null && snapshot.hasError) {
-                return const CoreEmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Rating unavailable',
-                  message: 'Open Reviews to retry.',
-                );
-              }
-              final profile = snapshot.data?.userProfile;
-              return Column(
-                children: [
-                  ActorInfoRow(
-                    icon: Icons.star_outline_rounded,
-                    label: 'Public rating',
-                    value: profile == null
-                        ? 'No live profile'
-                        : profile.reviewCount == 0
-                            ? 'No reviews yet'
-                            : '${profile.ratingAverage.toStringAsFixed(1)} / 5 · ${profile.reviewCount} reviews',
-                  ),
-                  const ActorInfoRow(
-                    icon: Icons.schedule_rounded,
-                    label: 'Response habit',
-                    value: 'Reply before expiry',
-                  ),
-                  const ActorInfoRow(
-                    icon: Icons.workspace_premium_outlined,
-                    label: 'Trust setup',
-                    value: 'KYC and safety',
-                  ),
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ],

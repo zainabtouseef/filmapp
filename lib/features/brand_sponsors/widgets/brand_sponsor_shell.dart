@@ -20,15 +20,16 @@ import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/brand_sponsor_routes.dart';
+import 'brand_full_walkthrough_steps.dart';
 import 'brand_sponsor_live.dart';
-import 'brand_tour_steps.dart';
 
-void startBrandTour(BuildContext context) {
+void startBrandFullWalkthrough(BuildContext context) {
   TourScope.of(context).start(
-    brandTourSteps,
-    tourId: brandTourId,
+    brandFullWalkthroughSteps,
+    tourId: brandFullWalkthroughTourId,
     replaceRoutes: true,
-    onFinished: () => const TourPreferencesStore().markSeen(brandTourId),
+    onFinished: () =>
+        const TourPreferencesStore().markSeen(brandFullWalkthroughTourId),
   );
 }
 
@@ -225,7 +226,9 @@ class BrandSponsorShell extends StatelessWidget {
               ),
               if (showMobileDemo) ...[
                 const SizedBox(width: 10),
-                _BrandDemoLauncher(onTap: () => startBrandTour(context)),
+                _BrandDemoLauncher(
+                  onTap: () => startBrandFullWalkthrough(context),
+                ),
               ],
             ],
           ),
@@ -246,7 +249,7 @@ class _BrandDemoLauncher extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Tooltip(
-      message: 'Play one complete project story',
+      message: 'Play the complete demo',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -278,7 +281,7 @@ class _BrandDemoLauncher extends StatelessWidget {
                 ),
                 const SizedBox(width: 7),
                 Text(
-                  'Project demo',
+                  'Demo',
                   style: AppTextStyles.cardLabel.copyWith(
                     color: colors.onGold,
                     fontWeight: FontWeight.w900,
@@ -420,8 +423,8 @@ class _BrandWorkspaceTopBar extends StatelessWidget {
           if (wide) ...[
             _BrandTopIcon(
               icon: Icons.explore_outlined,
-              tooltip: 'Play one complete project story',
-              onTap: () => startBrandTour(context),
+              tooltip: 'Play the complete demo',
+              onTap: () => startBrandFullWalkthrough(context),
             ),
             const SizedBox(width: 10),
           ],

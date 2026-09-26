@@ -7,6 +7,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
@@ -52,67 +53,73 @@ class _AT17BookingsMessagesScreenState
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ActorSearchFilterBar(
-          query: _query,
-          onQueryChanged: (value) => setState(() => _query = value),
-          filters: const ['All', 'Offers', 'Confirmed', 'Closed'],
-          selectedFilter: _filter,
-          onFilterChanged: (value) => setState(() => _filter = value),
+        TourTarget(
+          id: 'actor.bookings.searchFilter',
+          child: ActorSearchFilterBar(
+            query: _query,
+            onQueryChanged: (value) => setState(() => _query = value),
+            filters: const ['All', 'Offers', 'Confirmed', 'Closed'],
+            selectedFilter: _filter,
+            onFilterChanged: (value) => setState(() => _filter = value),
+          ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Bookings',
-          icon: Icons.event_available_outlined,
-          actionText: 'Refresh',
-          onActionTap: _reload,
-          child: FutureBuilder<List<Booking>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Column(
+        TourTarget(
+          id: 'actor.bookings.list',
+          child: ActorSectionCard(
+            title: 'Bookings',
+            icon: Icons.event_available_outlined,
+            actionText: 'Refresh',
+            onActionTap: _reload,
+            child: FutureBuilder<List<Booking>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Column(
+                    children: [
+                      SkeletonCard(height: 170),
+                      SizedBox(height: 10),
+                      SkeletonCard(height: 170),
+                    ],
+                  );
+                }
+                if (snapshot.hasError) {
+                  return CoreEmptyState(
+                    icon: Icons.cloud_off_outlined,
+                    title: 'Bookings unavailable',
+                    message: snapshot.error is ApiException
+                        ? (snapshot.error! as ApiException).message
+                        : 'Could not load your bookings.',
+                    actionLabel: 'Try again',
+                    onAction: _reload,
+                  );
+                }
+                final rows = (snapshot.data ?? const <Booking>[])
+                    .where(_matchesFilter)
+                    .toList();
+                if (rows.isEmpty) {
+                  return CoreEmptyState(
+                    icon: Icons.event_busy_outlined,
+                    title: 'No $_filter bookings',
+                    message:
+                        'Offers and confirmed production work appear here with schedule, messages, contract and payment actions.',
+                    actionLabel: 'Discover roles',
+                    onAction: () => Navigator.pushNamed(
+                      context,
+                      ActorTalentRoutes.opportunities,
+                    ),
+                  );
+                }
+                return Column(
                   children: [
-                    SkeletonCard(height: 170),
-                    SizedBox(height: 10),
-                    SkeletonCard(height: 170),
+                    for (var index = 0; index < rows.length; index++) ...[
+                      _BookingCard(booking: rows[index]),
+                      if (index != rows.length - 1) const SizedBox(height: 10),
+                    ],
                   ],
                 );
-              }
-              if (snapshot.hasError) {
-                return CoreEmptyState(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Bookings unavailable',
-                  message: snapshot.error is ApiException
-                      ? (snapshot.error! as ApiException).message
-                      : 'Could not load your bookings.',
-                  actionLabel: 'Try again',
-                  onAction: _reload,
-                );
-              }
-              final rows = (snapshot.data ?? const <Booking>[])
-                  .where(_matchesFilter)
-                  .toList();
-              if (rows.isEmpty) {
-                return CoreEmptyState(
-                  icon: Icons.event_busy_outlined,
-                  title: 'No $_filter bookings',
-                  message:
-                      'Offers and confirmed production work appear here with schedule, messages, contract and payment actions.',
-                  actionLabel: 'Discover roles',
-                  onAction: () => Navigator.pushNamed(
-                    context,
-                    ActorTalentRoutes.opportunities,
-                  ),
-                );
-              }
-              return Column(
-                children: [
-                  for (var index = 0; index < rows.length; index++) ...[
-                    _BookingCard(booking: rows[index]),
-                    if (index != rows.length - 1) const SizedBox(height: 10),
-                  ],
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ],

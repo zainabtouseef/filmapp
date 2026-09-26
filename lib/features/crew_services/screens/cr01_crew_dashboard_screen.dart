@@ -10,6 +10,7 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../shared/cards/cine_card_system.dart';
@@ -206,78 +207,91 @@ class _CrewDashboardBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _CrewHero(
-          data: data,
-          confirmedCount: confirmed.length,
-          openRequestsCount: openRequests.length,
+        TourTarget(
+          id: 'crew.dashboard.hero',
+          child: _CrewHero(
+            data: data,
+            confirmedCount: confirmed.length,
+            openRequestsCount: openRequests.length,
+          ),
         ),
         const SizedBox(height: 14),
-        _CrewQuickStats(metrics: metrics),
+        TourTarget(
+          id: 'crew.dashboard.quickStats',
+          child: _CrewQuickStats(metrics: metrics),
+        ),
         const SizedBox(height: 14),
         _CrewWidgetGridSection(data: data),
         const SizedBox(height: 14),
         CrewTwoColumn(
-          left: CrewSectionCard(
-            title: 'Production Pipeline',
-            icon: Icons.movie_creation_outlined,
-            actionText: 'View all',
-            onActionTap: () =>
-                Navigator.pushNamed(context, CrewServicesRoutes.requests),
-            selected: pipelineBookings.isNotEmpty,
-            child: pipelineBookings.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.movie_filter_outlined,
-                    title: 'Ready for the next production',
-                    message:
-                        'Open projects and direct crew requests will appear here as soon as a director connects.',
-                  )
-                : Column(
-                    children: [
-                      for (var i = 0; i < pipelineBookings.length; i++)
-                        _BookingPipelineRow(
-                          booking: pipelineBookings[i],
-                          showDivider: i != 0,
-                        ),
-                    ],
-                  ),
+          left: TourTarget(
+            id: 'crew.dashboard.pipeline',
+            child: CrewSectionCard(
+              title: 'Production Pipeline',
+              icon: Icons.movie_creation_outlined,
+              actionText: 'View all',
+              onActionTap: () =>
+                  Navigator.pushNamed(context, CrewServicesRoutes.requests),
+              selected: pipelineBookings.isNotEmpty,
+              child: pipelineBookings.isEmpty
+                  ? const CoreEmptyState(
+                      icon: Icons.movie_filter_outlined,
+                      title: 'Ready for the next production',
+                      message:
+                          'Open projects and direct crew requests will appear here as soon as a director connects.',
+                    )
+                  : Column(
+                      children: [
+                        for (var i = 0; i < pipelineBookings.length; i++)
+                          _BookingPipelineRow(
+                            booking: pipelineBookings[i],
+                            showDivider: i != 0,
+                          ),
+                      ],
+                    ),
+            ),
           ),
-          right: CrewSectionCard(
-            title: 'Action required',
-            icon: Icons.priority_high_rounded,
-            child: Column(
-              children: [
-                PortalAttentionRow(
-                  kindLabel: 'Requests',
-                  title: '${openRequests.length} open request(s)',
-                  meta: 'Review project scope, dates and fees',
-                  icon: Icons.move_to_inbox_outlined,
-                  tone: openRequests.isEmpty
-                      ? CineTone.positive
-                      : CineTone.warning,
-                  onTap: () =>
-                      Navigator.pushNamed(context, CrewServicesRoutes.requests),
-                ),
-                const SizedBox(height: 10),
-                PortalAttentionRow(
-                  kindLabel: 'Contracts',
-                  title: '${unsigned.length} unsigned contract(s)',
-                  meta: 'Review terms and signature progress',
-                  icon: Icons.draw_outlined,
-                  tone: unsigned.isEmpty ? CineTone.positive : CineTone.warning,
-                  onTap: () => Navigator.pushNamed(
-                      context, CrewServicesRoutes.contracts),
-                ),
-                const SizedBox(height: 10),
-                PortalAttentionRow(
-                  kindLabel: 'Opportunities',
-                  title: 'Open opportunities',
-                  meta: 'Pitch your services to active productions',
-                  icon: Icons.travel_explore_outlined,
-                  tone: CineTone.information,
-                  onTap: () => Navigator.pushNamed(
-                      context, CrewServicesRoutes.opportunities),
-                ),
-              ],
+          right: TourTarget(
+            id: 'crew.dashboard.actionRequired',
+            child: CrewSectionCard(
+              title: 'Action required',
+              icon: Icons.priority_high_rounded,
+              child: Column(
+                children: [
+                  PortalAttentionRow(
+                    kindLabel: 'Requests',
+                    title: '${openRequests.length} open request(s)',
+                    meta: 'Review project scope, dates and fees',
+                    icon: Icons.move_to_inbox_outlined,
+                    tone: openRequests.isEmpty
+                        ? CineTone.positive
+                        : CineTone.warning,
+                    onTap: () => Navigator.pushNamed(
+                        context, CrewServicesRoutes.requests),
+                  ),
+                  const SizedBox(height: 10),
+                  PortalAttentionRow(
+                    kindLabel: 'Contracts',
+                    title: '${unsigned.length} unsigned contract(s)',
+                    meta: 'Review terms and signature progress',
+                    icon: Icons.draw_outlined,
+                    tone:
+                        unsigned.isEmpty ? CineTone.positive : CineTone.warning,
+                    onTap: () => Navigator.pushNamed(
+                        context, CrewServicesRoutes.contracts),
+                  ),
+                  const SizedBox(height: 10),
+                  PortalAttentionRow(
+                    kindLabel: 'Opportunities',
+                    title: 'Open opportunities',
+                    meta: 'Pitch your services to active productions',
+                    icon: Icons.travel_explore_outlined,
+                    tone: CineTone.information,
+                    onTap: () => Navigator.pushNamed(
+                        context, CrewServicesRoutes.opportunities),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -377,6 +391,12 @@ class _CrewWidgetGridSection extends StatelessWidget {
   const _CrewWidgetGridSection({required this.data});
 
   static const _clockRingWidth = 168.0 * 2 + 14;
+  static const _calendarWidth = 340.0;
+
+  /// Below this, there's room for both groups side by side exactly as
+  /// designed. Above it, don't leave the clock group pinned at its fixed
+  /// width with dead space beside it — let each group fill the row.
+  static const _sideBySideThreshold = _clockRingWidth + 14 + _calendarWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -385,49 +405,80 @@ class _CrewWidgetGridSection extends StatelessWidget {
     final total = credit + pending;
     final progress = total == 0 ? 0.0 : credit / total;
 
-    return PortalStaggeredReveal(
+    final clockRingRow = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // FittedBox: guards against the narrowest mobile widths, where the
-        // shell's content column can be tighter than the clock+ring's
-        // combined natural width — that would otherwise clamp the
-        // SizedBox and overflow the Row inside it. scaleDown measures the
-        // group at full size first and only shrinks it (uniformly, no
-        // clipping) when space is tight — a no-op on any layout wide
-        // enough to fit it natively.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: _clockRingWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const PortalLiveClockWidget(),
-                    const SizedBox(width: 14),
-                    PortalGlassRingWidget(
-                      progress: progress,
-                      value: crewMoney(credit ~/ 100),
-                      label: 'Earnings cleared\nthis cycle',
-                      tone: CineTone.premium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                PortalGlassFireWidget(width: _clockRingWidth, height: 118),
-              ],
-            ),
-          ),
-        ),
-        PortalGlassWidgetCard(
-          width: 340,
-          child: _CrewAvailabilityCalendar(
-            availability: data.availability,
-            decorated: false,
-          ),
+        const PortalLiveClockWidget(),
+        const SizedBox(width: 14),
+        PortalGlassRingWidget(
+          progress: progress,
+          value: crewMoney(credit ~/ 100),
+          label: 'Earnings cleared\nthis cycle',
+          tone: CineTone.premium,
         ),
       ],
+    );
+    final calendarCard = TourTarget(
+      id: 'crew.dashboard.calendarWidget',
+      child: PortalGlassWidgetCard(
+        width: _calendarWidth,
+        child: _CrewAvailabilityCalendar(
+          availability: data.availability,
+          decorated: false,
+        ),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+
+        if (width >= _sideBySideThreshold) {
+          return PortalStaggeredReveal(
+            children: [
+              SizedBox(
+                width: _clockRingWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    clockRingRow,
+                    const SizedBox(height: 14),
+                    PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+                  ],
+                ),
+              ),
+              calendarCard,
+            ],
+          );
+        }
+
+        // Not enough room for both groups side by side: each group fills
+        // the actual available width instead of sitting pinned at a fixed
+        // pixel size with dead space left beside it.
+        final clockRingGroup = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: width < _clockRingWidth
+                  ? FittedBox(fit: BoxFit.scaleDown, child: clockRingRow)
+                  : clockRingRow,
+            ),
+            const SizedBox(height: 14),
+            PortalGlassFireWidget(width: width, height: 118),
+          ],
+        );
+
+        return PortalStaggeredReveal(
+          children: [
+            SizedBox(width: width, child: clockRingGroup),
+            Center(
+              child: width < _calendarWidth
+                  ? FittedBox(fit: BoxFit.scaleDown, child: calendarCard)
+                  : calendarCard,
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -12,6 +12,7 @@ import '../../../core/payments/payments_controller.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -177,38 +178,48 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _QuickStatsRow(metrics: metrics),
+        TourTarget(
+          id: 'location.dashboard.quickStats',
+          child: _QuickStatsRow(metrics: metrics),
+        ),
         const SizedBox(height: 12),
         LocationTwoColumn(
-          left: property == null
-              ? LocationSectionCard(
-                  title: 'Property portfolio',
-                  icon: Icons.add_location_alt_outlined,
-                  selected: true,
-                  child: CoreEmptyState(
-                    icon: Icons.location_city_outlined,
-                    title: 'Create your first property',
-                    message:
-                        'Add production areas, capacity, access details and a public listing.',
-                    actionLabel: 'Create property',
-                    onAction: () => Navigator.pushNamed(
-                      context,
-                      LocationOwnerRoutes.listing,
+          left: TourTarget(
+            id: 'location.dashboard.activeProperty',
+            child: property == null
+                ? LocationSectionCard(
+                    title: 'Property portfolio',
+                    icon: Icons.add_location_alt_outlined,
+                    selected: true,
+                    child: CoreEmptyState(
+                      icon: Icons.location_city_outlined,
+                      title: 'Create your first property',
+                      message:
+                          'Add production areas, capacity, access details and a public listing.',
+                      actionLabel: 'Create property',
+                      onAction: () => Navigator.pushNamed(
+                        context,
+                        LocationOwnerRoutes.listing,
+                      ),
                     ),
+                  )
+                : _LivePropertyCard(
+                    property: property,
+                    fallbackImageUrl:
+                        data.userProfile.coverFile?.publicUrl ?? '',
                   ),
-                )
-              : _LivePropertyCard(
-                  property: property,
-                  fallbackImageUrl: data.userProfile.coverFile?.publicUrl ?? '',
-                ),
-          right: LocationSectionCard(
-            title: 'Action required',
-            icon: Icons.priority_high_rounded,
-            tone: LocationTone.gold,
-            child: _ActionList(
-              property: property,
-              openRequests: openRequests,
-              upcoming: upcoming,
+          ),
+          right: TourTarget(
+            id: 'location.dashboard.actionRequired',
+            child: LocationSectionCard(
+              title: 'Action required',
+              icon: Icons.priority_high_rounded,
+              tone: LocationTone.gold,
+              child: _ActionList(
+                property: property,
+                openRequests: openRequests,
+                upcoming: upcoming,
+              ),
             ),
           ),
         ),
@@ -338,33 +349,36 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
                 ],
               ),
             ),
-            LocationSectionCard(
-              title: 'Safety & support',
-              icon: Icons.health_and_safety_outlined,
-              tone: LocationTone.danger,
-              child: Column(
-                children: [
-                  CoreSecondaryButton(
-                    icon: Icons.fact_check_outlined,
-                    label: 'Check-in evidence',
-                    compact: true,
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      LocationOwnerRoutes.checkIn,
+            TourTarget(
+              id: 'location.dashboard.safety',
+              child: LocationSectionCard(
+                title: 'Safety & support',
+                icon: Icons.health_and_safety_outlined,
+                tone: LocationTone.danger,
+                child: Column(
+                  children: [
+                    CoreSecondaryButton(
+                      icon: Icons.fact_check_outlined,
+                      label: 'Check-in evidence',
+                      compact: true,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        LocationOwnerRoutes.checkIn,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  CoreSecondaryButton(
-                    icon: Icons.support_agent_outlined,
-                    label: 'Report an issue',
-                    compact: true,
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      CoreRoutes.report,
-                      arguments: 'Location owner support',
+                    const SizedBox(height: 8),
+                    CoreSecondaryButton(
+                      icon: Icons.support_agent_outlined,
+                      label: 'Report an issue',
+                      compact: true,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        CoreRoutes.report,
+                        arguments: 'Location owner support',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

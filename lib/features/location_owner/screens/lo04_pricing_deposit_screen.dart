@@ -6,6 +6,7 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../models/location_owner_models.dart';
@@ -138,42 +139,48 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const MarketplacePricingPreferencePanel(
-          listingTypes: {'location'},
-          title: 'Location marketplace pricing',
+        const TourTarget(
+          id: 'location.pricing.preferencePanel',
+          child: MarketplacePricingPreferencePanel(
+            listingTypes: {'location'},
+            title: 'Location marketplace pricing',
+          ),
         ),
         const SizedBox(height: 12),
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: _rateValue(fullDay),
-              icon: Icons.today_outlined,
-              title: 'Full-day rate',
-              subtitle: fullDay.enabled ? 'Enabled' : 'Not published',
-              accentColor: colors.goldMid,
-            ),
-            MetricActionItem(
-              value: _rateValue(night),
-              icon: Icons.nights_stay_outlined,
-              title: 'Night shoot',
-              subtitle: night.enabled ? 'Enabled' : 'Not published',
-              accentColor: colors.infoPurple,
-            ),
-            MetricActionItem(
-              value: _rateValue(deposit),
-              icon: Icons.verified_user_outlined,
-              title: 'Security deposit',
-              subtitle: deposit.enabled ? 'Required' : 'Not set',
-              accentColor: colors.success,
-            ),
-            MetricActionItem(
-              value: '$savedCount/${_rates.length}',
-              icon: Icons.cloud_done_outlined,
-              title: 'Saved rate lines',
-              subtitle: 'Live property data',
-              accentColor: colors.infoBlue,
-            ),
-          ],
+        TourTarget(
+          id: 'location.pricing.snapshot',
+          child: MetricActionRail(
+            items: [
+              MetricActionItem(
+                value: _rateValue(fullDay),
+                icon: Icons.today_outlined,
+                title: 'Full-day rate',
+                subtitle: fullDay.enabled ? 'Enabled' : 'Not published',
+                accentColor: colors.goldMid,
+              ),
+              MetricActionItem(
+                value: _rateValue(night),
+                icon: Icons.nights_stay_outlined,
+                title: 'Night shoot',
+                subtitle: night.enabled ? 'Enabled' : 'Not published',
+                accentColor: colors.infoPurple,
+              ),
+              MetricActionItem(
+                value: _rateValue(deposit),
+                icon: Icons.verified_user_outlined,
+                title: 'Security deposit',
+                subtitle: deposit.enabled ? 'Required' : 'Not set',
+                accentColor: colors.success,
+              ),
+              MetricActionItem(
+                value: '$savedCount/${_rates.length}',
+                icon: Icons.cloud_done_outlined,
+                title: 'Saved rate lines',
+                subtitle: 'Live property data',
+                accentColor: colors.infoBlue,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
@@ -186,11 +193,14 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
                 for (var index = 0; index < _rates.length; index++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: _RateRow(
-                      rate: _rates[index],
-                      onMinus: () => _adjust(index, -5000),
-                      onPlus: () => _adjust(index, 5000),
-                      onEnabled: (value) => _setEnabled(index, value),
+                    child: TourTarget(
+                      id: 'location.pricing.rate.${_rates[index].unit}',
+                      child: _RateRow(
+                        rate: _rates[index],
+                        onMinus: () => _adjust(index, -5000),
+                        onPlus: () => _adjust(index, 5000),
+                        onEnabled: (value) => _setEnabled(index, value),
+                      ),
                     ),
                   ),
                 if (_error != null) ...[
@@ -214,11 +224,14 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: CorePrimaryButton(
-                        icon: Icons.save_outlined,
-                        label: _saving ? 'Saving...' : 'Save rates',
-                        compact: true,
-                        onTap: _saving ? null : _saveRates,
+                      child: TourTarget(
+                        id: 'location.pricing.save',
+                        child: CorePrimaryButton(
+                          icon: Icons.save_outlined,
+                          label: _saving ? 'Saving...' : 'Save rates',
+                          compact: true,
+                          onTap: _saving ? null : _saveRates,
+                        ),
                       ),
                     ),
                   ],

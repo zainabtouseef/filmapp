@@ -10,6 +10,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/trust_safety/trust_safety_controller.dart';
 import '../../../core/trust_safety/trust_safety_models.dart';
 import '../../../core/uploads/upload_repository.dart';
@@ -55,121 +56,137 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ActorSectionCard(
-          title: 'Booking Protections',
-          icon: Icons.health_and_safety_outlined,
-          child: Column(
-            children: [
-              const ActorInfoRow(
-                icon: Icons.phone_locked_outlined,
-                label: 'Contact privacy',
-                value: 'Use CineConnect chat',
-              ),
-              const ActorInfoRow(
-                icon: Icons.fact_check_outlined,
-                label: 'Content and usage',
-                value: 'Review before accepting',
-              ),
-              const ActorInfoRow(
-                icon: Icons.flight_takeoff_outlined,
-                label: 'Travel consent',
-                value: 'Confirm in offer terms',
-              ),
-              const ActorInfoRow(
-                icon: Icons.lock_clock_outlined,
-                label: 'Secured dates',
-                value: 'Locked by booking',
-              ),
-            ],
+        TourTarget(
+          id: 'actor.safety.protections',
+          child: ActorSectionCard(
+            title: 'Booking Protections',
+            icon: Icons.health_and_safety_outlined,
+            child: Column(
+              children: [
+                const ActorInfoRow(
+                  icon: Icons.phone_locked_outlined,
+                  label: 'Contact privacy',
+                  value: 'Use CineConnect chat',
+                ),
+                const ActorInfoRow(
+                  icon: Icons.fact_check_outlined,
+                  label: 'Content and usage',
+                  value: 'Review before accepting',
+                ),
+                const ActorInfoRow(
+                  icon: Icons.flight_takeoff_outlined,
+                  label: 'Travel consent',
+                  value: 'Confirm in offer terms',
+                ),
+                const ActorInfoRow(
+                  icon: Icons.lock_clock_outlined,
+                  label: 'Secured dates',
+                  value: 'Locked by booking',
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Account, Privacy & Security',
-          icon: Icons.manage_accounts_outlined,
-          tone: ActorTone.blue,
-          child: ActorResponsiveGrid(
-            minWidth: 210,
-            children: [
-              CoreSecondaryButton(
-                icon: Icons.settings_outlined,
-                label: 'Account settings',
-                onTap: () => Navigator.pushNamed(context, CoreRoutes.settings),
-              ),
-              CoreSecondaryButton(
-                icon: Icons.verified_user_outlined,
-                label: 'Identity verification',
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  CoreRoutes.verificationStatus,
+        TourTarget(
+          id: 'actor.safety.account',
+          child: ActorSectionCard(
+            title: 'Account, Privacy & Security',
+            icon: Icons.manage_accounts_outlined,
+            tone: ActorTone.blue,
+            child: ActorResponsiveGrid(
+              minWidth: 210,
+              children: [
+                CoreSecondaryButton(
+                  icon: Icons.settings_outlined,
+                  label: 'Account settings',
+                  onTap: () =>
+                      Navigator.pushNamed(context, CoreRoutes.settings),
                 ),
-              ),
-              CoreSecondaryButton(
-                icon: Icons.notifications_outlined,
-                label: 'Notifications',
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  CoreRoutes.notifications,
+                CoreSecondaryButton(
+                  icon: Icons.verified_user_outlined,
+                  label: 'Identity verification',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    CoreRoutes.verificationStatus,
+                  ),
                 ),
-              ),
-            ],
+                CoreSecondaryButton(
+                  icon: Icons.notifications_outlined,
+                  label: 'Notifications',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    CoreRoutes.notifications,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        ActorSectionCard(
-          title: 'Booking Disputes',
-          icon: Icons.gavel_outlined,
-          tone: ActorTone.gold,
-          actionText: 'Open dispute',
-          onActionTap: _openDispute,
-          child: _DisputesPanel(
-            future: _disputesFuture,
-            onRefresh: _refreshDisputes,
-            onAddEvidence: _openEvidence,
+        TourTarget(
+          id: 'actor.safety.disputes',
+          child: ActorSectionCard(
+            title: 'Booking Disputes',
+            icon: Icons.gavel_outlined,
+            tone: ActorTone.gold,
+            actionText: 'Open dispute',
+            onActionTap: _openDispute,
+            child: _DisputesPanel(
+              future: _disputesFuture,
+              onRefresh: _refreshDisputes,
+              onAddEvidence: _openEvidence,
+            ),
           ),
         ),
         const SizedBox(height: 12),
         ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Blocked Users',
-            icon: Icons.block_rounded,
-            child: _BlockedUsersPanel(
-              future: _blockedUsersFuture,
-              onRefresh: _refreshBlockedUsers,
+          left: TourTarget(
+            id: 'actor.safety.blockedUsers',
+            child: ActorSectionCard(
+              title: 'Blocked Users',
+              icon: Icons.block_rounded,
+              child: _BlockedUsersPanel(
+                future: _blockedUsersFuture,
+                onRefresh: _refreshBlockedUsers,
+              ),
             ),
           ),
-          right: ActorSectionCard(
-            title: 'Report & Support',
-            icon: Icons.support_agent_outlined,
-            child: Column(
-              children: [
-                CorePrimaryButton(
-                  icon: Icons.report_gmailerrorred_outlined,
-                  label: 'Report suspicious offer',
-                  compact: true,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ReportBlockScreen(),
+          right: TourTarget(
+            id: 'actor.safety.reportSupport',
+            child: ActorSectionCard(
+              title: 'Report & Support',
+              icon: Icons.support_agent_outlined,
+              child: Column(
+                children: [
+                  CorePrimaryButton(
+                    icon: Icons.report_gmailerrorred_outlined,
+                    label: 'Report suspicious offer',
+                    compact: true,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ReportBlockScreen(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                CoreSecondaryButton(
-                  icon: Icons.support_agent_outlined,
-                  label: 'Contact safety support',
-                  compact: true,
-                  onTap: () => _openSafetySupport(context),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'For immediate danger, leave the location and contact local emergency services.',
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: context.appColors.textSecondary,
-                    height: 1.3,
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.support_agent_outlined,
+                    label: 'Contact safety support',
+                    compact: true,
+                    onTap: () => _openSafetySupport(context),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    'For immediate danger, leave the location and contact local emergency services.',
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: context.appColors.textSecondary,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

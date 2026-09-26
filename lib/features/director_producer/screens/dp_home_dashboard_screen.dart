@@ -113,7 +113,17 @@ class _WidgetGridSection extends StatelessWidget {
   const _WidgetGridSection({required this.dashboard});
 
   static const _clockRingWidth = 168.0 * 2 + 14;
-  static const _calendarPipelineWidth = 340.0 * 2 + 14;
+  static const _calendarWidth = 340.0;
+  static const _calendarPipelineWidth = _calendarWidth * 2 + 14;
+
+  /// Below this, there's room for both groups side by side exactly as
+  /// designed — nothing changes from the wide desktop layout.
+  static const _sideBySideThreshold =
+      _clockRingWidth + 14 + _calendarPipelineWidth;
+
+  /// Below this, even a single row of calendar + pipeline is too tight;
+  /// they stack instead of squeezing pipeline into a sliver.
+  static const _calendarRowThreshold = 420.0;
 
   @override
   Widget build(BuildContext context) {
@@ -133,71 +143,105 @@ class _WidgetGridSection extends StatelessWidget {
     }).toList()
       ..sort((a, b) => a.startsAt!.compareTo(b.startsAt!));
 
-    return PortalStaggeredReveal(
+    final clockRingRow = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // FittedBox: PortalStaggeredReveal lays children out in a Wrap,
-        // which clamps an oversized child's declared width down to
-        // whatever room is left instead of letting it overflow onto a
-        // new line — without this, the inner Row's two 168px widgets
-        // (350px combined) overflow on narrow viewports. FittedBox
-        // measures the group at its natural size first and only scales
-        // it down uniformly if the available width is tighter; it's a
-        // no-op on any layout wide enough to fit it.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: _clockRingWidth,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const PortalLiveClockWidget(),
-                    const SizedBox(width: 14),
-                    PortalGlassRingWidget(
-                      progress: progress,
-                      value: CineFormat.currency(paid, compact: true),
-                      label: 'Payments cleared\nthis cycle',
-                      tone: CineTone.premium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                PortalGlassFireWidget(width: _clockRingWidth, height: 118),
-              ],
-            ),
-          ),
-        ),
-        // Calendar + today's pipeline are grouped as a single Wrap item
-        // so they can never be split across rows — pipeline must always
-        // render immediately beside the calendar, never wrapping away
-        // to its own row under a different column.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: _calendarPipelineWidth,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                PortalGlassWidgetCard(
-                  width: 340,
-                  child: DPMiniCalendarSection(
-                    dashboard: dashboard,
-                    decorated: false,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                SizedBox(
-                  width: 340,
-                  child: _TodayPipelineWidget(events: todayEvents),
-                ),
-              ],
-            ),
-          ),
+        const PortalLiveClockWidget(),
+        const SizedBox(width: 14),
+        PortalGlassRingWidget(
+          progress: progress,
+          value: CineFormat.currency(paid, compact: true),
+          label: 'Payments cleared\nthis cycle',
+          tone: CineTone.premium,
         ),
       ],
+    );
+    final calendarCard = PortalGlassWidgetCard(
+      width: _calendarWidth,
+      child: DPMiniCalendarSection(dashboard: dashboard, decorated: false),
+    );
+    final pipelineCard = _TodayPipelineWidget(events: todayEvents);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+
+        if (width >= _sideBySideThreshold) {
+          // Wide desktop: both groups sit side by side at their designed
+          // fixed sizes, exactly as before.
+          return PortalStaggeredReveal(
+            children: [
+              SizedBox(
+                width: _clockRingWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    clockRingRow,
+                    const SizedBox(height: 14),
+                    PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: _calendarPipelineWidth,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    calendarCard,
+                    const SizedBox(width: 14),
+                    SizedBox(width: _calendarWidth, child: pipelineCard),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Not enough room for both groups side by side: each group fills
+        // the actual available width instead of sitting pinned at a
+        // fixed pixel size with dead space left beside it.
+        final clockRingGroup = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: width < _clockRingWidth
+                  ? FittedBox(fit: BoxFit.scaleDown, child: clockRingRow)
+                  : clockRingRow,
+            ),
+            const SizedBox(height: 14),
+            PortalGlassFireWidget(width: width, height: 118),
+          ],
+        );
+
+        final calendarPipelineGroup = width < _calendarRowThreshold
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: width < _calendarWidth
+                        ? FittedBox(fit: BoxFit.scaleDown, child: calendarCard)
+                        : calendarCard,
+                  ),
+                  const SizedBox(height: 14),
+                  pipelineCard,
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  calendarCard,
+                  const SizedBox(width: 14),
+                  Expanded(child: pipelineCard),
+                ],
+              );
+
+        return PortalStaggeredReveal(
+          children: [
+            SizedBox(width: width, child: clockRingGroup),
+            SizedBox(width: width, child: calendarPipelineGroup),
+          ],
+        );
+      },
     );
   }
 }
@@ -409,26 +453,30 @@ class _ModulesSection extends StatelessWidget {
       ),
     ];
 
-    return DPSectionCard(
-      title: 'Modules',
-      icon: Icons.dashboard_customize_rounded,
-      actionText: 'Review applications',
-      onActionTap: () =>
-          Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const gap = AppSpacing.md;
-          final columns = (constraints.maxWidth / 216).floor().clamp(1, 3);
-          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (final module in modules)
-                SizedBox(width: width, child: module),
-            ],
-          );
-        },
+    return TourTarget(
+      id: 'dp.console.modules',
+      child: DPSectionCard(
+        title: 'Modules',
+        icon: Icons.dashboard_customize_rounded,
+        actionText: 'Review applications',
+        onActionTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.projects),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = AppSpacing.md;
+            final columns = (constraints.maxWidth / 216).floor().clamp(1, 3);
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final module in modules)
+                  SizedBox(width: width, child: module),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

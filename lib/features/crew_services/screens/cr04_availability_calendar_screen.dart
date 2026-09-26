@@ -5,6 +5,7 @@ import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/crew_services_models.dart';
@@ -45,17 +46,20 @@ class _CR04AvailabilityCalendarScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CrewSectionCard(
-          title: 'Live availability',
-          icon: Icons.calendar_month_outlined,
-          selected: true,
-          actionText: 'Add dates',
-          onActionTap: _addDates,
-          child: Text(
-            'Publish available days, tentative holds and unavailable periods. Confirmed bookings appear separately and cannot be overwritten here.',
-            style: AppTextStyles.smallMeta.copyWith(
-              color: context.appColors.textSecondary,
-              height: 1.4,
+        TourTarget(
+          id: 'crew.availability.publish',
+          child: CrewSectionCard(
+            title: 'Live availability',
+            icon: Icons.calendar_month_outlined,
+            selected: true,
+            actionText: 'Add dates',
+            onActionTap: _addDates,
+            child: Text(
+              'Publish available days, tentative holds and unavailable periods. Confirmed bookings appear separately and cannot be overwritten here.',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: context.appColors.textSecondary,
+                height: 1.4,
+              ),
             ),
           ),
         ),
@@ -95,59 +99,65 @@ class _CR04AvailabilityCalendarScreenState
                   .toList();
               return Column(
                 children: [
-                  CrewKpiRail(
-                    metrics: [
-                      CrewMetric(
-                        label: 'Available',
-                        value:
-                            '${active.where((e) => e.status == 'available').length}',
-                        delta: 'Published blocks',
-                        icon: Icons.event_available_outlined,
-                        tone: CrewTone.green,
-                        route: CrewServicesRoutes.availability,
-                      ),
-                      CrewMetric(
-                        label: 'Tentative',
-                        value:
-                            '${active.where((e) => e.status == 'tentative').length}',
-                        delta: 'Soft holds',
-                        icon: Icons.hourglass_top_rounded,
-                        tone: CrewTone.gold,
-                        route: CrewServicesRoutes.availability,
-                      ),
-                      CrewMetric(
-                        label: 'Booked',
-                        value:
-                            '${active.where((e) => e.status == 'booked').length}',
-                        delta: 'Project locked',
-                        icon: Icons.movie_filter_outlined,
-                        tone: CrewTone.blue,
-                        route: CrewServicesRoutes.requests,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (rows.isEmpty)
-                    CoreEmptyState(
-                      icon: Icons.edit_calendar_outlined,
-                      title: 'No schedule blocks yet',
-                      message:
-                          'Add your available dates so directors can book your crew with confidence.',
-                      actionLabel: 'Add availability',
-                      onAction: _addDates,
-                    )
-                  else
-                    CrewResponsiveGrid(
-                      minWidth: 300,
-                      children: [
-                        for (final entry in rows)
-                          _AvailabilityCard(
-                            entry: entry,
-                            busy: _busyId == entry.publicId,
-                            onStatus: (status) => _setStatus(entry, status),
-                          ),
+                  TourTarget(
+                    id: 'crew.availability.kpis',
+                    child: CrewKpiRail(
+                      metrics: [
+                        CrewMetric(
+                          label: 'Available',
+                          value:
+                              '${active.where((e) => e.status == 'available').length}',
+                          delta: 'Published blocks',
+                          icon: Icons.event_available_outlined,
+                          tone: CrewTone.green,
+                          route: CrewServicesRoutes.availability,
+                        ),
+                        CrewMetric(
+                          label: 'Tentative',
+                          value:
+                              '${active.where((e) => e.status == 'tentative').length}',
+                          delta: 'Soft holds',
+                          icon: Icons.hourglass_top_rounded,
+                          tone: CrewTone.gold,
+                          route: CrewServicesRoutes.availability,
+                        ),
+                        CrewMetric(
+                          label: 'Booked',
+                          value:
+                              '${active.where((e) => e.status == 'booked').length}',
+                          delta: 'Project locked',
+                          icon: Icons.movie_filter_outlined,
+                          tone: CrewTone.blue,
+                          route: CrewServicesRoutes.requests,
+                        ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  TourTarget(
+                    id: 'crew.availability.entries',
+                    child: rows.isEmpty
+                        ? CoreEmptyState(
+                            icon: Icons.edit_calendar_outlined,
+                            title: 'No schedule blocks yet',
+                            message:
+                                'Add your available dates so directors can book your crew with confidence.',
+                            actionLabel: 'Add availability',
+                            onAction: _addDates,
+                          )
+                        : CrewResponsiveGrid(
+                            minWidth: 300,
+                            children: [
+                              for (final entry in rows)
+                                _AvailabilityCard(
+                                  entry: entry,
+                                  busy: _busyId == entry.publicId,
+                                  onStatus: (status) =>
+                                      _setStatus(entry, status),
+                                ),
+                            ],
+                          ),
+                  ),
                 ],
               );
             },

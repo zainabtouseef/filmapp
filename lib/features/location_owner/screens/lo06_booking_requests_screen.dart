@@ -7,6 +7,7 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../widgets/location_owner_components.dart';
 import '../widgets/location_owner_live.dart';
@@ -115,20 +116,23 @@ class _LO06BookingRequestsScreenState extends State<LO06BookingRequestsScreen> {
                         }),
               );
             }
-            return LocationResponsiveGrid(
-              minWidth: 320,
-              children: [
-                for (final booking in rows)
-                  _LiveRequestCard(
-                    booking: booking,
-                    currentUserId: AuthScope.maybeOf(context)?.user?.publicId,
-                    busy: _busyBookingId == booking.publicId,
-                    onDetails: () => _showDetails(booking),
-                    onAccept: () => _accept(booking),
-                    onCounter: () => _counter(booking),
-                    onReject: () => _reject(booking),
-                  ),
-              ],
+            return TourTarget(
+              id: 'location.requests.list',
+              child: LocationResponsiveGrid(
+                minWidth: 320,
+                children: [
+                  for (final booking in rows)
+                    _LiveRequestCard(
+                      booking: booking,
+                      currentUserId: AuthScope.maybeOf(context)?.user?.publicId,
+                      busy: _busyBookingId == booking.publicId,
+                      onDetails: () => _showDetails(booking),
+                      onAccept: () => _accept(booking),
+                      onCounter: () => _counter(booking),
+                      onReject: () => _reject(booking),
+                    ),
+                ],
+              ),
             );
           },
         ),
@@ -410,53 +414,59 @@ class _RequestCommandBar extends StatelessWidget {
       onActionTap: onRefresh,
       child: Column(
         children: [
-          TextFormField(
-            key: ValueKey(query),
-            initialValue: query,
-            onChanged: onQueryChanged,
-            style: AppTextStyles.body.copyWith(color: colors.textPrimary),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Search booking, project or producer...',
-              prefixIcon:
-                  Icon(Icons.search_rounded, color: colors.goldDark, size: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+          TourTarget(
+            id: 'location.requests.search',
+            child: TextFormField(
+              key: ValueKey(query),
+              initialValue: query,
+              onChanged: onQueryChanged,
+              style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Search booking, project or producer...',
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: colors.goldDark, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final filter in [
-                  'All',
-                  'New',
-                  'Negotiation',
-                  'Accepted',
-                  'Closed',
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CoreChip(
-                      label: filter,
-                      selected: selectedFilter == filter,
-                      onTap: () => onFilterChanged(filter),
+            child: TourTarget(
+              id: 'location.requests.filters',
+              child: Row(
+                children: [
+                  for (final filter in [
+                    'All',
+                    'New',
+                    'Negotiation',
+                    'Accepted',
+                    'Closed',
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: CoreChip(
+                        label: filter,
+                        selected: selectedFilter == filter,
+                        onTap: () => onFilterChanged(filter),
+                      ),
                     ),
-                  ),
-                const SizedBox(width: 8),
-                for (final sort in ['Newest', 'Fee'])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CoreChip(
-                      label: sort,
-                      selected: selectedSort == sort,
-                      icon: Icons.sort_rounded,
-                      onTap: () => onSortChanged(sort),
+                  const SizedBox(width: 8),
+                  for (final sort in ['Newest', 'Fee'])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: CoreChip(
+                        label: sort,
+                        selected: selectedSort == sort,
+                        icon: Icons.sort_rounded,
+                        onTap: () => onSortChanged(sort),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

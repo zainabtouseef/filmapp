@@ -6,6 +6,7 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/actor_talent_models.dart';
 import '../widgets/actor_talent_components.dart';
@@ -88,93 +89,108 @@ class _LiveContracts extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = rows.first;
     return ActorTwoColumn(
-      left: ActorSectionCard(
-        title: 'Live Contract Queue',
-        icon: Icons.draw_outlined,
-        selected: !primary.isSigned,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                StatusChip(
-                  label: primary.bookingId,
-                  color: context.appColors.infoBlue,
-                ),
-                StatusChip(
-                  label: primary.statusLabel,
-                  color: primary.isSigned
-                      ? context.appColors.success
-                      : context.appColors.goldMid,
-                ),
-                StatusChip(
-                  label: 'Version ${primary.versionNumber}',
-                  color: context.appColors.infoPurple,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _LiveContractPreview(contract: primary),
-            const SizedBox(height: 12),
-            Text(
-              'Review every clause before signing. Corrections stay attached to the same booking and contract history.',
-              style: AppTextStyles.body.copyWith(
-                color: context.appColors.textSecondary,
-                height: 1.35,
+      left: TourTarget(
+        id: 'actor.contracts.queue',
+        child: ActorSectionCard(
+          title: 'Live Contract Queue',
+          icon: Icons.draw_outlined,
+          selected: !primary.isSigned,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  StatusChip(
+                    label: primary.bookingId,
+                    color: context.appColors.infoBlue,
+                  ),
+                  StatusChip(
+                    label: primary.statusLabel,
+                    color: primary.isSigned
+                        ? context.appColors.success
+                        : context.appColors.goldMid,
+                  ),
+                  StatusChip(
+                    label: 'Version ${primary.versionNumber}',
+                    color: context.appColors.infoPurple,
+                  ),
+                ],
               ),
-            ),
-            if (rows.length > 1) ...[
-              const SizedBox(height: 14),
-              for (final contract in rows.skip(1).take(4))
-                _ContractQueueRow(contract: contract),
+              const SizedBox(height: 12),
+              TourTarget(
+                id: 'actor.contracts.preview',
+                child: _LiveContractPreview(contract: primary),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Review every clause before signing. Corrections stay attached to the same booking and contract history.',
+                style: AppTextStyles.body.copyWith(
+                  color: context.appColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+              if (rows.length > 1) ...[
+                const SizedBox(height: 14),
+                for (final contract in rows.skip(1).take(4))
+                  _ContractQueueRow(contract: contract),
+              ],
             ],
-          ],
+          ),
         ),
       ),
-      right: ActorSectionCard(
-        title: 'Contract Actions',
-        icon: Icons.route_outlined,
-        child: Column(
-          children: [
-            ActorTimeline(
-              items: [
-                ('Terms approved', ActorBookingStatus.termsApproved),
-                ('Contract issued', ActorBookingStatus.contractPending),
-                (
-                  primary.isSigned ? 'Signature captured' : 'Signature due',
-                  primary.isSigned
-                      ? ActorBookingStatus.paymentPending
-                      : ActorBookingStatus.contractPending,
+      right: TourTarget(
+        id: 'actor.contracts.actions',
+        child: ActorSectionCard(
+          title: 'Contract Actions',
+          icon: Icons.route_outlined,
+          child: Column(
+            children: [
+              ActorTimeline(
+                items: [
+                  ('Terms approved', ActorBookingStatus.termsApproved),
+                  ('Contract issued', ActorBookingStatus.contractPending),
+                  (
+                    primary.isSigned ? 'Signature captured' : 'Signature due',
+                    primary.isSigned
+                        ? ActorBookingStatus.paymentPending
+                        : ActorBookingStatus.contractPending,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TourTarget(
+                id: 'actor.contracts.signButton',
+                child: CorePrimaryButton(
+                  icon: Icons.draw_outlined,
+                  label: primary.isSigned ? 'Signed' : 'Sign contract',
+                  compact: true,
+                  onTap: primary.isSigned
+                      ? null
+                      : () => Navigator.pushNamed(
+                            context,
+                            CoreRoutes.contract,
+                            arguments: primary.publicId,
+                          ).then((_) => onRefresh()),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            CorePrimaryButton(
-              icon: Icons.draw_outlined,
-              label: primary.isSigned ? 'Signed' : 'Sign contract',
-              compact: true,
-              onTap: primary.isSigned
-                  ? null
-                  : () => Navigator.pushNamed(
-                        context,
-                        CoreRoutes.contract,
-                        arguments: primary.publicId,
-                      ).then((_) => onRefresh()),
-            ),
-            const SizedBox(height: 8),
-            CoreSecondaryButton(
-              icon: Icons.edit_note_outlined,
-              label: 'Request correction',
-              compact: true,
-              onTap: () => Navigator.pushNamed(
-                context,
-                CoreRoutes.contract,
-                arguments: {'contract_id': primary.publicId, 'addendum': true},
-              ).then((_) => onRefresh()),
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              CoreSecondaryButton(
+                icon: Icons.edit_note_outlined,
+                label: 'Request correction',
+                compact: true,
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  CoreRoutes.contract,
+                  arguments: {
+                    'contract_id': primary.publicId,
+                    'addendum': true
+                  },
+                ).then((_) => onRefresh()),
+              ),
+            ],
+          ),
         ),
       ),
     );

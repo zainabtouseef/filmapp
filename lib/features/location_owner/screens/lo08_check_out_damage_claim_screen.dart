@@ -11,6 +11,7 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -168,16 +169,19 @@ class _LO08CheckOutDamageClaimScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CoreDropdownField<String>(
-                value: booking.publicId,
-                values: data.bookings.map((item) => item.publicId).toList(),
-                label: 'Accepted booking',
-                icon: Icons.movie_creation_outlined,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedBookingId = value);
-                  }
-                },
+              TourTarget(
+                id: 'location.checkout.bookingPicker',
+                child: CoreDropdownField<String>(
+                  value: booking.publicId,
+                  values: data.bookings.map((item) => item.publicId).toList(),
+                  label: 'Accepted booking',
+                  icon: Icons.movie_creation_outlined,
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedBookingId = value);
+                    }
+                  },
+                ),
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -217,16 +221,19 @@ class _LO08CheckOutDamageClaimScreenState
               Row(
                 children: [
                   Expanded(
-                    child: CoreSecondaryButton(
-                      icon: Icons.report_problem_outlined,
-                      label: 'File claim',
-                      compact: true,
-                      onTap: _busy
-                          ? null
-                          : () => _showClaimSheet(
-                                booking,
-                                checkOut ?? checkIn,
-                              ),
+                    child: TourTarget(
+                      id: 'location.checkout.fileClaim',
+                      child: CoreSecondaryButton(
+                        icon: Icons.report_problem_outlined,
+                        label: 'File claim',
+                        compact: true,
+                        onTap: _busy
+                            ? null
+                            : () => _showClaimSheet(
+                                  booking,
+                                  checkOut ?? checkIn,
+                                ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -259,40 +266,43 @@ class _LO08CheckOutDamageClaimScreenState
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
-          left: LocationResponsiveGrid(
-            minWidth: 300,
-            children: [
-              if (spaces.isEmpty)
-                LocationSectionCard(
-                  title: 'Condition comparison',
-                  icon: Icons.compare_outlined,
-                  child: const CoreEmptyState(
-                    icon: Icons.dashboard_customize_outlined,
-                    title: 'No property spaces',
-                    message:
-                        'Add shoot spaces before recording condition evidence.',
-                  ),
-                )
-              else
-                for (final space in spaces)
-                  _ConditionComparisonCard(
-                    area: space['name'] as String? ?? 'Property area',
-                    before: _itemFor(
-                      checkIn,
-                      space['name'] as String? ?? '',
+          left: TourTarget(
+            id: 'location.checkout.comparison',
+            child: LocationResponsiveGrid(
+              minWidth: 300,
+              children: [
+                if (spaces.isEmpty)
+                  LocationSectionCard(
+                    title: 'Condition comparison',
+                    icon: Icons.compare_outlined,
+                    child: const CoreEmptyState(
+                      icon: Icons.dashboard_customize_outlined,
+                      title: 'No property spaces',
+                      message:
+                          'Add shoot spaces before recording condition evidence.',
                     ),
-                    after: _itemFor(
-                      checkOut,
-                      space['name'] as String? ?? '',
+                  )
+                else
+                  for (final space in spaces)
+                    _ConditionComparisonCard(
+                      area: space['name'] as String? ?? 'Property area',
+                      before: _itemFor(
+                        checkIn,
+                        space['name'] as String? ?? '',
+                      ),
+                      after: _itemFor(
+                        checkOut,
+                        space['name'] as String? ?? '',
+                      ),
+                      locked: checkOut == null || ownerConfirmed,
+                      busy: _busyArea == (space['name'] as String? ?? ''),
+                      onCapture: () => _captureAfter(
+                        checkOut!,
+                        space['name'] as String? ?? 'Property area',
+                      ),
                     ),
-                    locked: checkOut == null || ownerConfirmed,
-                    busy: _busyArea == (space['name'] as String? ?? ''),
-                    onCapture: () => _captureAfter(
-                      checkOut!,
-                      space['name'] as String? ?? 'Property area',
-                    ),
-                  ),
-            ],
+              ],
+            ),
           ),
           right: Column(
             children: [
@@ -320,22 +330,25 @@ class _LO08CheckOutDamageClaimScreenState
                           : 'Waiting',
                     ),
                     const SizedBox(height: 8),
-                    CorePrimaryButton(
-                      icon: Icons.verified_outlined,
-                      label: ownerConfirmed
-                          ? 'Owner confirmed'
-                          : _busy
-                              ? 'Confirming...'
-                              : 'Confirm check-out',
-                      compact: true,
-                      onTap: checkOut == null || ownerConfirmed || _busy
-                          ? null
-                          : captured < total
-                              ? () => locationSnack(
-                                    context,
-                                    'Capture every property area first',
-                                  )
-                              : () => _confirmCheckOut(checkOut),
+                    TourTarget(
+                      id: 'location.checkout.confirm',
+                      child: CorePrimaryButton(
+                        icon: Icons.verified_outlined,
+                        label: ownerConfirmed
+                            ? 'Owner confirmed'
+                            : _busy
+                                ? 'Confirming...'
+                                : 'Confirm check-out',
+                        compact: true,
+                        onTap: checkOut == null || ownerConfirmed || _busy
+                            ? null
+                            : captured < total
+                                ? () => locationSnack(
+                                      context,
+                                      'Capture every property area first',
+                                    )
+                                : () => _confirmCheckOut(checkOut),
+                      ),
                     ),
                   ],
                 ),

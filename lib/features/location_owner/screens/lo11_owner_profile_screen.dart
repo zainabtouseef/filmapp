@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../actor_talent/models/actor_talent_models.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
@@ -22,8 +23,7 @@ class LO11OwnerProfileScreen extends StatefulWidget {
   const LO11OwnerProfileScreen({super.key});
 
   @override
-  State<LO11OwnerProfileScreen> createState() =>
-      _LO11OwnerProfileScreenState();
+  State<LO11OwnerProfileScreen> createState() => _LO11OwnerProfileScreenState();
 }
 
 class _LO11OwnerProfileScreenState extends State<LO11OwnerProfileScreen> {
@@ -105,12 +105,15 @@ class _LO11OwnerProfileScreenState extends State<LO11OwnerProfileScreen> {
             subtitle: 'Profile photo and cover image',
             icon: Icons.photo_camera_outlined,
             initiallyExpanded: true,
-            child: Column(
-              children: [
-                _avatarField(),
-                const SizedBox(height: 14),
-                _coverField(),
-              ],
+            child: TourTarget(
+              id: 'location.profile.avatar',
+              child: Column(
+                children: [
+                  _avatarField(),
+                  const SizedBox(height: 14),
+                  _coverField(),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -137,12 +140,15 @@ class _LO11OwnerProfileScreenState extends State<LO11OwnerProfileScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 10),
-                CoreTextField(
-                  controller: bio,
-                  label: 'Bio',
-                  icon: Icons.history_edu_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
+                TourTarget(
+                  id: 'location.profile.bio',
+                  child: CoreTextField(
+                    controller: bio,
+                    label: 'Bio',
+                    icon: Icons.history_edu_outlined,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
               ],
             ),
@@ -153,26 +159,29 @@ class _LO11OwnerProfileScreenState extends State<LO11OwnerProfileScreen> {
             subtitle: 'Instagram, TikTok',
             icon: Icons.apartment_outlined,
             tone: ActorTone.purple,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CoreTextField(
-                    controller: instagram,
-                    label: 'Instagram',
-                    icon: Icons.alternate_email_rounded,
-                    onChanged: (_) => setState(() {}),
+            child: TourTarget(
+              id: 'location.profile.social',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CoreTextField(
+                      controller: instagram,
+                      label: 'Instagram',
+                      icon: Icons.alternate_email_rounded,
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: CoreTextField(
-                    controller: tiktok,
-                    label: 'TikTok',
-                    icon: Icons.music_note_rounded,
-                    onChanged: (_) => setState(() {}),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CoreTextField(
+                      controller: tiktok,
+                      label: 'TikTok',
+                      icon: Icons.music_note_rounded,
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (error != null) ...[
@@ -200,12 +209,15 @@ class _LO11OwnerProfileScreenState extends State<LO11OwnerProfileScreen> {
             ),
           ],
           const SizedBox(height: 14),
-          CorePrimaryButton(
-            icon: Icons.verified_outlined,
-            label: 'Save profile',
-            compact: true,
-            loading: savingRemote,
-            onTap: savingRemote ? null : _submit,
+          TourTarget(
+            id: 'location.profile.save',
+            child: CorePrimaryButton(
+              icon: Icons.verified_outlined,
+              label: 'Save profile',
+              compact: true,
+              loading: savingRemote,
+              onTap: savingRemote ? null : _submit,
+            ),
           ),
         ],
       ),

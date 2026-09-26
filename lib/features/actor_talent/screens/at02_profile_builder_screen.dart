@@ -8,6 +8,7 @@ import '../../../core/network/open_url.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../models/actor_talent_models.dart';
@@ -155,296 +156,315 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          ActorCollapsibleSection(
-            title: 'Photos & CV',
-            subtitle: 'Headshot, cover image and resume',
-            icon: Icons.photo_camera_outlined,
-            initiallyExpanded: true,
-            child: Column(
-              children: [
-                _avatarField(),
-                const SizedBox(height: 14),
-                _coverField(),
-                const SizedBox(height: 14),
-                _resumeField(),
-              ],
+          TourTarget(
+            id: 'actor.profile.photos',
+            child: ActorCollapsibleSection(
+              title: 'Photos & CV',
+              subtitle: 'Headshot, cover image and resume',
+              icon: Icons.photo_camera_outlined,
+              initiallyExpanded: true,
+              child: Column(
+                children: [
+                  _avatarField(),
+                  const SizedBox(height: 14),
+                  _coverField(),
+                  const SizedBox(height: 14),
+                  _resumeField(),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          ActorCollapsibleSection(
-            title: 'Identity',
-            subtitle: 'Name, city and website',
-            icon: Icons.badge_outlined,
-            initiallyExpanded: true,
-            child: Column(
-              children: [
-                CoreTextField(
-                  controller: stageName,
-                  label: 'Stage name',
-                  icon: Icons.theater_comedy_outlined,
-                  errorText: _fieldError(stageName),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: realName,
-                  label: 'Account name',
-                  icon: Icons.person_outline_rounded,
-                  enabled: AuthScope.maybeOf(context)?.isAuthenticated != true,
-                  errorText: _fieldError(realName),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: city,
-                  label: 'City',
-                  icon: Icons.location_on_outlined,
-                  errorText: _fieldError(city),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: website,
-                  label: 'Portfolio website',
-                  icon: Icons.language_outlined,
-                  keyboardType: TextInputType.url,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ],
+          TourTarget(
+            id: 'actor.profile.identity',
+            child: ActorCollapsibleSection(
+              title: 'Identity',
+              subtitle: 'Name, city and website',
+              icon: Icons.badge_outlined,
+              initiallyExpanded: true,
+              child: Column(
+                children: [
+                  CoreTextField(
+                    controller: stageName,
+                    label: 'Stage name',
+                    icon: Icons.theater_comedy_outlined,
+                    errorText: _fieldError(stageName),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: realName,
+                    label: 'Account name',
+                    icon: Icons.person_outline_rounded,
+                    enabled:
+                        AuthScope.maybeOf(context)?.isAuthenticated != true,
+                    errorText: _fieldError(realName),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: city,
+                    label: 'City',
+                    icon: Icons.location_on_outlined,
+                    errorText: _fieldError(city),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: website,
+                    label: 'Portfolio website',
+                    icon: Icons.language_outlined,
+                    keyboardType: TextInputType.url,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          ActorCollapsibleSection(
-            title: 'Bio & Experience',
-            subtitle: 'Languages, skills, credits, training',
-            icon: Icons.history_edu_outlined,
-            tone: ActorTone.blue,
-            child: Column(
-              children: [
-                CoreTextField(
-                  controller: workHistory,
-                  label: 'Biography and acting experience',
-                  icon: Icons.history_edu_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: languages,
-                  label: 'Languages',
-                  icon: Icons.translate_rounded,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: skills,
-                  label: 'Acting skills',
-                  icon: Icons.local_offer_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: credits,
-                  label: 'Acting credits (one per line)',
-                  icon: Icons.workspace_premium_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: training,
-                  label: 'Education, workshops and training (one per line)',
-                  icon: Icons.school_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ],
+          TourTarget(
+            id: 'actor.profile.bio',
+            child: ActorCollapsibleSection(
+              title: 'Bio & Experience',
+              subtitle: 'Languages, skills, credits, training',
+              icon: Icons.history_edu_outlined,
+              tone: ActorTone.blue,
+              child: Column(
+                children: [
+                  CoreTextField(
+                    controller: workHistory,
+                    label: 'Biography and acting experience',
+                    icon: Icons.history_edu_outlined,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: languages,
+                    label: 'Languages',
+                    icon: Icons.translate_rounded,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: skills,
+                    label: 'Acting skills',
+                    icon: Icons.local_offer_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: credits,
+                    label: 'Acting credits (one per line)',
+                    icon: Icons.workspace_premium_outlined,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: training,
+                    label: 'Education, workshops and training (one per line)',
+                    icon: Icons.school_outlined,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          ActorCollapsibleSection(
-            title: 'Physical & Voice',
-            subtitle: 'Look, accents, playable age',
-            icon: Icons.face_retouching_natural_outlined,
-            tone: ActorTone.green,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: ageRange,
-                        label: 'Playable age',
-                        icon: Icons.face_retouching_natural_outlined,
-                        onChanged: (_) => setState(() {}),
+          TourTarget(
+            id: 'actor.profile.physical',
+            child: ActorCollapsibleSection(
+              title: 'Physical & Voice',
+              subtitle: 'Look, accents, playable age',
+              icon: Icons.face_retouching_natural_outlined,
+              tone: ActorTone.green,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CoreTextField(
+                          controller: ageRange,
+                          label: 'Playable age',
+                          icon: Icons.face_retouching_natural_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: height,
-                        label: 'Height',
-                        icon: Icons.height_outlined,
-                        onChanged: (_) => setState(() {}),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: CoreTextField(
+                          controller: height,
+                          label: 'Height',
+                          icon: Icons.height_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: eyeColor,
-                        label: 'Eye colour',
-                        icon: Icons.visibility_outlined,
-                        onChanged: (_) => setState(() {}),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CoreTextField(
+                          controller: eyeColor,
+                          label: 'Eye colour',
+                          icon: Icons.visibility_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: hairColor,
-                        label: 'Hair colour',
-                        icon: Icons.face_retouching_natural_outlined,
-                        onChanged: (_) => setState(() {}),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: CoreTextField(
+                          controller: hairColor,
+                          label: 'Hair colour',
+                          icon: Icons.face_retouching_natural_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: accents,
-                        label: 'Accents',
-                        icon: Icons.record_voice_over_outlined,
-                        onChanged: (_) => setState(() {}),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CoreTextField(
+                          controller: accents,
+                          label: 'Accents',
+                          icon: Icons.record_voice_over_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: specialAbilities,
-                        label: 'Special abilities',
-                        icon: Icons.sports_martial_arts_outlined,
-                        onChanged: (_) => setState(() {}),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: CoreTextField(
+                          controller: specialAbilities,
+                          label: 'Special abilities',
+                          icon: Icons.sports_martial_arts_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: genderIdentity,
-                        label: 'Gender identity',
-                        icon: Icons.diversity_1_outlined,
-                        onChanged: (_) => setState(() {}),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CoreTextField(
+                          controller: genderIdentity,
+                          label: 'Gender identity',
+                          icon: Icons.diversity_1_outlined,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: experienceYears,
-                        label: 'Experience (years)',
-                        icon: Icons.work_history_outlined,
-                        keyboardType: TextInputType.number,
-                        onChanged: (_) => setState(() {}),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: CoreTextField(
+                          controller: experienceYears,
+                          label: 'Experience (years)',
+                          icon: Icons.work_history_outlined,
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: unionNote,
-                  label: 'Union / professional membership',
-                  icon: Icons.verified_user_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: unionNote,
+                    label: 'Union / professional membership',
+                    icon: Icons.verified_user_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          ActorCollapsibleSection(
-            title: 'Marketplace Availability',
-            subtitle: 'Choose where directors and customers can discover you',
-            icon: Icons.storefront_outlined,
-            tone: ActorTone.gold,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilterChip(
-                  avatar: const Icon(Icons.theater_comedy_outlined, size: 18),
-                  label: const Text('Available as Actor'),
-                  selected: availableAsActor,
-                  onSelected: (value) =>
-                      setState(() => availableAsActor = value),
-                ),
-                FilterChip(
-                  avatar: const Icon(Icons.style_outlined, size: 18),
-                  label: const Text('Available as Model'),
-                  selected: availableAsModel,
-                  onSelected: (value) =>
-                      setState(() => availableAsModel = value),
-                ),
-                FilterChip(
-                  avatar: const Icon(Icons.campaign_outlined, size: 18),
-                  label: const Text('Available as Influencer'),
-                  selected: availableAsInfluencer,
-                  onSelected: (value) =>
-                      setState(() => availableAsInfluencer = value),
-                ),
-              ],
+          TourTarget(
+            id: 'actor.profile.marketplaceAvailability',
+            child: ActorCollapsibleSection(
+              title: 'Marketplace Availability',
+              subtitle: 'Choose where directors and customers can discover you',
+              icon: Icons.storefront_outlined,
+              tone: ActorTone.gold,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    avatar: const Icon(Icons.theater_comedy_outlined, size: 18),
+                    label: const Text('Available as Actor'),
+                    selected: availableAsActor,
+                    onSelected: (value) =>
+                        setState(() => availableAsActor = value),
+                  ),
+                  FilterChip(
+                    avatar: const Icon(Icons.style_outlined, size: 18),
+                    label: const Text('Available as Model'),
+                    selected: availableAsModel,
+                    onSelected: (value) =>
+                        setState(() => availableAsModel = value),
+                  ),
+                  FilterChip(
+                    avatar: const Icon(Icons.campaign_outlined, size: 18),
+                    label: const Text('Available as Influencer'),
+                    selected: availableAsInfluencer,
+                    onSelected: (value) =>
+                        setState(() => availableAsInfluencer = value),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          ActorCollapsibleSection(
-            title: 'Social & Representation',
-            subtitle: 'Instagram, TikTok, followers, agency',
-            icon: Icons.apartment_outlined,
-            tone: ActorTone.purple,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: CoreTextField(
-                        controller: instagram,
-                        label: 'Instagram',
-                        icon: Icons.alternate_email_rounded,
-                        onChanged: (_) => setState(() {}),
+          TourTarget(
+            id: 'actor.profile.social',
+            child: ActorCollapsibleSection(
+              title: 'Social & Representation',
+              subtitle: 'Instagram, TikTok, followers, agency',
+              icon: Icons.apartment_outlined,
+              tone: ActorTone.purple,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CoreTextField(
+                          controller: instagram,
+                          label: 'Instagram',
+                          icon: Icons.alternate_email_rounded,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: CoreTextField(
-                        controller: tiktok,
-                        label: 'TikTok',
-                        icon: Icons.music_note_rounded,
-                        onChanged: (_) => setState(() {}),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: CoreTextField(
+                          controller: tiktok,
+                          label: 'TikTok',
+                          icon: Icons.music_note_rounded,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: followers,
-                  label: 'Followers',
-                  icon: Icons.people_alt_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: agency,
-                  label: 'Agency affiliation',
-                  icon: Icons.apartment_outlined,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: followers,
+                    label: 'Followers',
+                    icon: Icons.people_alt_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: agency,
+                    label: 'Agency affiliation',
+                    icon: Icons.apartment_outlined,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
             ),
           ),
           if (error != null) ...[
@@ -472,40 +492,49 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
             ),
           ],
           const SizedBox(height: 14),
-          CorePrimaryButton(
-            icon: Icons.verified_outlined,
-            label: 'Save profile',
-            compact: true,
-            loading: savingRemote,
-            onTap: savingRemote ? null : _submit,
+          TourTarget(
+            id: 'actor.profile.save',
+            child: CorePrimaryButton(
+              icon: Icons.verified_outlined,
+              label: 'Save profile',
+              compact: true,
+              loading: savingRemote,
+              onTap: savingRemote ? null : _submit,
+            ),
           ),
           const SizedBox(height: 8),
-          CoreSecondaryButton(
-            icon: Icons.travel_explore_outlined,
-            label: publishingListing
-                ? 'Publishing listing…'
-                : 'Publish marketplace listing',
-            compact: true,
-            onTap: savingRemote || publishingListing
-                ? null
-                : _publishMarketplaceListing,
+          TourTarget(
+            id: 'actor.profile.publishListing',
+            child: CoreSecondaryButton(
+              icon: Icons.travel_explore_outlined,
+              label: publishingListing
+                  ? 'Publishing listing…'
+                  : 'Publish marketplace listing',
+              compact: true,
+              onTap: savingRemote || publishingListing
+                  ? null
+                  : _publishMarketplaceListing,
+            ),
           ),
         ],
       ),
-      right: _ProfileSummary(
-        avatarUrl: avatarUrl,
-        coverUrl: coverUrl,
-        stageName: stageName.text,
-        city: city.text,
-        languages: languages.text,
-        instagram: instagram.text,
-        tiktok: tiktok.text,
-        followers: followers.text,
-        workHistory: workHistory.text,
-        ageRange: ageRange.text,
-        height: height.text,
-        agency: agency.text,
-        completeness: _formCompleteness(),
+      right: TourTarget(
+        id: 'actor.profile.preview',
+        child: _ProfileSummary(
+          avatarUrl: avatarUrl,
+          coverUrl: coverUrl,
+          stageName: stageName.text,
+          city: city.text,
+          languages: languages.text,
+          instagram: instagram.text,
+          tiktok: tiktok.text,
+          followers: followers.text,
+          workHistory: workHistory.text,
+          ageRange: ageRange.text,
+          height: height.text,
+          agency: agency.text,
+          completeness: _formCompleteness(),
+        ),
       ),
     );
   }

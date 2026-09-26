@@ -8,6 +8,7 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../general_public/routes/general_public_routes.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
@@ -346,20 +347,23 @@ class _DPMarketplaceDiscoveryScreenState
           const SizedBox(height: 17),
           _MarketplaceReveal(
             delay: 100,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final category in categories)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _MarketplaceCategoryChip(
-                        label: category,
-                        active: _category == category,
-                        onTap: () => _setCategory(category),
+            child: TourTarget(
+              id: 'dp.marketplace.categories',
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final category in categories)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _MarketplaceCategoryChip(
+                          label: category,
+                          active: _category == category,
+                          onTap: () => _setCategory(category),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -426,83 +430,84 @@ class _DPMarketplaceDiscoveryScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CineMarketplaceResults(
-                    cards: candidates.indexed
-                        .map(
-                          (entry) => DPCandidateCard(
-                            featured: entry.$1 == 0,
-                            candidate: entry.$2,
-                            heroTag: 'marketplace-profile-'
-                                '${widget.publicBuyerMode ? (entry.$2.marketplaceListingId ?? entry.$2.profileId) : entry.$2.profileId}',
-                            onProfile: () => Navigator.pushNamed(
-                              context,
-                              widget.browseOnly
-                                  ? MarketplaceRoutes.profile
-                                  : widget.publicBuyerMode
-                                      ? GeneralPublicRoutes.profile
-                                      : DirectorProducerRoutes.profile,
-                              arguments: {
-                                'candidateId':
-                                    widget.browseOnly || widget.publicBuyerMode
-                                        ? entry.$2.marketplaceListingId ??
-                                            entry.$2.profileId
-                                        : entry.$2.profileId,
-                                'type': entry.$2.category,
-                                if (!widget.publicBuyerMode &&
-                                    !widget.browseOnly)
-                                  'projectId': _projectId,
-                              },
-                            ),
-                            onRequest: widget.browseOnly
-                                ? null
-                                : entry.$2.marketplaceListingId == null
-                                    ? () => _showProviderActionPending(entry.$2)
-                                    : () async {
-                                        final isPublicBuyer =
-                                            AuthScope.maybeOf(context)
-                                                    ?.user
-                                                    ?.primaryRole
-                                                    ?.code ==
-                                                'general_public';
-                                        if (!isPublicBuyer &&
-                                            !await ensureKycApproved(context)) {
-                                          return;
-                                        }
-                                        if (!context.mounted) return;
-                                        Navigator.pushNamed(
-                                          context,
-                                          widget.publicBuyerMode
-                                              ? GeneralPublicRoutes
-                                                  .bookingRequest
-                                              : DirectorProducerRoutes
-                                                  .bookingRequest,
-                                          arguments: {
-                                            'candidateId':
-                                                entry.$2.marketplaceListingId,
-                                            if (!widget.publicBuyerMode)
-                                              'projectId': _projectId,
-                                            'category': entry.$2.category,
-                                          },
-                                        );
-                                      },
-                            onShortlist: widget.browseOnly
-                                ? null
+                    cards: candidates.indexed.map(
+                      (entry) {
+                        final card = DPCandidateCard(
+                          featured: entry.$1 == 0,
+                          candidate: entry.$2,
+                          heroTag: 'marketplace-profile-'
+                              '${widget.publicBuyerMode ? (entry.$2.marketplaceListingId ?? entry.$2.profileId) : entry.$2.profileId}',
+                          onProfile: () => Navigator.pushNamed(
+                            context,
+                            widget.browseOnly
+                                ? MarketplaceRoutes.profile
                                 : widget.publicBuyerMode
-                                    ? () async {
-                                        _showSnack(
-                                          'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
-                                        );
-                                        return false;
-                                      }
-                                    : entry.$2.marketplaceListingId == null
-                                        ? () async {
-                                            _showProviderActionPending(
-                                                entry.$2);
-                                            return false;
-                                          }
-                                        : () => _shortlistCandidate(entry.$2),
+                                    ? GeneralPublicRoutes.profile
+                                    : DirectorProducerRoutes.profile,
+                            arguments: {
+                              'candidateId':
+                                  widget.browseOnly || widget.publicBuyerMode
+                                      ? entry.$2.marketplaceListingId ??
+                                          entry.$2.profileId
+                                      : entry.$2.profileId,
+                              'type': entry.$2.category,
+                              if (!widget.publicBuyerMode && !widget.browseOnly)
+                                'projectId': _projectId,
+                            },
                           ),
-                        )
-                        .toList(),
+                          onRequest: widget.browseOnly
+                              ? null
+                              : entry.$2.marketplaceListingId == null
+                                  ? () => _showProviderActionPending(entry.$2)
+                                  : () async {
+                                      final isPublicBuyer =
+                                          AuthScope.maybeOf(context)
+                                                  ?.user
+                                                  ?.primaryRole
+                                                  ?.code ==
+                                              'general_public';
+                                      if (!isPublicBuyer &&
+                                          !await ensureKycApproved(context)) {
+                                        return;
+                                      }
+                                      if (!context.mounted) return;
+                                      Navigator.pushNamed(
+                                        context,
+                                        widget.publicBuyerMode
+                                            ? GeneralPublicRoutes.bookingRequest
+                                            : DirectorProducerRoutes
+                                                .bookingRequest,
+                                        arguments: {
+                                          'candidateId':
+                                              entry.$2.marketplaceListingId,
+                                          if (!widget.publicBuyerMode)
+                                            'projectId': _projectId,
+                                          'category': entry.$2.category,
+                                        },
+                                      );
+                                    },
+                          onShortlist: widget.browseOnly
+                              ? null
+                              : widget.publicBuyerMode
+                                  ? () async {
+                                      _showSnack(
+                                        'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
+                                      );
+                                      return false;
+                                    }
+                                  : entry.$2.marketplaceListingId == null
+                                      ? () async {
+                                          _showProviderActionPending(entry.$2);
+                                          return false;
+                                        }
+                                      : () => _shortlistCandidate(entry.$2),
+                        );
+                        return entry.$1 == 0
+                            ? TourTarget(
+                                id: 'dp.marketplace.firstCard', child: card)
+                            : card;
+                      },
+                    ).toList(),
                   ),
                 ],
               );
@@ -1524,55 +1529,58 @@ class _MarketplaceSearchBar extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: CineMarketplaceVisuals.of(context).surface,
-              borderRadius: BorderRadius.circular(17),
-              border:
-                  Border.all(color: CineMarketplaceVisuals.of(context).border),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.search_rounded,
-                  color: CineMarketplaceVisuals.of(context).muted,
-                  size: 21,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    onChanged: (_) => onChanged(),
-                    cursorColor: CineMarketplaceVisuals.of(context).gold,
-                    style:
-                        CineMarketplaceVisuals.of(context).archivo(size: 13.5),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      hintText: hintText ?? 'Search talent, crew, locations…',
-                      hintStyle: CineMarketplaceVisuals.of(context).archivo(
-                        size: 13.5,
-                        color: CineMarketplaceVisuals.of(context).muted,
+          child: TourTarget(
+            id: 'dp.marketplace.search',
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: CineMarketplaceVisuals.of(context).surface,
+                borderRadius: BorderRadius.circular(17),
+                border: Border.all(
+                    color: CineMarketplaceVisuals.of(context).border),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    color: CineMarketplaceVisuals.of(context).muted,
+                    size: 21,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      onChanged: (_) => onChanged(),
+                      cursorColor: CineMarketplaceVisuals.of(context).gold,
+                      style: CineMarketplaceVisuals.of(context)
+                          .archivo(size: 13.5),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        hintText: hintText ?? 'Search talent, crew, locations…',
+                        hintStyle: CineMarketplaceVisuals.of(context).archivo(
+                          size: 13.5,
+                          color: CineMarketplaceVisuals.of(context).muted,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (controller.text.isNotEmpty)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      controller.clear();
-                      onChanged();
-                    },
-                    child: Icon(
-                      Icons.close_rounded,
-                      color: CineMarketplaceVisuals.of(context).muted,
-                      size: 18,
+                  if (controller.text.isNotEmpty)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        controller.clear();
+                        onChanged();
+                      },
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: CineMarketplaceVisuals.of(context).muted,
+                        size: 18,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1584,11 +1592,14 @@ class _MarketplaceSearchBar extends StatelessWidget {
         ),
         if (onFilters != null) ...[
           const SizedBox(width: 9),
-          _MarketplaceSquareButton(
-            tooltip: 'Filters',
-            icon: Icons.tune_rounded,
-            onTap: onFilters!,
-            emphasized: true,
+          TourTarget(
+            id: 'dp.marketplace.filterButton',
+            child: _MarketplaceSquareButton(
+              tooltip: 'Filters',
+              icon: Icons.tune_rounded,
+              onTap: onFilters!,
+              emphasized: true,
+            ),
           ),
         ],
       ],

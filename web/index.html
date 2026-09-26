@@ -34,8 +34,6 @@
 
   <title>cineconnect</title>
   <link rel="manifest" href="manifest.json">
-  <script src="director_tutorial_bootstrap.js?v=20260809-27"></script>
-  <link rel="stylesheet" href="director_tutorial.css?v=20260813-35">
   <style>
     #cc-boot-screen {
       position: fixed;
@@ -104,7 +102,7 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20260925-director-layout-v15';
+    const releaseVersion = '20260926-native-tours-v16';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;
@@ -263,6 +261,5 @@
     window.setTimeout(showSlowBoot, 12000);
     window.setTimeout(showManualReload, 45000);
   </script>
-  <script src="director_tutorial.js?v=20260813-35" defer></script>
 </body>
 </html>

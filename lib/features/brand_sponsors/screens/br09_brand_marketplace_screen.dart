@@ -166,11 +166,11 @@ class _BR09BrandMarketplaceScreenState
             ),
           ),
           const SizedBox(height: 22),
-          TourTarget(
-            id: 'brand:demo:working-project',
-            child: Column(
-              children: [
-                _BrandMarketplaceSearch(
+          Column(
+            children: [
+              TourTarget(
+                id: 'brand.discovery.search',
+                child: _BrandMarketplaceSearch(
                   onChanged: (value) {
                     _query = value;
                     _searchTimer?.cancel();
@@ -182,8 +182,11 @@ class _BR09BrandMarketplaceScreenState
                   onRefresh:
                       _loading ? null : () => _load(includeProjects: true),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+              ),
+              const SizedBox(height: 12),
+              TourTarget(
+                id: 'brand.discovery.project',
+                child: DropdownButtonFormField<String>(
                   key: ValueKey(_projectId),
                   initialValue: _projectId,
                   isExpanded: true,
@@ -227,8 +230,11 @@ class _BR09BrandMarketplaceScreenState
                   ],
                   onChanged: (value) => setState(() => _projectId = value),
                 ),
-                const SizedBox(height: 16),
-                SingleChildScrollView(
+              ),
+              const SizedBox(height: 16),
+              TourTarget(
+                id: 'brand.discovery.categories',
+                child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
@@ -247,8 +253,8 @@ class _BR09BrandMarketplaceScreenState
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           if (_error != null) ...[
@@ -277,7 +283,7 @@ class _BR09BrandMarketplaceScreenState
             )
           else
             TourTarget(
-              id: 'brand:demo:discovery-results',
+              id: 'brand.discovery.results',
               child: CineMarketplaceResults(
                 cards: [
                   for (final entry in _items.indexed)

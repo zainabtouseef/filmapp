@@ -9,6 +9,8 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_local_step_sync.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../general_public/routes/general_public_routes.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
@@ -36,8 +38,18 @@ class DPBookingRequestFormScreen extends StatefulWidget {
       _DPBookingRequestFormScreenState();
 }
 
-class _DPBookingRequestFormScreenState
-    extends State<DPBookingRequestFormScreen> {
+class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
+    with TourLocalStepSync<DPBookingRequestFormScreen> {
+  @override
+  String get tourRouteName => DirectorProducerRoutes.bookingRequest;
+
+  @override
+  void applyTourLocalStep(Object localStep) {
+    if (localStep is int && localStep != _step) {
+      setState(() => _step = localStep);
+    }
+  }
+
   Future<_BookingFormData>? _future;
   List<Project> _projects = const [];
   List<ProjectRequirement> _requirements = const [];
@@ -272,21 +284,24 @@ class _DPBookingRequestFormScreenState
 
   Widget _stepBody() {
     return switch (_step) {
-      0 => _ProjectAttachStep(
-          projects: _projects,
-          projectId: _projectId,
-          isPublicBuyer: _isPublicBuyer,
-          onProjectChanged: (value) async {
-            final projectsController = ProjectsScope.of(context);
-            final requirements = await projectsController.requirements(value);
-            setState(() {
-              _projectId = value;
-              _requirements = requirements;
-              _requirementId =
-                  requirements.isEmpty ? null : requirements.first.publicId;
-              _prefillFromSelection();
-            });
-          },
+      0 => TourTarget(
+          id: 'dp.booking.project',
+          child: _ProjectAttachStep(
+            projects: _projects,
+            projectId: _projectId,
+            isPublicBuyer: _isPublicBuyer,
+            onProjectChanged: (value) async {
+              final projectsController = ProjectsScope.of(context);
+              final requirements = await projectsController.requirements(value);
+              setState(() {
+                _projectId = value;
+                _requirements = requirements;
+                _requirementId =
+                    requirements.isEmpty ? null : requirements.first.publicId;
+                _prefillFromSelection();
+              });
+            },
+          ),
         ),
       1 => _RequirementStep(
           project: _project,
@@ -444,8 +459,7 @@ class _DPBookingRequestFormScreenState
   }
 
   String _feeLabel(ProjectRequirement? requirement, DpCandidate? candidate) {
-    if (_listing?.pricingMode == 'fixed' &&
-        _listing?.priceFromMinor != null) {
+    if (_listing?.pricingMode == 'fixed' && _listing?.priceFromMinor != null) {
       return '${_listing!.priceFromMinor! ~/ 100}';
     }
     if (requirement?.budgetMinMinor != null ||
@@ -665,11 +679,14 @@ class _TermsStep extends StatelessWidget {
         icon: Icons.edit_note_outlined,
         child: Column(
           children: [
-            CoreTextField(
-              controller: dates,
-              label: 'Dates',
-              icon: Icons.date_range_outlined,
-              onChanged: (_) => onChanged(),
+            TourTarget(
+              id: 'dp.booking.dates',
+              child: CoreTextField(
+                controller: dates,
+                label: 'Dates',
+                icon: Icons.date_range_outlined,
+                onChanged: (_) => onChanged(),
+              ),
             ),
             if (!candidate.available) ...[
               const SizedBox(height: 8),
@@ -701,11 +718,14 @@ class _TermsStep extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            CoreTextField(
-              controller: deliverables,
-              label: 'Deliverables',
-              icon: Icons.task_alt_outlined,
-              maxLines: 2,
+            TourTarget(
+              id: 'dp.booking.deliverables',
+              child: CoreTextField(
+                controller: deliverables,
+                label: 'Deliverables',
+                icon: Icons.task_alt_outlined,
+                maxLines: 2,
+              ),
             ),
             const SizedBox(height: 12),
             if (schema.showUsageRights)
@@ -716,11 +736,14 @@ class _TermsStep extends StatelessWidget {
                 maxLines: 2,
               ),
             const SizedBox(height: 12),
-            CoreTextField(
-              controller: conditions,
-              label: 'Special conditions',
-              icon: Icons.fact_check_outlined,
-              maxLines: 3,
+            TourTarget(
+              id: 'dp.booking.conditions',
+              child: CoreTextField(
+                controller: conditions,
+                label: 'Special conditions',
+                icon: Icons.fact_check_outlined,
+                maxLines: 3,
+              ),
             ),
             const SizedBox(height: 12),
             CoreTextField(
@@ -755,12 +778,15 @@ class _TermsStep extends StatelessWidget {
               icon: Icons.notes_outlined,
             ),
             const SizedBox(height: 14),
-            _ScheduleBuilder(
-              deposit: deposit,
-              middle: middle,
-              finalPayment: finalPayment,
-              total: scheduleTotal,
-              onChanged: onChanged,
+            TourTarget(
+              id: 'dp.booking.scheduleBuilder',
+              child: _ScheduleBuilder(
+                deposit: deposit,
+                middle: middle,
+                finalPayment: finalPayment,
+                total: scheduleTotal,
+                onChanged: onChanged,
+              ),
             ),
           ],
         ),
@@ -922,12 +948,15 @@ class _ReviewStep extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: DPHolographicButton(
-                  label: 'Send Booking Request',
-                  icon: sending
-                      ? Icons.hourglass_top_rounded
-                      : Icons.send_rounded,
-                  onTap: sending ? null : onSend,
+                child: TourTarget(
+                  id: 'dp.booking.send',
+                  child: DPHolographicButton(
+                    label: 'Send Booking Request',
+                    icon: sending
+                        ? Icons.hourglass_top_rounded
+                        : Icons.send_rounded,
+                    onTap: sending ? null : onSend,
+                  ),
                 ),
               ),
             ],

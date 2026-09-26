@@ -4,6 +4,7 @@ import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../routes/crew_services_routes.dart';
+import 'crew_full_walkthrough_steps.dart';
 
 const _crewBottomDestinations = [
   CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
@@ -103,6 +104,8 @@ class CrewServicesShell extends StatelessWidget {
       navRoutes: CrewServicesRoutes.primaryNav,
       navDestinations: _crewBottomDestinations,
       menuEntries: crewMenuEntries,
+      fullWalkthroughSteps: crewFullWalkthroughSteps,
+      fullWalkthroughTourId: crewFullWalkthroughTourId,
       bottomIndexOverrides: _crewBottomIndexOverrides,
       workspaceLayout: true,
       workspaceTitle: 'Crew Workspace',

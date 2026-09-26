@@ -6,6 +6,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/brand_sponsor_models.dart';
@@ -216,25 +217,33 @@ class _BR05NegotiationTermsScreenState
                   ],
                 ),
                 const SizedBox(height: 14),
-                CoreTextField(
-                  controller: _scope,
-                  label: 'Campaign scope and deliverables',
-                  icon: Icons.fact_check_outlined,
-                  maxLines: 4,
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: _exclusivity,
-                  label: 'Category exclusivity and duration',
-                  icon: Icons.lock_outline_rounded,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: _approvalRights,
-                  label: 'Approval rights and response window',
-                  icon: Icons.approval_outlined,
-                  maxLines: 3,
+                TourTarget(
+                  id: 'brand.negotiation.scope',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CoreTextField(
+                        controller: _scope,
+                        label: 'Campaign scope and deliverables',
+                        icon: Icons.fact_check_outlined,
+                        maxLines: 4,
+                      ),
+                      const SizedBox(height: 10),
+                      CoreTextField(
+                        controller: _exclusivity,
+                        label: 'Category exclusivity and duration',
+                        icon: Icons.lock_outline_rounded,
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 10),
+                      CoreTextField(
+                        controller: _approvalRights,
+                        label: 'Approval rights and response window',
+                        icon: Icons.approval_outlined,
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -245,48 +254,53 @@ class _BR05NegotiationTermsScreenState
                   ),
                 ),
                 const SizedBox(height: 8),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final fields = [
-                      _PercentField(
-                        controller: _advance,
-                        label: 'Advance',
-                        icon: Icons.playlist_add_check_rounded,
-                      ),
-                      _PercentField(
-                        controller: _proofApproval,
-                        label: 'Proof approval',
-                        icon: Icons.fact_check_outlined,
-                      ),
-                      _PercentField(
-                        controller: _completion,
-                        label: 'Completion',
-                        icon: Icons.task_alt_rounded,
-                      ),
-                    ];
-                    if (constraints.maxWidth < 620) {
-                      return Column(
+                TourTarget(
+                  id: 'brand.negotiation.milestones',
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final fields = [
+                        _PercentField(
+                          controller: _advance,
+                          label: 'Advance',
+                          icon: Icons.playlist_add_check_rounded,
+                        ),
+                        _PercentField(
+                          controller: _proofApproval,
+                          label: 'Proof approval',
+                          icon: Icons.fact_check_outlined,
+                        ),
+                        _PercentField(
+                          controller: _completion,
+                          label: 'Completion',
+                          icon: Icons.task_alt_rounded,
+                        ),
+                      ];
+                      if (constraints.maxWidth < 620) {
+                        return Column(
+                          children: [
+                            for (var index = 0;
+                                index < fields.length;
+                                index++) ...[
+                              fields[index],
+                              if (index < fields.length - 1)
+                                const SizedBox(height: 10),
+                            ],
+                          ],
+                        );
+                      }
+                      return Row(
                         children: [
                           for (var index = 0;
                               index < fields.length;
                               index++) ...[
-                            fields[index],
+                            Expanded(child: fields[index]),
                             if (index < fields.length - 1)
-                              const SizedBox(height: 10),
+                              const SizedBox(width: 10),
                           ],
                         ],
                       );
-                    }
-                    return Row(
-                      children: [
-                        for (var index = 0; index < fields.length; index++) ...[
-                          Expanded(child: fields[index]),
-                          if (index < fields.length - 1)
-                            const SizedBox(width: 10),
-                        ],
-                      ],
-                    );
-                  },
+                    },
+                  ),
                 ),
                 const SizedBox(height: 10),
                 InlineNotice(
@@ -295,138 +309,151 @@ class _BR05NegotiationTermsScreenState
                   icon: Icons.info_outline_rounded,
                 ),
                 const SizedBox(height: 14),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final chat = CoreSecondaryButton(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      label: _openingChat ? 'Opening...' : 'Message',
-                      compact: true,
-                      onTap: _openingChat ? null : _openChat,
-                    );
-                    final counter = CoreSecondaryButton(
-                      icon: Icons.edit_note_outlined,
-                      label: _saving ? 'Saving...' : 'Send counter',
-                      compact: true,
-                      onTap: _saving || selected.status == 'accepted'
-                          ? null
-                          : () => _save('negotiating'),
-                    );
-                    final accept = CorePrimaryButton(
-                      icon: Icons.check_circle_outline,
-                      label:
-                          selected.status == 'accepted' ? 'Accepted' : 'Accept',
-                      compact: true,
-                      onTap: _saving || selected.status == 'accepted'
-                          ? null
-                          : () => _save('accepted'),
-                    );
-                    if (constraints.maxWidth < 560) {
-                      return Column(
+                TourTarget(
+                  id: 'brand.negotiation.actions',
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final chat = CoreSecondaryButton(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        label: _openingChat ? 'Opening...' : 'Message',
+                        compact: true,
+                        onTap: _openingChat ? null : _openChat,
+                      );
+                      final counter = CoreSecondaryButton(
+                        icon: Icons.edit_note_outlined,
+                        label: _saving ? 'Saving...' : 'Send counter',
+                        compact: true,
+                        onTap: _saving || selected.status == 'accepted'
+                            ? null
+                            : () => _save('negotiating'),
+                      );
+                      final accept = CorePrimaryButton(
+                        icon: Icons.check_circle_outline,
+                        label: selected.status == 'accepted'
+                            ? 'Accepted'
+                            : 'Accept',
+                        compact: true,
+                        onTap: _saving || selected.status == 'accepted'
+                            ? null
+                            : () => _save('accepted'),
+                      );
+                      if (constraints.maxWidth < 560) {
+                        return Column(
+                          children: [
+                            SizedBox(width: double.infinity, child: chat),
+                            const SizedBox(height: 8),
+                            SizedBox(width: double.infinity, child: counter),
+                            const SizedBox(height: 8),
+                            SizedBox(width: double.infinity, child: accept),
+                          ],
+                        );
+                      }
+                      return Row(
                         children: [
-                          SizedBox(width: double.infinity, child: chat),
-                          const SizedBox(height: 8),
-                          SizedBox(width: double.infinity, child: counter),
-                          const SizedBox(height: 8),
-                          SizedBox(width: double.infinity, child: accept),
+                          Expanded(child: chat),
+                          const SizedBox(width: 8),
+                          Expanded(child: counter),
+                          const SizedBox(width: 8),
+                          Expanded(child: accept),
                         ],
                       );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(child: chat),
-                        const SizedBox(width: 8),
-                        Expanded(child: counter),
-                        const SizedBox(width: 8),
-                        Expanded(child: accept),
-                      ],
-                    );
-                  },
+                    },
+                  ),
                 ),
               ],
             ),
           ),
           right: Column(
             children: [
-              BrandSectionCard(
-                title: 'Applications in deal flow',
-                icon: Icons.people_alt_outlined,
-                tone: BrandTone.blue,
-                child: Column(
-                  children: [
-                    for (final application in _applications)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 9),
-                        child: _ApplicationDealRow(
-                          application: application,
-                          selected: application.publicId == selected.publicId,
-                          onTap: () => _selectApplication(application),
+              TourTarget(
+                id: 'brand.negotiation.applications',
+                child: BrandSectionCard(
+                  title: 'Applications in deal flow',
+                  icon: Icons.people_alt_outlined,
+                  tone: BrandTone.blue,
+                  child: Column(
+                    children: [
+                      for (final application in _applications)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 9),
+                          child: _ApplicationDealRow(
+                            application: application,
+                            selected: application.publicId == selected.publicId,
+                            onTap: () => _selectApplication(application),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              BrandSectionCard(
-                title: 'Version history',
-                icon: Icons.history_rounded,
-                tone: BrandTone.purple,
-                child: selected.terms.isEmpty
-                    ? Text(
-                        'No terms saved yet. The first counter creates version 1.',
-                        style: AppTextStyles.body.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          for (final term in selected.terms.reversed)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 9),
-                              child: _TermVersionRow(
-                                term: term,
-                                onTap: () => _seedTerm(term),
+              TourTarget(
+                id: 'brand.negotiation.history',
+                child: BrandSectionCard(
+                  title: 'Version history',
+                  icon: Icons.history_rounded,
+                  tone: BrandTone.purple,
+                  child: selected.terms.isEmpty
+                      ? Text(
+                          'No terms saved yet. The first counter creates version 1.',
+                          style: AppTextStyles.body.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (final term in selected.terms.reversed)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 9),
+                                child: _TermVersionRow(
+                                  term: term,
+                                  onTap: () => _seedTerm(term),
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
+                ),
               ),
               const SizedBox(height: 12),
-              BrandSectionCard(
-                title: 'Connected workflow',
-                icon: Icons.account_tree_outlined,
-                tone: BrandTone.green,
-                child: Column(
-                  children: [
-                    BrandInfoRow(
-                      icon: Icons.inbox_outlined,
-                      label: 'Application',
-                      value: readableBrandStatus(selected.status),
-                    ),
-                    BrandInfoRow(
-                      icon: Icons.description_outlined,
-                      label: 'Terms record',
-                      value: '${selected.termsCount} versions',
-                    ),
-                    BrandInfoRow(
-                      icon: Icons.fact_check_outlined,
-                      label: 'Campaign delivery',
-                      value: selected.status == 'accepted'
-                          ? 'Ready to assign'
-                          : 'Unlocks after acceptance',
-                    ),
-                    if (selected.status == 'accepted') ...[
-                      const SizedBox(height: 8),
-                      CorePrimaryButton(
-                        icon: Icons.arrow_forward_rounded,
-                        label: 'Open campaign delivery',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          BrandSponsorRoutes.tracker,
-                        ),
+              TourTarget(
+                id: 'brand.negotiation.workflow',
+                child: BrandSectionCard(
+                  title: 'Connected workflow',
+                  icon: Icons.account_tree_outlined,
+                  tone: BrandTone.green,
+                  child: Column(
+                    children: [
+                      BrandInfoRow(
+                        icon: Icons.inbox_outlined,
+                        label: 'Application',
+                        value: readableBrandStatus(selected.status),
                       ),
+                      BrandInfoRow(
+                        icon: Icons.description_outlined,
+                        label: 'Terms record',
+                        value: '${selected.termsCount} versions',
+                      ),
+                      BrandInfoRow(
+                        icon: Icons.fact_check_outlined,
+                        label: 'Campaign delivery',
+                        value: selected.status == 'accepted'
+                            ? 'Ready to assign'
+                            : 'Unlocks after acceptance',
+                      ),
+                      if (selected.status == 'accepted') ...[
+                        const SizedBox(height: 8),
+                        CorePrimaryButton(
+                          icon: Icons.arrow_forward_rounded,
+                          label: 'Open campaign delivery',
+                          compact: true,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            BrandSponsorRoutes.tracker,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],

@@ -6,6 +6,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/director/director_dashboard_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -83,9 +84,14 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
         DPPageHeader(
           eyebrow: 'Production calendar',
           title: 'Calendar',
-          actionLabel: _synced ? 'Synced ✓' : 'Sync',
-          actionIcon: _synced ? Icons.check_rounded : Icons.sync_rounded,
-          onActionTap: _sync,
+          trailing: TourTarget(
+            id: 'dp.schedule.sync',
+            child: DPHolographicButton(
+              label: _synced ? 'Synced ✓' : 'Sync',
+              icon: _synced ? Icons.check_rounded : Icons.sync_rounded,
+              onTap: _sync,
+            ),
+          ),
         ),
         const SizedBox(height: 14),
         DPSectionCard(
@@ -94,33 +100,45 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DPProjectScopePicker(
-                selectedProjectId: _projectId,
-                onChanged: (value) => setState(() {
-                  _projectId = value;
-                  _scheduleFuture = _loadSchedule();
-                }),
+              TourTarget(
+                id: 'dp.schedule.projectScope',
+                child: DPProjectScopePicker(
+                  selectedProjectId: _projectId,
+                  onChanged: (value) => setState(() {
+                    _projectId = value;
+                    _scheduleFuture = _loadSchedule();
+                  }),
+                ),
               ),
               const SizedBox(height: 12),
-              ProductionCalendar(
-                projectId: _projectId,
-                initialMode: ProductionCalendarMode.today,
+              TourTarget(
+                id: 'dp.schedule.calendar',
+                child: ProductionCalendar(
+                  projectId: _projectId,
+                  initialMode: ProductionCalendarMode.today,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        DPSectionCard(
-          title: 'Schedule risk watch',
-          icon: Icons.warning_amber_rounded,
-          child: _ScheduleRiskWatch(future: _scheduleFuture),
+        TourTarget(
+          id: 'dp.schedule.riskWatch',
+          child: DPSectionCard(
+            title: 'Schedule risk watch',
+            icon: Icons.warning_amber_rounded,
+            child: _ScheduleRiskWatch(future: _scheduleFuture),
+          ),
         ),
         const SizedBox(height: 12),
-        DPHolographicButton(
-          label: 'Create Call Sheet',
-          icon: Icons.description_outlined,
-          onTap: _openCallSheet,
-          secondary: true,
+        TourTarget(
+          id: 'dp.schedule.callSheet',
+          child: DPHolographicButton(
+            label: 'Create Call Sheet',
+            icon: Icons.description_outlined,
+            onTap: _openCallSheet,
+            secondary: true,
+          ),
         ),
       ],
     );

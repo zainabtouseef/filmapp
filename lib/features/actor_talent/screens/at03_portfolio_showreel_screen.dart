@@ -8,6 +8,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/open_url.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/credits/past_roles_section.dart';
 import '../widgets/actor_talent_components.dart';
@@ -74,11 +75,14 @@ class _AT03PortfolioShowreelScreenState
           child: _buildPortfolioBody(context),
         ),
         const SizedBox(height: 12),
-        const PastRolesSection(
-          profileType: 'talent',
-          sectionTitle: 'Past Roles',
-          emptyMessage:
-              'Add your past roles — productions, characters and a cover photo.',
+        const TourTarget(
+          id: 'actor.portfolio.pastRoles',
+          child: PastRolesSection(
+            profileType: 'talent',
+            sectionTitle: 'Past Roles',
+            emptyMessage:
+                'Add your past roles — productions, characters and a cover photo.',
+          ),
         ),
       ],
     );
@@ -115,28 +119,34 @@ class _AT03PortfolioShowreelScreenState
             const SizedBox(height: 14),
             _SlotSectionLabel(label: 'Photos', count: images.length),
             const SizedBox(height: 8),
-            _SlotRow(
-              kind: _SlotKind.image,
-              items: images,
-              busySlotKey: _busySlotKey,
-              onAdd: (index) => _addSlot(_SlotKind.image, index),
-              onReplace: (item, index) =>
-                  _replaceSlot(_SlotKind.image, item, index),
-              onRemove: (item, index) =>
-                  _removeSlot(_SlotKind.image, item, index),
+            TourTarget(
+              id: 'actor.portfolio.photos',
+              child: _SlotRow(
+                kind: _SlotKind.image,
+                items: images,
+                busySlotKey: _busySlotKey,
+                onAdd: (index) => _addSlot(_SlotKind.image, index),
+                onReplace: (item, index) =>
+                    _replaceSlot(_SlotKind.image, item, index),
+                onRemove: (item, index) =>
+                    _removeSlot(_SlotKind.image, item, index),
+              ),
             ),
             const SizedBox(height: 18),
             _SlotSectionLabel(label: 'Videos', count: videos.length),
             const SizedBox(height: 8),
-            _SlotRow(
-              kind: _SlotKind.video,
-              items: videos,
-              busySlotKey: _busySlotKey,
-              onAdd: (index) => _addSlot(_SlotKind.video, index),
-              onReplace: (item, index) =>
-                  _replaceSlot(_SlotKind.video, item, index),
-              onRemove: (item, index) =>
-                  _removeSlot(_SlotKind.video, item, index),
+            TourTarget(
+              id: 'actor.portfolio.videos',
+              child: _SlotRow(
+                kind: _SlotKind.video,
+                items: videos,
+                busySlotKey: _busySlotKey,
+                onAdd: (index) => _addSlot(_SlotKind.video, index),
+                onReplace: (item, index) =>
+                    _replaceSlot(_SlotKind.video, item, index),
+                onRemove: (item, index) =>
+                    _removeSlot(_SlotKind.video, item, index),
+              ),
             ),
           ],
         );

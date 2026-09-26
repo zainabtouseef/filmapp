@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../widgets/crew_services_components.dart';
@@ -80,9 +81,12 @@ class _CR02ServiceProfileScreenState extends State<CR02ServiceProfileScreen> {
     return CrewTwoColumn(
       left: Column(
         children: [
-          const MarketplacePricingPreferencePanel(
-            listingTypes: {'crew'},
-            title: 'Crew marketplace pricing',
+          const TourTarget(
+            id: 'crew.profile.pricing',
+            child: MarketplacePricingPreferencePanel(
+              listingTypes: {'crew'},
+              title: 'Crew marketplace pricing',
+            ),
           ),
           const SizedBox(height: 12),
           Padding(
@@ -105,74 +109,83 @@ class _CR02ServiceProfileScreenState extends State<CR02ServiceProfileScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          CrewSectionCard(
-            title: 'Photos',
-            icon: Icons.photo_camera_outlined,
-            selected: true,
-            child: Column(
-              children: [
-                _avatarField(),
-                const SizedBox(height: 14),
-                _coverField(),
-              ],
+          TourTarget(
+            id: 'crew.profile.photos',
+            child: CrewSectionCard(
+              title: 'Photos',
+              icon: Icons.photo_camera_outlined,
+              selected: true,
+              child: Column(
+                children: [
+                  _avatarField(),
+                  const SizedBox(height: 14),
+                  _coverField(),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          CrewSectionCard(
-            title: 'Identity',
-            icon: Icons.badge_outlined,
-            child: Column(
-              children: [
-                CoreTextField(
-                  controller: city,
-                  label: 'City',
-                  icon: Icons.location_on_outlined,
-                  errorText: _fieldError(city),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: website,
-                  label: 'Website',
-                  icon: Icons.language_outlined,
-                  keyboardType: TextInputType.url,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 10),
-                CoreTextField(
-                  controller: bio,
-                  label: 'Bio / services offered',
-                  icon: Icons.history_edu_outlined,
-                  maxLines: 3,
-                  onChanged: (_) => setState(() {}),
-                ),
-              ],
+          TourTarget(
+            id: 'crew.profile.identity',
+            child: CrewSectionCard(
+              title: 'Identity',
+              icon: Icons.badge_outlined,
+              child: Column(
+                children: [
+                  CoreTextField(
+                    controller: city,
+                    label: 'City',
+                    icon: Icons.location_on_outlined,
+                    errorText: _fieldError(city),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: website,
+                    label: 'Website',
+                    icon: Icons.language_outlined,
+                    keyboardType: TextInputType.url,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  CoreTextField(
+                    controller: bio,
+                    label: 'Bio / services offered',
+                    icon: Icons.history_edu_outlined,
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          CrewSectionCard(
-            title: 'Social',
-            icon: Icons.apartment_outlined,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CoreTextField(
-                    controller: instagram,
-                    label: 'Instagram',
-                    icon: Icons.alternate_email_rounded,
-                    onChanged: (_) => setState(() {}),
+          TourTarget(
+            id: 'crew.profile.social',
+            child: CrewSectionCard(
+              title: 'Social',
+              icon: Icons.apartment_outlined,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CoreTextField(
+                      controller: instagram,
+                      label: 'Instagram',
+                      icon: Icons.alternate_email_rounded,
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: CoreTextField(
-                    controller: tiktok,
-                    label: 'TikTok',
-                    icon: Icons.music_note_rounded,
-                    onChanged: (_) => setState(() {}),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CoreTextField(
+                      controller: tiktok,
+                      label: 'TikTok',
+                      icon: Icons.music_note_rounded,
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           if (error != null) ...[
@@ -200,21 +213,27 @@ class _CR02ServiceProfileScreenState extends State<CR02ServiceProfileScreen> {
             ),
           ],
           const SizedBox(height: 14),
-          CorePrimaryButton(
-            icon: Icons.verified_outlined,
-            label: 'Save profile',
-            compact: true,
-            loading: savingRemote,
-            onTap: savingRemote ? null : _submit,
+          TourTarget(
+            id: 'crew.profile.saveButton',
+            child: CorePrimaryButton(
+              icon: Icons.verified_outlined,
+              label: 'Save profile',
+              compact: true,
+              loading: savingRemote,
+              onTap: savingRemote ? null : _submit,
+            ),
           ),
         ],
       ),
-      right: _ProfileSummary(
-        avatarUrl: avatarUrl,
-        city: city.text,
-        instagram: instagram.text,
-        tiktok: tiktok.text,
-        bio: bio.text,
+      right: TourTarget(
+        id: 'crew.profile.preview',
+        child: _ProfileSummary(
+          avatarUrl: avatarUrl,
+          city: city.text,
+          instagram: instagram.text,
+          tiktok: tiktok.text,
+          bio: bio.text,
+        ),
       ),
     );
   }

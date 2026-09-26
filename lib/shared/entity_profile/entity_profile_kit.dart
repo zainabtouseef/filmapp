@@ -7,6 +7,7 @@ library;
 export 'entity_credit_row.dart';
 export 'entity_metric_block.dart';
 export 'entity_profile_tabs.dart';
+export 'entity_reveal.dart';
 export 'entity_section_label.dart';
 export 'entity_sticky_action_bar.dart';
 export 'entity_work_tile.dart';

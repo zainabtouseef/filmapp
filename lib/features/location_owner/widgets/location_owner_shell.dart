@@ -8,8 +8,8 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/tour/nav_tour_builder.dart';
 import '../../../core/tour/tour_controller.dart';
+import '../../../core/tour/tour_preferences_store.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
@@ -21,16 +21,17 @@ import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/location_owner_routes.dart';
+import 'location_full_walkthrough_steps.dart';
 import 'location_owner_components.dart';
 import 'location_owner_live.dart';
 
 void _startLocationOwnerTour(BuildContext context) {
   TourScope.of(context).start(
-    buildNavTourSteps([
-      for (final item in _locationMenuEntries)
-        NavTourEntry(label: item.label, route: item.route),
-    ]),
-    tourId: 'location_owner',
+    locationFullWalkthroughSteps,
+    tourId: locationFullWalkthroughTourId,
+    replaceRoutes: true,
+    onFinished: () =>
+        const TourPreferencesStore().markSeen(locationFullWalkthroughTourId),
   );
 }
 

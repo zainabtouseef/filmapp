@@ -5,6 +5,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -141,77 +142,83 @@ class _BR06CampaignTrackerScreenState extends State<BR06CampaignTrackerScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: '$pending',
-              icon: Icons.schedule_outlined,
-              title: 'Awaiting proof',
-              subtitle: '$revisions revision requests',
-              accentColor: context.appColors.goldDark,
-            ),
-            MetricActionItem(
-              value: '$review',
-              icon: Icons.rate_review_outlined,
-              title: 'Ready to review',
-              subtitle: 'Proof submitted',
-              accentColor: context.appColors.infoBlue,
-            ),
-            MetricActionItem(
-              value: '$approved',
-              icon: Icons.verified_outlined,
-              title: 'Approved',
-              subtitle: 'Campaign outputs',
-              accentColor: context.appColors.success,
-            ),
-            MetricActionItem(
-              value: _compactCount(metrics),
-              icon: Icons.visibility_outlined,
-              title: 'Impressions',
-              subtitle: 'Verified metrics',
-              accentColor: context.appColors.infoPurple,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        BrandSectionCard(
-          title: 'Campaign deliverables',
-          icon: Icons.fact_check_outlined,
-          selected: true,
-          actionText: _acceptedApplications.isEmpty ? null : 'Assign',
-          onActionTap:
-              _acceptedApplications.isEmpty ? null : _showCreateDeliverable,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BrandSearchField(
-                hintText: 'Search deliverable, owner or opportunity',
-                onChanged: (value) => setState(() => _query = value),
+        TourTarget(
+          id: 'brand.tracker.metrics',
+          child: MetricActionRail(
+            items: [
+              MetricActionItem(
+                value: '$pending',
+                icon: Icons.schedule_outlined,
+                title: 'Awaiting proof',
+                subtitle: '$revisions revision requests',
+                accentColor: context.appColors.goldDark,
               ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final tab in const [
-                      'All',
-                      'Awaiting proof',
-                      'Review',
-                      'Revision',
-                      'Approved',
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CoreChip(
-                          label: tab,
-                          selected: _tab == tab,
-                          onTap: () => setState(() => _tab = tab),
-                        ),
-                      ),
-                  ],
-                ),
+              MetricActionItem(
+                value: '$review',
+                icon: Icons.rate_review_outlined,
+                title: 'Ready to review',
+                subtitle: 'Proof submitted',
+                accentColor: context.appColors.infoBlue,
+              ),
+              MetricActionItem(
+                value: '$approved',
+                icon: Icons.verified_outlined,
+                title: 'Approved',
+                subtitle: 'Campaign outputs',
+                accentColor: context.appColors.success,
+              ),
+              MetricActionItem(
+                value: _compactCount(metrics),
+                icon: Icons.visibility_outlined,
+                title: 'Impressions',
+                subtitle: 'Verified metrics',
+                accentColor: context.appColors.infoPurple,
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        TourTarget(
+          id: 'brand.tracker.board',
+          child: BrandSectionCard(
+            title: 'Campaign deliverables',
+            icon: Icons.fact_check_outlined,
+            selected: true,
+            actionText: _acceptedApplications.isEmpty ? null : 'Assign',
+            onActionTap:
+                _acceptedApplications.isEmpty ? null : _showCreateDeliverable,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BrandSearchField(
+                  hintText: 'Search deliverable, owner or opportunity',
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final tab in const [
+                        'All',
+                        'Awaiting proof',
+                        'Review',
+                        'Revision',
+                        'Approved',
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: CoreChip(
+                            label: tab,
+                            selected: _tab == tab,
+                            onTap: () => setState(() => _tab = tab),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -240,26 +247,29 @@ class _BR06CampaignTrackerScreenState extends State<BR06CampaignTrackerScreen> {
                     }),
           )
         else
-          BrandResponsiveGrid(
-            minWidth: 330,
-            children: [
-              for (final deliverable in visible)
-                _CampaignDeliverableCard(
-                  deliverable: deliverable,
-                  opportunityTitle:
-                      _opportunityTitle(deliverable.opportunityId),
-                  working: _workingId == deliverable.publicId,
-                  onApprove: deliverable.status == 'submitted'
-                      ? () => _approve(deliverable)
-                      : null,
-                  onRevision: deliverable.status == 'submitted'
-                      ? () => _requestRevision(deliverable)
-                      : null,
-                  onMetrics: deliverable.status == 'approved'
-                      ? () => _showMetricSheet(deliverable)
-                      : null,
-                ),
-            ],
+          TourTarget(
+            id: 'brand.tracker.results',
+            child: BrandResponsiveGrid(
+              minWidth: 330,
+              children: [
+                for (final deliverable in visible)
+                  _CampaignDeliverableCard(
+                    deliverable: deliverable,
+                    opportunityTitle:
+                        _opportunityTitle(deliverable.opportunityId),
+                    working: _workingId == deliverable.publicId,
+                    onApprove: deliverable.status == 'submitted'
+                        ? () => _approve(deliverable)
+                        : null,
+                    onRevision: deliverable.status == 'submitted'
+                        ? () => _requestRevision(deliverable)
+                        : null,
+                    onMetrics: deliverable.status == 'approved'
+                        ? () => _showMetricSheet(deliverable)
+                        : null,
+                  ),
+              ],
+            ),
           ),
       ],
     );

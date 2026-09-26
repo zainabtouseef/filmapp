@@ -6,6 +6,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/brand_sponsor_routes.dart';
@@ -149,106 +150,115 @@ class _BR04ApplicationsInboxScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatusChip(
-                    label: '$awaiting AWAITING REVIEW',
-                    icon: Icons.schedule_outlined,
-                    color: context.appColors.goldMid,
-                  ),
-                  StatusChip(
-                    label: '$shortlisted SHORTLISTED',
-                    icon: Icons.star_outline_rounded,
-                    color: context.appColors.infoBlue,
-                  ),
-                  StatusChip(
-                    label: '$negotiating IN TERMS',
-                    icon: Icons.handshake_outlined,
-                    color: context.appColors.infoPurple,
-                  ),
-                ],
+              TourTarget(
+                id: 'brand.applications.queueStats',
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    StatusChip(
+                      label: '$awaiting AWAITING REVIEW',
+                      icon: Icons.schedule_outlined,
+                      color: context.appColors.goldMid,
+                    ),
+                    StatusChip(
+                      label: '$shortlisted SHORTLISTED',
+                      icon: Icons.star_outline_rounded,
+                      color: context.appColors.infoBlue,
+                    ),
+                    StatusChip(
+                      label: '$negotiating IN TERMS',
+                      icon: Icons.handshake_outlined,
+                      color: context.appColors.infoPurple,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
-              BrandSearchField(
-                hintText: 'Search applicant, opportunity or proposal',
-                onChanged: (value) => setState(() => _query = value),
+              TourTarget(
+                id: 'brand.applications.search',
+                child: BrandSearchField(
+                  hintText: 'Search applicant, opportunity or proposal',
+                  onChanged: (value) => setState(() => _query = value),
+                ),
               ),
               const SizedBox(height: 10),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 640;
-                  final statusField = CoreDropdownField<String>(
-                    value: _status,
-                    values: const [
-                      'All',
-                      'Awaiting review',
-                      'Shortlisted',
-                      'Negotiating',
-                      'Accepted',
-                      'Rejected',
-                    ],
-                    label: 'Status',
-                    icon: Icons.filter_alt_outlined,
-                    onChanged: (value) {
-                      if (value != null) setState(() => _status = value);
-                    },
-                  );
-                  final opportunityField = CoreDropdownField<String>(
-                    value: _opportunityId,
-                    values: [
-                      'All',
-                      ..._opportunities.map((item) => item.publicId),
-                    ],
-                    label: 'Opportunity',
-                    icon: Icons.campaign_outlined,
-                    labelBuilder: (value) {
-                      if (value == 'All') return 'All opportunities';
-                      return _opportunities
-                          .firstWhere((item) => item.publicId == value)
-                          .title;
-                    },
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _opportunityId = value);
-                      }
-                    },
-                  );
-                  final sortField = CoreDropdownField<String>(
-                    value: _sort,
-                    values: const [
-                      'Newest',
-                      'Budget: high to low',
-                      'Applicant'
-                    ],
-                    label: 'Sort',
-                    icon: Icons.sort_rounded,
-                    onChanged: (value) {
-                      if (value != null) setState(() => _sort = value);
-                    },
-                  );
-                  if (compact) {
-                    return Column(
+              TourTarget(
+                id: 'brand.applications.filters',
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 640;
+                    final statusField = CoreDropdownField<String>(
+                      value: _status,
+                      values: const [
+                        'All',
+                        'Awaiting review',
+                        'Shortlisted',
+                        'Negotiating',
+                        'Accepted',
+                        'Rejected',
+                      ],
+                      label: 'Status',
+                      icon: Icons.filter_alt_outlined,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _status = value);
+                      },
+                    );
+                    final opportunityField = CoreDropdownField<String>(
+                      value: _opportunityId,
+                      values: [
+                        'All',
+                        ..._opportunities.map((item) => item.publicId),
+                      ],
+                      label: 'Opportunity',
+                      icon: Icons.campaign_outlined,
+                      labelBuilder: (value) {
+                        if (value == 'All') return 'All opportunities';
+                        return _opportunities
+                            .firstWhere((item) => item.publicId == value)
+                            .title;
+                      },
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _opportunityId = value);
+                        }
+                      },
+                    );
+                    final sortField = CoreDropdownField<String>(
+                      value: _sort,
+                      values: const [
+                        'Newest',
+                        'Budget: high to low',
+                        'Applicant'
+                      ],
+                      label: 'Sort',
+                      icon: Icons.sort_rounded,
+                      onChanged: (value) {
+                        if (value != null) setState(() => _sort = value);
+                      },
+                    );
+                    if (compact) {
+                      return Column(
+                        children: [
+                          statusField,
+                          const SizedBox(height: 10),
+                          opportunityField,
+                          const SizedBox(height: 10),
+                          sortField,
+                        ],
+                      );
+                    }
+                    return Row(
                       children: [
-                        statusField,
-                        const SizedBox(height: 10),
-                        opportunityField,
-                        const SizedBox(height: 10),
-                        sortField,
+                        Expanded(child: statusField),
+                        const SizedBox(width: 10),
+                        Expanded(flex: 2, child: opportunityField),
+                        const SizedBox(width: 10),
+                        Expanded(child: sortField),
                       ],
                     );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(child: statusField),
-                      const SizedBox(width: 10),
-                      Expanded(flex: 2, child: opportunityField),
-                      const SizedBox(width: 10),
-                      Expanded(child: sortField),
-                    ],
-                  );
-                },
+                  },
+                ),
               ),
             ],
           ),
@@ -275,20 +285,24 @@ class _BR04ApplicationsInboxScreenState
                 : _clearFilters,
           )
         else
-          BrandResponsiveGrid(
-            minWidth: 330,
-            children: [
-              for (final application in visible)
-                _LiveApplicationCard(
-                  application: application,
-                  working: _workingId == application.publicId,
-                  onDetails: () => _showApplication(application),
-                  onChat: () => _openChat(application),
-                  onShortlist: () => _changeStatus(application, 'shortlisted'),
-                  onNegotiate: () => _beginNegotiation(application),
-                  onReject: () => _reject(application),
-                ),
-            ],
+          TourTarget(
+            id: 'brand.applications.results',
+            child: BrandResponsiveGrid(
+              minWidth: 330,
+              children: [
+                for (final application in visible)
+                  _LiveApplicationCard(
+                    application: application,
+                    working: _workingId == application.publicId,
+                    onDetails: () => _showApplication(application),
+                    onChat: () => _openChat(application),
+                    onShortlist: () =>
+                        _changeStatus(application, 'shortlisted'),
+                    onNegotiate: () => _beginNegotiation(application),
+                    onReject: () => _reject(application),
+                  ),
+              ],
+            ),
           ),
       ],
     );

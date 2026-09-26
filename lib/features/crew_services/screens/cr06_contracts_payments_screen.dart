@@ -9,6 +9,7 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/crew_services_models.dart';
@@ -134,91 +135,103 @@ class _CR06ContractsPaymentsScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CrewKpiRail(
-          metrics: [
-            CrewMetric(
-              label: 'Contracts',
-              value: '${data.contracts.length}',
-              delta: '$signed fully signed',
-              icon: Icons.description_outlined,
-              tone: CrewTone.purple,
-              route: CrewServicesRoutes.contracts,
-            ),
-            CrewMetric(
-              label: 'Earned',
-              value: crewMoney(credits ~/ 100),
-              delta: 'Backend ledger credits',
-              icon: Icons.account_balance_wallet_outlined,
-              tone: CrewTone.green,
-              route: CrewServicesRoutes.contracts,
-            ),
-            CrewMetric(
-              label: 'Scheduled',
-              value: crewMoney(pending ~/ 100),
-              delta: 'Pending milestones',
-              icon: Icons.schedule_outlined,
-              tone: CrewTone.gold,
-              route: CrewServicesRoutes.contracts,
-            ),
-          ],
+        TourTarget(
+          id: 'crew.contracts.kpis',
+          child: CrewKpiRail(
+            metrics: [
+              CrewMetric(
+                label: 'Contracts',
+                value: '${data.contracts.length}',
+                delta: '$signed fully signed',
+                icon: Icons.description_outlined,
+                tone: CrewTone.purple,
+                route: CrewServicesRoutes.contracts,
+              ),
+              CrewMetric(
+                label: 'Earned',
+                value: crewMoney(credits ~/ 100),
+                delta: 'Backend ledger credits',
+                icon: Icons.account_balance_wallet_outlined,
+                tone: CrewTone.green,
+                route: CrewServicesRoutes.contracts,
+              ),
+              CrewMetric(
+                label: 'Scheduled',
+                value: crewMoney(pending ~/ 100),
+                delta: 'Pending milestones',
+                icon: Icons.schedule_outlined,
+                tone: CrewTone.gold,
+                route: CrewServicesRoutes.contracts,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         if (readyForContract.isNotEmpty) ...[
-          CrewSectionCard(
-            title: 'Ready for contract',
-            icon: Icons.post_add_outlined,
-            selected: true,
-            child: Column(
-              children: [
-                for (final booking in readyForContract)
-                  _ReadyContractRow(
-                    booking: booking,
-                    busy: _busyId == booking.publicId,
-                    onGenerate: () => _generate(booking),
-                  ),
-              ],
+          TourTarget(
+            id: 'crew.contracts.readyForContract',
+            child: CrewSectionCard(
+              title: 'Ready for contract',
+              icon: Icons.post_add_outlined,
+              selected: true,
+              child: Column(
+                children: [
+                  for (final booking in readyForContract)
+                    _ReadyContractRow(
+                      booking: booking,
+                      busy: _busyId == booking.publicId,
+                      onGenerate: () => _generate(booking),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
         ],
         CrewTwoColumn(
-          left: CrewSectionCard(
-            title: 'Crew contracts',
-            icon: Icons.draw_outlined,
-            child: data.contracts.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.description_outlined,
-                    title: 'No crew contracts yet',
-                    message:
-                        'Accepted crew bookings can generate an auditable contract here.',
-                  )
-                : Column(
-                    children: [
-                      for (final contract in data.contracts)
-                        _ContractCard(
-                          contract: contract,
-                          busy: _busyId == contract.publicId,
-                          onSign: () => _sign(contract),
-                        ),
-                    ],
-                  ),
+          left: TourTarget(
+            id: 'crew.contracts.list',
+            child: CrewSectionCard(
+              title: 'Crew contracts',
+              icon: Icons.draw_outlined,
+              child: data.contracts.isEmpty
+                  ? const CoreEmptyState(
+                      icon: Icons.description_outlined,
+                      title: 'No crew contracts yet',
+                      message:
+                          'Accepted crew bookings can generate an auditable contract here.',
+                    )
+                  : Column(
+                      children: [
+                        for (final contract in data.contracts)
+                          _ContractCard(
+                            contract: contract,
+                            busy: _busyId == contract.publicId,
+                            onSign: () => _sign(contract),
+                          ),
+                      ],
+                    ),
+            ),
           ),
-          right: CrewSectionCard(
-            title: 'Payment ledger',
-            icon: Icons.receipt_long_outlined,
-            child: data.ledger.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'No crew ledger entries',
-                    message:
-                        'Released project milestones and payout activity will appear here.',
-                  )
-                : Column(
-                    children: [
-                      for (final entry in data.ledger.take(8))
-                        _LedgerRow(entry: entry),
-                    ],
-                  ),
+          right: TourTarget(
+            id: 'crew.contracts.ledger',
+            child: CrewSectionCard(
+              title: 'Payment ledger',
+              icon: Icons.receipt_long_outlined,
+              child: data.ledger.isEmpty
+                  ? const CoreEmptyState(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'No crew ledger entries',
+                      message:
+                          'Released project milestones and payout activity will appear here.',
+                    )
+                  : Column(
+                      children: [
+                        for (final entry in data.ledger.take(8))
+                          _LedgerRow(entry: entry),
+                      ],
+                    ),
+            ),
           ),
         ),
       ],

@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
@@ -184,12 +185,15 @@ class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
                   onDelete: _deleteSavedSearch,
                 ),
                 const SizedBox(height: 12),
-                _LiveShortlistColumns(
-                  boards: bundle.shortlists,
-                  mutatingId: _mutatingId,
-                  onDelete: _deleteShortlistItem,
-                  onMove: _moveShortlistItem,
-                  onSelect: _selectShortlistItem,
+                TourTarget(
+                  id: 'dp.shortlist.board',
+                  child: _LiveShortlistColumns(
+                    boards: bundle.shortlists,
+                    mutatingId: _mutatingId,
+                    onDelete: _deleteShortlistItem,
+                    onMove: _moveShortlistItem,
+                    onSelect: _selectShortlistItem,
+                  ),
                 ),
               ],
             );
@@ -349,16 +353,28 @@ class _LiveShortlistColumns extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final board in visibleBoards) ...[
+              for (final (index, board) in visibleBoards.indexed) ...[
                 SizedBox(
                   width: width.clamp(280.0, 390.0),
-                  child: _LiveShortlistColumn(
-                    board: board,
-                    mutatingId: mutatingId,
-                    onDelete: onDelete,
-                    onMove: onMove,
-                    onSelect: onSelect,
-                  ),
+                  child: index == 0
+                      ? TourTarget(
+                          id: 'dp.shortlist.firstGroup',
+                          child: _LiveShortlistColumn(
+                            board: board,
+                            mutatingId: mutatingId,
+                            onDelete: onDelete,
+                            onMove: onMove,
+                            onSelect: onSelect,
+                            wrapFirstItem: true,
+                          ),
+                        )
+                      : _LiveShortlistColumn(
+                          board: board,
+                          mutatingId: mutatingId,
+                          onDelete: onDelete,
+                          onMove: onMove,
+                          onSelect: onSelect,
+                        ),
                 ),
                 if (board != visibleBoards.last) const SizedBox(width: 12),
               ],
@@ -376,6 +392,7 @@ class _LiveShortlistColumn extends StatelessWidget {
   final ValueChanged<String> onDelete;
   final void Function(MarketplaceShortlistItem item, int direction) onMove;
   final ValueChanged<MarketplaceShortlistItem> onSelect;
+  final bool wrapFirstItem;
 
   const _LiveShortlistColumn({
     required this.board,
@@ -383,6 +400,7 @@ class _LiveShortlistColumn extends StatelessWidget {
     required this.onDelete,
     required this.onMove,
     required this.onSelect,
+    this.wrapFirstItem = false,
   });
 
   @override
@@ -408,19 +426,25 @@ class _LiveShortlistColumn extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          ...board.items.map(
-            (item) => Padding(
+          for (final (index, item) in board.items.indexed)
+            Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _LiveShortlistCard(
-                item: item,
-                loading: mutatingId == item.publicId,
-                onDelete: () => onDelete(item.publicId),
-                onMoveUp: () => onMove(item, -1),
-                onMoveDown: () => onMove(item, 1),
-                onSelect: () => onSelect(item),
-              ),
+              child: () {
+                final isFirst = wrapFirstItem && index == 0;
+                final card = _LiveShortlistCard(
+                  item: item,
+                  loading: mutatingId == item.publicId,
+                  onDelete: () => onDelete(item.publicId),
+                  onMoveUp: () => onMove(item, -1),
+                  onMoveDown: () => onMove(item, 1),
+                  onSelect: () => onSelect(item),
+                  wrapActions: isFirst,
+                );
+                return isFirst
+                    ? TourTarget(id: 'dp.shortlist.firstCard', child: card)
+                    : card;
+              }(),
             ),
-          ),
         ],
       ),
     );
@@ -434,6 +458,7 @@ class _LiveShortlistCard extends StatelessWidget {
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onSelect;
+  final bool wrapActions;
 
   const _LiveShortlistCard({
     required this.item,
@@ -442,6 +467,7 @@ class _LiveShortlistCard extends StatelessWidget {
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onSelect,
+    this.wrapActions = false,
   });
 
   @override
@@ -485,20 +511,42 @@ class _LiveShortlistCard extends StatelessWidget {
                 loading: loading,
                 onTap: onMoveDown,
               ),
-              _MiniAction(
-                icon: selected
-                    ? Icons.undo_rounded
-                    : Icons.check_circle_outline_rounded,
-                label: selected ? 'Unselect' : 'Select',
-                loading: loading,
-                onTap: onSelect,
-              ),
-              _MiniAction(
-                icon: Icons.delete_outline_rounded,
-                label: 'Remove',
-                loading: loading,
-                onTap: onDelete,
-              ),
+              wrapActions
+                  ? TourTarget(
+                      id: 'dp.shortlist.select',
+                      child: _MiniAction(
+                        icon: selected
+                            ? Icons.undo_rounded
+                            : Icons.check_circle_outline_rounded,
+                        label: selected ? 'Unselect' : 'Select',
+                        loading: loading,
+                        onTap: onSelect,
+                      ),
+                    )
+                  : _MiniAction(
+                      icon: selected
+                          ? Icons.undo_rounded
+                          : Icons.check_circle_outline_rounded,
+                      label: selected ? 'Unselect' : 'Select',
+                      loading: loading,
+                      onTap: onSelect,
+                    ),
+              wrapActions
+                  ? TourTarget(
+                      id: 'dp.shortlist.remove',
+                      child: _MiniAction(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Remove',
+                        loading: loading,
+                        onTap: onDelete,
+                      ),
+                    )
+                  : _MiniAction(
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Remove',
+                      loading: loading,
+                      onTap: onDelete,
+                    ),
             ],
           ),
         ],

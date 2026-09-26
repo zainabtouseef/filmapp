@@ -94,7 +94,10 @@ class TalentProfileShowcase extends StatelessWidget {
               children: [
                 heroTag == null
                     ? heroImage
-                    : Hero(tag: heroTag!, child: heroImage),
+                    : Hero(
+                        tag: heroTag!,
+                        child: heroImage,
+                      ),
                 const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

@@ -7,6 +7,7 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -123,127 +124,139 @@ class _LO10PropertyPerformanceScreenState
           selected: true,
           actionText: 'Refresh',
           onActionTap: _reload,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final range in ['7 days', '30 days', '90 days'])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CoreChip(
-                      label: range,
-                      selected: _range == range,
-                      icon: Icons.date_range_outlined,
-                      onTap: () => setState(() => _range = range),
+          child: TourTarget(
+            id: 'location.performance.range',
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final range in ['7 days', '30 days', '90 days'])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: CoreChip(
+                        label: range,
+                        selected: _range == range,
+                        icon: Icons.date_range_outlined,
+                        onTap: () => setState(() => _range = range),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: '${data.properties.length}',
-              icon: Icons.location_city_outlined,
-              title: 'Properties',
-              subtitle: '$complete production-ready',
-              accentColor: colors.infoBlue,
-            ),
-            MetricActionItem(
-              value: '$open',
-              icon: Icons.move_to_inbox_outlined,
-              title: 'Open requests',
-              subtitle: 'Within $_range',
-              accentColor: colors.goldMid,
-            ),
-            MetricActionItem(
-              value: '$accepted',
-              icon: Icons.event_available_outlined,
-              title: 'Accepted bookings',
-              subtitle: 'Within $_range',
-              accentColor: colors.success,
-            ),
-            MetricActionItem(
-              value: averageRating > 0
-                  ? averageRating.toStringAsFixed(1)
-                  : 'No ratings',
-              icon: Icons.star_outline_rounded,
-              title: 'Property rating',
-              subtitle: '${rated.length} rated',
-              accentColor: colors.infoPurple,
-            ),
-          ],
+        TourTarget(
+          id: 'location.performance.snapshot',
+          child: MetricActionRail(
+            items: [
+              MetricActionItem(
+                value: '${data.properties.length}',
+                icon: Icons.location_city_outlined,
+                title: 'Properties',
+                subtitle: '$complete production-ready',
+                accentColor: colors.infoBlue,
+              ),
+              MetricActionItem(
+                value: '$open',
+                icon: Icons.move_to_inbox_outlined,
+                title: 'Open requests',
+                subtitle: 'Within $_range',
+                accentColor: colors.goldMid,
+              ),
+              MetricActionItem(
+                value: '$accepted',
+                icon: Icons.event_available_outlined,
+                title: 'Accepted bookings',
+                subtitle: 'Within $_range',
+                accentColor: colors.success,
+              ),
+              MetricActionItem(
+                value: averageRating > 0
+                    ? averageRating.toStringAsFixed(1)
+                    : 'No ratings',
+                icon: Icons.star_outline_rounded,
+                title: 'Property rating',
+                subtitle: '${rated.length} rated',
+                accentColor: colors.infoPurple,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
-          left: LocationSectionCard(
-            title: 'Booking status',
-            icon: Icons.bar_chart_rounded,
-            tone: LocationTone.blue,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Location bookings in $_range',
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                LocationMiniBarChart(
-                  values: [
-                    open.toDouble(),
-                    accepted.toDouble(),
-                    closed.toDouble(),
-                  ],
-                  colors: [
-                    colors.goldMid,
-                    colors.success,
-                    colors.textSecondary,
-                  ],
-                  height: 144,
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    StatusChip(
-                      label: '$open OPEN',
-                      color: colors.goldMid,
-                    ),
-                    StatusChip(
-                      label: '$accepted ACCEPTED',
-                      color: colors.success,
-                    ),
-                    StatusChip(
-                      label: '$closed CLOSED',
-                      color: colors.textSecondary,
-                    ),
-                  ],
-                ),
-                if (bookings.isEmpty) ...[
-                  const SizedBox(height: 12),
+          left: TourTarget(
+            id: 'location.performance.chart',
+            child: LocationSectionCard(
+              title: 'Booking status',
+              icon: Icons.bar_chart_rounded,
+              tone: LocationTone.blue,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    'No location bookings fall within the selected shoot-date window.',
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
+                    'Location bookings in $_range',
+                    style: AppTextStyles.cardLabel.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  LocationMiniBarChart(
+                    values: [
+                      open.toDouble(),
+                      accepted.toDouble(),
+                      closed.toDouble(),
+                    ],
+                    colors: [
+                      colors.goldMid,
+                      colors.success,
+                      colors.textSecondary,
+                    ],
+                    height: 144,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      StatusChip(
+                        label: '$open OPEN',
+                        color: colors.goldMid,
+                      ),
+                      StatusChip(
+                        label: '$accepted ACCEPTED',
+                        color: colors.success,
+                      ),
+                      StatusChip(
+                        label: '$closed CLOSED',
+                        color: colors.textSecondary,
+                      ),
+                    ],
+                  ),
+                  if (bookings.isEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'No location bookings fall within the selected shoot-date window.',
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           right: Column(
             children: [
-              LocationSectionCard(
-                title: 'Portfolio actions',
-                icon: Icons.tips_and_updates_outlined,
-                tone: LocationTone.gold,
-                child: _PropertySuggestions(properties: data.properties),
+              TourTarget(
+                id: 'location.performance.suggestions',
+                child: LocationSectionCard(
+                  title: 'Portfolio actions',
+                  icon: Icons.tips_and_updates_outlined,
+                  tone: LocationTone.gold,
+                  child: _PropertySuggestions(properties: data.properties),
+                ),
               ),
               const SizedBox(height: 12),
               LocationSectionCard(

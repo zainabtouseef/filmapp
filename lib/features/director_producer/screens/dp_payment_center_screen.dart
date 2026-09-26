@@ -5,8 +5,11 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_local_step_sync.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/payments/payment_trust_timeline.dart';
 import '../models/dp_payment.dart';
+import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_milestone_board.dart';
@@ -19,7 +22,18 @@ class DPPaymentCenterScreen extends StatefulWidget {
   State<DPPaymentCenterScreen> createState() => _DPPaymentCenterScreenState();
 }
 
-class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen> {
+class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen>
+    with TourLocalStepSync<DPPaymentCenterScreen> {
+  @override
+  String get tourRouteName => DirectorProducerRoutes.payments;
+
+  @override
+  void applyTourLocalStep(Object localStep) {
+    if (localStep is String && localStep != _tab) {
+      setState(() => _tab = localStep);
+    }
+  }
+
   Future<PaymentDashboardDto>? _future;
   String _tab = 'Ledger';
 
@@ -165,14 +179,24 @@ class _PaymentCenterContent extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         if (tab == 'Ledger')
-          DPMilestoneBoard(payments: payments)
+          TourTarget(
+            id: 'dp.payments.ledger',
+            child:
+                DPMilestoneBoard(payments: payments, highlightFirstDue: true),
+          )
         else if (tab == 'Timeline')
-          PaymentTrustTimeline(
-            schedules: schedules,
-            audience: PaymentTimelineAudience.producer,
+          TourTarget(
+            id: 'dp.payments.timeline',
+            child: PaymentTrustTimeline(
+              schedules: schedules,
+              audience: PaymentTimelineAudience.producer,
+            ),
           )
         else
-          _HistoryList(items: [...verified, ...rejected]),
+          TourTarget(
+            id: 'dp.payments.history',
+            child: _HistoryList(items: [...verified, ...rejected]),
+          ),
       ],
     );
   }

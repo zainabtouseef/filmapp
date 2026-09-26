@@ -5,6 +5,7 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/location_owner_models.dart';
@@ -197,30 +198,33 @@ class _LO05RulesRestrictionsScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        MetricActionRail(
-          items: [
-            MetricActionItem(
-              value: '$allowed',
-              icon: Icons.check_circle_outline,
-              title: 'Allowed',
-              subtitle: 'Current draft',
-              accentColor: colors.success,
-            ),
-            MetricActionItem(
-              value: '$restricted',
-              icon: Icons.block_rounded,
-              title: 'Restricted',
-              subtitle: 'Current draft',
-              accentColor: colors.goldMid,
-            ),
-            MetricActionItem(
-              value: '$saved/${_rules.length}',
-              icon: Icons.cloud_done_outlined,
-              title: 'Saved rules',
-              subtitle: 'Live property data',
-              accentColor: colors.infoBlue,
-            ),
-          ],
+        TourTarget(
+          id: 'location.rules.snapshot',
+          child: MetricActionRail(
+            items: [
+              MetricActionItem(
+                value: '$allowed',
+                icon: Icons.check_circle_outline,
+                title: 'Allowed',
+                subtitle: 'Current draft',
+                accentColor: colors.success,
+              ),
+              MetricActionItem(
+                value: '$restricted',
+                icon: Icons.block_rounded,
+                title: 'Restricted',
+                subtitle: 'Current draft',
+                accentColor: colors.goldMid,
+              ),
+              MetricActionItem(
+                value: '$saved/${_rules.length}',
+                icon: Icons.cloud_done_outlined,
+                title: 'Saved rules',
+                subtitle: 'Live property data',
+                accentColor: colors.infoBlue,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
@@ -233,10 +237,13 @@ class _LO05RulesRestrictionsScreenState
                 for (var index = 0; index < _rules.length; index++)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: _RuleRow(
-                      rule: _rules[index],
-                      onChanged: (value) => _setAllowed(index, value),
-                      onEdit: () => _editRule(index),
+                    child: TourTarget(
+                      id: 'location.rules.rule.${_rules[index].ruleType}',
+                      child: _RuleRow(
+                        rule: _rules[index],
+                        onChanged: (value) => _setAllowed(index, value),
+                        onEdit: () => _editRule(index),
+                      ),
                     ),
                   ),
                 if (_error != null) ...[
@@ -247,11 +254,14 @@ class _LO05RulesRestrictionsScreenState
                   ),
                   const SizedBox(height: 10),
                 ],
-                CorePrimaryButton(
-                  icon: Icons.save_outlined,
-                  label: _saving ? 'Saving...' : 'Save property rules',
-                  compact: true,
-                  onTap: _saving ? null : _saveRules,
+                TourTarget(
+                  id: 'location.rules.save',
+                  child: CorePrimaryButton(
+                    icon: Icons.save_outlined,
+                    label: _saving ? 'Saving...' : 'Save property rules',
+                    compact: true,
+                    onTap: _saving ? null : _saveRules,
+                  ),
                 ),
               ],
             ),

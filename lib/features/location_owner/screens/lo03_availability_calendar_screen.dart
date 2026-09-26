@@ -6,6 +6,7 @@ import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
@@ -62,107 +63,116 @@ class _LO03AvailabilityCalendarScreenState
             children: [
               const _CalendarLegend(),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 100,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 14,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final date = DateUtils.dateOnly(
-                      DateTime.now().add(Duration(days: index)),
-                    );
-                    return _DayTile(
-                      date: date,
-                      status: _statusForDate(date),
-                      selected: DateUtils.isSameDay(_selectedDate, date),
-                      onTap: () => setState(() => _selectedDate = date),
-                    );
-                  },
+              TourTarget(
+                id: 'location.calendar.dayStrip',
+                child: SizedBox(
+                  height: 100,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 14,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final date = DateUtils.dateOnly(
+                        DateTime.now().add(Duration(days: index)),
+                      );
+                      return _DayTile(
+                        date: date,
+                        status: _statusForDate(date),
+                        selected: DateUtils.isSameDay(_selectedDate, date),
+                        onTap: () => setState(() => _selectedDate = date),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final status in [
-                    LocationCalendarStatus.available,
-                    LocationCalendarStatus.blocked,
-                    LocationCalendarStatus.tentativeHold,
-                  ])
-                    CoreSecondaryButton(
-                      icon: locationCalendarIcon(status),
-                      label: locationCalendarLabel(status),
-                      compact: true,
-                      onTap: selectedStatus == LocationCalendarStatus.booked
-                          ? null
-                          : () => _saveStatus(status),
-                    ),
-                ],
+              TourTarget(
+                id: 'location.calendar.statusButtons',
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final status in [
+                      LocationCalendarStatus.available,
+                      LocationCalendarStatus.blocked,
+                      LocationCalendarStatus.tentativeHold,
+                    ])
+                      CoreSecondaryButton(
+                        icon: locationCalendarIcon(status),
+                        label: locationCalendarLabel(status),
+                        compact: true,
+                        onTap: selectedStatus == LocationCalendarStatus.booked
+                            ? null
+                            : () => _saveStatus(status),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        LocationSectionCard(
-          title: 'Server calendar',
-          icon: Icons.cloud_done_outlined,
-          actionText: _future == null ? null : 'Refresh',
-          onActionTap: _refresh,
-          tone: LocationTone.blue,
-          child: _future == null
-              ? const CoreEmptyState(
-                  icon: Icons.cloud_sync_outlined,
-                  title: 'Sign in to load calendar',
-                  message:
-                      'Booking-generated and manual availability entries are fetched from the backend.',
-                )
-              : FutureBuilder<List<AvailabilityEntry>>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(20),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    }
-                    if (snapshot.hasError) {
-                      return CoreEmptyState(
-                        icon: Icons.cloud_off_outlined,
-                        title: 'Calendar unavailable',
-                        message: locationApiMessage(snapshot.error!),
-                        actionLabel: 'Try again',
-                        onAction: _refresh,
-                      );
-                    }
-                    final rows = snapshot.data ?? const [];
-                    if (rows.isEmpty) {
-                      return const CoreEmptyState(
-                        icon: Icons.event_available_outlined,
-                        title: 'No saved entries',
-                        message:
-                            'Select a day and set it available, blocked or on hold.',
-                      );
-                    }
-                    return Column(
-                      children: [
-                        for (final entry in rows.take(6))
-                          LocationInfoRow(
-                            icon: entry.status == 'booked'
-                                ? Icons.lock_clock_outlined
-                                : Icons.event_available_outlined,
-                            label: readableLocationStatus(entry.status),
-                            value:
-                                '${DateFormat('MMM d, h:mm a').format(entry.startAt.toLocal())} - '
-                                '${DateFormat('MMM d, h:mm a').format(entry.endAt.toLocal())}',
+        TourTarget(
+          id: 'location.calendar.serverEntries',
+          child: LocationSectionCard(
+            title: 'Server calendar',
+            icon: Icons.cloud_done_outlined,
+            actionText: _future == null ? null : 'Refresh',
+            onActionTap: _refresh,
+            tone: LocationTone.blue,
+            child: _future == null
+                ? const CoreEmptyState(
+                    icon: Icons.cloud_sync_outlined,
+                    title: 'Sign in to load calendar',
+                    message:
+                        'Booking-generated and manual availability entries are fetched from the backend.',
+                  )
+                : FutureBuilder<List<AvailabilityEntry>>(
+                    future: _future,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: CircularProgressIndicator(),
                           ),
-                      ],
-                    );
-                  },
-                ),
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return CoreEmptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: 'Calendar unavailable',
+                          message: locationApiMessage(snapshot.error!),
+                          actionLabel: 'Try again',
+                          onAction: _refresh,
+                        );
+                      }
+                      final rows = snapshot.data ?? const [];
+                      if (rows.isEmpty) {
+                        return const CoreEmptyState(
+                          icon: Icons.event_available_outlined,
+                          title: 'No saved entries',
+                          message:
+                              'Select a day and set it available, blocked or on hold.',
+                        );
+                      }
+                      return Column(
+                        children: [
+                          for (final entry in rows.take(6))
+                            LocationInfoRow(
+                              icon: entry.status == 'booked'
+                                  ? Icons.lock_clock_outlined
+                                  : Icons.event_available_outlined,
+                              label: readableLocationStatus(entry.status),
+                              value:
+                                  '${DateFormat('MMM d, h:mm a').format(entry.startAt.toLocal())} - '
+                                  '${DateFormat('MMM d, h:mm a').format(entry.endAt.toLocal())}',
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
         ),
         const SizedBox(height: 12),
         LocationTwoColumn(
@@ -175,40 +185,43 @@ class _LO03AvailabilityCalendarScreenState
               status: selectedStatus,
             ),
           ),
-          right: LocationSectionCard(
-            title: 'Conflict monitor',
-            icon: Icons.warning_amber_outlined,
-            tone: LocationTone.gold,
-            child: Column(
-              children: [
-                LocationInfoRow(
-                  icon: Icons.lock_clock_outlined,
-                  label: 'Manual holds',
-                  value:
-                      '${_entries.where((item) => item.status == 'hold').length}',
-                ),
-                LocationInfoRow(
-                  icon: Icons.event_available_outlined,
-                  label: 'Secured bookings',
-                  value: '${_securedBookingCount()}',
-                ),
-                LocationInfoRow(
-                  icon: Icons.block_rounded,
-                  label: 'Blocked entries',
-                  value:
-                      '${_entries.where((item) => item.status == 'blocked').length}',
-                ),
-                const SizedBox(height: 8),
-                CoreSecondaryButton(
-                  icon: Icons.search_rounded,
-                  label: 'Inspect requests',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    LocationOwnerRoutes.requests,
+          right: TourTarget(
+            id: 'location.calendar.conflictMonitor',
+            child: LocationSectionCard(
+              title: 'Conflict monitor',
+              icon: Icons.warning_amber_outlined,
+              tone: LocationTone.gold,
+              child: Column(
+                children: [
+                  LocationInfoRow(
+                    icon: Icons.lock_clock_outlined,
+                    label: 'Manual holds',
+                    value:
+                        '${_entries.where((item) => item.status == 'hold').length}',
                   ),
-                ),
-              ],
+                  LocationInfoRow(
+                    icon: Icons.event_available_outlined,
+                    label: 'Secured bookings',
+                    value: '${_securedBookingCount()}',
+                  ),
+                  LocationInfoRow(
+                    icon: Icons.block_rounded,
+                    label: 'Blocked entries',
+                    value:
+                        '${_entries.where((item) => item.status == 'blocked').length}',
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.search_rounded,
+                    label: 'Inspect requests',
+                    compact: true,
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      LocationOwnerRoutes.requests,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

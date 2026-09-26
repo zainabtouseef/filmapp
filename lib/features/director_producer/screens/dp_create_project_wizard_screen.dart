@@ -12,6 +12,8 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../core/tour/tour_local_step_sync.dart';
+import '../../../core/tour/tour_target.dart';
 import '../data/project_draft_store.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_budget_health_bar.dart';
@@ -148,7 +150,18 @@ class DPCreateProjectWizardScreen extends StatefulWidget {
 }
 
 class _DPCreateProjectWizardScreenState
-    extends State<DPCreateProjectWizardScreen> {
+    extends State<DPCreateProjectWizardScreen>
+    with TourLocalStepSync<DPCreateProjectWizardScreen> {
+  @override
+  String get tourRouteName => DirectorProducerRoutes.createProject;
+
+  @override
+  void applyTourLocalStep(Object localStep) {
+    if (localStep is int && localStep != _step && !_justCreated) {
+      setState(() => _step = localStep);
+    }
+  }
+
   final _draftStore = const ProjectDraftStore();
   final _title = TextEditingController();
   final _customType = TextEditingController();
@@ -343,16 +356,19 @@ class _DPCreateProjectWizardScreenState
               if (_step > 0) const SizedBox(width: 10),
               Expanded(
                 flex: 2,
-                child: DPHolographicButton(
-                  label: _saving
-                      ? 'Working…'
-                      : _step == _wizardSteps.length - 1
-                          ? 'Create Project'
-                          : 'Next',
-                  icon: _step == _wizardSteps.length - 1
-                      ? Icons.check_circle_outline
-                      : Icons.arrow_forward_rounded,
-                  onTap: _saving ? null : _next,
+                child: TourTarget(
+                  id: 'dp.wizard.save',
+                  child: DPHolographicButton(
+                    label: _saving
+                        ? 'Working…'
+                        : _step == _wizardSteps.length - 1
+                            ? 'Create Project'
+                            : 'Next',
+                    icon: _step == _wizardSteps.length - 1
+                        ? Icons.check_circle_outline
+                        : Icons.arrow_forward_rounded,
+                    onTap: _saving ? null : _next,
+                  ),
                 ),
               ),
             ],
@@ -426,34 +442,37 @@ class _DPCreateProjectWizardScreenState
       children: [
         _coverPhotoField(),
         const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final type in _projectTypes)
+        TourTarget(
+          id: 'dp.wizard.type',
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final type in _projectTypes)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _type = type;
+                    _customTypeSelected = false;
+                  }),
+                  child: DPStatusChip(
+                    label: type,
+                    tone: !_customTypeSelected && _type == type
+                        ? DpTone.warning
+                        : DpTone.neutral,
+                  ),
+                ),
               GestureDetector(
                 onTap: () => setState(() {
-                  _type = type;
-                  _customTypeSelected = false;
+                  _customTypeSelected = true;
+                  _type = _customType.text.trim();
                 }),
                 child: DPStatusChip(
-                  label: type,
-                  tone: !_customTypeSelected && _type == type
-                      ? DpTone.warning
-                      : DpTone.neutral,
+                  label: 'Custom',
+                  tone: _customTypeSelected ? DpTone.warning : DpTone.neutral,
                 ),
               ),
-            GestureDetector(
-              onTap: () => setState(() {
-                _customTypeSelected = true;
-                _type = _customType.text.trim();
-              }),
-              child: DPStatusChip(
-                label: 'Custom',
-                tone: _customTypeSelected ? DpTone.warning : DpTone.neutral,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
         if (_customTypeSelected) ...[
           const SizedBox(height: 12),
@@ -470,18 +489,24 @@ class _DPCreateProjectWizardScreenState
               style: AppTextStyles.caption.copyWith(color: colors.danger)),
         ],
         const SizedBox(height: 12),
-        CoreTextField(
-          controller: _title,
-          label: 'Project title (e.g., Ramadan Telefilm 2027)',
-          icon: Icons.title_rounded,
-          errorText: _errors['title'],
+        TourTarget(
+          id: 'dp.wizard.title',
+          child: CoreTextField(
+            controller: _title,
+            label: 'Project title (e.g., Ramadan Telefilm 2027)',
+            icon: Icons.title_rounded,
+            errorText: _errors['title'],
+          ),
         ),
         const SizedBox(height: 12),
-        CoreTextField(
-          controller: _description,
-          label: 'Description / tone',
-          icon: Icons.notes_rounded,
-          maxLines: 3,
+        TourTarget(
+          id: 'dp.wizard.overview',
+          child: CoreTextField(
+            controller: _description,
+            label: 'Description / tone',
+            icon: Icons.notes_rounded,
+            maxLines: 3,
+          ),
         ),
       ],
     );
@@ -495,9 +520,9 @@ class _DPCreateProjectWizardScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _citiesField(),
+        TourTarget(id: 'dp.wizard.location', child: _citiesField()),
         const SizedBox(height: 12),
-        _dateRangeField(),
+        TourTarget(id: 'dp.wizard.dates', child: _dateRangeField()),
         if (_errors['dates'] != null) ...[
           const SizedBox(height: 6),
           Text(_errors['dates']!,
@@ -692,27 +717,30 @@ class _DPCreateProjectWizardScreenState
         : (min > 0 || max > 0)
             ? 'One bound set'
             : 'Budget starts empty';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CoreTextField(
-          controller: _budgetMin,
-          label: 'Budget minimum (PKR)',
-          icon: Icons.payments_outlined,
-          keyboardType: TextInputType.number,
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 12),
-        CoreTextField(
-          controller: _budgetMax,
-          label: 'Budget maximum (PKR)',
-          icon: Icons.account_balance_wallet_outlined,
-          keyboardType: TextInputType.number,
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 14),
-        DPBudgetHealthBar(value: pct, label: label),
-      ],
+    return TourTarget(
+      id: 'dp.wizard.budget',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CoreTextField(
+            controller: _budgetMin,
+            label: 'Budget minimum (PKR)',
+            icon: Icons.payments_outlined,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          CoreTextField(
+            controller: _budgetMax,
+            label: 'Budget maximum (PKR)',
+            icon: Icons.account_balance_wallet_outlined,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+          DPBudgetHealthBar(value: pct, label: label),
+        ],
+      ),
     );
   }
 
@@ -776,43 +804,46 @@ class _DPCreateProjectWizardScreenState
 
   Widget _filesStep() {
     final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Script vault',
-          style: AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
-        ),
-        const SizedBox(height: 8),
-        dpText(
-          context,
-          'Upload PDF, DOC, DOCX, or TXT. Scripts stay private to invited team members.',
-        ),
-        const SizedBox(height: 12),
-        if (_files.isEmpty)
-          const DPStatusChip(
-              label: 'No files attached yet', tone: DpTone.neutral)
-        else
-          Column(
-            children: [
-              for (final file in _files) ...[
-                _FileRow(
-                  file: file,
-                  onRemove: () => setState(() => _files.remove(file)),
-                  onReplace: () => _replaceFile(file),
-                  onRetry: () => _uploadFile(file),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ],
+    return TourTarget(
+      id: 'dp.wizard.files',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Script vault',
+            style: AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
           ),
-        const SizedBox(height: 8),
-        DPHolographicButton(
-          label: 'Add script from device',
-          icon: Icons.upload_file_outlined,
-          onTap: _pickFiles,
-        ),
-      ],
+          const SizedBox(height: 8),
+          dpText(
+            context,
+            'Upload PDF, DOC, DOCX, or TXT. Scripts stay private to invited team members.',
+          ),
+          const SizedBox(height: 12),
+          if (_files.isEmpty)
+            const DPStatusChip(
+                label: 'No files attached yet', tone: DpTone.neutral)
+          else
+            Column(
+              children: [
+                for (final file in _files) ...[
+                  _FileRow(
+                    file: file,
+                    onRemove: () => setState(() => _files.remove(file)),
+                    onReplace: () => _replaceFile(file),
+                    onRetry: () => _uploadFile(file),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            ),
+          const SizedBox(height: 8),
+          DPHolographicButton(
+            label: 'Add script from device',
+            icon: Icons.upload_file_outlined,
+            onTap: _pickFiles,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1177,51 +1208,54 @@ class _DPCreateProjectWizardScreenState
 
   Widget _reviewStep() {
     final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ReviewRow(label: 'Project', value: _title.text),
-        const SizedBox(height: 10),
-        _ReviewRow(label: 'Type', value: _type),
-        const SizedBox(height: 10),
-        _ReviewRow(
-          label: 'Cities',
-          value: _selectedCities.isEmpty
-              ? 'Not set'
-              : _selectedCities.map((city) => city.name).join(', '),
-        ),
-        const SizedBox(height: 10),
-        _ReviewRow(
-          label: 'Dates',
-          value: (_startDate != null && _endDate != null)
-              ? '${_formatDate(_startDate!)} → ${_formatDate(_endDate!)}'
-              : '',
-        ),
-        const SizedBox(height: 10),
-        _ReviewRow(
-          label: 'Budget range',
-          value: (_budgetMin.text.isEmpty && _budgetMax.text.isEmpty)
-              ? ''
-              : 'PKR ${_budgetMin.text} – ${_budgetMax.text}',
-        ),
-        const SizedBox(height: 10),
-        _ReviewRow(label: 'Team', value: _team.join(', ')),
-        const SizedBox(height: 10),
-        _ReviewRow(
-          label: 'Files',
-          value: _files.isEmpty ? '' : '${_files.length} attached',
-        ),
-        const SizedBox(height: 10),
-        _ReviewRow(
-          label: 'Requirements',
-          value: _requirements.isEmpty ? '' : '${_requirements.length} added',
-        ),
-        if (_errors['submit'] != null) ...[
+    return TourTarget(
+      id: 'dp.wizard.review',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ReviewRow(label: 'Project', value: _title.text),
           const SizedBox(height: 10),
-          Text(_errors['submit']!,
-              style: AppTextStyles.caption.copyWith(color: colors.danger)),
+          _ReviewRow(label: 'Type', value: _type),
+          const SizedBox(height: 10),
+          _ReviewRow(
+            label: 'Cities',
+            value: _selectedCities.isEmpty
+                ? 'Not set'
+                : _selectedCities.map((city) => city.name).join(', '),
+          ),
+          const SizedBox(height: 10),
+          _ReviewRow(
+            label: 'Dates',
+            value: (_startDate != null && _endDate != null)
+                ? '${_formatDate(_startDate!)} → ${_formatDate(_endDate!)}'
+                : '',
+          ),
+          const SizedBox(height: 10),
+          _ReviewRow(
+            label: 'Budget range',
+            value: (_budgetMin.text.isEmpty && _budgetMax.text.isEmpty)
+                ? ''
+                : 'PKR ${_budgetMin.text} – ${_budgetMax.text}',
+          ),
+          const SizedBox(height: 10),
+          _ReviewRow(label: 'Team', value: _team.join(', ')),
+          const SizedBox(height: 10),
+          _ReviewRow(
+            label: 'Files',
+            value: _files.isEmpty ? '' : '${_files.length} attached',
+          ),
+          const SizedBox(height: 10),
+          _ReviewRow(
+            label: 'Requirements',
+            value: _requirements.isEmpty ? '' : '${_requirements.length} added',
+          ),
+          if (_errors['submit'] != null) ...[
+            const SizedBox(height: 10),
+            Text(_errors['submit']!,
+                style: AppTextStyles.caption.copyWith(color: colors.danger)),
+          ],
         ],
-      ],
+      ),
     );
   }
 

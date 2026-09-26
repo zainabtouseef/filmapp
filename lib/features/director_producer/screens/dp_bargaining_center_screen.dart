@@ -6,6 +6,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../widgets/dp_empty_state.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
@@ -171,26 +172,32 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
             const SizedBox(height: 12),
             _FilterRow(value: _filter, onChanged: _setFilter),
             const SizedBox(height: 12),
-            DPResponsiveGrid(
-              minWidth: 300,
-              children: negotiations
-                  .map(
-                    (negotiation) => _NegotiationCard(
-                      title: negotiation.booking.provider.displayName,
-                      project: projectTitles[negotiation.booking.projectId] ??
-                          'Project ${negotiation.booking.projectId}',
-                      subtitle: negotiation.booking.category,
-                      rate: negotiation.currentOffer?.feeLabel ?? 'Rate TBD',
-                      status: _statusLabel(negotiation.status),
-                      tone: _filterTone(_liveFilterKey(negotiation.status)),
-                      expiry: negotiation.currentOffer?.expiresAt == null
-                          ? null
-                          : 'Expiring',
-                      onTap: () =>
-                          openNegotiationSheet(context, negotiation.publicId),
-                    ),
-                  )
-                  .toList(),
+            TourTarget(
+              id: 'dp.bargaining.list',
+              child: DPResponsiveGrid(
+                minWidth: 300,
+                children: negotiations.indexed.map((entry) {
+                  final (index, negotiation) = entry;
+                  final card = _NegotiationCard(
+                    title: negotiation.booking.provider.displayName,
+                    project: projectTitles[negotiation.booking.projectId] ??
+                        'Project ${negotiation.booking.projectId}',
+                    subtitle: negotiation.booking.category,
+                    rate: negotiation.currentOffer?.feeLabel ?? 'Rate TBD',
+                    status: _statusLabel(negotiation.status),
+                    tone: _filterTone(_liveFilterKey(negotiation.status)),
+                    expiry: negotiation.currentOffer?.expiresAt == null
+                        ? null
+                        : 'Expiring',
+                    wrapOpenButton: index == 0,
+                    onTap: () =>
+                        openNegotiationSheet(context, negotiation.publicId),
+                  );
+                  return index == 0
+                      ? TourTarget(id: 'dp.bargaining.firstCard', child: card)
+                      : card;
+                }).toList(),
+              ),
             ),
           ],
         );
@@ -268,6 +275,7 @@ class _NegotiationCard extends StatelessWidget {
   final DpTone tone;
   final String? expiry;
   final VoidCallback onTap;
+  final bool wrapOpenButton;
 
   const _NegotiationCard({
     required this.title,
@@ -278,6 +286,7 @@ class _NegotiationCard extends StatelessWidget {
     required this.tone,
     required this.expiry,
     required this.onTap,
+    this.wrapOpenButton = false,
   });
 
   @override
@@ -328,24 +337,31 @@ class _NegotiationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onTap,
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-              label: const Text('Open Negotiation'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colors.textPrimary,
-                side: BorderSide(color: colors.border),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
+          _buildOpenButton(colors),
         ],
       ),
     );
+  }
+
+  Widget _buildOpenButton(CineThemeColors colors) {
+    final button = SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+        label: const Text('Open Negotiation'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.textPrimary,
+          side: BorderSide(color: colors.border),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+    return wrapOpenButton
+        ? TourTarget(id: 'dp.bargaining.open', child: button)
+        : button;
   }
 }

@@ -42,8 +42,11 @@ class AppDurations {
   static const heroRingRotation = Duration(seconds: 6);
 
   /// Card → detail-profile page transition, timed to let a `Hero` image's
-  /// flight read as a deliberate morph rather than a rushed default push.
-  static const heroReveal = Duration(milliseconds: 480);
+  /// flight read as a deliberate morph rather than a rushed default push —
+  /// matches the CineConnect Flow Reel's card-to-profile morph pacing
+  /// (scaled down from its ~1s authored duration to stay responsive for
+  /// real interaction rather than a passive watch-through).
+  static const heroReveal = Duration(milliseconds: 640);
 
   static const Curve standardCurve = Curves.easeOutCubic;
 }

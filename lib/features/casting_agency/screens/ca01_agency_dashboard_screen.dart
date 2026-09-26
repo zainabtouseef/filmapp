@@ -169,42 +169,47 @@ class _LiveAgencyDashboard extends StatelessWidget {
         // widgets — replaces the old standalone ring card. No calendar
         // widget here: this dashboard has no real event/date data to back
         // one without fabricating it.
-        PortalStaggeredReveal(
-          children: [
-            // FittedBox: guards against the narrowest mobile widths, where
-            // the shell's content column can be tighter than the clock+
-            // ring's combined natural width — that would otherwise clamp
-            // the SizedBox and overflow the Row inside it. scaleDown
-            // measures the group at full size first and only shrinks it
-            // (uniformly, no clipping) when space is tight — a no-op on
-            // any layout wide enough to fit it natively.
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: _clockRingWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const PortalLiveClockWidget(),
-                        const SizedBox(width: 14),
-                        PortalGlassRingWidget(
-                          progress: commissionProgress,
-                          value: _money(paidCommissionMinor),
-                          label: 'Commission\ncollected',
-                          tone: CineTone.premium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    PortalGlassFireWidget(width: _clockRingWidth, height: 118),
-                  ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final clockRingRow = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const PortalLiveClockWidget(),
+                const SizedBox(width: 14),
+                PortalGlassRingWidget(
+                  progress: commissionProgress,
+                  value: _money(paidCommissionMinor),
+                  label: 'Commission\ncollected',
+                  tone: CineTone.premium,
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+            // No second group sits beside this one, so it fills the full
+            // available width (fire stretches, clock+ring stays centered)
+            // instead of sitting pinned at a fixed pixel size with dead
+            // space left beside it on wider layouts.
+            return PortalStaggeredReveal(
+              children: [
+                SizedBox(
+                  width: width,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: width < _clockRingWidth
+                            ? FittedBox(
+                                fit: BoxFit.scaleDown, child: clockRingRow)
+                            : clockRingRow,
+                      ),
+                      const SizedBox(height: 14),
+                      PortalGlassFireWidget(width: width, height: 118),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         AgencyTwoColumn(

@@ -15,6 +15,12 @@ class TourStep {
   final String description;
   final String? routeName;
 
+  /// Sub-state a multi-step/tabbed screen should show while this step is
+  /// active — e.g. an `int` wizard-page index. Portal-agnostic on purpose:
+  /// each screen defines its own meaning via [TourLocalStepSync]; this
+  /// carrier stays a dumb data class so it never needs a feature import.
+  final Object? localStep;
+
   const TourStep({
     required this.id,
     required this.targetId,
@@ -22,5 +28,6 @@ class TourStep {
     required this.title,
     required this.description,
     this.routeName,
+    this.localStep,
   });
 }

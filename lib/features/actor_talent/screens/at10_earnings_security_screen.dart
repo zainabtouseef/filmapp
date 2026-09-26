@@ -6,6 +6,7 @@ import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../shared/payments/payment_trust_timeline.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/actor_talent_models.dart';
@@ -132,98 +133,109 @@ class _LiveEarnings extends StatelessWidget {
     final received = dashboard.creditMinor ~/ 100;
     return Column(
       children: [
-        ActorSectionCard(
-          title: 'Money Safe Summary',
-          icon: Icons.account_balance_wallet_outlined,
-          selected: pending > 0,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'PKR $received',
-                style: AppTextStyles.metricNumber.copyWith(
-                  color: context.appColors.textPrimary,
-                  fontSize: 34,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Verified talent ledger credits from CineConnect.',
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  StatusChip(
-                    label: 'Pending release PKR $pending',
-                    color: pending > 0
-                        ? context.appColors.goldMid
-                        : context.appColors.success,
+        TourTarget(
+          id: 'actor.earnings.summary',
+          child: ActorSectionCard(
+            title: 'Money Safe Summary',
+            icon: Icons.account_balance_wallet_outlined,
+            selected: pending > 0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PKR $received',
+                  style: AppTextStyles.metricNumber.copyWith(
+                    color: context.appColors.textPrimary,
+                    fontSize: 34,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
-                  StatusChip(
-                    label: '${dashboard.schedules.length} schedules',
-                    color: context.appColors.infoBlue,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Verified talent ledger credits from CineConnect.',
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.textSecondary,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    StatusChip(
+                      label: 'Pending release PKR $pending',
+                      color: pending > 0
+                          ? context.appColors.goldMid
+                          : context.appColors.success,
+                    ),
+                    StatusChip(
+                      label: '${dashboard.schedules.length} schedules',
+                      color: context.appColors.infoBlue,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
         ActorTwoColumn(
-          left: ActorSectionCard(
-            title: 'Payment Timeline',
-            icon: Icons.timeline_outlined,
-            child: PaymentTrustTimeline(
-              schedules: dashboard.schedules,
-              audience: PaymentTimelineAudience.provider,
+          left: TourTarget(
+            id: 'actor.earnings.timeline',
+            child: ActorSectionCard(
+              title: 'Payment Timeline',
+              icon: Icons.timeline_outlined,
+              child: PaymentTrustTimeline(
+                schedules: dashboard.schedules,
+                audience: PaymentTimelineAudience.provider,
+              ),
             ),
           ),
-          right: ActorSectionCard(
-            title: 'Security Actions',
-            icon: Icons.verified_user_outlined,
-            child: Column(
-              children: [
-                FutureBuilder<List<PayoutAccountDto>>(
-                  future: accountsFuture,
-                  builder: (context, snapshot) {
-                    final accounts = snapshot.data ?? const [];
-                    return ActorInfoRow(
-                      icon: Icons.account_balance_outlined,
-                      label: 'Payout account',
-                      value: accounts.isEmpty
-                          ? 'None'
-                          : '${accounts.first.accountName} ${accounts.first.accountMasked}',
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                CorePrimaryButton(
-                  icon: Icons.account_balance_outlined,
-                  label: 'Add payout account',
-                  compact: true,
-                  onTap: () => onCreateAccount(),
-                ),
-                const SizedBox(height: 8),
-                CoreSecondaryButton(
-                  icon: Icons.receipt_long_outlined,
-                  label: 'Open receipts',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(context, CoreRoutes.ledger),
-                ),
-                const SizedBox(height: 8),
-                CoreSecondaryButton(
-                  icon: Icons.report_gmailerrorred_outlined,
-                  label: 'Raise issue',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(context, CoreRoutes.report),
-                ),
-              ],
+          right: TourTarget(
+            id: 'actor.earnings.securityActions',
+            child: ActorSectionCard(
+              title: 'Security Actions',
+              icon: Icons.verified_user_outlined,
+              child: Column(
+                children: [
+                  FutureBuilder<List<PayoutAccountDto>>(
+                    future: accountsFuture,
+                    builder: (context, snapshot) {
+                      final accounts = snapshot.data ?? const [];
+                      return ActorInfoRow(
+                        icon: Icons.account_balance_outlined,
+                        label: 'Payout account',
+                        value: accounts.isEmpty
+                            ? 'None'
+                            : '${accounts.first.accountName} ${accounts.first.accountMasked}',
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  CorePrimaryButton(
+                    icon: Icons.account_balance_outlined,
+                    label: 'Add payout account',
+                    compact: true,
+                    onTap: () => onCreateAccount(),
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Open receipts',
+                    compact: true,
+                    onTap: () =>
+                        Navigator.pushNamed(context, CoreRoutes.ledger),
+                  ),
+                  const SizedBox(height: 8),
+                  CoreSecondaryButton(
+                    icon: Icons.report_gmailerrorred_outlined,
+                    label: 'Raise issue',
+                    compact: true,
+                    onTap: () =>
+                        Navigator.pushNamed(context, CoreRoutes.report),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

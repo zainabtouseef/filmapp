@@ -726,7 +726,10 @@ class CineMarketplaceMediaFrame extends StatelessWidget {
       child: media,
     );
     if (heroTag == null) return framed;
-    return Hero(tag: heroTag!, child: framed);
+    return Hero(
+      tag: heroTag!,
+      child: framed,
+    );
   }
 }
 

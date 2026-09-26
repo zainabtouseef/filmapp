@@ -10,6 +10,7 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -90,38 +91,44 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            dpHeaderAction(
-              context,
-              icon: Icons.campaign_outlined,
-              label: _savingDecision ? 'Pinning...' : 'Pin Decision',
-              onTap: _savingDecision ? () {} : _pinDecision,
+            TourTarget(
+              id: 'dp.room.pinDecision',
+              child: dpHeaderAction(
+                context,
+                icon: Icons.campaign_outlined,
+                label: _savingDecision ? 'Pinning...' : 'Pin Decision',
+                onTap: _savingDecision ? () {} : _pinDecision,
+              ),
             ),
             const SizedBox(height: 8),
             DPTwoColumn(
-              left: DPSectionCard(
-                title: 'Team Feed',
-                icon: Icons.chat_bubble_outline_rounded,
-                child: Column(
-                  children: [
-                    if (room.items.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: dpText(
-                          context,
-                          'No room decisions yet. Pin one for the team.',
-                        ),
-                      )
-                    else
-                      for (var i = 0; i < room.items.length; i++)
-                        _RoomFeedItem(
-                          author: room.items[i].creatorName ?? 'CineConnect',
-                          text: room.items[i].body?.isNotEmpty == true
-                              ? room.items[i].body!
-                              : room.items[i].title,
-                          time: _timeLabel(room.items[i].createdAt),
-                          showDivider: i != room.items.length - 1,
-                        ),
-                  ],
+              left: TourTarget(
+                id: 'dp.room.feed',
+                child: DPSectionCard(
+                  title: 'Team Feed',
+                  icon: Icons.chat_bubble_outline_rounded,
+                  child: Column(
+                    children: [
+                      if (room.items.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: dpText(
+                            context,
+                            'No room decisions yet. Pin one for the team.',
+                          ),
+                        )
+                      else
+                        for (var i = 0; i < room.items.length; i++)
+                          _RoomFeedItem(
+                            author: room.items[i].creatorName ?? 'CineConnect',
+                            text: room.items[i].body?.isNotEmpty == true
+                                ? room.items[i].body!
+                                : room.items[i].title,
+                            time: _timeLabel(room.items[i].createdAt),
+                            showDivider: i != room.items.length - 1,
+                          ),
+                    ],
+                  ),
                 ),
               ),
               right: DPSectionCard(

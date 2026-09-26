@@ -5,6 +5,7 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../models/dp_project.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
@@ -125,18 +126,22 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
               )
             else
               DPResponsiveGrid(
-                children: filtered
-                    .map(
-                      (project) => DPProjectCard(
-                        project: project,
-                        onOpen: () => Navigator.pushNamed(
-                          context,
-                          DirectorProducerRoutes.projectDetail,
-                          arguments: project.id,
-                        ),
+                children: filtered.indexed.map(
+                  (entry) {
+                    final (index, project) = entry;
+                    final card = DPProjectCard(
+                      project: project,
+                      onOpen: () => Navigator.pushNamed(
+                        context,
+                        DirectorProducerRoutes.projectDetail,
+                        arguments: project.id,
                       ),
-                    )
-                    .toList(),
+                    );
+                    return index == 0
+                        ? TourTarget(id: 'dp.projects.firstCard', child: card)
+                        : card;
+                  },
+                ).toList(),
               ),
           ],
         );
@@ -203,19 +208,22 @@ class _FilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final key in _filterKeys) ...[
-            DpDotChip(
-              label: key,
-              active: value == key,
-              onTap: () => onChanged(key),
-            ),
-            const SizedBox(width: 8),
+    return TourTarget(
+      id: 'dp.projects.filters',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final key in _filterKeys) ...[
+              DpDotChip(
+                label: key,
+                active: value == key,
+                onTap: () => onChanged(key),
+              ),
+              const SizedBox(width: 8),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

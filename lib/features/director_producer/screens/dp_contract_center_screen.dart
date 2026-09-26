@@ -8,6 +8,7 @@ import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -37,11 +38,14 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        dpHeaderAction(
-          context,
-          icon: Icons.article_outlined,
-          label: _generating ? 'Preparing wizard...' : 'Open contract wizard',
-          onTap: _generating ? () {} : _openContractWizard,
+        TourTarget(
+          id: 'dp.contracts.wizardButton',
+          child: dpHeaderAction(
+            context,
+            icon: Icons.article_outlined,
+            label: _generating ? 'Preparing wizard...' : 'Open contract wizard',
+            onTap: _generating ? () {} : _openContractWizard,
+          ),
         ),
         const SizedBox(height: 8),
         if (future == null)
@@ -80,22 +84,32 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
                       'Accept a booking and generate a contract to populate this center from the database.',
                 );
               }
-              return DPResponsiveGrid(
-                minWidth: 310,
-                children: [
-                  for (final contract in contracts)
-                    _ContractCard(
-                      title: contract.title,
-                      project: contract.projectId,
-                      stakeholder: contract.counterpartySummary,
-                      value: contract.displayValue,
-                      status: contract.statusLabel,
-                      progress: contract.signatureProgress,
-                      date: contract.effectiveDate ?? 'Draft',
-                      contractId: contract.publicId,
-                      onRequestReview: () => _requestReview(contract),
-                    ),
-                ],
+              return TourTarget(
+                id: 'dp.contracts.list',
+                child: DPResponsiveGrid(
+                  minWidth: 310,
+                  children: [
+                    for (final (index, contract) in contracts.indexed)
+                      () {
+                        final card = _ContractCard(
+                          title: contract.title,
+                          project: contract.projectId,
+                          stakeholder: contract.counterpartySummary,
+                          value: contract.displayValue,
+                          status: contract.statusLabel,
+                          progress: contract.signatureProgress,
+                          date: contract.effectiveDate ?? 'Draft',
+                          contractId: contract.publicId,
+                          onRequestReview: () => _requestReview(contract),
+                          wrapDetails: index == 0,
+                        );
+                        return index == 0
+                            ? TourTarget(
+                                id: 'dp.contracts.firstCard', child: card)
+                            : card;
+                      }(),
+                  ],
+                ),
               );
             },
           ),
@@ -1105,6 +1119,7 @@ class _ContractCard extends StatelessWidget {
   final String date;
   final String? contractId;
   final VoidCallback? onRequestReview;
+  final bool wrapDetails;
 
   const _ContractCard({
     required this.title,
@@ -1116,6 +1131,7 @@ class _ContractCard extends StatelessWidget {
     required this.date,
     required this.contractId,
     required this.onRequestReview,
+    this.wrapDetails = false,
   });
 
   @override
@@ -1143,13 +1159,7 @@ class _ContractCard extends StatelessWidget {
           const SizedBox(height: 6),
           dpText(context, '$project - $stakeholder'),
           const SizedBox(height: 9),
-          LinearProgressIndicator(
-            value: progress,
-            minHeight: 7,
-            borderRadius: BorderRadius.circular(99),
-            backgroundColor: colors.surface.withValues(alpha: 0.28),
-            valueColor: AlwaysStoppedAnimation<Color>(colors.goldMid),
-          ),
+          _signatureBar(colors),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -1177,15 +1187,35 @@ class _ContractCard extends StatelessWidget {
           ),
           if (contractId != null) ...[
             const SizedBox(height: 8),
-            DPHolographicButton(
-              label: 'Request Legal Review',
-              icon: Icons.gavel_outlined,
-              onTap: onRequestReview,
-              secondary: true,
-            ),
+            _legalReviewButton(),
           ],
         ],
       ),
     );
+  }
+
+  Widget _signatureBar(CineThemeColors colors) {
+    final bar = LinearProgressIndicator(
+      value: progress,
+      minHeight: 7,
+      borderRadius: BorderRadius.circular(99),
+      backgroundColor: colors.surface.withValues(alpha: 0.28),
+      valueColor: AlwaysStoppedAnimation<Color>(colors.goldMid),
+    );
+    return wrapDetails
+        ? TourTarget(id: 'dp.contracts.signatures', child: bar)
+        : bar;
+  }
+
+  Widget _legalReviewButton() {
+    final button = DPHolographicButton(
+      label: 'Request Legal Review',
+      icon: Icons.gavel_outlined,
+      onTap: onRequestReview,
+      secondary: true,
+    );
+    return wrapDetails
+        ? TourTarget(id: 'dp.contracts.legalReview', child: button)
+        : button;
   }
 }

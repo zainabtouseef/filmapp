@@ -96,45 +96,48 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BrandSectionCard(
-          title: 'Project shortlists',
-          icon: Icons.favorite_outline_rounded,
-          selected: true,
-          child: Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _projectId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Filter by project',
-                    prefixIcon: Icon(Icons.account_tree_outlined),
-                  ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: '',
-                      child: Text('All projects'),
+        TourTarget(
+          id: 'brand.shortlists.filter',
+          child: BrandSectionCard(
+            title: 'Project shortlists',
+            icon: Icons.favorite_outline_rounded,
+            selected: true,
+            child: Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _projectId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Filter by project',
+                      prefixIcon: Icon(Icons.account_tree_outlined),
                     ),
-                    for (final project in _projects)
-                      DropdownMenuItem(
-                        value: project.publicId,
-                        child: Text(
-                          project.title,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('All projects'),
                       ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _projectId = value ?? ''),
+                      for (final project in _projects)
+                        DropdownMenuItem(
+                          value: project.publicId,
+                          child: Text(
+                            project.title,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _projectId = value ?? ''),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: 'Refresh shortlists',
-                onPressed: _loading ? null : _load,
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-            ],
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Refresh shortlists',
+                  onPressed: _loading ? null : _load,
+                  icon: const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -162,7 +165,7 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
           )
         else
           TourTarget(
-            id: 'brand:demo:shortlist-board',
+            id: 'brand.shortlists.board',
             child: Column(
               children: [
                 for (final board in _boards) ...[

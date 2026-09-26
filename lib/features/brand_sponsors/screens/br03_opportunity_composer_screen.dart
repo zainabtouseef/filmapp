@@ -8,6 +8,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -159,83 +160,107 @@ class _BR03OpportunityComposerScreenState
               ],
             ),
             const SizedBox(height: 14),
-            CoreTextField(
-              controller: _title,
-              label: 'Opportunity title',
-              icon: Icons.title_rounded,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreDropdownField<String>(
-              value: _category,
-              values: const [
-                'Product placement',
-                'Sponsorship',
-                'Branded content',
-                'Social campaign',
-                'Event partnership',
-                'Other',
-              ],
-              label: 'Opportunity category',
-              icon: Icons.category_outlined,
-              onChanged: (value) {
-                if (value != null) setState(() => _category = value);
-              },
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _budget,
-              label: 'Total budget (PKR)',
-              icon: Icons.payments_outlined,
-              keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _usage,
-              label: 'Usage rights and territory',
-              icon: Icons.policy_outlined,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _eligibility,
-              label: 'Eligible projects or applicants',
-              icon: Icons.rule_outlined,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 10),
-            CoreTextField(
-              controller: _deliverables,
-              label: 'Required deliverables',
-              icon: Icons.fact_check_outlined,
-              maxLines: 4,
-            ),
-            const SizedBox(height: 10),
-            UploadCard(
-              title: _uploading ? 'Uploading cover...' : 'Opportunity cover',
-              subtitle: _coverFileName ??
-                  (_coverUrl.isEmpty
-                      ? 'Optional campaign or product image'
-                      : 'Current cover is connected'),
-              uploaded: _coverFileName != null || _coverUrl.isNotEmpty,
-              onTap: _uploading ? null : _pickCover,
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                Icons.event_outlined,
-                color: colors.goldDark,
+            TourTarget(
+              id: 'brand.composer.title',
+              child: CoreTextField(
+                controller: _title,
+                label: 'Opportunity title',
+                icon: Icons.title_rounded,
+                onChanged: (_) => setState(() {}),
               ),
-              title: const Text('Application deadline'),
-              subtitle: Text(brandDate(_dueAt)),
-              trailing: IconButton(
-                tooltip: 'Choose deadline',
-                icon: const Icon(Icons.edit_calendar_outlined),
-                onPressed: _pickDeadline,
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.category',
+              child: CoreDropdownField<String>(
+                value: _category,
+                values: const [
+                  'Product placement',
+                  'Sponsorship',
+                  'Branded content',
+                  'Social campaign',
+                  'Event partnership',
+                  'Other',
+                ],
+                label: 'Opportunity category',
+                icon: Icons.category_outlined,
+                onChanged: (value) {
+                  if (value != null) setState(() => _category = value);
+                },
               ),
-              onTap: _pickDeadline,
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.budget',
+              child: CoreTextField(
+                controller: _budget,
+                label: 'Total budget (PKR)',
+                icon: Icons.payments_outlined,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.usage',
+              child: CoreTextField(
+                controller: _usage,
+                label: 'Usage rights and territory',
+                icon: Icons.policy_outlined,
+                maxLines: 3,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.eligibility',
+              child: CoreTextField(
+                controller: _eligibility,
+                label: 'Eligible projects or applicants',
+                icon: Icons.rule_outlined,
+                maxLines: 3,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.deliverables',
+              child: CoreTextField(
+                controller: _deliverables,
+                label: 'Required deliverables',
+                icon: Icons.fact_check_outlined,
+                maxLines: 4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.cover',
+              child: UploadCard(
+                title: _uploading ? 'Uploading cover...' : 'Opportunity cover',
+                subtitle: _coverFileName ??
+                    (_coverUrl.isEmpty
+                        ? 'Optional campaign or product image'
+                        : 'Current cover is connected'),
+                uploaded: _coverFileName != null || _coverUrl.isNotEmpty,
+                onTap: _uploading ? null : _pickCover,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TourTarget(
+              id: 'brand.composer.deadline',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.event_outlined,
+                  color: colors.goldDark,
+                ),
+                title: const Text('Application deadline'),
+                subtitle: Text(brandDate(_dueAt)),
+                trailing: IconButton(
+                  tooltip: 'Choose deadline',
+                  icon: const Icon(Icons.edit_calendar_outlined),
+                  onPressed: _pickDeadline,
+                ),
+                onTap: _pickDeadline,
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
@@ -246,26 +271,29 @@ class _BR03OpportunityComposerScreenState
               ),
             ],
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: CoreSecondaryButton(
-                    icon: Icons.save_outlined,
-                    label: _saving ? 'Saving...' : 'Save draft',
-                    compact: true,
-                    onTap: _saving ? null : () => _save(publish: false),
+            TourTarget(
+              id: 'brand.composer.publish',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CoreSecondaryButton(
+                      icon: Icons.save_outlined,
+                      label: _saving ? 'Saving...' : 'Save draft',
+                      compact: true,
+                      onTap: _saving ? null : () => _save(publish: false),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CorePrimaryButton(
-                    icon: Icons.publish_outlined,
-                    label: _saving ? 'Publishing...' : 'Publish',
-                    compact: true,
-                    onTap: _saving ? null : () => _save(publish: true),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: CorePrimaryButton(
+                      icon: Icons.publish_outlined,
+                      label: _saving ? 'Publishing...' : 'Publish',
+                      compact: true,
+                      onTap: _saving ? null : () => _save(publish: true),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -314,34 +342,37 @@ class _BR03OpportunityComposerScreenState
             ),
           ),
           const SizedBox(height: 12),
-          BrandSectionCard(
-            title: 'Opportunity portfolio',
-            icon: Icons.view_list_outlined,
-            tone: BrandTone.purple,
-            actionText: 'New',
-            onActionTap: _newOpportunity,
-            child: _opportunities.isEmpty
-                ? Text(
-                    'No saved opportunities.',
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  )
-                : Column(
-                    children: [
-                      for (final opportunity in _opportunities)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 9),
-                          child: _OpportunityRow(
-                            opportunity: opportunity,
-                            selected: opportunity.publicId == _selectedId,
-                            onTap: () => _selectOpportunity(opportunity),
-                            onStatus: (status) =>
-                                _changeStatus(opportunity, status),
+          TourTarget(
+            id: 'brand.composer.portfolio',
+            child: BrandSectionCard(
+              title: 'Opportunity portfolio',
+              icon: Icons.view_list_outlined,
+              tone: BrandTone.purple,
+              actionText: 'New',
+              onActionTap: _newOpportunity,
+              child: _opportunities.isEmpty
+                  ? Text(
+                      'No saved opportunities.',
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        for (final opportunity in _opportunities)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 9),
+                            child: _OpportunityRow(
+                              opportunity: opportunity,
+                              selected: opportunity.publicId == _selectedId,
+                              onTap: () => _selectOpportunity(opportunity),
+                              onStatus: (status) =>
+                                  _changeStatus(opportunity, status),
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    ),
+            ),
           ),
         ],
       ),
