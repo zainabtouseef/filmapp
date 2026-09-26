@@ -7,6 +7,8 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/media_equipment_models.dart';
 import '../routes/media_equipment_routes.dart';
@@ -70,18 +72,15 @@ class _ME05AvailabilityCalendarScreenState
   Widget build(BuildContext context) {
     if (_dataFuture == null) {
       return const InlineNotice(
-        message: 'Preview mode. Sign in to manage equipment availability.',
-        icon: Icons.visibility_outlined,
+        message: 'Sign in to manage live equipment availability.',
+        icon: Icons.lock_outline_rounded,
       );
     }
     return FutureBuilder<_ScheduleData>(
       future: _dataFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const InlineNotice(
-            message: 'Loading fleet schedule...',
-            icon: Icons.hourglass_top_rounded,
-          );
+          return const SkeletonCard(height: 480);
         }
         if (snapshot.hasError) {
           return InlineNotice(
@@ -134,24 +133,14 @@ class _ME05AvailabilityCalendarScreenState
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final item in data.items)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: item.modelName,
-                              icon: Icons.videocam_outlined,
-                              selected: item.publicId == selectedItem.publicId,
-                              onTap: () => setState(
-                                () => _selectedItemId = item.publicId,
-                              ),
-                            ),
-                          ),
-                      ],
+                  CineAnimatedFilterRail<EquipmentItemDto>(
+                    values: data.items,
+                    selected: selectedItem,
+                    onSelected: (item) => setState(
+                      () => _selectedItemId = item.publicId,
                     ),
+                    labelFor: (item) => item.modelName,
+                    iconFor: (_) => Icons.videocam_outlined,
                   ),
                   const SizedBox(height: 12),
                   const _AvailabilityLegend(),
@@ -176,29 +165,24 @@ class _ME05AvailabilityCalendarScreenState
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final value in const [
-                        MediaAvailabilityStatus.available,
-                        MediaAvailabilityStatus.hold,
-                        MediaAvailabilityStatus.maintenance,
-                        MediaAvailabilityStatus.transit,
-                      ])
-                        CoreChip(
-                          label: mediaAvailabilityLabel(value),
-                          icon: mediaAvailabilityIcon(value),
-                          selected: status == value,
-                          onTap: _saving || entry?.sourceBookingId != null
-                              ? null
-                              : () => _setStatus(
-                                    item: selectedItem,
-                                    entry: entry,
-                                    status: value,
-                                  ),
-                        ),
+                  CineAnimatedFilterRail<MediaAvailabilityStatus>(
+                    values: const [
+                      MediaAvailabilityStatus.available,
+                      MediaAvailabilityStatus.hold,
+                      MediaAvailabilityStatus.maintenance,
+                      MediaAvailabilityStatus.transit,
                     ],
+                    selected: status,
+                    onSelected: (value) {
+                      if (_saving || entry?.sourceBookingId != null) return;
+                      _setStatus(
+                        item: selectedItem,
+                        entry: entry,
+                        status: value,
+                      );
+                    },
+                    labelFor: mediaAvailabilityLabel,
+                    iconFor: mediaAvailabilityIcon,
                   ),
                 ],
               ),

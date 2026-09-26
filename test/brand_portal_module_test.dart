@@ -81,13 +81,18 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('brand-demo-launcher')), findsOneWidget);
-    expect(find.text('Demo'), findsOneWidget);
-    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('About CineConnect'), findsOneWidget);
+    expect(find.text('Demo'), findsNothing);
+    // Compact headers keep the primary account controls visible and expose
+    // notifications from the portal menu.
+    expect(find.byTooltip('Notifications'), findsNothing);
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byKey(const ValueKey('brand-demo-launcher')));
-    await tester.pump();
+    await tester.tap(find.byTooltip('About CineConnect'));
+    await tester.pumpAndSettle();
+    expect(find.text('Guided tour'), findsOneWidget);
+    await tester.tap(find.text('Guided tour'));
+    await tester.pumpAndSettle();
     expect(tour.isActive, isTrue);
     expect(tour.activeTourId, brandFullWalkthroughTourId);
   });

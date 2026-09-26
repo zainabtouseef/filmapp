@@ -13,6 +13,7 @@ import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../models/role_portal_models.dart';
 
@@ -145,21 +146,21 @@ class _PortalTopBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
+          CineAboutButton(
+            size: compact ? 34 : 38,
+            onStartTour: () => _startPortalNavTour(context, portal),
+          ),
+          SizedBox(width: compact ? 6 : 10),
           _PortalIconButton(
             icon: Icons.logout_rounded,
             tooltip: 'Logout',
             onTap: () => logoutToLogin(context),
+            size: compact ? 34 : 38,
           ),
           if (!compact) ...[
-            const SizedBox(width: 10),
-            _PortalIconButton(
-              icon: Icons.explore_outlined,
-              tooltip: 'Take the tour',
-              onTap: () => _startPortalNavTour(context, portal),
-            ),
             const SizedBox(width: 10),
             _PortalIconButton(
               icon: Icons.notifications_none_rounded,
@@ -177,11 +178,13 @@ class _PortalIconButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final double size;
 
   const _PortalIconButton({
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.size = 38,
   });
 
   @override
@@ -192,10 +195,10 @@ class _PortalIconButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: GlassContainer(
-          width: 38,
-          height: 38,
-          radius: 19,
-          child: Icon(icon, color: colors.icon, size: 20),
+          width: size,
+          height: size,
+          radius: size / 2,
+          child: Icon(icon, color: colors.icon, size: size * 0.53),
         ),
       ),
     );

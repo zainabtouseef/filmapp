@@ -17,6 +17,7 @@ import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/media_equipment_routes.dart';
@@ -395,27 +396,27 @@ class _EquipmentTopBar extends StatelessWidget {
           SizedBox(width: compact ? 8 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
           SizedBox(width: compact ? 8 : 10),
-          _TopIcon(
-            icon: Icons.storefront_outlined,
-            tooltip: 'Provider profile',
-            onTap: () => Navigator.pushNamed(
-              context,
-              MediaEquipmentRoutes.profile,
-            ),
-          ),
           if (wide) ...[
-            const SizedBox(width: 10),
             _TopIcon(
-              icon: Icons.explore_outlined,
-              tooltip: 'Take the tour',
-              onTap: () => _startEquipmentTour(context),
+              icon: Icons.storefront_outlined,
+              tooltip: 'Provider profile',
+              onTap: () => Navigator.pushNamed(
+                context,
+                MediaEquipmentRoutes.profile,
+              ),
             ),
+            const SizedBox(width: 10),
           ],
-          const SizedBox(width: 10),
+          CineAboutButton(
+            size: compact ? 34 : 38,
+            onStartTour: () => _startEquipmentTour(context),
+          ),
+          SizedBox(width: compact ? 6 : 10),
           _TopIcon(
             icon: Icons.logout_rounded,
             tooltip: 'Logout',
             onTap: () => logoutToLogin(context),
+            size: compact ? 34 : 38,
           ),
         ],
       ),
@@ -522,11 +523,13 @@ class _TopIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final double size;
 
   const _TopIcon({
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.size = 38,
   });
 
   @override
@@ -535,13 +538,13 @@ class _TopIcon extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(size / 2),
         onTap: onTap,
         child: GlassContainer(
-          width: 38,
-          height: 38,
-          radius: 19,
-          child: Icon(icon, color: colors.icon, size: 20),
+          width: size,
+          height: size,
+          radius: size / 2,
+          child: Icon(icon, color: colors.icon, size: size * 0.53),
         ),
       ),
     );

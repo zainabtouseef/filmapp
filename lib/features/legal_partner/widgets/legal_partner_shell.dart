@@ -12,6 +12,7 @@ import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../routes/legal_partner_routes.dart';
 
@@ -186,9 +187,11 @@ class _LegalTopBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
+          CineAboutButton(size: compact ? 34 : 38),
+          SizedBox(width: compact ? 6 : 10),
           _LegalIconButton(
             icon: Icons.logout_rounded,
             tooltip: 'Logout',

@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
+import '../../../core/theme/app_durations.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../general_public/routes/general_public_routes.dart';
@@ -18,8 +19,10 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
-import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../../shared/marketplace/marketplace_preferences.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 
 const _categoryKeys = [
   'All',
@@ -32,6 +35,8 @@ const _categoryKeys = [
   'Agencies',
   'Distribution',
 ];
+
+enum _MarketplaceViewMode { list, grid }
 
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
   final String? initialCategory;
@@ -57,10 +62,38 @@ class _DPMarketplaceDiscoveryScreenState
   late String _category = _normalizeCategory(widget.initialCategory);
   bool _verifiedOnly = false;
   bool _newOnly = false;
+  _MarketplaceViewMode _viewMode = _MarketplaceViewMode.list;
+  final _preferences = const MarketplacePreferences();
   final _search = TextEditingController();
   String? _projectId;
   Future<List<DpCandidate>>? _candidatesFuture;
   Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreViewMode();
+  }
+
+  String get _preferenceScope => widget.publicBuyerMode
+      ? 'public-buyer'
+      : widget.browseOnly
+          ? 'shared-portal'
+          : 'director';
+
+  Future<void> _restoreViewMode() async {
+    final usesGrid = await _preferences.usesGrid(_preferenceScope);
+    if (!mounted) return;
+    setState(() {
+      _viewMode =
+          usesGrid ? _MarketplaceViewMode.grid : _MarketplaceViewMode.list;
+    });
+  }
+
+  void _setViewMode(_MarketplaceViewMode value) {
+    setState(() => _viewMode = value);
+    _preferences.setGrid(_preferenceScope, value == _MarketplaceViewMode.grid);
+  }
 
   @override
   void dispose() {
@@ -162,11 +195,15 @@ class _DPMarketplaceDiscoveryScreenState
   }
 
   Future<void> _openMarketplaceFilters() async {
-    await showModalBottomSheet<void>(
+    await showGeneralDialog<void>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss smart filters',
+      barrierColor: Colors.black.withValues(alpha: 0.38),
+      transitionDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : AppDurations.sheet,
+      pageBuilder: (dialogContext, _, __) => StatefulBuilder(
         builder: (context, sheetSetState) {
           void update(VoidCallback change) {
             setState(change);
@@ -174,95 +211,136 @@ class _DPMarketplaceDiscoveryScreenState
           }
 
           return SafeArea(
-            top: false,
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-              decoration: BoxDecoration(
-                color: CineMarketplaceVisuals.of(context).surface,
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                    color: CineMarketplaceVisuals.of(context).border),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'FILTER MARKETPLACE',
-                          style: CineMarketplaceVisuals.of(context).archivo(
-                            size: 13,
-                            weight: FontWeight.w700,
-                            color: CineMarketplaceVisuals.of(context).gold,
-                            letterSpacing: 2.6,
-                          ),
-                        ),
+            child: Align(
+              alignment: Alignment.topRight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                    decoration: BoxDecoration(
+                      color: CineMarketplaceVisuals.of(context).surface,
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: CineMarketplaceVisuals.of(context).border,
                       ),
-                      IconButton(
-                        tooltip: 'Close filters',
-                        onPressed: () => Navigator.pop(sheetContext),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: CineMarketplaceVisuals.of(context).ink,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.24),
+                          blurRadius: 34,
+                          offset: const Offset(0, 16),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _MarketplaceFilterSwitch(
-                    label: 'Verified only',
-                    subtitle: 'Show approved and verified profiles',
-                    value: _verifiedOnly,
-                    onChanged: (value) => update(() => _verifiedOnly = value),
-                  ),
-                  const SizedBox(height: 10),
-                  _MarketplaceFilterSwitch(
-                    label: 'New this week',
-                    subtitle: 'Prioritize recently published listings',
-                    value: _newOnly,
-                    onChanged: (value) => update(() => _newOnly = value),
-                  ),
-                  if (!widget.publicBuyerMode && !widget.browseOnly) ...[
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          Navigator.pushNamed(
-                            this.context,
-                            DirectorProducerRoutes.filters,
-                          );
-                        },
-                        icon: const Icon(Icons.tune_rounded, size: 18),
-                        label: const Text('Open smart filters'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor:
-                              CineMarketplaceVisuals.of(context).gold,
-                          side: BorderSide(
-                            color: CineMarketplaceVisuals.of(context).gold,
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'FILTER MARKETPLACE',
+                                  style: CineMarketplaceVisuals.of(context)
+                                      .archivo(
+                                    size: 13,
+                                    weight: FontWeight.w700,
+                                    color:
+                                        CineMarketplaceVisuals.of(context).gold,
+                                    letterSpacing: 2.6,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Close filters',
+                                onPressed: () => Navigator.pop(dialogContext),
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: CineMarketplaceVisuals.of(context).ink,
+                                ),
+                              ),
+                            ],
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                          const SizedBox(height: 12),
+                          _MarketplaceFilterSwitch(
+                            label: 'Verified only',
+                            subtitle: 'Show approved and verified profiles',
+                            value: _verifiedOnly,
+                            onChanged: (value) =>
+                                update(() => _verifiedOnly = value),
                           ),
-                          textStyle: CineMarketplaceVisuals.of(context).archivo(
-                            size: 13,
-                            weight: FontWeight.w700,
+                          const SizedBox(height: 10),
+                          _MarketplaceFilterSwitch(
+                            label: 'New this week',
+                            subtitle: 'Prioritize recently published listings',
+                            value: _newOnly,
+                            onChanged: (value) =>
+                                update(() => _newOnly = value),
                           ),
-                        ),
+                          if (!widget.publicBuyerMode &&
+                              !widget.browseOnly) ...[
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  Navigator.pushNamed(
+                                    this.context,
+                                    DirectorProducerRoutes.filters,
+                                  );
+                                },
+                                icon: const Icon(Icons.tune_rounded, size: 18),
+                                label: const Text('Open smart filters'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor:
+                                      CineMarketplaceVisuals.of(context).gold,
+                                  side: BorderSide(
+                                    color:
+                                        CineMarketplaceVisuals.of(context).gold,
+                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  textStyle: CineMarketplaceVisuals.of(context)
+                                      .archivo(
+                                    size: 13,
+                                    weight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ],
-                ],
+                  ),
+                ),
               ),
             ),
           );
         },
       ),
+      transitionBuilder: (context, animation, _, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+            alignment: Alignment.topRight,
+            child: child,
+          ),
+        );
+      },
     );
   }
 
@@ -331,6 +409,7 @@ class _DPMarketplaceDiscoveryScreenState
               onChanged: _searchChanged,
               onFilters: _openMarketplaceFilters,
               onSaveSearch: _saveCurrentSearch,
+              activeFilterCount: (_verifiedOnly ? 1 : 0) + (_newOnly ? 1 : 0),
             ),
           ),
           if (!widget.publicBuyerMode &&
@@ -349,21 +428,16 @@ class _DPMarketplaceDiscoveryScreenState
             delay: 100,
             child: TourTarget(
               id: 'dp.marketplace.categories',
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final category in categories)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _MarketplaceCategoryChip(
-                          label: category,
-                          active: _category == category,
-                          onTap: () => _setCategory(category),
-                        ),
-                      ),
-                  ],
-                ),
+              child: CineAnimatedFilterRail<String>(
+                values: categories,
+                selected: _category,
+                onSelected: _setCategory,
+                labelFor: (category) => category,
+                railColor: CineMarketplaceVisuals.of(context).surface,
+                selectedColor: CineMarketplaceVisuals.of(context).gold,
+                selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
+                textColor: CineMarketplaceVisuals.of(context).secondary,
+                borderColor: CineMarketplaceVisuals.of(context).border,
               ),
             ),
           ),
@@ -423,92 +497,22 @@ class _DPMarketplaceDiscoveryScreenState
                       : 'Live $_category feed is not connected yet',
                   message: _categoryHasLiveFeed(_category)
                       ? 'Try clearing filters or searching another city, name, or category.'
-                      : 'This portal no longer shows fake $_category records. Add the planned Director discovery endpoint to populate this category from the database.',
+                      : 'Connect the Director discovery endpoint to populate live $_category records.',
                 );
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CineMarketplaceResults(
-                    cards: candidates.indexed.map(
-                      (entry) {
-                        final card = DPCandidateCard(
-                          featured: entry.$1 == 0,
-                          candidate: entry.$2,
-                          heroTag: 'marketplace-profile-'
-                              '${widget.publicBuyerMode ? (entry.$2.marketplaceListingId ?? entry.$2.profileId) : entry.$2.profileId}',
-                          onProfile: () => Navigator.pushNamed(
-                            context,
-                            widget.browseOnly
-                                ? MarketplaceRoutes.profile
-                                : widget.publicBuyerMode
-                                    ? GeneralPublicRoutes.profile
-                                    : DirectorProducerRoutes.profile,
-                            arguments: {
-                              'candidateId':
-                                  widget.browseOnly || widget.publicBuyerMode
-                                      ? entry.$2.marketplaceListingId ??
-                                          entry.$2.profileId
-                                      : entry.$2.profileId,
-                              'type': entry.$2.category,
-                              if (!widget.publicBuyerMode && !widget.browseOnly)
-                                'projectId': _projectId,
-                            },
-                          ),
-                          onRequest: widget.browseOnly
-                              ? null
-                              : entry.$2.marketplaceListingId == null
-                                  ? () => _showProviderActionPending(entry.$2)
-                                  : () async {
-                                      final isPublicBuyer =
-                                          AuthScope.maybeOf(context)
-                                                  ?.user
-                                                  ?.primaryRole
-                                                  ?.code ==
-                                              'general_public';
-                                      if (!isPublicBuyer &&
-                                          !await ensureKycApproved(context)) {
-                                        return;
-                                      }
-                                      if (!context.mounted) return;
-                                      Navigator.pushNamed(
-                                        context,
-                                        widget.publicBuyerMode
-                                            ? GeneralPublicRoutes.bookingRequest
-                                            : DirectorProducerRoutes
-                                                .bookingRequest,
-                                        arguments: {
-                                          'candidateId':
-                                              entry.$2.marketplaceListingId,
-                                          if (!widget.publicBuyerMode)
-                                            'projectId': _projectId,
-                                          'category': entry.$2.category,
-                                        },
-                                      );
-                                    },
-                          onShortlist: widget.browseOnly
-                              ? null
-                              : widget.publicBuyerMode
-                                  ? () async {
-                                      _showSnack(
-                                        'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
-                                      );
-                                      return false;
-                                    }
-                                  : entry.$2.marketplaceListingId == null
-                                      ? () async {
-                                          _showProviderActionPending(entry.$2);
-                                          return false;
-                                        }
-                                      : () => _shortlistCandidate(entry.$2),
-                        );
-                        return entry.$1 == 0
-                            ? TourTarget(
-                                id: 'dp.marketplace.firstCard', child: card)
-                            : card;
-                      },
-                    ).toList(),
+                  _MarketplaceResultsToolbar(
+                    count: candidates.length,
+                    category: _category,
+                    verifiedOnly: _verifiedOnly,
+                    newOnly: _newOnly,
+                    viewMode: _viewMode,
+                    onViewModeChanged: _setViewMode,
                   ),
+                  const SizedBox(height: 12),
+                  _buildCandidateResults(candidates),
                 ],
               );
             },
@@ -516,6 +520,112 @@ class _DPMarketplaceDiscoveryScreenState
         ],
       ),
     );
+  }
+
+  Widget _buildCandidateResults(List<DpCandidate> candidates) {
+    if (_category != 'All') {
+      return CineMarketplaceResults(
+        grid: _viewMode == _MarketplaceViewMode.grid,
+        cards: [
+          for (final entry in candidates.indexed)
+            _buildCandidateCard(entry.$2, entry.$1),
+        ],
+      );
+    }
+    final grouped = <String, List<DpCandidate>>{};
+    for (final candidate in candidates) {
+      grouped.putIfAbsent(candidate.category, () => []).add(candidate);
+    }
+    var globalIndex = 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final category in _categoryKeys.skip(1))
+          if (grouped[category]?.isNotEmpty ?? false) ...[
+            _MarketplaceCategoryHeading(
+              category: category,
+              count: grouped[category]!.length,
+              onViewAll: () => _setCategory(category),
+            ),
+            const SizedBox(height: 10),
+            CineMarketplaceResults(
+              grid: _viewMode == _MarketplaceViewMode.grid,
+              cards: [
+                for (final candidate in grouped[category]!)
+                  _buildCandidateCard(candidate, globalIndex++),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+      ],
+    );
+  }
+
+  Widget _buildCandidateCard(DpCandidate candidate, int index) {
+    final card = DPCandidateCard(
+      featured: index == 0,
+      candidate: candidate,
+      heroTag: 'marketplace-profile-'
+          '${widget.publicBuyerMode ? (candidate.marketplaceListingId ?? candidate.profileId) : candidate.profileId}',
+      onProfile: () => Navigator.pushNamed(
+        context,
+        widget.browseOnly
+            ? MarketplaceRoutes.profile
+            : widget.publicBuyerMode
+                ? GeneralPublicRoutes.profile
+                : DirectorProducerRoutes.profile,
+        arguments: {
+          'candidateId': widget.browseOnly || widget.publicBuyerMode
+              ? candidate.marketplaceListingId ?? candidate.profileId
+              : candidate.profileId,
+          'type': candidate.category,
+          if (!widget.publicBuyerMode && !widget.browseOnly)
+            'projectId': _projectId,
+        },
+      ),
+      onRequest: widget.browseOnly
+          ? null
+          : candidate.marketplaceListingId == null
+              ? () => _showProviderActionPending(candidate)
+              : () async {
+                  final isPublicBuyer =
+                      AuthScope.maybeOf(context)?.user?.primaryRole?.code ==
+                          'general_public';
+                  if (!isPublicBuyer && !await ensureKycApproved(context)) {
+                    return;
+                  }
+                  if (!mounted) return;
+                  Navigator.pushNamed(
+                    context,
+                    widget.publicBuyerMode
+                        ? GeneralPublicRoutes.bookingRequest
+                        : DirectorProducerRoutes.bookingRequest,
+                    arguments: {
+                      'candidateId': candidate.marketplaceListingId,
+                      if (!widget.publicBuyerMode) 'projectId': _projectId,
+                      'category': candidate.category,
+                    },
+                  );
+                },
+      onShortlist: widget.browseOnly
+          ? null
+          : widget.publicBuyerMode
+              ? () async {
+                  _showSnack(
+                    'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
+                  );
+                  return false;
+                }
+              : candidate.marketplaceListingId == null
+                  ? () async {
+                      _showProviderActionPending(candidate);
+                      return false;
+                    }
+                  : () => _shortlistCandidate(candidate),
+    );
+    return index == 0
+        ? TourTarget(id: 'dp.marketplace.firstCard', child: card)
+        : card;
   }
 
   Future<void> _saveCurrentSearch() async {
@@ -994,55 +1104,6 @@ class _MarketplaceProjectScope extends StatelessWidget {
   }
 }
 
-class _MarketplaceCategoryChip extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _MarketplaceCategoryChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: active
-          ? CineMarketplaceVisuals.of(context).gold
-          : CineMarketplaceVisuals.of(context).surface,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 190),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: active
-                  ? CineMarketplaceVisuals.of(context).gold
-                  : CineMarketplaceVisuals.of(context).border,
-            ),
-          ),
-          child: Text(
-            label,
-            style: CineMarketplaceVisuals.of(context).archivo(
-              size: 11.5,
-              weight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active
-                  ? CineMarketplaceVisuals.of(context).onGold
-                  : CineMarketplaceVisuals.of(context).secondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MarketplaceActiveFilter extends StatelessWidget {
   final String label;
   final VoidCallback onRemove;
@@ -1164,12 +1225,65 @@ class _MarketplaceLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 170,
-      child: Center(
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: CineMarketplaceVisuals.of(context).gold,
+    final visuals = CineMarketplaceVisuals.of(context);
+    return Column(
+      children: List.generate(
+        3,
+        (index) => Container(
+          height: 152,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: visuals.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: visuals.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 104,
+                decoration: BoxDecoration(
+                  color: visuals.border.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _MarketplaceSkeletonLine(widthFactor: 0.46),
+                    const SizedBox(height: 12),
+                    _MarketplaceSkeletonLine(widthFactor: 0.76),
+                    const SizedBox(height: 12),
+                    _MarketplaceSkeletonLine(widthFactor: 0.62),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MarketplaceSkeletonLine extends StatelessWidget {
+  final double widthFactor;
+
+  const _MarketplaceSkeletonLine({required this.widthFactor});
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: Container(
+        height: 12,
+        decoration: BoxDecoration(
+          color:
+              CineMarketplaceVisuals.of(context).border.withValues(alpha: 0.62),
+          borderRadius: BorderRadius.circular(999),
         ),
       ),
     );
@@ -1509,12 +1623,126 @@ class _MarketplaceErrorState extends StatelessWidget {
   }
 }
 
+class _MarketplaceCategoryHeading extends StatelessWidget {
+  final String category;
+  final int count;
+  final VoidCallback onViewAll;
+
+  const _MarketplaceCategoryHeading({
+    required this.category,
+    required this.count,
+    required this.onViewAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = CineMarketplaceVisuals.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            '$category · $count',
+            style: visuals.archivo(
+              size: 15,
+              weight: FontWeight.w700,
+              color: visuals.ink,
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: onViewAll,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+          label: const Text('View all'),
+          style: TextButton.styleFrom(
+            foregroundColor: visuals.gold,
+            textStyle: visuals.archivo(size: 12, weight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MarketplaceResultsToolbar extends StatelessWidget {
+  final int count;
+  final String category;
+  final bool verifiedOnly;
+  final bool newOnly;
+  final _MarketplaceViewMode viewMode;
+  final ValueChanged<_MarketplaceViewMode> onViewModeChanged;
+
+  const _MarketplaceResultsToolbar({
+    required this.count,
+    required this.category,
+    required this.verifiedOnly,
+    required this.newOnly,
+    required this.viewMode,
+    required this.onViewModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final qualifiers = <String>[
+      if (category != 'All') category,
+      if (verifiedOnly) 'verified',
+      if (newOnly) 'new this week',
+    ];
+    final label = '$count approved ${count == 1 ? 'listing' : 'listings'}'
+        '${qualifiers.isEmpty ? '' : ' · ${qualifiers.join(' · ')}'}';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 470;
+        final summary = Text(
+          label,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: CineMarketplaceVisuals.of(context).archivo(
+            size: 11.5,
+            weight: FontWeight.w600,
+            color: CineMarketplaceVisuals.of(context).secondary,
+          ),
+        );
+        final selector = SizedBox(
+          width: 194,
+          child: CineAnimatedFilterRail<_MarketplaceViewMode>(
+            values: _MarketplaceViewMode.values,
+            selected: viewMode,
+            onSelected: onViewModeChanged,
+            labelFor: (mode) =>
+                mode == _MarketplaceViewMode.list ? 'List' : 'Grid',
+            iconFor: (mode) => mode == _MarketplaceViewMode.list
+                ? Icons.view_agenda_outlined
+                : Icons.grid_view_rounded,
+            showSelectionDot: false,
+            itemHeight: 38,
+            selectedColor: CineMarketplaceVisuals.of(context).gold,
+            selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
+            railColor: CineMarketplaceVisuals.of(context).surface,
+            textColor: CineMarketplaceVisuals.of(context).secondary,
+            borderColor: CineMarketplaceVisuals.of(context).border,
+          ),
+        );
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [summary, const SizedBox(height: 8), selector],
+          );
+        }
+        return Row(
+          children: [Expanded(child: summary), selector],
+        );
+      },
+    );
+  }
+}
+
 class _MarketplaceSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String? hintText;
   final VoidCallback onChanged;
   final VoidCallback? onFilters;
   final VoidCallback onSaveSearch;
+  final int activeFilterCount;
 
   const _MarketplaceSearchBar({
     required this.controller,
@@ -1522,6 +1750,7 @@ class _MarketplaceSearchBar extends StatelessWidget {
     required this.onChanged,
     this.onFilters,
     required this.onSaveSearch,
+    this.activeFilterCount = 0,
   });
 
   @override
@@ -1599,6 +1828,7 @@ class _MarketplaceSearchBar extends StatelessWidget {
               icon: Icons.tune_rounded,
               onTap: onFilters!,
               emphasized: true,
+              badgeCount: activeFilterCount,
             ),
           ),
         ],
@@ -1612,12 +1842,14 @@ class _MarketplaceSquareButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final bool emphasized;
+  final int badgeCount;
 
   const _MarketplaceSquareButton({
     required this.tooltip,
     required this.icon,
     required this.onTap,
     this.emphasized = false,
+    this.badgeCount = 0,
   });
 
   @override
@@ -1643,12 +1875,44 @@ class _MarketplaceSquareButton extends StatelessWidget {
                     : CineMarketplaceVisuals.of(context).border,
               ),
             ),
-            child: Icon(
-              icon,
-              color: emphasized
-                  ? CineMarketplaceVisuals.of(context).onGold
-                  : CineMarketplaceVisuals.of(context).gold,
-              size: 21,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: emphasized
+                      ? CineMarketplaceVisuals.of(context).onGold
+                      : CineMarketplaceVisuals.of(context).gold,
+                  size: 21,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: 7,
+                    top: 7,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 17),
+                      height: 17,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: emphasized
+                            ? CineMarketplaceVisuals.of(context).ink
+                            : CineMarketplaceVisuals.of(context).gold,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$badgeCount',
+                        style: CineMarketplaceVisuals.of(context).archivo(
+                          size: 9,
+                          weight: FontWeight.w800,
+                          color: emphasized
+                              ? CineMarketplaceVisuals.of(context).surface
+                              : CineMarketplaceVisuals.of(context).onGold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

@@ -458,6 +458,18 @@ def _apply_project_payload(
         project.progress_percent = progress
 
 
+def _validate_required_project_cover(project: Project, payload: dict[str, Any]) -> None:
+    if (
+        payload.get("require_cover") is True
+        and project.status != "draft"
+        and project.cover_file_id is None
+    ):
+        raise _field_error(
+            "cover_file_id",
+            "Add a project cover image before publishing the project.",
+        )
+
+
 def _apply_requirement_payload(
     requirement: ProjectRequirement, payload: dict[str, Any]
 ) -> None:
@@ -569,6 +581,7 @@ def create_project() -> ResponseReturnValue:
         organization_id=str(payload.get("organization_id", "")).strip()[:40] or None,
     )
     _apply_project_payload(project, payload, actor=user)
+    _validate_required_project_cover(project, payload)
     db.session.add(project)
     db.session.flush()
     db.session.add(
@@ -658,7 +671,9 @@ def update_project(public_id: str) -> Response:
             "Only the project owner can update project settings.",
             status=403,
         )
-    _apply_project_payload(project, _json_body(), actor=user)
+    payload = _json_body()
+    _apply_project_payload(project, payload, actor=user)
+    _validate_required_project_cover(project, payload)
     db.session.commit()
     return jsonify(success({"project": _project_payload(project, include_nested=True)}))
 

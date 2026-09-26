@@ -6,6 +6,7 @@ import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -195,27 +196,17 @@ class _BR06CampaignTrackerScreenState extends State<BR06CampaignTrackerScreen> {
                   onChanged: (value) => setState(() => _query = value),
                 ),
                 const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final tab in const [
-                        'All',
-                        'Awaiting proof',
-                        'Review',
-                        'Revision',
-                        'Approved',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: CoreChip(
-                            label: tab,
-                            selected: _tab == tab,
-                            onTap: () => setState(() => _tab = tab),
-                          ),
-                        ),
-                    ],
-                  ),
+                CineAnimatedFilterRail<String>(
+                  values: const [
+                    'All',
+                    'Awaiting proof',
+                    'Review',
+                    'Revision',
+                    'Approved',
+                  ],
+                  selected: _tab,
+                  onSelected: (tab) => setState(() => _tab = tab),
+                  labelFor: (tab) => tab,
                 ),
               ],
             ),

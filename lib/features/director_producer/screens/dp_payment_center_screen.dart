@@ -8,6 +8,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_local_step_sync.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/payments/payment_trust_timeline.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/dp_payment.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
@@ -58,10 +60,14 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen>
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CoreEmptyState(
-            icon: Icons.hourglass_top_rounded,
-            title: 'Loading payment center',
-            message: 'Fetching schedules and ledger totals.',
+          return const Column(
+            children: [
+              SkeletonCard(height: 72),
+              SizedBox(height: 12),
+              SkeletonCard(height: 138),
+              SizedBox(height: 12),
+              SkeletonCard(height: 280),
+            ],
           );
         }
         if (snapshot.hasError) {
@@ -148,26 +154,11 @@ class _PaymentCenterContent extends StatelessWidget {
           title: 'Payments',
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            DpDotChip(
-              label: 'Ledger',
-              active: tab == 'Ledger',
-              onTap: () => onTab('Ledger'),
-            ),
-            const SizedBox(width: 8),
-            DpDotChip(
-              label: 'Timeline',
-              active: tab == 'Timeline',
-              onTap: () => onTab('Timeline'),
-            ),
-            const SizedBox(width: 8),
-            DpDotChip(
-              label: 'History',
-              active: tab == 'History',
-              onTap: () => onTab('History'),
-            ),
-          ],
+        CineAnimatedFilterRail<String>(
+          values: const ['Ledger', 'Timeline', 'History'],
+          selected: tab,
+          onSelected: onTab,
+          labelFor: (value) => value,
         ),
         const SizedBox(height: 12),
         _StatGrid(

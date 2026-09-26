@@ -581,8 +581,13 @@ class _ShortlistButton extends StatelessWidget {
 /// Staggers result rows upward in the same order as the reference animation.
 class CineMarketplaceResults extends StatefulWidget {
   final List<Widget> cards;
+  final bool grid;
 
-  const CineMarketplaceResults({super.key, required this.cards});
+  const CineMarketplaceResults({
+    super.key,
+    required this.cards,
+    this.grid = false,
+  });
 
   @override
   State<CineMarketplaceResults> createState() => _CineMarketplaceResultsState();
@@ -614,20 +619,37 @@ class _CineMarketplaceResultsState extends State<CineMarketplaceResults>
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final count = cards.length.clamp(1, 8);
-    return Column(
-      children: [
-        for (var index = 0; index < cards.length; index++) ...[
-          if (reduceMotion)
-            cards[index]
-          else
-            _RevealRow(
-              controller: _controller,
-              start: (index / count) * 0.52,
-              child: cards[index],
-            ),
-          if (index != cards.length - 1) const SizedBox(height: 10),
+    Widget animatedCard(int index) => reduceMotion
+        ? cards[index]
+        : _RevealRow(
+            controller: _controller,
+            start: (index / count) * 0.52,
+            child: cards[index],
+          );
+    if (!widget.grid) {
+      return Column(
+        children: [
+          for (var index = 0; index < cards.length; index++) ...[
+            animatedCard(index),
+            if (index != cards.length - 1) const SizedBox(height: 10),
+          ],
         ],
-      ],
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = (constraints.maxWidth / 380).floor().clamp(1, 4);
+        const gap = 12.0;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (var index = 0; index < cards.length; index++)
+              SizedBox(width: width, child: animatedCard(index)),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/core_ui/widgets/core_widgets.dart';
+import '../widgets/cine_animated_filter_rail.dart';
 
 class AdminCompactFilterBar extends StatelessWidget {
   final List<String> filters;
@@ -16,22 +16,11 @@ class AdminCompactFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: filters
-            .map(
-              (filter) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: CoreChip(
-                  label: filter,
-                  selected: selected == filter,
-                  onTap: () => onSelected(filter),
-                ),
-              ),
-            )
-            .toList(),
-      ),
+    return CineAnimatedFilterRail<String>(
+      values: filters,
+      selected: selected,
+      onSelected: onSelected,
+      labelFor: (filter) => filter,
     );
   }
 }

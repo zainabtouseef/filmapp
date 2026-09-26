@@ -5,6 +5,7 @@ import '../../core/core_ui/core_logout.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/theme_controller.dart';
+import 'cine_about_button.dart';
 import 'glass_card.dart';
 
 /// The CineConnect brand header: logo + tagline, theme toggle,
@@ -26,6 +27,7 @@ class CineConnectHeader extends StatelessWidget {
     final colors = context.appColors;
     final width = MediaQuery.sizeOf(context).width;
     final tablet = width >= 700;
+    final phone = width < 600;
     final logoSize = tablet ? 28.0 : 20.0;
     final taglineSize = tablet ? 12.5 : 10.5;
     final avatarSize = tablet ? 56.0 : 48.0;
@@ -114,12 +116,18 @@ class CineConnectHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ThemeToggleButton(size: tablet ? 42 : 34),
-                SizedBox(width: tablet ? 18 : 12),
-                _NotificationBell(tablet: tablet),
-                SizedBox(width: tablet ? 18 : 12),
+                SizedBox(width: tablet ? 18 : 6),
+                if (!phone) ...[
+                  _NotificationBell(tablet: tablet),
+                  SizedBox(width: tablet ? 18 : 6),
+                ],
+                CineAboutButton(size: tablet ? 42 : 34),
+                SizedBox(width: tablet ? 18 : 6),
                 _HeaderLogoutButton(size: tablet ? 42 : 34),
-                SizedBox(width: tablet ? 20 : 14),
-                _GoldAvatar(size: avatarSize, child: avatar),
+                if (!phone) ...[
+                  SizedBox(width: tablet ? 20 : 8),
+                  _GoldAvatar(size: avatarSize, child: avatar),
+                ],
               ],
             ),
           ),

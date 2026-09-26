@@ -19,6 +19,7 @@ import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../director_producer/screens/dp_booking_request_form_screen.dart';
 import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
@@ -524,6 +525,8 @@ class _PublicTopBar extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           ThemeToggleButton(size: compact ? 34 : 38),
+          SizedBox(width: compact ? 8 : 10),
+          CineAboutButton(size: compact ? 34 : 38),
           SizedBox(width: compact ? 8 : 10),
           _PublicIconButton(
             icon: Icons.logout_rounded,

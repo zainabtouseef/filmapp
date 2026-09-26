@@ -528,6 +528,26 @@ class AuthController extends ChangeNotifier {
     return DirectorRepository(_client).schedule(projectId: projectId);
   }
 
+  Future<DirectorScheduleEvent> createDirectorScheduleEvent({
+    required String projectId,
+    required String title,
+    required String eventType,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    String? location,
+    String? notes,
+  }) {
+    return DirectorRepository(_client).createScheduleEvent(
+      projectId: projectId,
+      title: title,
+      eventType: eventType,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      location: location,
+      notes: notes,
+    );
+  }
+
   Future<DirectorDiscoveryBundle> directorDiscovery({
     String? category,
     String? query,

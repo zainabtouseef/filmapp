@@ -50,28 +50,29 @@ void main() {
     return controller;
   }
 
-  testWidgets('mobile DP shell always shows a labeled demo launcher',
+  testWidgets('mobile DP shell exposes the guided tour through About',
       (tester) async {
     final controller = await pumpShell(tester, size: const Size(390, 844));
 
-    expect(find.byKey(const ValueKey('dp-demo-launcher')), findsOneWidget);
-    expect(find.text('Demo'), findsOneWidget);
+    expect(find.byTooltip('About CineConnect'), findsOneWidget);
+    expect(find.text('Demo'), findsNothing);
     expect(tester.takeException(), isNull);
 
-    final launcher = tester.widget<InkWell>(
-      find.byKey(const ValueKey('dp-demo-launcher')),
-    );
-    launcher.onTap!();
+    await tester.tap(find.byTooltip('About CineConnect'));
+    await tester.pumpAndSettle();
+    expect(find.text('Guided tour'), findsOneWidget);
+    await tester.tap(find.text('Guided tour'));
+    await tester.pumpAndSettle();
 
     expect(controller.isActive, isTrue);
     expect(controller.activeTourId, dpFullWalkthroughTourId);
   });
 
-  testWidgets('desktop keeps the tour action in the top bar', (tester) async {
+  testWidgets('desktop keeps About in the top bar', (tester) async {
     await pumpShell(tester, size: const Size(1440, 1000));
 
-    expect(find.byKey(const ValueKey('dp-demo-launcher')), findsNothing);
-    expect(find.byTooltip('Take the tour'), findsOneWidget);
+    expect(find.byTooltip('About CineConnect'), findsOneWidget);
+    expect(find.byTooltip('Take the tour'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -155,26 +157,16 @@ class _LO09EarningsDepositsScreenState
               children: [
                 TourTarget(
                   id: 'location.earnings.filters',
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final filter in [
-                          'All',
-                          'Pending',
-                          'Verified',
-                          'Disputed',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: CoreChip(
-                              label: filter,
-                              selected: _filter == filter,
-                              onTap: () => setState(() => _filter = filter),
-                            ),
-                          ),
-                      ],
-                    ),
+                  child: CineAnimatedFilterRail<String>(
+                    values: const [
+                      'All',
+                      'Pending',
+                      'Verified',
+                      'Disputed',
+                    ],
+                    selected: _filter,
+                    onSelected: (filter) => setState(() => _filter = filter),
+                    labelFor: (filter) => filter,
                   ),
                 ),
                 const SizedBox(height: 12),

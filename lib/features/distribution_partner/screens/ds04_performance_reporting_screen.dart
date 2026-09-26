@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
@@ -74,21 +76,12 @@ class _DS04PerformanceReportingScreenState
                       onChanged: (value) => setState(() => _query = value),
                     ),
                     const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final channel in _channels(liveRows))
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: CoreChip(
-                                label: channel,
-                                selected: _channel == channel,
-                                onTap: () => setState(() => _channel = channel),
-                              ),
-                            ),
-                        ],
-                      ),
+                    CineAnimatedFilterRail<String>(
+                      values: _channels(liveRows),
+                      selected: _channel,
+                      onSelected: (channel) =>
+                          setState(() => _channel = channel),
+                      labelFor: (channel) => channel,
                     ),
                     const SizedBox(height: 12),
                     DistributionTwoColumn(

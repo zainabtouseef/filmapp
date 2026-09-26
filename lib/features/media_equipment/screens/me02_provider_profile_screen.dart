@@ -46,7 +46,8 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
     final profile = await operations.equipmentProfile(force: true);
     final items = await operations.equipmentItems(force: true);
     final userProfile = await auth.myProfile();
-    return _ProfileData(profile: profile, items: items, userProfile: userProfile);
+    return _ProfileData(
+        profile: profile, items: items, userProfile: userProfile);
   }
 
   Future<void> _pickAvatar() async {
@@ -97,7 +98,7 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
   Widget build(BuildContext context) {
     if (_dataFuture == null) {
       return const InlineNotice(
-        message: 'Preview mode. Sign in to manage the provider profile.',
+        message: 'Sign in to manage the live provider profile.',
         icon: Icons.visibility_outlined,
       );
     }
@@ -247,9 +248,9 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
                     MediaInfoRow(
                       icon: Icons.music_note_rounded,
                       label: 'TikTok',
-                      value: data.userProfile.socialLinks['tiktok']
-                              ?.toString() ??
-                          'Not connected',
+                      value:
+                          data.userProfile.socialLinks['tiktok']?.toString() ??
+                              'Not connected',
                     ),
                     MediaInfoRow(
                       icon: Icons.inventory_2_outlined,

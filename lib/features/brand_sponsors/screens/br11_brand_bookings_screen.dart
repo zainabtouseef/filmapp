@@ -7,6 +7,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
@@ -151,37 +152,27 @@ class _BR11BrandBookingsScreenState extends State<BR11BrandBookingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final status in const [
-                        'All',
-                        'Sent',
-                        'Viewed',
-                        'Under negotiation',
-                        'Accepted',
-                        'Secured',
-                        'Completed',
-                        'Cancelled',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 7),
-                          child: FilterChip(
-                            label: Text(status),
-                            selected: status == 'All'
-                                ? _status == 'All'
-                                : _status ==
-                                    status.toLowerCase().replaceAll(' ', '_'),
-                            onSelected: (_) => setState(
-                              () => _status = status == 'All'
-                                  ? 'All'
-                                  : status.toLowerCase().replaceAll(' ', '_'),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                CineAnimatedFilterRail<String>(
+                  values: const [
+                    'All',
+                    'sent',
+                    'viewed',
+                    'under_negotiation',
+                    'accepted',
+                    'secured',
+                    'completed',
+                    'cancelled',
+                  ],
+                  selected: _status,
+                  onSelected: (status) => setState(() => _status = status),
+                  labelFor: (status) => status == 'All'
+                      ? status
+                      : status
+                          .replaceAll('_', ' ')
+                          .split(' ')
+                          .map((part) =>
+                              '${part[0].toUpperCase()}${part.substring(1)}')
+                          .join(' '),
                 ),
               ],
             ),

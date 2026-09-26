@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
@@ -433,40 +435,35 @@ class _RequestCommandBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: TourTarget(
-              id: 'location.requests.filters',
-              child: Row(
-                children: [
-                  for (final filter in [
+          TourTarget(
+            id: 'location.requests.filters',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CineAnimatedFilterRail<String>(
+                  values: const [
                     'All',
                     'New',
                     'Negotiation',
                     'Accepted',
                     'Closed',
-                  ])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: CoreChip(
-                        label: filter,
-                        selected: selectedFilter == filter,
-                        onTap: () => onFilterChanged(filter),
-                      ),
-                    ),
-                  const SizedBox(width: 8),
-                  for (final sort in ['Newest', 'Fee'])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: CoreChip(
-                        label: sort,
-                        selected: selectedSort == sort,
-                        icon: Icons.sort_rounded,
-                        onTap: () => onSortChanged(sort),
-                      ),
-                    ),
-                ],
-              ),
+                  ],
+                  selected: selectedFilter,
+                  onSelected: onFilterChanged,
+                  labelFor: (filter) => filter,
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 230,
+                  child: CineAnimatedFilterRail<String>(
+                    values: const ['Newest', 'Fee'],
+                    selected: selectedSort,
+                    onSelected: onSortChanged,
+                    labelFor: (sort) => sort,
+                    iconFor: (_) => Icons.sort_rounded,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

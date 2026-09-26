@@ -38,7 +38,7 @@ class _ME06RateTermsScreenState extends State<ME06RateTermsScreen> {
   Widget build(BuildContext context) {
     if (_termsFuture == null) {
       return const InlineNotice(
-        message: 'Preview mode. Sign in to manage rental terms.',
+        message: 'Sign in to manage live rental terms.',
         icon: Icons.visibility_outlined,
       );
     }

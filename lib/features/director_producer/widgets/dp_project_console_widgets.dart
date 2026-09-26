@@ -6,6 +6,7 @@ import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/dp_booking.dart';
 import '../models/dp_contract.dart';
 import '../models/dp_payment.dart';
@@ -389,6 +390,41 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
     return auth.directorSchedule(projectId: widget.projectId);
   }
 
+  Future<void> _addPlan() async {
+    final projectId = widget.projectId;
+    if (projectId == null) return;
+    final draft = await showModalBottomSheet<_PlanDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _AddPlanSheet(),
+    );
+    if (draft == null || !mounted) return;
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) return;
+    try {
+      await auth.createDirectorScheduleEvent(
+        projectId: projectId,
+        title: draft.title,
+        eventType: draft.eventType,
+        startsAt: draft.startsAt,
+        endsAt: draft.endsAt,
+        location: draft.location,
+        notes: draft.notes,
+      );
+      if (!mounted) return;
+      setState(() => _future = _load());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Plan added to the live schedule.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not add plan: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -398,6 +434,18 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
           value: _mode,
           onChanged: (value) => setState(() => _mode = value),
         ),
+        if (widget.projectId != null) ...[
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: DPHolographicButton(
+              label: 'Add plan',
+              icon: Icons.add_task_rounded,
+              onTap: _addPlan,
+              secondary: true,
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         FutureBuilder<DirectorSchedule>(
           future: _future,
@@ -438,6 +486,219 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
   }
 }
 
+typedef _PlanDraft = ({
+  String title,
+  String eventType,
+  DateTime startsAt,
+  DateTime endsAt,
+  String location,
+  String notes,
+});
+
+class _AddPlanSheet extends StatefulWidget {
+  const _AddPlanSheet();
+
+  @override
+  State<_AddPlanSheet> createState() => _AddPlanSheetState();
+}
+
+class _AddPlanSheetState extends State<_AddPlanSheet> {
+  final _title = TextEditingController();
+  final _location = TextEditingController();
+  final _notes = TextEditingController();
+  String _eventType = 'shoot';
+  DateTime _date = DateTime.now();
+  TimeOfDay _start = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _end = const TimeOfDay(hour: 10, minute: 0);
+  String? _error;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _location.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final value = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+    if (value != null) setState(() => _date = value);
+  }
+
+  Future<void> _pickTime({required bool start}) async {
+    final value = await showTimePicker(
+      context: context,
+      initialTime: start ? _start : _end,
+    );
+    if (value == null) return;
+    setState(() {
+      if (start) {
+        _start = value;
+      } else {
+        _end = value;
+      }
+    });
+  }
+
+  DateTime _combine(TimeOfDay value) => DateTime(
+        _date.year,
+        _date.month,
+        _date.day,
+        value.hour,
+        value.minute,
+      );
+
+  void _submit() {
+    final startsAt = _combine(_start);
+    final endsAt = _combine(_end);
+    if (_title.text.trim().length < 2) {
+      setState(() => _error = 'Add a plan title.');
+      return;
+    }
+    if (!endsAt.isAfter(startsAt)) {
+      setState(() => _error = 'End time must be after start time.');
+      return;
+    }
+    Navigator.pop(context, (
+      title: _title.text.trim(),
+      eventType: _eventType,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      location: _location.text.trim(),
+      notes: _notes.text.trim(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + bottom),
+        decoration: BoxDecoration(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colors.border),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Add production plan',
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 20,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _title,
+                decoration: const InputDecoration(
+                  labelText: 'Plan title',
+                  prefixIcon: Icon(Icons.edit_calendar_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _eventType,
+                decoration: const InputDecoration(
+                  labelText: 'Plan type',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: const [
+                  'shoot',
+                  'audition',
+                  'meeting',
+                  'deadline',
+                  'payment',
+                  'contract',
+                  'task',
+                  'reminder',
+                ]
+                    .map((value) => DropdownMenuItem(
+                          value: value,
+                          child:
+                              Text(value[0].toUpperCase() + value.substring(1)),
+                        ))
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => _eventType = value ?? _eventType),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(
+                      '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickTime(start: true),
+                    icon: const Icon(Icons.schedule_outlined),
+                    label: Text('Start ${_start.format(context)}'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickTime(start: false),
+                    icon: const Icon(Icons.schedule_send_outlined),
+                    label: Text('End ${_end.format(context)}'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _location,
+                decoration: const InputDecoration(
+                  labelText: 'Location (optional)',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _notes,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (optional)',
+                  prefixIcon: Icon(Icons.notes_outlined),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _error!,
+                  style: AppTextStyles.caption.copyWith(color: colors.danger),
+                ),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add_task_rounded),
+                  label: const Text('Add to planner'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CalendarToggle extends StatelessWidget {
   final ProductionCalendarMode value;
   final ValueChanged<ProductionCalendarMode> onChanged;
@@ -446,49 +707,15 @@ class _CalendarToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _ToggleChip(
-          label: 'Today',
-          selected: value == ProductionCalendarMode.today,
-          onTap: () => onChanged(ProductionCalendarMode.today),
-        ),
-        _ToggleChip(
-          label: 'Month',
-          selected: value == ProductionCalendarMode.month,
-          onTap: () => onChanged(ProductionCalendarMode.month),
-        ),
-        _ToggleChip(
-          label: 'List',
-          selected: value == ProductionCalendarMode.list,
-          onTap: () => onChanged(ProductionCalendarMode.list),
-        ),
-      ],
-    );
-  }
-}
-
-class _ToggleChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ToggleChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: DPStatusChip(
-        label: label,
-        tone: selected ? DpTone.warning : DpTone.neutral,
-      ),
+    return CineAnimatedFilterRail<ProductionCalendarMode>(
+      values: ProductionCalendarMode.values,
+      selected: value,
+      onSelected: onChanged,
+      labelFor: (mode) => switch (mode) {
+        ProductionCalendarMode.today => 'Today',
+        ProductionCalendarMode.month => 'Month',
+        ProductionCalendarMode.list => 'List',
+      },
     );
   }
 }

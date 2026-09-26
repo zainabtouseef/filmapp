@@ -77,8 +77,7 @@ class _EquipmentInspectionWorkspaceState
   Widget build(BuildContext context) {
     if (_dataFuture == null) {
       return InlineNotice(
-        message:
-            'Preview mode. Sign in to manage ${widget.inspectionType} inspections.',
+        message: 'Sign in to manage live ${widget.inspectionType} inspections.',
         icon: Icons.visibility_outlined,
       );
     }

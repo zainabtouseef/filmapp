@@ -67,6 +67,7 @@ class ProjectsController extends ChangeNotifier {
     String? status,
     String? visibility,
     int? progressPercent,
+    String? coverFileId,
   }) async {
     final project = await _repository.updateProject(
       projectId: projectId,
@@ -81,6 +82,7 @@ class ProjectsController extends ChangeNotifier {
       status: status,
       visibility: visibility,
       progressPercent: progressPercent,
+      coverFileId: coverFileId,
     );
     await projects(force: true);
     return project;

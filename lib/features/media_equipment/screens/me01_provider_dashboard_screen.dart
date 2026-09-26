@@ -82,7 +82,7 @@ class _ME01ProviderDashboardScreenState
   Widget build(BuildContext context) {
     if (_dataFuture == null) {
       return const InlineNotice(
-        message: 'Preview mode. Sign in to load equipment operations.',
+        message: 'Sign in to load live equipment operations.',
         icon: Icons.visibility_outlined,
       );
     }

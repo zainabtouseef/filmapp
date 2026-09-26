@@ -87,7 +87,7 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
       if (!mounted) return;
       setState(() {
         _notice =
-            'Live reporting unavailable — this screen will keep your draft locally.';
+            'Could not load live report reasons. Reopen this screen to retry.';
       });
     }
   }
@@ -112,24 +112,32 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
 
   Future<void> _submit() async {
     if (_submitting) return;
-    setState(() => _submitting = true);
     final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null) {
+      showCoreSnack(context, 'Sign in before submitting a report.');
+      return;
+    }
+    final entityId = widget.entityId ?? widget.reportedUserId;
+    if (entityId == null || entityId.trim().isEmpty) {
+      showCoreSnack(
+        context,
+        'Open Report from a live profile, booking, or project first.',
+      );
+      return;
+    }
+    setState(() => _submitting = true);
     try {
-      if (trustSafety != null) {
-        await trustSafety.createReport({
-          'entity_type': widget.entityType,
-          'entity_id': widget.entityId ??
-              widget.reportedUserId ??
-              'DEMO-REPORTED-ENTITY',
-          'reported_user_id': widget.reportedUserId,
-          'reason': _reasonCode(),
-          'description':
-              '${_description.text.trim()}\nUrgency: $_urgency\nEvidence attached: $_uploaded',
-        });
-        if (_block && widget.reportedUserId != null) {
-          await trustSafety.blockUser(widget.reportedUserId!,
-              reason: _reasonCode());
-        }
+      await trustSafety.createReport({
+        'entity_type': widget.entityType,
+        'entity_id': entityId,
+        'reported_user_id': widget.reportedUserId,
+        'reason': _reasonCode(),
+        'description':
+            '${_description.text.trim()}\nUrgency: $_urgency\nEvidence attached: $_uploaded',
+      });
+      if (_block && widget.reportedUserId != null) {
+        await trustSafety.blockUser(widget.reportedUserId!,
+            reason: _reasonCode());
       }
       if (_block) {
         widget.onBlock?.call();

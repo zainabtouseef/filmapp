@@ -12,6 +12,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
@@ -64,17 +65,14 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
       future: _roomFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return DPSectionCard(
-            title: 'Project Room',
-            icon: Icons.hourglass_top_rounded,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 28),
-                child: CircularProgressIndicator(
-                  color: context.appColors.goldMid,
-                ),
-              ),
-            ),
+          return const Column(
+            children: [
+              SkeletonCard(height: 64),
+              SizedBox(height: 10),
+              SkeletonCard(height: 220),
+              SizedBox(height: 10),
+              SkeletonCard(height: 180),
+            ],
           );
         }
         if (snapshot.hasError) {

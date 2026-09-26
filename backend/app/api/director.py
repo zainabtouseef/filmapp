@@ -6,11 +6,13 @@ from decimal import Decimal
 from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
+from flask.typing import ResponseReturnValue
 from sqlalchemy import func, select
 
-from app.api.auth import _current_user
+from app.api.auth import _current_user, _json_body
 from app.api.marketplace import (
     _city_payload,
+    _field_error,
     _file_payload,
     _owner_avatar_url,
     _talent_availability_categories,
@@ -19,6 +21,12 @@ from app.errors import APIError
 from app.extensions import db
 from app.models.base import utc_now
 from app.models.bookings import Booking, Offer
+from app.models.cineplanner import (
+    CineAuditLog,
+    CineProduction,
+    CineScheduleEvent,
+    CineShootDay,
+)
 from app.models.contracts import Contract
 from app.models.identity import User, UserRole
 from app.models.marketplace import (
@@ -47,6 +55,7 @@ from app.models.specialist import (
 from app.models.trust_safety import Dispute
 from app.responses import success
 from app.security import as_utc
+from app.services.cineplanner_productions import ensure_cineplanner_production
 
 director_blueprint = Blueprint("director", __name__)
 
@@ -1821,6 +1830,12 @@ def _director_schedule_payload(
 ) -> dict[str, Any]:
     all_projects = _visible_projects(user)
     project_by_public_id = _project_lookup(all_projects)
+    if project_id and project_id not in project_by_public_id:
+        raise APIError(
+            "director.project_not_found",
+            "The selected project is unavailable.",
+            status=404,
+        )
     projects = (
         [project_by_public_id[project_id]]
         if project_id and project_id in project_by_public_id
@@ -1829,6 +1844,50 @@ def _director_schedule_payload(
     visible_ids = {project.id for project in projects}
     events: list[dict[str, Any]] = []
     risks: list[dict[str, Any]] = []
+
+    if visible_ids:
+        productions = list(
+            db.session.execute(
+                select(CineProduction).where(CineProduction.project_id.in_(visible_ids))
+            ).scalars()
+        )
+        production_ids = [production.id for production in productions]
+        project_by_id = {project.id: project for project in projects}
+        production_projects = {
+            production.id: project_by_id[production.project_id]
+            for production in productions
+            if production.project_id in project_by_id
+        }
+        if production_ids:
+            planner_events = list(
+                db.session.execute(
+                    select(CineScheduleEvent)
+                    .where(CineScheduleEvent.production_id.in_(production_ids))
+                    .order_by(CineScheduleEvent.created_at.asc())
+                ).scalars()
+            )
+            for planner_event in planner_events:
+                project = production_projects.get(planner_event.production_id)
+                if project is None:
+                    continue
+                day = planner_event.shoot_day
+                events.append(
+                    _schedule_event(
+                        kind=planner_event.event_type,
+                        public_id=planner_event.public_id,
+                        project=project,
+                        title=planner_event.title,
+                        subtitle=planner_event.notes,
+                        location=day.location_name,
+                        starts_at=datetime.combine(
+                            day.shoot_date, planner_event.starts_at
+                        ),
+                        ends_at=datetime.combine(day.shoot_date, planner_event.ends_at),
+                        status=day.status,
+                        route="/director/schedule",
+                        argument=planner_event.public_id,
+                    )
+                )
 
     for project in projects:
         if project.start_date:
@@ -1993,18 +2052,18 @@ def _director_schedule_payload(
         )
 
     room_items = _room_items(projects)
-    for item in room_items:
+    for room_item in room_items:
         events.append(
             _schedule_event(
                 kind="room_item",
-                public_id=item["public_id"],
-                project=project_by_public_id[item["project_id"]],
-                title=item["title"],
-                subtitle=item["item_type"],
-                starts_at=datetime.fromisoformat(item["created_at"]),
-                status="pinned" if item["item_type"] == "decision" else "logged",
-                route=item["route"],
-                argument=item["argument"],
+                public_id=room_item["public_id"],
+                project=project_by_public_id[room_item["project_id"]],
+                title=room_item["title"],
+                subtitle=room_item["item_type"],
+                starts_at=datetime.fromisoformat(room_item["created_at"]),
+                status=("pinned" if room_item["item_type"] == "decision" else "logged"),
+                route=room_item["route"],
+                argument=room_item["argument"],
             )
         )
 
@@ -2061,6 +2120,7 @@ def _pipeline_rows(user: User, bookings: list[Booking]) -> list[dict[str, Any]]:
             "currency": contract.currency,
             "route": "/contract",
             "argument": contract.public_id,
+            "updated_at": contract.updated_at.isoformat(),
         }
         for contract in contracts
     ]
@@ -2080,6 +2140,7 @@ def _pipeline_rows(user: User, bookings: list[Booking]) -> list[dict[str, Any]]:
             "currency": booking.currency,
             "route": "/booking",
             "argument": booking.public_id,
+            "updated_at": booking.updated_at.isoformat(),
         }
         for booking in bookings
         if booking.status in {"sent", "under_negotiation", "accepted", "secured"}
@@ -2111,6 +2172,67 @@ def _room_items(projects: list[Project]) -> list[dict[str, Any]]:
         }
         for item in rows
     ]
+
+
+def _activity_items(
+    projects: list[Project],
+    bookings: list[Booking],
+    payments: list[PaymentMilestone],
+    pipeline: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    project_ids = {project.id for project in projects}
+    items = _room_items(projects)
+    for booking in bookings:
+        if booking.project_id not in project_ids:
+            continue
+        items.append(
+            {
+                "public_id": booking.public_id,
+                "project_id": booking.project.public_id,
+                "project_title": booking.project.title,
+                "item_type": "booking",
+                "title": f"Booking {booking.status.replace('_', ' ')}",
+                "body": booking.provider.display_name,
+                "created_at": booking.updated_at.isoformat(),
+                "route": "/booking",
+                "argument": booking.public_id,
+            }
+        )
+    for milestone in payments:
+        project = milestone.schedule.booking.project
+        if project.id not in project_ids:
+            continue
+        items.append(
+            {
+                "public_id": milestone.public_id,
+                "project_id": project.public_id,
+                "project_title": project.title,
+                "item_type": "payment",
+                "title": f"Payment {milestone.status.replace('_', ' ')}",
+                "body": milestone.name,
+                "created_at": milestone.updated_at.isoformat(),
+                "route": "/payments/proof",
+                "argument": milestone.public_id,
+            }
+        )
+    for row in pipeline:
+        if row.get("kind") != "contract":
+            continue
+        items.append(
+            {
+                "public_id": row["public_id"],
+                "project_id": row.get("project_id"),
+                "project_title": row["project_title"],
+                "item_type": "contract",
+                "title": f"Contract {str(row['status']).replace('_', ' ')}",
+                "body": row["title"],
+                "created_at": row["updated_at"],
+                "route": row.get("route") or "/contract",
+                "argument": row.get("argument") or row["public_id"],
+            }
+        )
+    items.sort(key=lambda item: item["created_at"], reverse=True)
+    return items[:8]
 
 
 def _priority_actions(
@@ -2234,7 +2356,7 @@ def director_dashboard() -> Response:
             if row.status not in {"paid", "verified"}
         ][:5],
         "pipeline": pipeline,
-        "activity": _room_items(projects),
+        "activity": _activity_items(projects, bookings, payments, pipeline),
         "priority_actions": priority,
     }
     return jsonify(success({"dashboard": payload}))
@@ -2248,6 +2370,125 @@ def director_schedule() -> Response:
     project_id = request.args.get("project_id")
     payload = _director_schedule_payload(user, project_id=project_id)
     return jsonify(success({"schedule": payload}))
+
+
+@director_blueprint.post("/brands/schedule")
+@director_blueprint.post("/director/schedule")
+def create_director_schedule_event() -> ResponseReturnValue:
+    user = _current_user()
+    _require_director_dashboard(user)
+    payload = _json_body()
+    project_id = str(payload.get("project_id", "")).strip()
+    projects = _visible_projects(user)
+    project = next(
+        (item for item in projects if item.public_id == project_id),
+        None,
+    )
+    if project is None:
+        raise _field_error("project_id", "Select an available project.")
+
+    title = str(payload.get("title", "")).strip()
+    if len(title) < 2:
+        raise _field_error("title", "Plan title is required.")
+    event_type = str(payload.get("event_type", "task")).strip().lower()
+    if event_type not in {
+        "shoot",
+        "audition",
+        "meeting",
+        "deadline",
+        "payment",
+        "contract",
+        "task",
+        "reminder",
+    }:
+        raise _field_error("event_type", "Select a supported plan type.")
+
+    def parse_datetime(field: str) -> datetime:
+        value = str(payload.get(field, "")).strip()
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise _field_error(field, "Use a valid date and time.") from exc
+
+    starts_at = parse_datetime("starts_at")
+    ends_at = parse_datetime("ends_at")
+    if ends_at <= starts_at:
+        raise _field_error("ends_at", "End time must be after start time.")
+    if ends_at.date() != starts_at.date():
+        raise _field_error("ends_at", "A plan must finish on the same day.")
+
+    production, _ = ensure_cineplanner_production(
+        project,
+        actor_user_id=user.id,
+    )
+    shoot_day = db.session.execute(
+        select(CineShootDay).where(
+            CineShootDay.production_id == production.id,
+            CineShootDay.shoot_date == starts_at.date(),
+        )
+    ).scalar_one_or_none()
+    location = str(payload.get("location", "")).strip()[:180] or None
+    if shoot_day is None:
+        maximum = db.session.execute(
+            select(func.max(CineShootDay.shoot_day_number)).where(
+                CineShootDay.production_id == production.id
+            )
+        ).scalar_one()
+        shoot_day = CineShootDay(
+            production_id=production.id,
+            shoot_day_number=(maximum or 0) + 1,
+            shoot_date=starts_at.date(),
+            crew_call=starts_at.time().replace(tzinfo=None),
+            expected_wrap=ends_at.time().replace(tzinfo=None),
+            location_name=location,
+            status="planned",
+        )
+        db.session.add(shoot_day)
+        db.session.flush()
+    elif location and not shoot_day.location_name:
+        shoot_day.location_name = location
+
+    event = CineScheduleEvent(
+        production_id=production.id,
+        shoot_day_id=shoot_day.id,
+        event_type=event_type,
+        title=title[:240],
+        starts_at=starts_at.time().replace(tzinfo=None),
+        ends_at=ends_at.time().replace(tzinfo=None),
+        notes=str(payload.get("notes", "")).strip()[:4000] or None,
+    )
+    db.session.add(event)
+    db.session.flush()
+    db.session.add(
+        CineAuditLog(
+            production_id=production.id,
+            actor_user_id=user.id,
+            action="schedule_event_created_from_portal",
+            entity_type="schedule_event",
+            entity_public_id=event.public_id,
+            old_value_json=None,
+            new_value_json={
+                "title": event.title,
+                "event_type": event.event_type,
+                "shoot_date": shoot_day.shoot_date.isoformat(),
+            },
+        )
+    )
+    db.session.commit()
+    result = _schedule_event(
+        kind=event.event_type,
+        public_id=event.public_id,
+        project=project,
+        title=event.title,
+        subtitle=event.notes,
+        location=shoot_day.location_name,
+        starts_at=datetime.combine(shoot_day.shoot_date, event.starts_at),
+        ends_at=datetime.combine(shoot_day.shoot_date, event.ends_at),
+        status=shoot_day.status,
+        route="/director/schedule",
+        argument=event.public_id,
+    )
+    return jsonify(success({"event": result})), 201
 
 
 @director_blueprint.get("/brands/discovery")

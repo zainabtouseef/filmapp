@@ -32,6 +32,34 @@ class DirectorRepository {
     );
   }
 
+  Future<DirectorScheduleEvent> createScheduleEvent({
+    required String projectId,
+    required String title,
+    required String eventType,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    String? location,
+    String? notes,
+  }) async {
+    final response = await _client.post(
+      '/director/schedule',
+      body: {
+        'project_id': projectId,
+        'title': title,
+        'event_type': eventType,
+        'starts_at': startsAt.toIso8601String(),
+        'ends_at': endsAt.toIso8601String(),
+        if (location != null && location.trim().isNotEmpty)
+          'location': location.trim(),
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return DirectorScheduleEvent.fromJson(
+      data['event'] as Map<String, dynamic>,
+    );
+  }
+
   Future<DirectorDiscoveryBundle> discovery({
     String? category,
     String? query,

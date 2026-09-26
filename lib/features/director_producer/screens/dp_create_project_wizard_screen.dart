@@ -14,6 +14,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../core/tour/tour_local_step_sync.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../data/project_draft_store.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_budget_health_bar.dart';
@@ -285,11 +286,14 @@ class _DPCreateProjectWizardScreenState
   @override
   Widget build(BuildContext context) {
     if (!_draftLoaded) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
-          child: CircularProgressIndicator(),
-        ),
+      return const Column(
+        children: [
+          SkeletonCard(height: 72),
+          SizedBox(height: 12),
+          SkeletonCard(height: 54),
+          SizedBox(height: 12),
+          SkeletonCard(height: 360),
+        ],
       );
     }
     return Column(
@@ -441,6 +445,13 @@ class _DPCreateProjectWizardScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _coverPhotoField(),
+        if (_errors['cover'] != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _errors['cover']!,
+            style: AppTextStyles.caption.copyWith(color: colors.danger),
+          ),
+        ],
         const SizedBox(height: 14),
         TourTarget(
           id: 'dp.wizard.type',
@@ -1275,6 +1286,11 @@ class _DPCreateProjectWizardScreenState
       if (_type.isEmpty) errors['type'] = 'Choose a project type.';
       if (_title.text.trim().length < 2) {
         errors['title'] = 'Project title is required.';
+      }
+      if (_coverPhoto?.uploadedFileId == null) {
+        errors['cover'] = _coverPhoto == null
+            ? 'Add a project cover image before continuing.'
+            : 'Wait for the cover image to finish uploading.';
       }
       if (errors.isNotEmpty) {
         setState(() => _errors.addAll(errors));

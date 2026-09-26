@@ -135,7 +135,7 @@ class _LG05ReviewHistoryBillingScreenState
                           children: [
                             const InlineNotice(
                               message:
-                                  'Dedicated legal billing invoices are not exposed yet, so this screen does not show fake invoices.',
+                                  'Dedicated legal billing invoices are not available from the API yet.',
                               icon: Icons.info_outline_rounded,
                             ),
                             const SizedBox(height: 10),

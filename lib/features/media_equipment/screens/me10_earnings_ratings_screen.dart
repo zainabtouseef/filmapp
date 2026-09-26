@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
@@ -100,7 +102,7 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
   Widget build(BuildContext context) {
     if (_future == null) {
       return const InlineNotice(
-        message: 'Preview mode. Sign in to load equipment earnings.',
+        message: 'Sign in to load live equipment earnings.',
         icon: Icons.visibility_outlined,
       );
     }
@@ -199,26 +201,16 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final filter in [
-                        'All',
-                        'Pending',
-                        'Verified',
-                        'Disputed',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: CoreChip(
-                            label: filter,
-                            selected: _filter == filter,
-                            onTap: () => setState(() => _filter = filter),
-                          ),
-                        ),
-                    ],
-                  ),
+                CineAnimatedFilterRail<String>(
+                  values: const [
+                    'All',
+                    'Pending',
+                    'Verified',
+                    'Disputed',
+                  ],
+                  selected: _filter,
+                  onSelected: (filter) => setState(() => _filter = filter),
+                  labelFor: (filter) => filter,
                 ),
                 const SizedBox(height: 12),
                 if (rows.isEmpty)

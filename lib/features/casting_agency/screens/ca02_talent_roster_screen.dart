@@ -7,6 +7,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../widgets/casting_agency_components.dart';
 
 class CA02TalentRosterScreen extends StatefulWidget {
@@ -175,32 +176,27 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final filter in ['All', 'active', 'pending'])
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CoreChip(
-                label: filter == 'All' ? filter : filter.toUpperCase(),
-                selected: selected == filter,
-                onTap: () => onFilter(filter),
-              ),
-            ),
-          const SizedBox(width: 8),
-          for (final option in ['Name', 'Commission'])
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CoreChip(
-                label: option,
-                selected: sort == option,
-                icon: Icons.sort_rounded,
-                onTap: () => onSort(option),
-              ),
-            ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CineAnimatedFilterRail<String>(
+          values: const ['All', 'active', 'pending'],
+          selected: selected,
+          onSelected: onFilter,
+          labelFor: (filter) => filter == 'All' ? filter : filter.toUpperCase(),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 260,
+          child: CineAnimatedFilterRail<String>(
+            values: const ['Name', 'Commission'],
+            selected: sort,
+            onSelected: onSort,
+            labelFor: (option) => option,
+            iconFor: (_) => Icons.sort_rounded,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -415,6 +415,8 @@ class DirectorActivityItem {
   final String title;
   final String? body;
   final DateTime? createdAt;
+  final String? route;
+  final String? argument;
 
   const DirectorActivityItem({
     required this.publicId,
@@ -423,6 +425,8 @@ class DirectorActivityItem {
     required this.title,
     required this.body,
     required this.createdAt,
+    required this.route,
+    required this.argument,
   });
 
   factory DirectorActivityItem.fromJson(Map<String, dynamic> json) {
@@ -433,6 +437,8 @@ class DirectorActivityItem {
       title: json['title'] as String? ?? 'Activity',
       body: json['body'] as String?,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+      route: json['route'] as String?,
+      argument: json['argument'] as String?,
     );
   }
 }

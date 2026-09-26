@@ -16,6 +16,7 @@ import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 import '../../../shared/entity_profile/entity_profile_kit.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../../general_public/routes/general_public_routes.dart';
@@ -108,8 +109,14 @@ class _DPStakeholderProfileScreenState
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const DPGlassCard(
-            child: Center(child: CircularProgressIndicator()),
+          return const Column(
+            children: [
+              SkeletonCard(height: 270),
+              SizedBox(height: 10),
+              SkeletonCard(height: 58),
+              SizedBox(height: 10),
+              SkeletonCard(height: 150),
+            ],
           );
         }
         if (snapshot.hasError || !snapshot.hasData) {
@@ -400,9 +407,8 @@ class _ProfileHero extends StatelessWidget {
       portraitUrl: candidate.imageUrl,
       verified: candidate.verified,
       available: candidate.available,
-      rateLabel: candidate.rateRange.trim().isEmpty
-          ? 'Rate on request'
-          : candidate.rateRange,
+      rateLabel:
+          candidate.allowsBargaining ? 'Open to negotiation' : 'Request terms',
       rating: candidate.rating > 0 ? candidate.rating : null,
       highlights: highlights,
       heroTag: heroTag,
@@ -471,14 +477,11 @@ class _LiveListingProfile extends StatelessWidget {
             const SizedBox(height: 12),
             DPDetailRow(label: 'Listing type', value: candidate.category),
             DPDetailRow(label: 'City', value: candidate.city),
-            DPDetailRow(label: 'Rate', value: candidate.rateRange),
             DPDetailRow(
-              label: 'Pricing choice',
-              value: switch (candidate.pricingMode) {
-                'fixed' => 'Fixed public price',
-                'on_request' => 'Private price · bargaining',
-                _ => 'Public starting price · bargaining',
-              },
+              label: 'Commercial terms',
+              value: candidate.allowsBargaining
+                  ? 'Open negotiation inside a booking request'
+                  : 'Request terms inside an authorised booking',
             ),
             DPDetailRow(label: 'Owner', value: listing.ownerName),
             DPDetailRow(
@@ -585,14 +588,11 @@ class _LiveDirectorDiscoveryProfile extends StatelessWidget {
             const SizedBox(height: 12),
             DPDetailRow(label: 'Provider type', value: candidate.category),
             DPDetailRow(label: 'City', value: candidate.city),
-            DPDetailRow(label: 'Rate', value: candidate.rateRange),
             DPDetailRow(
-              label: 'Pricing choice',
-              value: switch (candidate.pricingMode) {
-                'fixed' => 'Fixed public price',
-                'on_request' => 'Private price · bargaining',
-                _ => 'Public starting price · bargaining',
-              },
+              label: 'Commercial terms',
+              value: candidate.allowsBargaining
+                  ? 'Open negotiation inside a booking request'
+                  : 'Request terms inside an authorised booking',
             ),
             DPDetailRow(label: 'Owner', value: item.ownerName ?? 'Not shown'),
             DPDetailRow(

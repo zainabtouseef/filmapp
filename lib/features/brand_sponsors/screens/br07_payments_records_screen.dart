@@ -9,6 +9,7 @@ import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../models/brand_sponsor_models.dart';
@@ -208,27 +209,18 @@ class _BR07PaymentsRecordsScreenState extends State<BR07PaymentsRecordsScreen> {
                         onChanged: (value) => setState(() => _query = value),
                       ),
                       const SizedBox(height: 10),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (final filter in const [
-                              'All',
-                              'Due',
-                              'Pending verification',
-                              'Released',
-                              'Issue',
-                            ])
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: CoreChip(
-                                  label: filter,
-                                  selected: _filter == filter,
-                                  onTap: () => setState(() => _filter = filter),
-                                ),
-                              ),
-                          ],
-                        ),
+                      CineAnimatedFilterRail<String>(
+                        values: const [
+                          'All',
+                          'Due',
+                          'Pending verification',
+                          'Released',
+                          'Issue',
+                        ],
+                        selected: _filter,
+                        onSelected: (filter) =>
+                            setState(() => _filter = filter),
+                        labelFor: (filter) => filter,
                       ),
                     ],
                   ),

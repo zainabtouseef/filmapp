@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/casting_agency_models.dart';
 import '../widgets/casting_agency_components.dart';
 
@@ -107,24 +108,13 @@ class _CA07CommissionRecordsScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                for (final filter in ['All', 'pending', 'paid'])
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: CoreChip(
-                                      label: filter == 'All'
-                                          ? filter
-                                          : filter.toUpperCase(),
-                                      selected: _filter == filter,
-                                      onTap: () =>
-                                          setState(() => _filter = filter),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                          CineAnimatedFilterRail<String>(
+                            values: const ['All', 'pending', 'paid'],
+                            selected: _filter,
+                            onSelected: (filter) =>
+                                setState(() => _filter = filter),
+                            labelFor: (filter) =>
+                                filter == 'All' ? filter : filter.toUpperCase(),
                           ),
                           const SizedBox(height: 12),
                           if (visible.isEmpty)

@@ -5,6 +5,7 @@ import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../director_producer/widgets/dp_glass_card.dart';
 import '../../director_producer/widgets/dp_holographic_button.dart';
 import '../../director_producer/widgets/dp_layout_helpers.dart';
@@ -310,33 +311,26 @@ class _CinemaToolbar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _FilterChip(
-                label: 'All',
-                selected: kind == 'all',
-                onTap: () => onKindChanged('all'),
-              ),
-              _FilterChip(
-                label: 'Trailers',
-                selected: kind == 'trailer',
-                onTap: () => onKindChanged('trailer'),
-              ),
-              _FilterChip(
-                label: 'OST',
-                selected: kind == 'ost',
-                onTap: () => onKindChanged('ost'),
-              ),
-              for (final item in types)
-                _FilterChip(
-                  label: _titleCase(item),
-                  selected: type == item,
-                  onTap: () => onTypeChanged(type == item ? 'all' : item),
-                ),
-            ],
+          CineAnimatedFilterRail<String>(
+            values: const ['all', 'trailer', 'ost'],
+            selected: kind,
+            onSelected: onKindChanged,
+            labelFor: (value) => switch (value) {
+              'trailer' => 'Trailers',
+              'ost' => 'OST',
+              _ => 'All',
+            },
           ),
+          if (types.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            CineAnimatedFilterRail<String>(
+              values: ['all', ...types],
+              selected: type,
+              onSelected: onTypeChanged,
+              labelFor: (value) =>
+                  value == 'all' ? 'All types' : _titleCase(value),
+            ),
+          ],
         ],
       ),
     );
@@ -659,44 +653,6 @@ class _CinemaNoResults extends StatelessWidget {
             onTap: onClear,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? colors.activeChipGradient
-              : colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? colors.goldMid : colors.border),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.smallMeta.copyWith(
-            color: selected ? colors.textPrimary : colors.textSecondary,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
       ),
     );
   }

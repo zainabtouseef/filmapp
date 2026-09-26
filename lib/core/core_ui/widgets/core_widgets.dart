@@ -8,6 +8,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gold_button.dart';
 import '../../theme/app_breakpoints.dart';
 import '../../theme/app_color_scheme.dart';
+import '../../theme/app_durations.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_back_navigation.dart';
 import '../models/shared_models.dart';
@@ -857,7 +858,7 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
-class CoreChip extends StatelessWidget {
+class CoreChip extends StatefulWidget {
   final String label;
   final bool selected;
   final VoidCallback? onTap;
@@ -872,42 +873,91 @@ class CoreChip extends StatelessWidget {
   });
 
   @override
+  State<CoreChip> createState() => _CoreChipState();
+}
+
+class _CoreChipState extends State<CoreChip> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? colors.activeChipGradient
-              : colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: selected ? colors.goldMid : colors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon,
-                  size: 16,
-                  color: selected ? colors.goldDark : colors.iconMuted),
-              const SizedBox(width: 7),
-            ],
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180),
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: selected ? colors.goldDark : colors.textSecondary,
-                  fontWeight: FontWeight.w800,
-                ),
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return Semantics(
+      button: widget.onTap != null,
+      selected: widget.selected,
+      label: widget.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: widget.onTap == null
+            ? null
+            : (_) => setState(() => _pressed = true),
+        onTapUp: widget.onTap == null
+            ? null
+            : (_) => setState(() => _pressed = false),
+        onTapCancel: widget.onTap == null
+            ? null
+            : () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed && !reduceMotion ? 0.98 : 1,
+          duration: reduceMotion ? Duration.zero : AppDurations.press,
+          curve: AppDurations.standardCurve,
+          child: AnimatedContainer(
+            duration: reduceMotion ? Duration.zero : AppDurations.tab,
+            curve: AppDurations.standardCurve,
+            constraints: const BoxConstraints(minHeight: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: widget.selected
+                  ? colors.activeChipGradient
+                  : colors.inactiveChipGradient,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: widget.selected ? colors.goldMid : colors.border,
               ),
+              boxShadow: widget.selected && !reduceMotion
+                  ? [
+                      BoxShadow(
+                        color: colors.goldGlow,
+                        blurRadius: 13,
+                        spreadRadius: -6,
+                      ),
+                    ]
+                  : null,
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(
+                    widget.icon,
+                    size: 16,
+                    color: widget.selected ? colors.goldDark : colors.iconMuted,
+                  ),
+                  const SizedBox(width: 7),
+                ],
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: AnimatedDefaultTextStyle(
+                    duration: reduceMotion ? Duration.zero : AppDurations.tab,
+                    style: AppTextStyles.caption.copyWith(
+                      color: widget.selected
+                          ? colors.goldDark
+                          : colors.textSecondary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

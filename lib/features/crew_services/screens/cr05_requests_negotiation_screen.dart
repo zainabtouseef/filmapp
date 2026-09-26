@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
@@ -73,27 +75,17 @@ class _CR05RequestsNegotiationScreenState
                   ),
                 ),
                 const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final filter in const [
-                        'All',
-                        'New',
-                        'Negotiation',
-                        'Secured',
-                        'Closed',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: CoreChip(
-                            label: filter,
-                            selected: _filter == filter,
-                            onTap: () => setState(() => _filter = filter),
-                          ),
-                        ),
-                    ],
-                  ),
+                CineAnimatedFilterRail<String>(
+                  values: const [
+                    'All',
+                    'New',
+                    'Negotiation',
+                    'Secured',
+                    'Closed',
+                  ],
+                  selected: _filter,
+                  onSelected: (filter) => setState(() => _filter = filter),
+                  labelFor: (filter) => filter,
                 ),
               ],
             ),
@@ -102,8 +94,8 @@ class _CR05RequestsNegotiationScreenState
         const SizedBox(height: 12),
         if (_bookingsFuture == null)
           const InlineNotice(
-            message: 'Preview mode. Sign in to view booking requests.',
-            icon: Icons.visibility_outlined,
+            message: 'Sign in to load live booking requests.',
+            icon: Icons.lock_outline_rounded,
           )
         else
           FutureBuilder<List<Booking>>(

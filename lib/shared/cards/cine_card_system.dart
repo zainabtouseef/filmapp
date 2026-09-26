@@ -2289,27 +2289,39 @@ class _SkeletonCardState extends State<SkeletonCard>
                   colors.borderMuted,
                 ],
               ).createShader(bounds),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 132,
-                    height: 12,
-                    color: colors.borderMuted,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Container(
-                    width: 210,
-                    height: 28,
-                    color: colors.borderMuted,
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: double.infinity,
-                    height: 9,
-                    color: colors.borderMuted,
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Keep the placeholder lines inside compact skeletons.
+                  // Several responsive loading states intentionally use
+                  // 48-58px rows, so fixed desktop-sized lines overflowed.
+                  final height = constraints.maxHeight;
+                  final titleHeight = height < 72 ? height * 0.18 : 12.0;
+                  final gapHeight = height < 72 ? height * 0.12 : AppSpacing.lg;
+                  final headlineHeight = height < 72 ? height * 0.30 : 28.0;
+                  final footerHeight = height < 72 ? height * 0.12 : 9.0;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 132,
+                        height: titleHeight,
+                        color: colors.borderMuted,
+                      ),
+                      SizedBox(height: gapHeight),
+                      Container(
+                        width: 210,
+                        height: headlineHeight,
+                        color: colors.borderMuted,
+                      ),
+                      const Spacer(),
+                      Container(
+                        width: double.infinity,
+                        height: footerHeight,
+                        color: colors.borderMuted,
+                      ),
+                    ],
+                  );
+                },
               ),
             );
           },

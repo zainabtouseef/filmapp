@@ -29,7 +29,7 @@ class DPAICastingMatchFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Tooltip(
-      message: 'AI casting match score',
+      message: 'Smart casting matches',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -57,7 +57,7 @@ class DPAICastingMatchFab extends StatelessWidget {
                 Icon(Icons.auto_awesome_rounded, color: colors.onGold),
                 const SizedBox(width: 9),
                 Text(
-                  'AI Match',
+                  'Smart match',
                   style:
                       AppTextStyles.statusText.copyWith(color: colors.onGold),
                 ),
@@ -186,7 +186,7 @@ class _AICastingMatchSheetState extends State<_AICastingMatchSheet> {
     if (auth == null || !auth.isAuthenticated) {
       throw const ApiException(
         code: 'auth.required',
-        message: 'Sign in to run AI casting match.',
+        message: 'Sign in to run smart casting match.',
       );
     }
     final bundle = await auth.directorDiscovery(category: _category);
@@ -240,7 +240,7 @@ class _AICastingMatchSheetState extends State<_AICastingMatchSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'CineMatch AI casting score',
+                              'CineMatch rule-based casting score',
                               style: AppTextStyles.cardTitle.copyWith(
                                 color: colors.textPrimary,
                               ),

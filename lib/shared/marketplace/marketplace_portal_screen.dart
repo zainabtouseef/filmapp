@@ -12,6 +12,7 @@ import '../../features/general_public/routes/general_public_routes.dart';
 import '../../features/general_public/screens/general_public_portal_screen.dart';
 import '../layout/admin_screen_scaffold.dart';
 import '../layout/admin_top_bar.dart';
+import '../widgets/cine_about_button.dart';
 import 'marketplace_routes.dart';
 
 /// The same director marketplace presentation, backed by approved public
@@ -75,6 +76,8 @@ class MarketplacePortalScreen extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            const CineAboutButton(size: 38),
+            const SizedBox(width: 8),
             IconButton(
               tooltip: 'Logout',
               onPressed: () => logoutToLogin(context),

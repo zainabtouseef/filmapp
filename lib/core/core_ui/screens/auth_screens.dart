@@ -23,10 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identity = TextEditingController();
   final _password = TextEditingController();
   bool _showPassword = false;
-  bool _biometric = false;
-  bool _showDemoTools = false;
   bool _loading = false;
-  String _demoLoginAs = 'Director / Producer';
   String? _identityError;
   String? _passwordError;
 
@@ -45,13 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // The "Demo Login As" picker only previews which portal a role expects
-    // — the actual destination always comes from the real authenticated
-    // account's real role (see RoleMapper.portalRouteForCode), same as for
-    // every business-portal role. Admin/staff roles used to short-circuit
-    // straight to the admin console with no real session at all, which
-    // meant every admin data screen silently had no access token to call
-    // the API with.
     setState(() {
       _identityError =
           _identity.text.trim().isEmpty ? 'Email is required' : null;
@@ -73,101 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  String? _portalRouteFor(String label) {
-    return RoleMapper.portalRouteForCode(RoleMapper.codeForLabel(label));
-  }
-
-  static const _demoRoles = [
-    'User',
-    'Director / Producer',
-    'Actor / Talent',
-    'Model',
-    'Location Owner',
-    'Media / Equipment Provider',
-    'Crew / Services',
-    'Casting Agency',
-    'Brand / Sponsor',
-    'Legal Partner',
-    'Insurance / Safety Partner',
-    'Distribution / Release Partner',
-    'Super Admin',
-    'Payments Officer',
-    'Verification Agent',
-    'Dispute Officer',
-    'Content Moderator',
-  ];
-
-  void _showDemoRolePicker() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _CoreBottomSheet(
-        title: 'Demo Login As',
-        subtitle: 'Pick a role to preview its portal.',
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.55,
-          ),
-          child: SingleChildScrollView(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _demoRoles
-                  .map(
-                    (role) => CoreChip(
-                      label: role,
-                      selected: _demoLoginAs == role,
-                      onTap: () {
-                        setState(() => _demoLoginAs = role);
-                        Navigator.pop(sheetContext);
-                      },
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showOtpSheet() {
-    final otp = TextEditingController();
-    final rootContext = context;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CoreBottomSheet(
-        title: 'Login with OTP',
-        subtitle: 'Enter any 6 digits to continue to your portal.',
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OtpInputRow(controller: otp),
-            const SizedBox(height: 16),
-            CorePrimaryButton(
-              icon: Icons.login_rounded,
-              label: 'Verify & Login',
-              onTap: () {
-                if (otp.text.trim().length == 6) {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(
-                    rootContext,
-                    _portalRouteFor(_demoLoginAs) ?? CoreRoutes.dashboard,
-                  );
-                } else {
-                  showCoreSnack(context, 'Enter a 6-digit OTP');
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -224,111 +119,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: _showOtpSheet,
-                        child: const Text('Login with OTP instead'),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(
-                        context,
-                        CoreRoutes.forgotPassword,
-                      ),
-                      child: const Text('Forgot Password?'),
-                    ),
-                  ],
-                ),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  value: _biometric,
-                  activeThumbColor: colors.goldMid,
-                  onChanged: (value) => setState(() => _biometric = value),
-                  title: Text(
-                    'Biometric login',
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Enable after first login',
-                    style: AppTextStyles.caption.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => setState(
-                      () => _showDemoTools = !_showDemoTools,
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      CoreRoutes.forgotPassword,
                     ),
-                    icon: Icon(
-                      _showDemoTools
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                    ),
-                    label: const Text('Demo accounts'),
+                    child: const Text('Forgot Password?'),
                   ),
-                ),
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 180),
-                  firstChild: GestureDetector(
-                    onTap: _showDemoRolePicker,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: colors.border),
-                        color: colors.surface.withValues(alpha: 0.4),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.badge_outlined,
-                            size: 18,
-                            color: colors.goldDark,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Preview portal as',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: colors.textSecondary,
-                                  ),
-                                ),
-                                Text(
-                                  _demoLoginAs,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.label.copyWith(
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.expand_more_rounded,
-                            color: colors.iconMuted,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  secondChild: const SizedBox.shrink(),
-                  crossFadeState: _showDemoTools
-                      ? CrossFadeState.showFirst
-                      : CrossFadeState.showSecond,
                 ),
                 const SizedBox(height: 14),
                 CorePrimaryButton(
@@ -797,58 +596,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CoreBottomSheet extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  const _CoreBottomSheet({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 26),
-        decoration: BoxDecoration(
-          gradient: colors.cardGradient,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(top: BorderSide(color: colors.border)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTextStyles.sectionTitle.copyWith(
-                  color: colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                style: AppTextStyles.bodyMuted.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 18),
-              child,
-            ],
-          ),
-        ),
       ),
     );
   }

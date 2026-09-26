@@ -6,13 +6,14 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/dp_project.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_project_card.dart';
-import '../widgets/dp_status_chip.dart';
 
 const _filterKeys = [
   'All',
@@ -210,20 +211,11 @@ class _FilterChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return TourTarget(
       id: 'dp.projects.filters',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final key in _filterKeys) ...[
-              DpDotChip(
-                label: key,
-                active: value == key,
-                onTap: () => onChanged(key),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ],
-        ),
+      child: CineAnimatedFilterRail<String>(
+        values: _filterKeys,
+        selected: value,
+        onSelected: onChanged,
+        labelFor: (key) => key,
       ),
     );
   }
@@ -234,24 +226,17 @@ class _ProjectsLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: colors.goldMid),
-            const SizedBox(height: 12),
-            Text(
-              'Loading live projects...',
-              style: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SkeletonCard(height: 68),
+        SizedBox(height: 10),
+        SkeletonCard(height: 48),
+        SizedBox(height: 10),
+        SkeletonCard(height: 170),
+        SizedBox(height: 10),
+        SkeletonCard(height: 170),
+      ],
     );
   }
 }

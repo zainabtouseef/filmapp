@@ -7,6 +7,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../widgets/casting_agency_components.dart';
 
 class CA04CandidateShortlistScreen extends StatefulWidget {
@@ -204,22 +205,12 @@ class _BuilderBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final audition in auditions)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: CoreChip(
-                    label: audition.roleTitle,
-                    selected: selected.publicId == audition.publicId,
-                    icon: Icons.local_activity_outlined,
-                    onTap: () => onSelectedAudition(audition.publicId),
-                  ),
-                ),
-            ],
-          ),
+        CineAnimatedFilterRail<AuditionDto>(
+          values: auditions,
+          selected: selected,
+          onSelected: (audition) => onSelectedAudition(audition.publicId),
+          labelFor: (audition) => audition.roleTitle,
+          iconFor: (_) => Icons.local_activity_outlined,
         ),
         const SizedBox(height: 12),
         AgencyInfoRow(

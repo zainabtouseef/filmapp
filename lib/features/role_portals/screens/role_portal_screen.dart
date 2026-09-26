@@ -29,7 +29,7 @@ class RolePortalScreen extends StatelessWidget {
             icon: screen.icon,
             title: 'Legacy generic portal disabled',
             message:
-                'This generic role portal no longer renders static demo records. Use the dedicated live portal for this role, or add a database-backed API/DTO before enabling this legacy surface again.',
+                'This legacy route does not render sample records. Use the dedicated live portal for this role, or connect a database API before enabling this surface.',
             actionLabel: 'Go home',
             onAction: () => Navigator.pushNamed(context, '/'),
           ),
@@ -70,7 +70,7 @@ RolePortalScreenSpec _screenForRoute(String route, RolePortalSpec? portal) {
     id: _screenId(route),
     navLabel: _titleForRoute(route),
     title: _titleForRoute(route),
-    subtitle: 'Legacy generic route cleaned of static demo data.',
+    subtitle: 'Legacy generic route reserved for live database content.',
     route: route,
     icon: _iconForRoute(route, group.icon),
     kind: route == group.homeRoute

@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
@@ -11,6 +12,8 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -229,29 +232,18 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
                     onChanged: (value) => setState(() => _query = value),
                   ),
                   const SizedBox(height: 10),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final status in const [
-                          'All',
-                          'Draft',
-                          'Active',
-                          'Paused',
-                          'Completed',
-                          'Archived',
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 7),
-                            child: FilterChip(
-                              label: Text(status),
-                              selected: _status == status,
-                              onSelected: (_) =>
-                                  setState(() => _status = status),
-                            ),
-                          ),
-                      ],
-                    ),
+                  CineAnimatedFilterRail<String>(
+                    values: const [
+                      'All',
+                      'Draft',
+                      'Active',
+                      'Paused',
+                      'Completed',
+                      'Archived',
+                    ],
+                    selected: _status,
+                    onSelected: (status) => setState(() => _status = status),
+                    labelFor: (status) => status,
                   ),
                   const SizedBox(height: 8),
                   if (_visibleProjects.isEmpty)
@@ -342,6 +334,7 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
         endDate: draft.endDate,
         estimatedBudgetMinor: draft.budgetMinor,
         status: draft.status,
+        coverFileId: draft.coverFileId,
       );
       await _load(force: true, selectId: project.publicId);
       if (mounted) brandSnack(context, 'Project saved to the backend');
@@ -370,6 +363,7 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
         startDate: draft.startDate,
         endDate: draft.endDate,
         estimatedBudgetMinor: draft.budgetMinor,
+        coverFileId: draft.coverFileId,
       );
       await _load(force: true, selectId: project.publicId);
       if (mounted) brandSnack(context, 'Project details updated');
@@ -757,6 +751,7 @@ typedef _ProjectDraft = ({
   String? endDate,
   int? budgetMinor,
   String status,
+  String? coverFileId,
 });
 
 Future<_ProjectDraft?> _showProjectDialog(
@@ -779,6 +774,9 @@ Future<_ProjectDraft?> _showProjectDialog(
     cityId = '';
   }
   var status = existing?.status ?? 'draft';
+  String? coverFileId = existing?.coverFile?.publicId;
+  String? coverFileName = existing?.coverFile?.originalName;
+  var uploadingCover = false;
   String? error;
   final result = await showDialog<_ProjectDraft>(
     context: context,
@@ -839,6 +837,61 @@ Future<_ProjectDraft?> _showProjectDialog(
                   label: 'Description and production requirements',
                   icon: Icons.notes_outlined,
                   maxLines: 4,
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: uploadingCover
+                      ? null
+                      : () async {
+                          final auth = AuthScope.maybeOf(context);
+                          if (auth == null) {
+                            setState(
+                                () => error = 'Sign in to upload a cover.');
+                            return;
+                          }
+                          final result = await FilePicker.platform.pickFiles(
+                            type: FileType.image,
+                            withData: true,
+                          );
+                          final file = result?.files.single;
+                          if (file == null || file.bytes == null) return;
+                          setState(() {
+                            uploadingCover = true;
+                            error = null;
+                          });
+                          try {
+                            final uploaded = await auth.uploadFile(
+                              purpose: 'project_cover',
+                              file: PickedFileData(
+                                name: file.name,
+                                mimeType: _projectCoverMimeType(file.extension),
+                                bytes: file.bytes!,
+                              ),
+                            );
+                            setState(() {
+                              coverFileId = uploaded.publicId;
+                              coverFileName = file.name;
+                            });
+                          } catch (uploadError) {
+                            setState(
+                                () => error = brandApiMessage(uploadError));
+                          } finally {
+                            setState(() => uploadingCover = false);
+                          }
+                        },
+                  icon: uploadingCover
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(
+                    coverFileName == null
+                        ? 'Add project cover image'
+                        : 'Cover: $coverFileName',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -931,6 +984,11 @@ Future<_ProjectDraft?> _showProjectDialog(
                 setState(() => error = 'Enter a valid budget.');
                 return;
               }
+              if (status != 'draft' && coverFileId == null) {
+                setState(() =>
+                    error = 'Add a project cover image before publishing.');
+                return;
+              }
               Navigator.pop(dialogContext, (
                 title: title.text.trim(),
                 type: type,
@@ -940,6 +998,7 @@ Future<_ProjectDraft?> _showProjectDialog(
                 endDate: end.text.trim().isEmpty ? null : end.text.trim(),
                 budgetMinor: wholeBudget == null ? null : wholeBudget * 100,
                 status: status,
+                coverFileId: coverFileId,
               ));
             },
             child: Text(existing != null
@@ -958,6 +1017,14 @@ Future<_ProjectDraft?> _showProjectDialog(
   end.dispose();
   budget.dispose();
   return result;
+}
+
+String _projectCoverMimeType(String? extension) {
+  return switch (extension?.toLowerCase()) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    _ => 'image/jpeg',
+  };
 }
 
 String _dateInput(DateTime? value) =>

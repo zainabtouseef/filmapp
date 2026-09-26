@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
@@ -56,22 +58,12 @@ class _CA08AgencyBookingRecordsScreenState
                 onChanged: (value) => setState(() => _query = value),
               ),
               const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final filter in ['All', 'pending', 'paid'])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CoreChip(
-                          label:
-                              filter == 'All' ? filter : filter.toUpperCase(),
-                          selected: _filter == filter,
-                          onTap: () => setState(() => _filter = filter),
-                        ),
-                      ),
-                  ],
-                ),
+              CineAnimatedFilterRail<String>(
+                values: const ['All', 'pending', 'paid'],
+                selected: _filter,
+                onSelected: (filter) => setState(() => _filter = filter),
+                labelFor: (filter) =>
+                    filter == 'All' ? filter : filter.toUpperCase(),
               ),
             ],
           ),

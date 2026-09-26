@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
@@ -7,6 +8,8 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../widgets/dp_empty_state.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_glass_card.dart';
@@ -25,12 +28,34 @@ DpTone _filterTone(String key) {
   };
 }
 
-String _liveFilterKey(String status) {
-  return switch (status) {
+String _liveFilterKey(NegotiationThread negotiation, String? currentUserId) {
+  return switch (negotiation.status) {
     'accepted' => 'Locked',
     'rejected' => 'Closed',
-    _ => 'Your move',
+    _ => negotiation.currentOffer?.recipient.publicId == currentUserId
+        ? 'Your move'
+        : 'Replied',
   };
+}
+
+String? _expiryLabel(DateTime? expiresAt) {
+  if (expiresAt == null) return null;
+  final remaining = expiresAt.difference(DateTime.now());
+  if (remaining.isNegative) return 'Expired';
+  if (remaining.inHours < 1) {
+    return 'Expires in ${remaining.inMinutes.clamp(1, 59)}m';
+  }
+  if (remaining.inDays < 1) return 'Expires in ${remaining.inHours}h';
+  return 'Expires in ${remaining.inDays}d';
+}
+
+String _lastActivityLabel(DateTime? value) {
+  if (value == null) return 'Activity time unavailable';
+  final elapsed = DateTime.now().difference(value);
+  if (elapsed.inMinutes < 1) return 'Updated now';
+  if (elapsed.inHours < 1) return 'Updated ${elapsed.inMinutes}m ago';
+  if (elapsed.inDays < 1) return 'Updated ${elapsed.inHours}h ago';
+  return 'Updated ${elapsed.inDays}d ago';
 }
 
 /// Presents the full negotiation thread (rounds, counter-offer form,
@@ -110,6 +135,7 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
           in ProjectsScope.maybeOf(context)?.cachedProjects ?? const [])
         project.publicId: project.title,
     };
+    final currentUserId = AuthScope.maybeOf(context)?.user?.publicId;
     if (future == null) {
       return const CoreEmptyState(
         icon: Icons.lock_outline_rounded,
@@ -121,10 +147,14 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const DPEmptyState(
-            icon: Icons.hourglass_top_rounded,
-            title: 'Loading negotiations',
-            message: 'Fetching live booking threads.',
+          return const Column(
+            children: [
+              SkeletonCard(height: 72),
+              SizedBox(height: 12),
+              SkeletonCard(height: 180),
+              SizedBox(height: 12),
+              SkeletonCard(height: 180),
+            ],
           );
         }
         if (snapshot.hasError) {
@@ -147,7 +177,9 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
         }
         final negotiations = _filter == 'All'
             ? all
-            : all.where((n) => _liveFilterKey(n.status) == _filter).toList();
+            : all
+                .where((n) => _liveFilterKey(n, currentUserId) == _filter)
+                .toList();
         if (negotiations.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,17 +210,24 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
                 minWidth: 300,
                 children: negotiations.indexed.map((entry) {
                   final (index, negotiation) = entry;
+                  final state = _liveFilterKey(negotiation, currentUserId);
                   final card = _NegotiationCard(
                     title: negotiation.booking.provider.displayName,
                     project: projectTitles[negotiation.booking.projectId] ??
                         'Project ${negotiation.booking.projectId}',
                     subtitle: negotiation.booking.category,
                     rate: negotiation.currentOffer?.feeLabel ?? 'Rate TBD',
-                    status: _statusLabel(negotiation.status),
-                    tone: _filterTone(_liveFilterKey(negotiation.status)),
-                    expiry: negotiation.currentOffer?.expiresAt == null
-                        ? null
-                        : 'Expiring',
+                    status: _statusLabel(negotiation.status, state),
+                    tone: _filterTone(state),
+                    turn: state == 'Your move'
+                        ? 'Your response is required'
+                        : state == 'Replied'
+                            ? 'Waiting for ${negotiation.booking.provider.displayName}'
+                            : state,
+                    expiry: _expiryLabel(negotiation.currentOffer?.expiresAt),
+                    lastActivity: _lastActivityLabel(
+                      negotiation.currentOffer?.createdAt,
+                    ),
                     wrapOpenButton: index == 0,
                     onTap: () =>
                         openNegotiationSheet(context, negotiation.publicId),
@@ -213,11 +252,11 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
     setState(() => _future = bookings.negotiations());
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(String status, String state) {
     return switch (status) {
       'accepted' => 'Accepted',
       'rejected' => 'Rejected',
-      _ => 'Open',
+      _ => state,
     };
   }
 }
@@ -248,20 +287,11 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final key in _filterKeys) ...[
-            DpDotChip(
-              label: key,
-              active: value == key,
-              onTap: () => onChanged(key),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ],
-      ),
+    return CineAnimatedFilterRail<String>(
+      values: _filterKeys,
+      selected: value,
+      onSelected: onChanged,
+      labelFor: (key) => key,
     );
   }
 }
@@ -272,6 +302,8 @@ class _NegotiationCard extends StatelessWidget {
   final String subtitle;
   final String rate;
   final String status;
+  final String turn;
+  final String lastActivity;
   final DpTone tone;
   final String? expiry;
   final VoidCallback onTap;
@@ -283,6 +315,8 @@ class _NegotiationCard extends StatelessWidget {
     required this.subtitle,
     required this.rate,
     required this.status,
+    required this.turn,
+    required this.lastActivity,
     required this.tone,
     required this.expiry,
     required this.onTap,
@@ -322,6 +356,18 @@ class _NegotiationCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style:
                 AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            '$turn · $lastActivity',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.copyWith(
+              color:
+                  status == 'Your move' ? colors.goldDark : colors.textTertiary,
+              fontWeight:
+                  status == 'Your move' ? FontWeight.w800 : FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 9),
           Row(

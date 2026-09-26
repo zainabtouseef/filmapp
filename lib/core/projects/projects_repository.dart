@@ -54,6 +54,7 @@ class ProjectsRepository {
         'currency': currency,
         'status': status,
         'visibility': 'project_members',
+        'require_cover': true,
       },
     );
     final data = response['data'] as Map<String, dynamic>;
@@ -73,6 +74,7 @@ class ProjectsRepository {
     String? status,
     String? visibility,
     int? progressPercent,
+    String? coverFileId,
   }) async {
     final response = await _client.patch(
       '/projects/$projectId',
@@ -89,6 +91,9 @@ class ProjectsRepository {
         if (status != null) 'status': status,
         if (visibility != null) 'visibility': visibility,
         if (progressPercent != null) 'progress_percent': progressPercent,
+        if (coverFileId != null && coverFileId.isNotEmpty)
+          'cover_file_id': coverFileId,
+        if (status != null) 'require_cover': true,
       },
     );
     final data = response['data'] as Map<String, dynamic>;

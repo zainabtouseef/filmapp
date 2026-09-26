@@ -22,6 +22,7 @@ import '../../../shared/widgets/premium_data_table.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../models/admin_models.dart';
 import '../routes/super_admin_routes.dart';
@@ -537,7 +538,7 @@ class AdminTopBar extends StatelessWidget {
     final compact = !wide;
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final narrow = compact && viewportWidth < 520;
-    final hideAvatar = compact && viewportWidth < 390;
+    final hideAvatar = compact && viewportWidth < 520;
     final canGoBack = wide || Navigator.canPop(context);
     final adminName =
         AuthScope.maybeOf(context)?.user?.displayName ?? 'Super Admin';
@@ -552,7 +553,7 @@ class AdminTopBar extends StatelessWidget {
           ),
           SizedBox(width: compact ? 8 : 12),
           SizedBox(
-            width: compact ? 108 : null,
+            width: compact ? 92 : null,
             child: const _AdminBrand(compact: true),
           ),
           if (narrow) ...[
@@ -605,9 +606,11 @@ class AdminTopBar extends StatelessWidget {
                 ),
               ),
             ),
-          SizedBox(width: compact ? 8 : 10),
+          SizedBox(width: compact ? 6 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
+          CineAboutButton(size: compact ? 34 : 38),
+          SizedBox(width: compact ? 6 : 10),
           AdminIconButton(
             icon: Icons.logout_rounded,
             tooltip: 'Logout',

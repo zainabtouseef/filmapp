@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
@@ -49,21 +51,11 @@ class _CA05SelfTapeCollectionScreenState
           onActionTap: _refresh,
           child: Column(
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final tab in ['All', 'Received', 'Missing'])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CoreChip(
-                          label: tab,
-                          selected: _tab == tab,
-                          onTap: () => setState(() => _tab = tab),
-                        ),
-                      ),
-                  ],
-                ),
+              CineAnimatedFilterRail<String>(
+                values: const ['All', 'Received', 'Missing'],
+                selected: _tab,
+                onSelected: (tab) => setState(() => _tab = tab),
+                labelFor: (tab) => tab,
               ),
             ],
           ),

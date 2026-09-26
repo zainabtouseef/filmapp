@@ -20,6 +20,7 @@ import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
+import '../../../shared/cards/cine_card_system.dart';
 
 class DPBookingRequestFormScreen extends StatefulWidget {
   final String? candidateId;
@@ -217,8 +218,14 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const DPGlassCard(
-            child: Center(child: CircularProgressIndicator()),
+          return const Column(
+            children: [
+              SkeletonCard(height: 68),
+              SizedBox(height: 10),
+              SkeletonCard(height: 52),
+              SizedBox(height: 10),
+              SkeletonCard(height: 300),
+            ],
           );
         }
         if (snapshot.hasError || !snapshot.hasData) {

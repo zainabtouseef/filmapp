@@ -32,8 +32,17 @@ class DPActivityFeed extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 11),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () =>
-                  Navigator.pushNamed(context, DirectorProducerRoutes.room),
+              onTap: () => Navigator.pushNamed(
+                context,
+                switch (entry.itemType) {
+                  'booking' => DirectorProducerRoutes.bargaining,
+                  'payment' => DirectorProducerRoutes.payments,
+                  'contract' => DirectorProducerRoutes.contracts,
+                  _ => DirectorProducerRoutes.room,
+                },
+                arguments:
+                    entry.argument == null ? null : {'id': entry.argument},
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

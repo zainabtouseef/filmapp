@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
@@ -126,22 +128,12 @@ class _LO10PropertyPerformanceScreenState
           onActionTap: _reload,
           child: TourTarget(
             id: 'location.performance.range',
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final range in ['7 days', '30 days', '90 days'])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: CoreChip(
-                        label: range,
-                        selected: _range == range,
-                        icon: Icons.date_range_outlined,
-                        onTap: () => setState(() => _range = range),
-                      ),
-                    ),
-                ],
-              ),
+            child: CineAnimatedFilterRail<String>(
+              values: const ['7 days', '30 days', '90 days'],
+              selected: _range,
+              onSelected: (range) => setState(() => _range = range),
+              labelFor: (range) => range,
+              iconFor: (_) => Icons.date_range_outlined,
             ),
           ),
         ),

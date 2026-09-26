@@ -14,6 +14,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/cards/cine_card_system.dart';
 
 class CinePlannerConsoleScreen extends StatefulWidget {
   const CinePlannerConsoleScreen({super.key});
@@ -464,6 +465,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
         title: title,
         projectType: 'film',
         description: 'Production workspace created in CinePlanner.',
+        status: 'draft',
       );
       await controller.createProduction(
         title: title,
@@ -3511,11 +3513,14 @@ class _CineLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: SizedBox.square(
-        dimension: 36,
-        child: CircularProgressIndicator(),
-      ),
+    return const Column(
+      children: [
+        SkeletonCard(height: 78),
+        SizedBox(height: 12),
+        SkeletonCard(height: 260),
+        SizedBox(height: 12),
+        SkeletonCard(height: 180),
+      ],
     );
   }
 }

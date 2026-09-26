@@ -8,6 +8,42 @@ import 'app_text_styles.dart';
 ///
 /// Do not build ad-hoc ThemeData or hardcode colors in screens — add
 /// new decoration helpers here so every dashboard stays consistent.
+/// Every portal screen builds its own full shell (side nav + top bar +
+/// body) rather than swapping content inside one persistent shell, so any
+/// page transition necessarily animates the whole tree, sidebar included.
+/// A plain cross-fade (no slide/scale) is the one transition style where
+/// that doesn't read as "the whole screen moving" — the sidebar is nearly
+/// identical between the outgoing and incoming frame, so it just holds
+/// still while the differing body content dissolves in.
+class _NoSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _NoSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: child,
+    );
+  }
+}
+
+const _kNoSlidePageTransitionsTheme = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: _NoSlidePageTransitionsBuilder(),
+    TargetPlatform.iOS: _NoSlidePageTransitionsBuilder(),
+    TargetPlatform.macOS: _NoSlidePageTransitionsBuilder(),
+    TargetPlatform.windows: _NoSlidePageTransitionsBuilder(),
+    TargetPlatform.linux: _NoSlidePageTransitionsBuilder(),
+    TargetPlatform.fuchsia: _NoSlidePageTransitionsBuilder(),
+  },
+);
+
 class AppTheme {
   AppTheme._();
 
@@ -21,6 +57,7 @@ class AppTheme {
         : ThemeData.light(useMaterial3: true);
 
     return base.copyWith(
+      pageTransitionsTheme: _kNoSlidePageTransitionsTheme,
       scaffoldBackgroundColor: colors.background,
       canvasColor: colors.background,
       splashColor: colors.goldGlow,

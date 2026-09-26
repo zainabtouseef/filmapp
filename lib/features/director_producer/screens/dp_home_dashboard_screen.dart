@@ -14,6 +14,7 @@ import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/formatters/cine_format.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dashboard/dp_command_header.dart';
+import '../widgets/dashboard/dp_activity_feed.dart';
 import '../widgets/dashboard/dp_deal_pipeline.dart';
 import '../widgets/dashboard/dp_financial_centre.dart';
 import '../widgets/dashboard/dp_mini_calendar_section.dart';
@@ -87,7 +88,7 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
                 const SizedBox(height: 14),
                 _WidgetGridSection(dashboard: dashboard),
                 const SizedBox(height: 14),
-                _ModulesSection(dashboard: dashboard),
+                _ProductionWorkflowSection(dashboard: dashboard),
                 const SizedBox(height: 14),
                 if (wide)
                   _WideBody(dashboard: dashboard)
@@ -102,11 +103,7 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   }
 }
 
-/// macOS-widget-style grid: a live clock + payments ring (with an
-/// animated glow filling the space beneath their shorter pair), the mini
-/// calendar (real event dates from `dashboard.timeline`), and a preview
-/// of today's real production pipeline — all frosted-glass, fixed-size
-/// widgets that cascade in together, rather than full-width stat cards.
+/// Compact live widgets backed by the dashboard response.
 class _WidgetGridSection extends StatelessWidget {
   final DirectorDashboard dashboard;
 
@@ -178,7 +175,12 @@ class _WidgetGridSection extends StatelessWidget {
                   children: [
                     clockRingRow,
                     const SizedBox(height: 14),
-                    PortalGlassFireWidget(width: _clockRingWidth, height: 118),
+                    SizedBox(
+                      width: _clockRingWidth,
+                      child: _ActivityNewsWidget(
+                        items: dashboard.activity,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -209,7 +211,10 @@ class _WidgetGridSection extends StatelessWidget {
                   : clockRingRow,
             ),
             const SizedBox(height: 14),
-            PortalGlassFireWidget(width: width, height: 118),
+            SizedBox(
+              width: width,
+              child: _ActivityNewsWidget(items: dashboard.activity),
+            ),
           ],
         );
 
@@ -246,10 +251,40 @@ class _WidgetGridSection extends StatelessWidget {
   }
 }
 
-/// Compact preview of today's real production timeline — the same
-/// `dashboard.timeline` data the full "Today's Production Timeline"
-/// section (below) shows in detail; this is a glanceable summary, not a
-/// duplicate data source.
+class _ActivityNewsWidget extends StatelessWidget {
+  final List<DirectorActivityItem> items;
+
+  const _ActivityNewsWidget({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return PortalGlassWidgetCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.campaign_outlined, size: 18, color: colors.goldDark),
+              const SizedBox(width: 8),
+              Text(
+                'Live production news',
+                style: AppTextStyles.sectionSerifHeading.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          DPActivityFeed(items: items.take(2).toList()),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact preview of the current planner day.
 class _TodayPipelineWidget extends StatelessWidget {
   final List<DirectorTimelineItem> events;
 
@@ -266,7 +301,7 @@ class _TodayPipelineWidget extends StatelessWidget {
           Row(
             children: [
               Text(
-                "Today's pipeline",
+                'Planner snapshot',
                 style: AppTextStyles.sectionSerifHeading
                     .copyWith(color: colors.textPrimary, fontSize: 15),
               ),
@@ -363,14 +398,11 @@ class _TodayPipelineRow extends StatelessWidget {
   }
 }
 
-/// "Modules" grid — the flagship's shortcut launchpad, replacing the
-/// previous ad hoc CinePlanner/applications button rows with the
-/// dashboard-kit's module-card grid. Counts are real pipeline/payment
-/// figures already computed elsewhere on this dashboard, not fabricated.
-class _ModulesSection extends StatelessWidget {
+/// Goal-oriented production workflows backed by live dashboard counts.
+class _ProductionWorkflowSection extends StatelessWidget {
   final DirectorDashboard dashboard;
 
-  const _ModulesSection({required this.dashboard});
+  const _ProductionWorkflowSection({required this.dashboard});
 
   @override
   Widget build(BuildContext context) {
@@ -387,12 +419,12 @@ class _ModulesSection extends StatelessWidget {
     final paymentsDue =
         dashboard.dpPayments.where((p) => p.status == 'Due').length;
 
-    final modules = [
+    final workflows = [
       PortalModuleCard(
         icon: Icons.view_timeline_rounded,
-        name: 'CinePlanner',
-        description: 'Breakdowns, scenes, call sheets.',
-        actionLabel: 'Open planner',
+        name: 'Plan production',
+        description: 'Build schedules, scenes, and call sheets.',
+        actionLabel: 'Plan now',
         tone: CineTone.information,
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
@@ -401,9 +433,9 @@ class _ModulesSection extends StatelessWidget {
         id: 'dp.reviewApplications',
         child: PortalModuleCard(
           icon: Icons.how_to_reg_outlined,
-          name: 'Casting',
-          description: 'Applications and auditions.',
-          actionLabel: 'Review',
+          name: 'Build your cast',
+          description: 'Review applications and auditions.',
+          actionLabel: 'Review talent',
           tone: CineTone.premium,
           onTap: () =>
               Navigator.pushNamed(context, DirectorProducerRoutes.projects),
@@ -413,9 +445,9 @@ class _ModulesSection extends StatelessWidget {
         id: 'dp.findProviders',
         child: PortalModuleCard(
           icon: Icons.travel_explore_outlined,
-          name: 'Discover',
-          description: 'Talent, crew, locations, gear.',
-          actionLabel: 'Browse',
+          name: 'Find collaborators',
+          description: 'Discover talent, crew, locations, and gear.',
+          actionLabel: 'Open marketplace',
           tone: CineTone.information,
           onTap: () =>
               Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
@@ -423,7 +455,7 @@ class _ModulesSection extends StatelessWidget {
       ),
       PortalModuleCard(
         icon: Icons.handshake_outlined,
-        name: 'Bargaining',
+        name: 'Close negotiations',
         count: negotiating > 0 ? negotiating : null,
         description: 'Counter offers, lock rates.',
         actionLabel: 'Open deals',
@@ -433,7 +465,7 @@ class _ModulesSection extends StatelessWidget {
       ),
       PortalModuleCard(
         icon: Icons.description_outlined,
-        name: 'Contracts',
+        name: 'Contracts to sign',
         count: contractsPending > 0 ? contractsPending : null,
         description: 'Agreements and e-signatures.',
         actionLabel: 'View',
@@ -443,7 +475,7 @@ class _ModulesSection extends StatelessWidget {
       ),
       PortalModuleCard(
         icon: Icons.shield_outlined,
-        name: 'Escrow',
+        name: 'Payment milestones',
         count: paymentsDue > 0 ? paymentsDue : null,
         description: 'Milestones and proof uploads.',
         actionLabel: 'Release',
@@ -456,8 +488,8 @@ class _ModulesSection extends StatelessWidget {
     return TourTarget(
       id: 'dp.console.modules',
       child: DPSectionCard(
-        title: 'Modules',
-        icon: Icons.dashboard_customize_rounded,
+        title: 'Production workflow',
+        icon: Icons.account_tree_outlined,
         actionText: 'Review applications',
         onActionTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.projects),
@@ -471,8 +503,8 @@ class _ModulesSection extends StatelessWidget {
               spacing: gap,
               runSpacing: gap,
               children: [
-                for (final module in modules)
-                  SizedBox(width: width, child: module),
+                for (final workflow in workflows)
+                  SizedBox(width: width, child: workflow),
               ],
             );
           },

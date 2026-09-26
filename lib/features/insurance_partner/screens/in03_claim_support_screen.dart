@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
+
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/insurance/insurance_controller.dart';
 import '../../../core/insurance/insurance_models.dart';
@@ -69,21 +71,11 @@ class _IN03ClaimSupportScreenState extends State<IN03ClaimSupportScreen> {
                       onChanged: (value) => setState(() => _query = value),
                     ),
                     const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final status in _statuses(allRows))
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: CoreChip(
-                                label: status,
-                                selected: _status == status,
-                                onTap: () => setState(() => _status = status),
-                              ),
-                            ),
-                        ],
-                      ),
+                    CineAnimatedFilterRail<String>(
+                      values: _statuses(allRows),
+                      selected: _status,
+                      onSelected: (status) => setState(() => _status = status),
+                      labelFor: (status) => status,
                     ),
                     const SizedBox(height: 12),
                     if (rows.isEmpty)
@@ -93,7 +85,7 @@ class _IN03ClaimSupportScreenState extends State<IN03ClaimSupportScreen> {
                             ? 'No live claims'
                             : 'No claims match filters',
                         message: allRows.isEmpty
-                            ? 'Seed insurance claims in MySQL to make this screen visible for demo.'
+                            ? 'New insurance claims will appear here after they are submitted.'
                             : 'Clear filters or search another claim.',
                         actionLabel: allRows.isEmpty ? null : 'Clear',
                         onAction: allRows.isEmpty

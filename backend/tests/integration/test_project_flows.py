@@ -131,6 +131,33 @@ def test_project_requirement_and_skills_flow(client: FlaskClient) -> None:
     assert project["members"][0]["permissions"]["manage_project"] is True
     project_id = project["public_id"]
 
+    planned = client.post(
+        "/api/v1/director/schedule",
+        headers=headers,
+        json={
+            "project_id": project_id,
+            "title": "Table read",
+            "event_type": "meeting",
+            "starts_at": "2026-07-18T10:00:00+05:00",
+            "ends_at": "2026-07-18T11:00:00+05:00",
+            "location": "Production office",
+            "notes": "Department heads and lead cast.",
+        },
+    )
+    assert planned.status_code == 201, planned.text
+    planned_event = planned.json["data"]["event"]
+    assert planned_event["title"] == "Table read"
+    assert planned_event["project_id"] == project_id
+
+    schedule = client.get(
+        f"/api/v1/director/schedule?project_id={project_id}", headers=headers
+    )
+    assert schedule.status_code == 200, schedule.text
+    assert any(
+        item["public_id"] == planned_event["public_id"]
+        for item in schedule.json["data"]["schedule"]["events"]
+    )
+
     listed = client.get("/api/v1/projects", headers=headers)
     assert listed.status_code == 200
     assert any(
@@ -211,6 +238,19 @@ def test_project_role_and_member_scope(client: FlaskClient) -> None:
         json={"title": "Actor owned project", "project_type": "film"},
     )
     assert blocked.status_code == 403
+
+    missing_cover = client.post(
+        "/api/v1/projects",
+        headers=producer_headers,
+        json={
+            "title": "Publish without cover",
+            "project_type": "film",
+            "status": "active",
+            "require_cover": True,
+        },
+    )
+    assert missing_cover.status_code == 422
+    assert "cover_file_id" in missing_cover.json["error"]["fields"]
 
     created = client.post(
         "/api/v1/projects",

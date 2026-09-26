@@ -18,6 +18,7 @@ import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/location_owner_routes.dart';
@@ -415,19 +416,17 @@ class _LocationWorkspaceTopBar extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           ThemeToggleButton(size: compact ? 34 : 38),
-          if (wide) ...[
-            const SizedBox(width: 10),
-            _LocationTopIcon(
-              icon: Icons.explore_outlined,
-              tooltip: 'Take the tour',
-              onTap: () => _startLocationOwnerTour(context),
-            ),
-          ],
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
+          CineAboutButton(
+            size: compact ? 34 : 38,
+            onStartTour: () => _startLocationOwnerTour(context),
+          ),
+          SizedBox(width: compact ? 6 : 10),
           _LocationTopIcon(
             icon: Icons.logout_rounded,
             tooltip: 'Logout',
             onTap: () => logoutToLogin(context),
+            size: compact ? 34 : 38,
           ),
         ],
       ),
@@ -544,11 +543,13 @@ class _LocationTopIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final double size;
 
   const _LocationTopIcon({
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.size = 38,
   });
 
   @override
@@ -557,13 +558,13 @@ class _LocationTopIcon extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(size / 2),
         onTap: onTap,
         child: GlassContainer(
-          width: 38,
-          height: 38,
-          radius: 19,
-          child: Icon(icon, color: colors.icon, size: 20),
+          width: size,
+          height: size,
+          radius: size / 2,
+          child: Icon(icon, color: colors.icon, size: size * 0.53),
         ),
       ),
     );

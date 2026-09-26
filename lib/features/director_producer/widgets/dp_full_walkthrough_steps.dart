@@ -186,8 +186,8 @@ const _dpFullWalkthroughChapters = <_DpTourChapter>[
         targetId: 'dp.marketplace.filterButton',
       ),
       _DpTourTopic(
-        'Use AI matching carefully',
-        'Treat recommended matches as a faster starting point, then confirm the profile, proof of work, and production fit yourself.',
+        'Use smart matching carefully',
+        'Treat rule-based matches as a faster starting point, then confirm the profile, proof of work, and production fit yourself.',
         targetId: 'dp.marketplace.firstCard',
       ),
       _DpTourTopic(

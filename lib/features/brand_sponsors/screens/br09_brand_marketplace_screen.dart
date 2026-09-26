@@ -11,6 +11,9 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/marketplace/marketplace_preferences.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../widgets/brand_demo_journey.dart';
@@ -29,6 +32,8 @@ const _brandDiscoveryCategories = [
   'Agencies',
   'Distribution',
 ];
+
+enum _BrandMarketplaceViewMode { list, grid }
 
 class BR09BrandMarketplaceScreen extends StatefulWidget {
   const BR09BrandMarketplaceScreen({super.key});
@@ -51,6 +56,27 @@ class _BR09BrandMarketplaceScreenState
   bool _loading = false;
   bool _loaded = false;
   Timer? _searchTimer;
+  _BrandMarketplaceViewMode _viewMode = _BrandMarketplaceViewMode.list;
+  final _preferences = const MarketplacePreferences();
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreViewMode();
+  }
+
+  Future<void> _restoreViewMode() async {
+    final usesGrid = await _preferences.usesGrid('brand');
+    if (!mounted) return;
+    setState(() => _viewMode = usesGrid
+        ? _BrandMarketplaceViewMode.grid
+        : _BrandMarketplaceViewMode.list);
+  }
+
+  void _setViewMode(_BrandMarketplaceViewMode value) {
+    setState(() => _viewMode = value);
+    _preferences.setGrid('brand', value == _BrandMarketplaceViewMode.grid);
+  }
 
   @override
   void didChangeDependencies() {
@@ -234,24 +260,19 @@ class _BR09BrandMarketplaceScreenState
               const SizedBox(height: 16),
               TourTarget(
                 id: 'brand.discovery.categories',
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final category in _brandDiscoveryCategories)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: _BrandMarketplaceChip(
-                            label: category,
-                            active: _category == category,
-                            onTap: () {
-                              setState(() => _category = category);
-                              _load();
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
+                child: CineAnimatedFilterRail<String>(
+                  values: _brandDiscoveryCategories,
+                  selected: _category,
+                  onSelected: (category) {
+                    setState(() => _category = category);
+                    _load();
+                  },
+                  labelFor: (category) => category,
+                  railColor: CineMarketplaceVisuals.of(context).surface,
+                  selectedColor: CineMarketplaceVisuals.of(context).gold,
+                  selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
+                  textColor: CineMarketplaceVisuals.of(context).secondary,
+                  borderColor: CineMarketplaceVisuals.of(context).border,
                 ),
               ),
             ],
@@ -266,11 +287,14 @@ class _BR09BrandMarketplaceScreenState
             const SizedBox(height: 12),
           ],
           if (_loading && !_loaded)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: CircularProgressIndicator(),
-              ),
+            const Column(
+              children: [
+                SkeletonCard(height: 144),
+                SizedBox(height: 10),
+                SkeletonCard(height: 144),
+                SizedBox(height: 10),
+                SkeletonCard(height: 144),
+              ],
             )
           else if (_items.isEmpty)
             CoreEmptyState(
@@ -282,35 +306,29 @@ class _BR09BrandMarketplaceScreenState
               onAction: _load,
             )
           else
-            TourTarget(
-              id: 'brand.discovery.results',
-              child: CineMarketplaceResults(
-                cards: [
-                  for (final entry in _items.indexed)
-                    CineMarketplaceCard(
-                      title: entry.$2.title,
-                      kind: entry.$2.kind,
-                      category: entry.$2.category,
-                      subtitle: entry.$2.subtitle,
-                      summary: entry.$2.summary,
-                      city: entry.$2.cityName,
-                      rateLabel: entry.$2.rateLabel,
-                      pricingMode: entry.$2.pricingMode,
-                      allowsBargaining: entry.$2.allowsBargaining,
-                      verificationStatus: entry.$2.verificationStatus,
-                      imageUrl: entry.$2.coverImageUrl,
-                      tags: entry.$2.tags,
-                      available: entry.$2.available,
-                      rating: entry.$2.ratingAverage.toDouble(),
-                      trustScore: entry.$2.trustMetrics?.score,
-                      busy: _loading,
-                      featured: entry.$1 == 0,
-                      onProfile: () => _showProfile(entry.$2),
-                      onShortlist: () => _shortlist(entry.$2),
-                      onRequest: () => _request(entry.$2),
-                    ),
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _BrandResultsToolbar(
+                  count: _items.length,
+                  category: _category,
+                  viewMode: _viewMode,
+                  onViewModeChanged: _setViewMode,
+                ),
+                const SizedBox(height: 12),
+                TourTarget(
+                  id: 'brand.discovery.results',
+                  child: _category == 'All'
+                      ? _buildGroupedResults()
+                      : CineMarketplaceResults(
+                          grid: _viewMode == _BrandMarketplaceViewMode.grid,
+                          cards: [
+                            for (final entry in _items.indexed)
+                              _buildMarketplaceCard(entry.$2, entry.$1),
+                          ],
+                        ),
+                ),
+              ],
             ),
         ],
       ),
@@ -322,6 +340,64 @@ class _BR09BrandMarketplaceScreenState
       if (project.publicId == _projectId) return project;
     }
     return null;
+  }
+
+  Widget _buildGroupedResults() {
+    final grouped = <String, List<DirectorDiscoveryItem>>{};
+    for (final item in _items) {
+      grouped.putIfAbsent(_categoryForItem(item), () => []).add(item);
+    }
+    var globalIndex = 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final category in _brandDiscoveryCategories.skip(1))
+          if (grouped[category]?.isNotEmpty ?? false) ...[
+            _BrandCategoryHeading(
+              category: category,
+              count: grouped[category]!.length,
+              onViewAll: () {
+                setState(() => _category = category);
+                _load();
+              },
+            ),
+            const SizedBox(height: 10),
+            CineMarketplaceResults(
+              grid: _viewMode == _BrandMarketplaceViewMode.grid,
+              cards: [
+                for (final item in grouped[category]!)
+                  _buildMarketplaceCard(item, globalIndex++),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+      ],
+    );
+  }
+
+  Widget _buildMarketplaceCard(DirectorDiscoveryItem item, int index) {
+    return CineMarketplaceCard(
+      title: item.title,
+      kind: item.kind,
+      category: item.category,
+      subtitle: item.subtitle,
+      summary: item.summary,
+      city: item.cityName,
+      rateLabel: item.rateLabel,
+      pricingMode: item.pricingMode,
+      allowsBargaining: item.allowsBargaining,
+      verificationStatus: item.verificationStatus,
+      imageUrl: item.coverImageUrl,
+      tags: item.tags,
+      available: item.available,
+      rating: item.ratingAverage.toDouble(),
+      trustScore: item.trustMetrics?.score,
+      busy: _loading,
+      featured: index == 0,
+      onProfile: () => _showProfile(item),
+      onShortlist: () => _shortlist(item),
+      onRequest: () => _request(item),
+    );
   }
 
   Future<bool> _shortlist(DirectorDiscoveryItem item) async {
@@ -388,11 +464,12 @@ class _BR09BrandMarketplaceScreenState
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
-              ),
+            return const Column(
+              children: [
+                SkeletonCard(height: 310),
+                SizedBox(height: 12),
+                SkeletonCard(height: 180),
+              ],
             );
           }
           if (snapshot.hasError) {
@@ -415,7 +492,9 @@ class _BR09BrandMarketplaceScreenState
                 portraitUrl: detail.coverImageUrl,
                 verified: detail.verificationStatus == 'approved',
                 available: detail.available,
-                rateLabel: detail.rateLabel,
+                rateLabel: detail.allowsBargaining
+                    ? 'Open to negotiation'
+                    : 'Request terms',
                 rating: trust?.ratingAverage ??
                     (detail.ratingAverage > 0
                         ? detail.ratingAverage.toDouble()
@@ -435,8 +514,13 @@ class _BR09BrandMarketplaceScreenState
                 children: [
                   BrandLiveStatusChip(status: detail.verificationStatus),
                   Chip(label: Text(detail.cityName)),
-                  Chip(label: Text(detail.rateLabel)),
-                  Chip(label: Text(detail.pricingChoiceLabel)),
+                  Chip(
+                    label: Text(
+                      detail.allowsBargaining
+                          ? 'Negotiation available'
+                          : 'Terms shared in booking',
+                    ),
+                  ),
                   if (detail.trustMetrics?.score != null)
                     Chip(
                         label: Text('Trust ${detail.trustMetrics!.score}/100')),
@@ -573,53 +657,113 @@ class _BrandMarketplaceSearch extends StatelessWidget {
   }
 }
 
-class _BrandMarketplaceChip extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
+class _BrandResultsToolbar extends StatelessWidget {
+  final int count;
+  final String category;
+  final _BrandMarketplaceViewMode viewMode;
+  final ValueChanged<_BrandMarketplaceViewMode> onViewModeChanged;
 
-  const _BrandMarketplaceChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
+  const _BrandResultsToolbar({
+    required this.count,
+    required this.category,
+    required this.viewMode,
+    required this.onViewModeChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: active
-          ? CineMarketplaceVisuals.of(context).gold
-          : CineMarketplaceVisuals.of(context).surface,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 190),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: active
-                  ? CineMarketplaceVisuals.of(context).gold
-                  : CineMarketplaceVisuals.of(context).border,
-            ),
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          '$count approved ${count == 1 ? 'listing' : 'listings'}'
+          '${category == 'All' ? '' : ' · $category'}',
+          style: CineMarketplaceVisuals.of(context).archivo(
+            size: 11.5,
+            weight: FontWeight.w600,
+            color: CineMarketplaceVisuals.of(context).secondary,
           ),
+        ),
+        SizedBox(
+          width: 194,
+          child: CineAnimatedFilterRail<_BrandMarketplaceViewMode>(
+            values: _BrandMarketplaceViewMode.values,
+            selected: viewMode,
+            onSelected: onViewModeChanged,
+            labelFor: (mode) =>
+                mode == _BrandMarketplaceViewMode.list ? 'List' : 'Grid',
+            iconFor: (mode) => mode == _BrandMarketplaceViewMode.list
+                ? Icons.view_agenda_outlined
+                : Icons.grid_view_rounded,
+            showSelectionDot: false,
+            itemHeight: 38,
+            selectedColor: CineMarketplaceVisuals.of(context).gold,
+            selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
+            railColor: CineMarketplaceVisuals.of(context).surface,
+            textColor: CineMarketplaceVisuals.of(context).secondary,
+            borderColor: CineMarketplaceVisuals.of(context).border,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BrandCategoryHeading extends StatelessWidget {
+  final String category;
+  final int count;
+  final VoidCallback onViewAll;
+
+  const _BrandCategoryHeading({
+    required this.category,
+    required this.count,
+    required this.onViewAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visuals = CineMarketplaceVisuals.of(context);
+    return Row(
+      children: [
+        Expanded(
           child: Text(
-            label,
-            style: CineMarketplaceVisuals.of(context).archivo(
-              size: 11.5,
-              weight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active
-                  ? CineMarketplaceVisuals.of(context).onGold
-                  : CineMarketplaceVisuals.of(context).secondary,
+            '$category · $count',
+            style: visuals.archivo(
+              size: 15,
+              weight: FontWeight.w700,
+              color: visuals.ink,
             ),
           ),
         ),
-      ),
+        TextButton.icon(
+          onPressed: onViewAll,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+          label: const Text('View all'),
+          style: TextButton.styleFrom(
+            foregroundColor: visuals.gold,
+            textStyle: visuals.archivo(size: 12, weight: FontWeight.w700),
+          ),
+        ),
+      ],
     );
   }
+}
+
+String _categoryForItem(DirectorDiscoveryItem item) {
+  return switch (item.kind.toLowerCase()) {
+    'actor' => 'Actors',
+    'model' => 'Models',
+    'influencer' => 'Influencers',
+    'crew' => 'Crew',
+    'location' => 'Locations',
+    'equipment' => 'Media & Equipment',
+    'agency' => 'Agencies',
+    'distribution' => 'Distribution',
+    _ => item.category,
+  };
 }
 
 String _profileBadge(String kind) {

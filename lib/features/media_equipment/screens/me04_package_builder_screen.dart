@@ -78,7 +78,7 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
         const SizedBox(height: 12),
         if (_dataFuture == null)
           const InlineNotice(
-            message: 'Preview mode. Sign in to manage rental packages.',
+            message: 'Sign in to manage live rental packages.',
             icon: Icons.visibility_outlined,
           )
         else

@@ -6,6 +6,7 @@ import '../../../core/operations/operations_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
+import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../widgets/media_equipment_components.dart';
 
@@ -54,11 +55,11 @@ class _ME03InventoryManagerScreenState
                 onChanged: (value) => setState(() => _query = value),
               ),
               const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final filter in const [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CineAnimatedFilterRail<String>(
+                    values: const [
                       'All',
                       'Camera',
                       'Lens',
@@ -66,28 +67,23 @@ class _ME03InventoryManagerScreenState
                       'Drone',
                       'Audio',
                       'Grip',
-                    ])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CoreChip(
-                          label: filter,
-                          selected: _filter == filter,
-                          onTap: () => setState(() => _filter = filter),
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    for (final sort in const ['Category', 'Rate'])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CoreChip(
-                          label: sort,
-                          icon: Icons.sort_rounded,
-                          selected: _sort == sort,
-                          onTap: () => setState(() => _sort = sort),
-                        ),
-                      ),
-                  ],
-                ),
+                    ],
+                    selected: _filter,
+                    onSelected: (filter) => setState(() => _filter = filter),
+                    labelFor: (filter) => filter,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 230,
+                    child: CineAnimatedFilterRail<String>(
+                      values: const ['Category', 'Rate'],
+                      selected: _sort,
+                      onSelected: (sort) => setState(() => _sort = sort),
+                      labelFor: (sort) => sort,
+                      iconFor: (_) => Icons.sort_rounded,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
 import '../../../core/core_ui/core_routes.dart';
-import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -17,6 +16,7 @@ import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_about_button.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/brand_sponsor_routes.dart';
@@ -170,8 +170,6 @@ class BrandSponsorShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showMobileDemo =
-        MediaQuery.sizeOf(context).width < AppBreakpoints.laptop;
     return AdminScreenScaffold(
       title: title,
       currentRoute: routeName,
@@ -218,79 +216,10 @@ class BrandSponsorShell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _BrandRouteHeading(title: title, route: routeName),
-              ),
-              if (showMobileDemo) ...[
-                const SizedBox(width: 10),
-                _BrandDemoLauncher(
-                  onTap: () => startBrandFullWalkthrough(context),
-                ),
-              ],
-            ],
-          ),
+          _BrandRouteHeading(title: title, route: routeName),
           const SizedBox(height: 14),
           child,
         ],
-      ),
-    );
-  }
-}
-
-class _BrandDemoLauncher extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _BrandDemoLauncher({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Tooltip(
-      message: 'Play the complete demo',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: const ValueKey('brand-demo-launcher'),
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Ink(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            decoration: BoxDecoration(
-              gradient: colors.goldGradient,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.goldMid),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.goldGlow,
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.play_circle_outline_rounded,
-                  color: colors.onGold,
-                  size: 19,
-                ),
-                const SizedBox(width: 7),
-                Text(
-                  'Demo',
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.onGold,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -421,37 +350,37 @@ class _BrandWorkspaceTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           if (wide) ...[
-            _BrandTopIcon(
-              icon: Icons.explore_outlined,
-              tooltip: 'Play the complete demo',
-              onTap: () => startBrandFullWalkthrough(context),
-            ),
-            const SizedBox(width: 10),
-          ],
-          TourTarget(
-            id: 'brand:notifications',
-            child: _BrandNotificationButton(
-              onTap: () =>
-                  Navigator.pushNamed(context, CoreRoutes.notifications),
-            ),
-          ),
-          const SizedBox(width: 10),
-          TourTarget(
-            id: 'nav:${BrandSponsorRoutes.profile}',
-            child: _BrandProfileButton(
-              onTap: () => Navigator.pushNamed(
-                context,
-                BrandSponsorRoutes.profile,
+            TourTarget(
+              id: 'brand:notifications',
+              child: _BrandNotificationButton(
+                onTap: () =>
+                    Navigator.pushNamed(context, CoreRoutes.notifications),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            TourTarget(
+              id: 'nav:${BrandSponsorRoutes.profile}',
+              child: _BrandProfileButton(
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  BrandSponsorRoutes.profile,
+                ),
+              ),
+            ),
+          ],
           SizedBox(width: compact ? 8 : 10),
           ThemeToggleButton(size: compact ? 34 : 38),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
+          CineAboutButton(
+            size: compact ? 34 : 38,
+            onStartTour: () => startBrandFullWalkthrough(context),
+          ),
+          SizedBox(width: compact ? 6 : 10),
           _BrandTopIcon(
             icon: Icons.logout_rounded,
             tooltip: 'Logout',
             onTap: () => logoutToLogin(context),
+            size: compact ? 34 : 38,
           ),
         ],
       ),
@@ -570,11 +499,13 @@ class _BrandTopIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final double size;
 
   const _BrandTopIcon({
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.size = 38,
   });
 
   @override
@@ -583,13 +514,13 @@ class _BrandTopIcon extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: InkWell(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(size / 2),
         onTap: onTap,
         child: GlassContainer(
-          width: 38,
-          height: 38,
-          radius: 19,
-          child: Icon(icon, color: colors.icon, size: 20),
+          width: size,
+          height: size,
+          radius: size / 2,
+          child: Icon(icon, color: colors.icon, size: size * 0.53),
         ),
       ),
     );
