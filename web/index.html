@@ -18,10 +18,11 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="description" content="CineConnect dark cinematic film-industry marketplace app.">
+  <meta name="description" content="CineConnect production marketplace and portal suite.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,7 +33,7 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>cineconnect</title>
+  <title>CineConnect</title>
   <link rel="manifest" href="manifest.json">
   <style>
     #cc-boot-screen {
@@ -41,8 +42,8 @@
       z-index: 2147483000;
       display: grid;
       place-items: center;
-      background: #faf6ee;
-      color: #17140f;
+      background: #070708;
+      color: #f7f4eb;
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     .cc-boot-content { text-align: center; }
@@ -57,7 +58,7 @@
     }
     #cc-boot-message {
       margin: 0;
-      color: #6b655a;
+      color: #aaa294;
       font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.08em;
@@ -102,7 +103,7 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20260926-floating-bubbles-v18';
+    const releaseVersion = '20261010-unified-portals-v19';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;

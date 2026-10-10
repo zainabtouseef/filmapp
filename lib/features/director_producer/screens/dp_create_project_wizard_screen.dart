@@ -280,7 +280,8 @@ class _DPCreateProjectWizardScreenState
       'requirements': _requirements.map((r) => r.toJson()).toList(),
     });
     if (!mounted || !notify) return;
-    dpSnack(context, 'Draft saved');
+    dpSnack(context,
+        'Draft saved on this device. Submit to save your project online.');
   }
 
   @override
@@ -1160,6 +1161,8 @@ class _DPCreateProjectWizardScreenState
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _requirements.length,
+            // Keep compatibility with the project's supported Flutter SDKs.
+            // ignore: deprecated_member_use
             onReorder: (oldIndex, newIndex) {
               setState(() {
                 if (newIndex > oldIndex) newIndex -= 1;
@@ -1430,7 +1433,7 @@ class _DPCreateProjectWizardScreenState
     if (project == null) return;
     Navigator.pushNamed(
       context,
-      DirectorProducerRoutes.projectDetail,
+      DirectorProducerRoutes.projectPath(project.publicId),
       arguments: project.publicId,
     );
   }

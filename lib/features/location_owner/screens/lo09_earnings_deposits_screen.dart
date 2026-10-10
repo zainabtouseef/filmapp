@@ -55,7 +55,9 @@ class _LO09EarningsDepositsScreenState
 
   void _reload() {
     if (_payments == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override
@@ -365,7 +367,11 @@ class _LedgerRow extends StatelessWidget {
                 Navigator.pushNamed(
                   context,
                   CoreRoutes.report,
-                  arguments: 'Location ledger issue ${item.publicId}',
+                  arguments: {
+                    'reason': 'Location ledger issue: ${item.description}',
+                    'entity_type': 'payment_ledger_entry',
+                    'entity_id': item.publicId,
+                  },
                 );
               }
             },

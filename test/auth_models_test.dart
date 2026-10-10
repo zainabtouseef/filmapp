@@ -30,4 +30,22 @@ void main() {
     expect(user.hasRole('director_producer'), isTrue);
     expect(user.hasRole('brand_sponsor'), isFalse);
   });
+
+  test('AuthSettings parses persisted locale and notification channels', () {
+    final settings = AuthSettings.fromJson({
+      'timezone': 'Asia/Karachi',
+      'locale': 'ur-Latn-PK',
+      'notifications': {
+        'email_enabled': false,
+        'sms_enabled': true,
+        'push_enabled': false,
+      },
+    });
+
+    expect(settings.timezone, 'Asia/Karachi');
+    expect(settings.locale, 'ur-Latn-PK');
+    expect(settings.emailEnabled, isFalse);
+    expect(settings.smsEnabled, isTrue);
+    expect(settings.pushEnabled, isFalse);
+  });
 }

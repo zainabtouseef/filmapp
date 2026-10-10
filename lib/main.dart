@@ -26,6 +26,7 @@ import 'core/theme/theme_controller.dart';
 import 'core/tour/spotlight_overlay.dart';
 import 'core/tour/tour_controller.dart';
 import 'core/trust_safety/trust_safety_controller.dart';
+import 'shared/widgets/cinematic_cursor.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -154,7 +155,8 @@ class CineConnectApp extends StatelessWidget {
               // controls, so it gets its own self-contained pair here
               // rather than crashing at runtime (a gap `flutter analyze`
               // can't catch; only caught by actually pumping the widget).
-              builder: (context, child) => Overlay(
+              builder: (context, child) => CinematicCursor(
+                  child: Overlay(
                 initialEntries: [
                   OverlayEntry(
                     builder: (context) => Material(
@@ -170,7 +172,7 @@ class CineConnectApp extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
+              )),
             );
           },
         ),

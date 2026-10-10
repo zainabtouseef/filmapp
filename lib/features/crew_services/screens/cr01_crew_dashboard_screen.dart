@@ -107,7 +107,9 @@ class _CR01CrewDashboardScreenState extends State<CR01CrewDashboardScreen> {
 
   void _reload() {
     if (_auth == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override

@@ -13,7 +13,8 @@ class LO13OpportunitiesScreen extends StatelessWidget {
     return const OpportunityInboxScreen(
       category: 'location',
       sectionTitle: 'Open Location Requests',
-      emptyMessage: 'New location requirements from directors will appear here.',
+      emptyMessage:
+          'New location requirements from directors will appear here.',
       detailRoute: LocationOwnerRoutes.opportunityApplicationDetail,
     );
   }

@@ -1,11 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../contracts/contract_models.dart';
 import '../../contracts/contracts_controller.dart';
-import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/widgets/core_widgets.dart';
+import '../../network/save_download.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 
@@ -30,13 +28,15 @@ class ContractViewerScreen extends StatefulWidget {
 }
 
 class _ContractViewerScreenState extends State<ContractViewerScreen> {
-  String _version = 'v1.1';
   bool _signed = false;
   bool _signing = false;
   Future<CineContract>? _contractFuture;
   final bool requiresKycBeforeSigning = true;
 
-  bool get _live => widget.contractId?.startsWith('CON-') ?? false;
+  // Contract identifiers are opaque server values. Production demo records use
+  // `DEMO-CTR-*`, while user-created records may use a different prefix; the
+  // backend remains the authority for existence and access control.
+  bool get _live => widget.contractId?.trim().isNotEmpty ?? false;
 
   @override
   void didChangeDependencies() {
@@ -71,32 +71,32 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              if (contract != null) {
-                final contracts = ContractsScope.maybeOf(rootContext);
-                if (contracts != null) {
-                  unawaited(
-                    contracts
-                        .createAddendum(
-                          contractId: contract.publicId,
-                          reason: 'Correction request',
-                          content: controller.text.trim().isEmpty
-                              ? 'Please review the requested correction.'
-                              : controller.text.trim(),
-                        )
-                        .catchError((_) => ContractAddendum(
-                              publicId: '',
-                              requestedBy: const ContractUser(
-                                publicId: '',
-                                displayName: '',
-                              ),
-                              reason: '',
-                              content: '',
-                              status: 'failed',
-                              createdAt: null,
-                            )),
+              final contracts = ContractsScope.maybeOf(rootContext);
+              if (contract == null || contracts == null) {
+                showCoreSnack(
+                  rootContext,
+                  'A live contract is required before requesting a correction.',
+                );
+                return;
+              }
+              try {
+                await contracts.createAddendum(
+                  contractId: contract.publicId,
+                  reason: 'Correction request',
+                  content: controller.text.trim().isEmpty
+                      ? 'Please review the requested correction.'
+                      : controller.text.trim(),
+                );
+              } catch (_) {
+                if (rootContext.mounted) {
+                  showCoreSnack(
+                    rootContext,
+                    'Correction request could not be sent. Please try again.',
                   );
                 }
+                return;
               }
+              if (!rootContext.mounted || !dialogContext.mounted) return;
               Navigator.pop(dialogContext);
               showCoreSnack(rootContext, 'Correction request sent');
             },
@@ -109,7 +109,6 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
 
   void _signatureSheet() {
     final typed = TextEditingController();
-    final otp = TextEditingController();
     final rootContext = context;
     final contracts = ContractsScope.maybeOf(context);
     showModalBottomSheet<void>(
@@ -121,32 +120,43 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
             bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
         child: _SignatureSheet(
           typed: typed,
-          otp: otp,
           loading: _signing,
-          onSigned: () async {
-            if (otp.text.trim().length != 6) {
-              showCoreSnack(rootContext, 'Enter any 6-digit OTP');
+          onSigned: (consent) async {
+            if (!_live || contracts == null) {
+              showCoreSnack(
+                rootContext,
+                'Open a live CineConnect contract before signing.',
+              );
               return;
             }
-            if (_live) {
-              if (contracts == null) return;
-              setState(() => _signing = true);
-              try {
-                final updated = await contracts.sign(widget.contractId!);
-                if (!mounted || !rootContext.mounted) return;
-                setState(() {
-                  _signed = updated.isSigned;
-                  _contractFuture = Future.value(updated);
-                  _signing = false;
-                });
-              } catch (error) {
-                if (!mounted || !rootContext.mounted) return;
-                setState(() => _signing = false);
-                showCoreSnack(rootContext, '$error');
-                return;
-              }
-            } else {
-              setState(() => _signed = true);
+            if (typed.text.trim().length < 2) {
+              showCoreSnack(rootContext, 'Enter your signed-in account name.');
+              return;
+            }
+            if (!consent) {
+              showCoreSnack(
+                  rootContext, 'Confirm the signing acknowledgement.');
+              return;
+            }
+            if (_signing) return;
+            setState(() => _signing = true);
+            try {
+              final updated = await contracts.sign(
+                widget.contractId!,
+                typedName: typed.text.trim(),
+                consent: consent,
+              );
+              if (!mounted || !rootContext.mounted) return;
+              setState(() {
+                _signed = updated.isSigned;
+                _contractFuture = Future.value(updated);
+                _signing = false;
+              });
+            } catch (error) {
+              if (!mounted || !rootContext.mounted) return;
+              setState(() => _signing = false);
+              showCoreSnack(rootContext, '$error');
+              return;
             }
             if (!sheetContext.mounted || !rootContext.mounted) return;
             Navigator.pop(sheetContext);
@@ -162,56 +172,31 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
     );
   }
 
-  void _qrDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        final colors = context.appColors;
-        return AlertDialog(
-          backgroundColor: colors.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text(
-            'QR Verification',
-            style:
-                AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 150,
-                height: 150,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors.textPrimary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 49,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    mainAxisSpacing: 4,
-                    crossAxisSpacing: 4,
-                  ),
-                  itemBuilder: (_, i) => Container(
-                    color: (i * 7 + i) % 3 == 0
-                        ? colors.onGold
-                        : colors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'CC-CON-2026-0041',
-                style: AppTextStyles.label.copyWith(color: colors.textPrimary),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  Future<void> _downloadPdf(CineContract contract) async {
+    final contracts = ContractsScope.maybeOf(context);
+    if (contracts == null) return;
+    try {
+      final download = await contracts.downloadContract(contract.publicId);
+      if (!mounted) return;
+      final saved =
+          saveDownload(download.filename, download.bytes, download.contentType);
+      showCoreSnack(
+        context,
+        saved
+            ? 'Contract PDF downloaded'
+            : 'Contract PDF is ready. Browser download is available on web.',
+      );
+    } catch (error) {
+      if (mounted) showCoreSnack(context, 'Contract download failed: $error');
+    }
+  }
+
+  void _retryContract() {
+    final contracts = ContractsScope.maybeOf(context);
+    if (!_live || contracts == null) return;
+    setState(() {
+      _contractFuture = contracts.contract(widget.contractId!);
+    });
   }
 
   @override
@@ -230,7 +215,16 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
             );
           }
           if (snapshot.hasError || snapshot.data == null) {
-            return _demoScaffold(context);
+            return CoreScreenScaffold(
+              child: CoreEmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Contract unavailable',
+                message:
+                    'CineConnect could not load this live contract. No demo contract is being substituted.',
+                actionLabel: 'Retry',
+                onAction: _retryContract,
+              ),
+            );
           }
           final contract = snapshot.data!;
           _signed = contract.isSigned;
@@ -238,14 +232,20 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
         },
       );
     }
-    return _demoScaffold(context);
+    return const CoreScreenScaffold(
+      child: CoreEmptyState(
+        icon: Icons.description_outlined,
+        title: 'Choose a live contract',
+        message:
+            'Open a contract from a booking or contract workspace to review and sign it.',
+      ),
+    );
   }
 
-  Widget _demoScaffold(BuildContext context) {
-    return _contractScaffold(context);
-  }
-
-  Widget _contractScaffold(BuildContext context, {CineContract? contract}) {
+  Widget _contractScaffold(
+    BuildContext context, {
+    required CineContract contract,
+  }) {
     final colors = context.appColors;
     return CoreScreenScaffold(
       child: Column(
@@ -266,7 +266,7 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        contract?.title ?? 'Actor Booking Agreement',
+                        contract.title,
                         style: AppTextStyles.cardTitle.copyWith(
                           color: colors.textPrimary,
                           fontSize: 17,
@@ -283,20 +283,28 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  contract == null
-                      ? 'Contract ID: CC-CON-2026-0041 · Booking BK-2048 · TVC Shoot — Lahore'
-                      : 'Contract ID: ${contract.publicId} · Booking ${contract.bookingId} · ${contract.displayValue}',
+                  'Contract ID: ${contract.publicId} · Booking ${contract.bookingId} · ${contract.displayValue}',
                   style: AppTextStyles.caption
                       .copyWith(color: colors.textSecondary),
                 ),
                 const SizedBox(height: 14),
-                CoreDropdownField<String>(
-                  value: _version,
-                  values: const ['v1.0', 'v1.1', 'Addendum 1'],
-                  label: 'Version selector',
-                  icon: Icons.history_rounded,
-                  onChanged: (value) =>
-                      setState(() => _version = value ?? _version),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.history_rounded,
+                      color: colors.goldMid,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Contract version ${contract.versionNumber} · Template version ${contract.template.versionNumber}',
+                        style: AppTextStyles.body.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -328,11 +336,20 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
               _actionButton(Icons.edit_note_outlined, 'Request Correction',
                   () => _correctionDialog(contract)),
               _actionButton(
-                  Icons.draw_outlined, 'Sign Contract', _signatureSheet),
+                Icons.draw_outlined,
+                _signed ? 'Contract Signed' : 'Review & Sign',
+                _signed ? null : _signatureSheet,
+              ),
               _actionButton(Icons.picture_as_pdf_outlined, 'Download PDF',
-                  () => showCoreSnack(context, 'PDF download simulated')),
+                  () => _downloadPdf(contract)),
               _actionButton(
-                  Icons.qr_code_2_rounded, 'View QR Verification', _qrDialog),
+                Icons.qr_code_2_rounded,
+                'QR verification unavailable',
+                () => showCoreSnack(
+                  context,
+                  'QR verification requires a signed verification service and is not enabled.',
+                ),
+              ),
             ],
           ),
         ],
@@ -340,7 +357,7 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
     );
   }
 
-  Widget _actionButton(IconData icon, String label, VoidCallback onTap) {
+  Widget _actionButton(IconData icon, String label, VoidCallback? onTap) {
     return SizedBox(
       width: 190,
       child: CoreSecondaryButton(
@@ -352,9 +369,12 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
     );
   }
 
-  Widget _documentBody(BuildContext context, {CineContract? contract}) {
+  Widget _documentBody(
+    BuildContext context, {
+    required CineContract contract,
+  }) {
     final colors = context.appColors;
-    final clauses = contract?.clauses;
+    final clauses = contract.clauses;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
@@ -385,29 +405,21 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          if (contract != null) ...[
+          ContractClauseRow(
+            title: 'Parties',
+            value: contract.counterpartySummary,
+          ),
+          ContractClauseRow(
+            title: 'Commercials',
+            value:
+                '${contract.displayValue} · effective ${contract.effectiveDate ?? 'on signature'} · ${contract.signatureProgressPercent}',
+          ),
+          for (var i = 0; i < clauses.length; i++)
             ContractClauseRow(
-              title: 'Parties',
-              value: contract.counterpartySummary,
+              title: clauses[i].title,
+              value: clauses[i].bodyText,
+              showDivider: i != clauses.length - 1,
             ),
-            ContractClauseRow(
-              title: 'Commercials',
-              value:
-                  '${contract.displayValue} · effective ${contract.effectiveDate ?? 'on signature'} · ${contract.signatureProgressPercent}',
-            ),
-            for (var i = 0; i < (clauses ?? const []).length; i++)
-              ContractClauseRow(
-                title: clauses![i].title,
-                value: clauses[i].bodyText,
-                showDivider: i != clauses.length - 1,
-              ),
-          ] else
-            for (var i = 0; i < SharedMockData.clauses.length; i++)
-              ContractClauseRow(
-                title: SharedMockData.clauses[i].title,
-                value: SharedMockData.clauses[i].value,
-                showDivider: i != SharedMockData.clauses.length - 1,
-              ),
         ],
       ),
     );
@@ -462,18 +474,23 @@ class ContractClauseRow extends StatelessWidget {
   }
 }
 
-class _SignatureSheet extends StatelessWidget {
+class _SignatureSheet extends StatefulWidget {
   final TextEditingController typed;
-  final TextEditingController otp;
   final bool loading;
-  final Future<void> Function() onSigned;
+  final Future<void> Function(bool consent) onSigned;
 
   const _SignatureSheet({
     required this.typed,
-    required this.otp,
     required this.loading,
     required this.onSigned,
   });
+
+  @override
+  State<_SignatureSheet> createState() => _SignatureSheetState();
+}
+
+class _SignatureSheetState extends State<_SignatureSheet> {
+  bool _consent = false;
 
   @override
   Widget build(BuildContext context) {
@@ -497,33 +514,29 @@ class _SignatureSheet extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             CoreTextField(
-              controller: typed,
-              label: 'Typed signature',
+              controller: widget.typed,
+              label: 'Signed-in account name',
               icon: Icons.drive_file_rename_outline,
             ),
             const SizedBox(height: 14),
-            Container(
-              height: 92,
-              width: double.infinity,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: colors.border),
-              ),
-              child: Text(
-                'Draw signature area',
-                style:
-                    AppTextStyles.caption.copyWith(color: colors.textSecondary),
+            CheckboxListTile(
+              value: _consent,
+              onChanged: widget.loading
+                  ? null
+                  : (value) => setState(() => _consent = value ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(
+                'I reviewed this contract and agree to sign it using my authenticated CineConnect account.',
+                style: AppTextStyles.body.copyWith(color: colors.textPrimary),
               ),
             ),
-            const SizedBox(height: 14),
-            OtpInputRow(controller: otp),
             const SizedBox(height: 18),
             CorePrimaryButton(
               icon: Icons.verified_outlined,
-              label: 'OTP-confirmed signature',
-              loading: loading,
-              onTap: onSigned,
+              label: 'Sign with authenticated account',
+              loading: widget.loading,
+              onTap: () => widget.onSigned(_consent),
             ),
           ],
         ),

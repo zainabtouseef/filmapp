@@ -35,7 +35,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   Future<void> _flag(AdminBookingRecordDto booking) async {
@@ -278,8 +280,7 @@ class _BookingDetailContent extends StatelessWidget {
                     ? null
                     : () => Navigator.pushNamed(
                           context,
-                          CoreRoutes.contract,
-                          arguments: booking.contractId,
+                          CoreRoutes.contractDetail(booking.contractId!),
                         ),
               ),
               AdminActionButton(

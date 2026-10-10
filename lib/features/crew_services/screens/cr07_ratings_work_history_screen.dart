@@ -78,7 +78,9 @@ class _CR07RatingsWorkHistoryScreenState
 
   void _reload() {
     if (_auth == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override

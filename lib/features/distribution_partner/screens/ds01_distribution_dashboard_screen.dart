@@ -36,7 +36,9 @@ class _DS01DistributionDashboardScreenState
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override

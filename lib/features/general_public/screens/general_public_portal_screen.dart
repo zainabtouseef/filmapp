@@ -370,7 +370,9 @@ class _GeneralPublicRequestsScreenState
                 DPHolographicButton(
                   label: 'Retry',
                   icon: Icons.refresh_rounded,
-                  onTap: () => setState(() => _future = _load()),
+                  onTap: () => setState(() {
+                    _future = _load();
+                  }),
                 ),
               ],
             ),
@@ -830,7 +832,8 @@ class _PublicBottomNav extends StatelessWidget {
     if (_publicActive(currentRoute, GeneralPublicRoutes.home)) return 0;
     if (_publicActive(currentRoute, GeneralPublicRoutes.browse) ||
         _publicActive(currentRoute, GeneralPublicRoutes.actors) ||
-        _publicActive(currentRoute, GeneralPublicRoutes.models)) {
+        _publicActive(currentRoute, GeneralPublicRoutes.models) ||
+        _publicActive(currentRoute, GeneralPublicRoutes.influencers)) {
       return 1;
     }
     if (_publicActive(currentRoute, GeneralPublicRoutes.cinema)) return 2;

@@ -45,7 +45,8 @@ class MeetingNegotiationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentRound = thread?.currentRound;
     final isMine = currentRound?.proposedBy.publicId == currentUserId;
-    final canRespond = currentRound != null && currentRound.isPending && !isMine;
+    final canRespond =
+        currentRound != null && currentRound.isPending && !isMine;
     return ActorSectionCard(
       title: meetingLabel,
       icon: Icons.event_available_outlined,
@@ -148,7 +149,8 @@ class MeetingNegotiationPanel extends StatelessWidget {
           ),
           if (thread != null && thread!.rounds.length > 1) ...[
             const SizedBox(height: 12),
-            _MeetingHistory(rounds: thread!.rounds, currentUserId: currentUserId),
+            _MeetingHistory(
+                rounds: thread!.rounds, currentUserId: currentUserId),
           ],
         ],
       ),

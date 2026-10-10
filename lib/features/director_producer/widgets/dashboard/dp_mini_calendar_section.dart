@@ -20,15 +20,19 @@ const _monthNames = [
 ];
 
 /// Mini month calendar for the DP dashboard, with event dots computed
-/// from the real production timeline (`dashboard.timeline[].startsAt`) —
+/// from the real production schedule (`GET /director/schedule`) —
 /// no fabricated/sample data.
 class DPMiniCalendarSection extends StatefulWidget {
-  final DirectorDashboard dashboard;
+  final List<DirectorScheduleEvent> events;
+  final DateTime selectedDate;
+  final ValueChanged<DateTime> onDaySelected;
   final bool decorated;
 
   const DPMiniCalendarSection({
     super.key,
-    required this.dashboard,
+    required this.events,
+    required this.selectedDate,
+    required this.onDaySelected,
     this.decorated = true,
   });
 
@@ -42,8 +46,22 @@ class _DPMiniCalendarSectionState extends State<DPMiniCalendarSection> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _visibleMonth = DateTime(now.year, now.month);
+    _visibleMonth = DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant DPMiniCalendarSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDate.year != widget.selectedDate.year ||
+        oldWidget.selectedDate.month != widget.selectedDate.month) {
+      _visibleMonth = DateTime(
+        widget.selectedDate.year,
+        widget.selectedDate.month,
+      );
+    }
   }
 
   void _shiftMonth(int delta) {
@@ -57,7 +75,7 @@ class _DPMiniCalendarSectionState extends State<DPMiniCalendarSection> {
     final colors = context.appColors;
     final now = DateTime.now();
     final eventDays = <int>{
-      for (final item in widget.dashboard.timeline)
+      for (final item in widget.events)
         if (item.startsAt != null &&
             item.startsAt!.year == _visibleMonth.year &&
             item.startsAt!.month == _visibleMonth.month)
@@ -76,11 +94,17 @@ class _DPMiniCalendarSectionState extends State<DPMiniCalendarSection> {
       for (var day = 1; day <= daysInMonth; day++)
         PortalCalendarDay(
           day: day,
+          selected: widget.selectedDate.year == _visibleMonth.year &&
+              widget.selectedDate.month == _visibleMonth.month &&
+              widget.selectedDate.day == day,
           isToday: now.year == _visibleMonth.year &&
               now.month == _visibleMonth.month &&
               now.day == day,
           hasEvents: eventDays.contains(day),
           eventColor: colors.goldMid,
+          onTap: () => widget.onDaySelected(
+            DateTime(_visibleMonth.year, _visibleMonth.month, day),
+          ),
         ),
     ];
 

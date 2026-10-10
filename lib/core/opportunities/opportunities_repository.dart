@@ -68,7 +68,8 @@ class OpportunitiesRepository {
       '/opportunities/roles/$roleId/applications',
       body: {
         'cover_note': coverNote,
-        if (attachmentFileIds.isNotEmpty) 'attachment_file_ids': attachmentFileIds,
+        if (attachmentFileIds.isNotEmpty)
+          'attachment_file_ids': attachmentFileIds,
         'submit': submit,
       },
     );

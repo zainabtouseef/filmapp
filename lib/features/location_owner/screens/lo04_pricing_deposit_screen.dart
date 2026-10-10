@@ -109,7 +109,9 @@ class _LO04PricingDepositScreenState extends State<LO04PricingDepositScreen> {
             title: 'Rates unavailable',
             message: locationApiMessage(snapshot.error!),
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load(force: true)),
+            onAction: () => setState(() {
+              _future = _load(force: true);
+            }),
           );
         }
         if (_property == null) {

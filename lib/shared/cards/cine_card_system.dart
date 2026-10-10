@@ -117,14 +117,16 @@ class _CardShellState extends State<CardShell> {
                 : colors.border;
 
     final content = AnimatedScale(
-      scale: _pressed ? 0.995 : 1,
+      // A restrained desktop lift keeps dense operational cards feeling
+      // cinematic without making touch layouts jump or changing geometry.
+      scale: _pressed ? 0.994 : (elevated ? 1.006 : 1),
       duration: reduceMotion ? Duration.zero : AppDurations.press,
       curve: AppDurations.standardCurve,
       child: AnimatedContainer(
         duration: reduceMotion ? Duration.zero : AppDurations.hover,
         curve: AppDurations.standardCurve,
         constraints: BoxConstraints(minHeight: widget.minHeight ?? 0),
-        transform: Matrix4.translationValues(0, elevated ? -1.5 : 0, 0),
+        transform: Matrix4.translationValues(0, elevated ? -2 : 0, 0),
         decoration: BoxDecoration(
           color: surface,
           borderRadius: BorderRadius.circular(_radius),

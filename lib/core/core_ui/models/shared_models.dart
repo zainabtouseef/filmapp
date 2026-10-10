@@ -102,6 +102,7 @@ class LedgerRowData {
   final LedgerStatus status;
   final String date;
   final String receiptId;
+  final String receiptNumber;
   final String transactionId;
 
   const LedgerRowData({
@@ -113,6 +114,7 @@ class LedgerRowData {
     required this.status,
     required this.date,
     required this.receiptId,
+    this.receiptNumber = '',
     required this.transactionId,
   });
 }

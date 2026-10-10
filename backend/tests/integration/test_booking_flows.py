@@ -309,7 +309,10 @@ def test_booking_offer_counter_accept_chat_and_availability(
         headers=actor_headers,
     )
     assert conversation.status_code == 200
-    assert (
-        conversation.json["data"]["conversation"]["messages"][0]["public_id"]
-        == message_id
-    )
+    conversation_data = conversation.json["data"]["conversation"]
+    assert conversation_data["messages"][0]["public_id"] == message_id
+    assert conversation_data["messages"][0]["decision_type"] == "final_call_time"
+    assert conversation_data["messages"][0]["pinned"] is True
+    assert conversation_data["booking_status"] == "accepted"
+    assert conversation_data["project_title"] == "Booking Flow TVC"
+    assert conversation_data["contact_unlocked"] is False

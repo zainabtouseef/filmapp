@@ -111,7 +111,6 @@ def test_register_login_refresh_roles_and_logout(client: FlaskClient) -> None:
         json={"refresh_token": refresh_token},
     )
     assert old_refresh.status_code == 401
-
     logout = client.post("/api/v1/auth/logout", json={"refresh_token": rotated})
     assert logout.status_code == 200
     assert logout.json["data"]["revoked"] is True
@@ -125,7 +124,7 @@ def test_register_login_refresh_roles_and_logout(client: FlaskClient) -> None:
 
 def test_password_reset_updates_password_hash(client: FlaskClient) -> None:
     email = _email()
-    _register(client, email=email)
+    registered = _register(client, email=email)
     with client.application.app_context():
         user = db.session.execute(select(User).where(User.email == email)).scalar_one()
         token = new_opaque_token()
@@ -144,9 +143,87 @@ def test_password_reset_updates_password_hash(client: FlaskClient) -> None:
     )
 
     assert response.status_code == 200, response.text
+    old_refresh = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": registered["tokens"]["refresh_token"]},
+    )
+    assert old_refresh.status_code == 401
+    reused = client.post(
+        "/api/v1/auth/password/reset",
+        json={"token": token, "new_password": "AnotherStrongPass123!"},
+    )
+    assert reused.status_code == 401
+    old_access = client.get(
+        "/api/v1/me",
+        headers={"Authorization": f"Bearer {registered['tokens']['access_token']}"},
+    )
+    assert old_access.status_code == 401
+    new_login = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": "NewStrongPass123!"}
+    )
+    assert new_login.status_code == 200
+    new_token = new_login.json["data"]["tokens"]["access_token"]
+    new_access = client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {new_token}"}
+    )
+    assert new_access.status_code == 200
     with client.application.app_context():
         user = db.session.execute(select(User).where(User.email == email)).scalar_one()
         assert verify_password(user.password_hash, "NewStrongPass123!")
+
+
+def test_authenticated_user_can_read_and_update_settings(
+    client: FlaskClient,
+) -> None:
+    registered = _register(client)
+    headers = {"Authorization": f"Bearer {registered['tokens']['access_token']}"}
+
+    initial = client.get("/api/v1/me/settings", headers=headers)
+    assert initial.status_code == 200, initial.text
+    assert initial.json["data"] == {
+        "timezone": "Asia/Karachi",
+        "locale": "en-PK",
+        "notifications": {
+            "email_enabled": True,
+            "sms_enabled": False,
+            "push_enabled": True,
+        },
+    }
+
+    updated = client.patch(
+        "/api/v1/me/settings",
+        headers=headers,
+        json={
+            "locale": "ur-Latn-PK",
+            "timezone": "Asia/Karachi",
+            "notifications": {
+                "email_enabled": False,
+                "sms_enabled": True,
+                "push_enabled": False,
+            },
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json["data"]["locale"] == "ur-Latn-PK"
+    assert updated.json["data"]["notifications"] == {
+        "email_enabled": False,
+        "sms_enabled": True,
+        "push_enabled": False,
+    }
+
+    invalid_locale = client.patch(
+        "/api/v1/me/settings", headers=headers, json={"locale": "xx-YY"}
+    )
+    assert invalid_locale.status_code == 422
+    assert "locale" in invalid_locale.json["error"]["fields"]
+
+    invalid_notification = client.patch(
+        "/api/v1/me/settings",
+        headers=headers,
+        json={"notifications": {"push_enabled": "yes"}},
+    )
+    assert invalid_notification.status_code == 422
+    assert "notifications.push_enabled" in invalid_notification.json["error"]["fields"]
 
 
 def test_login_rejects_bad_password_and_records_session_only_on_success(

@@ -37,7 +37,9 @@ class _CR04AvailabilityCalendarScreenState
 
   void _reload() {
     if (_bookings == null) return;
-    setState(() => _future = _bookings!.availability());
+    setState(() {
+      _future = _bookings!.availability();
+    });
   }
 
   @override

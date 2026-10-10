@@ -37,7 +37,9 @@ class _PaymentReviewDetailScreenState extends State<PaymentReviewDetailScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   Future<void> _decide(

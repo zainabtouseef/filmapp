@@ -81,7 +81,9 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
 
   void _reload() {
     if (_operations == null || _bookings == null || _payments == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override
@@ -371,11 +373,18 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
                       icon: Icons.support_agent_outlined,
                       label: 'Report an issue',
                       compact: true,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        CoreRoutes.report,
-                        arguments: 'Location owner support',
-                      ),
+                      onTap: property == null
+                          ? null
+                          : () => Navigator.pushNamed(
+                                context,
+                                CoreRoutes.report,
+                                arguments: {
+                                  'reason':
+                                      'Location issue for ${property.name}',
+                                  'entity_type': 'location_property',
+                                  'entity_id': property.publicId,
+                                },
+                              ),
                     ),
                   ],
                 ),

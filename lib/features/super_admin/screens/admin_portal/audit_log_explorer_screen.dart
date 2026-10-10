@@ -19,7 +19,9 @@ class _AuditLogExplorerScreenState extends State<AuditLogExplorerScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = AdminScope.of(context).auditEvents(force: true));
+    setState(() {
+      _future = AdminScope.of(context).auditEvents(force: true);
+    });
   }
 
   String _entityRoute(AdminAuditEventDto event) {

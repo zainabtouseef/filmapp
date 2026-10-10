@@ -35,7 +35,7 @@ class DPCommandHeader extends StatelessWidget {
       child: PortalHeroCard(
         initials: _initialsFor(name),
         name: name,
-        badgeLabel: 'Verified producer',
+        badgeLabel: 'Director / Producer',
         stats: [
           PortalHeroStat(
             value: '${summary.activeProjects}',

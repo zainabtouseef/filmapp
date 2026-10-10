@@ -19,7 +19,9 @@ class _CommissionFeeScreenState extends State<CommissionFeeScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = AdminScope.of(context).feeRules(force: true));
+    setState(() {
+      _future = AdminScope.of(context).feeRules(force: true);
+    });
   }
 
   Future<void> _create() async {

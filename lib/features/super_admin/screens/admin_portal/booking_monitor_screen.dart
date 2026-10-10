@@ -25,7 +25,9 @@ class _BookingMonitorScreenState extends State<BookingMonitorScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = AdminScope.of(context).bookings(force: true));
+    setState(() {
+      _future = AdminScope.of(context).bookings(force: true);
+    });
   }
 
   List<AdminBookingRecordDto> _visible(

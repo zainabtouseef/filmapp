@@ -11,9 +11,11 @@ from sqlalchemy import func, select
 
 from app.api.auth import _current_user, _json_body
 from app.api.marketplace import (
+    TALENT_LISTING_TYPES,
     _city_payload,
     _field_error,
     _file_payload,
+    _listing_subcategories,
     _owner_avatar_url,
     _talent_availability_categories,
 )
@@ -435,6 +437,7 @@ def _with_listing(
     listing = _listing_for_profile(listing_type, profile_id)
     item["listing_id"] = listing.public_id if listing else None
     if listing:
+        item["subcategories"] = _listing_subcategories(listing)
         if listing.media:
             item["media"] = [
                 {
@@ -448,7 +451,9 @@ def _with_listing(
         mode = (listing.pricing_mode or "negotiable").strip().lower()
         if mode not in {"fixed", "negotiable", "on_request"}:
             mode = "negotiable"
-        shows_price = mode != "on_request"
+        shows_price = (
+            mode != "on_request" and listing.listing_type not in TALENT_LISTING_TYPES
+        )
         allows_bargaining = mode != "fixed"
         item["pricing_mode"] = mode
         item["shows_price"] = shows_price
@@ -1472,6 +1477,7 @@ def _crew_discovery_item(item: MarketplaceListing) -> dict[str, Any]:
         "public_id": item.profile_entity_id,
         "listing_id": item.public_id,
         "kind": "crew",
+        "subcategories": _listing_subcategories(item),
         "category": "Crew",
         "title": item.title,
         "subtitle": item.owner.display_name,
@@ -1799,6 +1805,7 @@ def _schedule_event(
         "location": location or (project.city.name if project.city else "Pakistan"),
         "stakeholders": stakeholders or [],
         "starts_at": starts_at.isoformat() if starts_at else None,
+        "all_day": kind in {"project_start", "project_wrap"},
         "ends_at": ends_at.isoformat() if ends_at else None,
         "status": status,
         "risk_level": risk_level,

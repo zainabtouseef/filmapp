@@ -48,7 +48,9 @@ class _PastRolesSectionState extends State<PastRolesSection> {
     return controller.list(widget.profileType);
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +265,8 @@ class _CreditCard extends StatelessWidget {
             ].join(' · '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+            style:
+                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
           ),
           if ((entry.roleLabel ?? '').isNotEmpty) ...[
             const SizedBox(height: 2),
@@ -339,7 +342,8 @@ class _CreditFormDialogState extends State<_CreditFormDialog> {
     super.initState();
     final existing = widget.existing;
     _title = TextEditingController(text: existing?.title ?? '');
-    _productionName = TextEditingController(text: existing?.productionName ?? '');
+    _productionName =
+        TextEditingController(text: existing?.productionName ?? '');
     _roleLabel = TextEditingController(text: existing?.roleLabel ?? '');
     _year = TextEditingController(text: existing?.year?.toString() ?? '');
     _description = TextEditingController(text: existing?.description ?? '');
@@ -491,7 +495,8 @@ class _CreditFormDialogState extends State<_CreditFormDialog> {
       _CreditFormResult(
         title: title,
         productionName: productionName,
-        roleLabel: _roleLabel.text.trim().isEmpty ? null : _roleLabel.text.trim(),
+        roleLabel:
+            _roleLabel.text.trim().isEmpty ? null : _roleLabel.text.trim(),
         year: year,
         description:
             _description.text.trim().isEmpty ? null : _description.text.trim(),

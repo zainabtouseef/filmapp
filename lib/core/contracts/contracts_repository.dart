@@ -35,15 +35,26 @@ class ContractsRepository {
   }
 
   Future<CineContract> sign(String contractId,
-      {String? signatureFileId}) async {
+      {required String typedName,
+      required bool consent,
+      String? signatureFileId}) async {
     final response = await _client.post(
       '/contracts/$contractId/signatures',
       body: {
+        'typed_name': typedName,
+        'consent': consent,
         if (signatureFileId != null) 'signature_file_id': signatureFileId,
       },
     );
     final data = response['data'] as Map<String, dynamic>;
     return CineContract.fromJson(data['contract'] as Map<String, dynamic>);
+  }
+
+  Future<ApiDownload> downloadContract(String contractId) {
+    return _client.getBytes(
+      '/contracts/$contractId.pdf',
+      fallbackFilename: 'cineconnect-contract-$contractId.pdf',
+    );
   }
 
   Future<ContractAddendum> createAddendum({

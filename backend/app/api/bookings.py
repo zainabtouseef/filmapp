@@ -192,7 +192,7 @@ def _attachment_payload(item: MessageAttachment) -> dict[str, Any]:
     }
 
 
-def _message_payload(item: Message) -> dict[str, Any]:
+def _message_payload(item: Message, *, pinned: bool = False) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
         "sender": _user_payload(item.sender),
@@ -200,6 +200,7 @@ def _message_payload(item: Message) -> dict[str, Any]:
         "body": item.body,
         "reply_to_id": item.reply_to_id.hex if item.reply_to_id else None,
         "decision_type": item.decision_type,
+        "pinned": pinned,
         "edited_at": item.edited_at.isoformat() if item.edited_at else None,
         "attachments": [_attachment_payload(row) for row in item.attachments],
         "created_at": item.created_at.isoformat(),
@@ -207,17 +208,32 @@ def _message_payload(item: Message) -> dict[str, Any]:
 
 
 def _conversation_payload(item: Conversation) -> dict[str, Any]:
+    pinned_message_ids = set(
+        db.session.execute(
+            select(PinnedDecision.message_id).where(
+                PinnedDecision.conversation_id == item.id,
+                PinnedDecision.superseded_by_id.is_(None),
+            )
+        ).scalars()
+    )
+    booking = item.booking
     return {
         "public_id": item.public_id,
         "booking_id": item.booking.public_id if item.booking else None,
         "project_id": item.project.public_id if item.project else None,
         "type": item.type,
         "title": item.title,
+        "booking_status": booking.status if booking else None,
+        "project_title": booking.project.title if booking else None,
+        "contact_unlocked": bool(booking and booking.status == "secured"),
         "last_message_at": item.last_message_at.isoformat()
         if item.last_message_at
         else None,
         "members": [_user_payload(row.user) for row in item.members],
-        "messages": [_message_payload(row) for row in item.messages],
+        "messages": [
+            _message_payload(row, pinned=row.id in pinned_message_ids)
+            for row in item.messages
+        ],
     }
 
 

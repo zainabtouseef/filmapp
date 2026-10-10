@@ -1678,7 +1678,7 @@ class _CineDashboard extends StatelessWidget {
         Icons.calendar_month_outlined
       ),
       (
-        'Progress',
+        'Breakdown approved',
         '${dashboard['production_progress'] ?? 0}%',
         Icons.donut_large_rounded
       ),
@@ -1744,7 +1744,78 @@ class _CineDashboard extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ConflictSummary(snapshot: snapshot),
+        const SizedBox(height: 12),
+        _CineReadinessSummary(snapshot: snapshot),
       ],
+    );
+  }
+}
+
+class _CineReadinessSummary extends StatelessWidget {
+  final Map<String, dynamic> snapshot;
+
+  const _CineReadinessSummary({required this.snapshot});
+
+  @override
+  Widget build(BuildContext context) {
+    final dashboard =
+        snapshot['dashboard'] as Map<String, dynamic>? ?? const {};
+    final scripts = snapshot['scripts'] as List? ?? const [];
+    final crew = snapshot['crew'] as List? ?? const [];
+    final checks = <String, bool>{
+      'Screenplay uploaded': scripts.isNotEmpty,
+      'Scenes extracted': (dashboard['total_scenes'] as num? ?? 0) > 0,
+      'Shoot days scheduled':
+          (dashboard['scheduled_shoot_days'] as num? ?? 0) > 0,
+      'Crew assigned': crew.isNotEmpty,
+      'Budget estimated':
+          (dashboard['estimated_budget_minor'] as num? ?? 0) > 0,
+    };
+    final completed = checks.entries
+        .where((item) => item.value)
+        .map((item) => item.key)
+        .toList();
+    final missing = checks.entries
+        .where((item) => !item.value)
+        .map((item) => item.key)
+        .toList();
+    final pending = <String>[
+      if ((dashboard['unapproved_ai_items'] as num? ?? 0) > 0)
+        '${dashboard['unapproved_ai_items']} breakdown items await approval',
+      if ((dashboard['schedule_conflicts'] as num? ?? 0) > 0)
+        '${dashboard['schedule_conflicts']} schedule conflicts need resolution',
+      for (final script in scripts)
+        if (script is Map && script['analysis_status'] != 'approved')
+          'Screenplay revision ${script['version_number'] ?? ''}: ${script['analysis_status'] ?? 'not approved'}',
+    ];
+    final colors = context.appColors;
+    return _CinePanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Project status summary',
+              style:
+                  AppTextStyles.cardTitle.copyWith(color: colors.textPrimary)),
+          const SizedBox(height: 8),
+          for (final group in [
+            ('Completed', completed),
+            ('Missing', missing),
+            ('Pending', pending)
+          ]) ...[
+            Text('${group.$1} (${group.$2.length})',
+                style: AppTextStyles.label.copyWith(color: colors.goldMid)),
+            const SizedBox(height: 4),
+            Text(group.$2.isEmpty ? 'None recorded.' : group.$2.join(' • '),
+                style:
+                    AppTextStyles.body.copyWith(color: colors.textSecondary)),
+            const SizedBox(height: 10),
+          ],
+          Text(
+              'Derived from saved production data. Approval progress does not represent filming completion.',
+              style: AppTextStyles.smallMeta
+                  .copyWith(color: colors.textSecondary)),
+        ],
+      ),
     );
   }
 }

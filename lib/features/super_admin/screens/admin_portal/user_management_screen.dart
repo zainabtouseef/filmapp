@@ -26,7 +26,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = AdminScope.of(context).users(force: true));
+    setState(() {
+      _future = AdminScope.of(context).users(force: true);
+    });
   }
 
   List<AdminUserRecordDto> _visible(List<AdminUserRecordDto> users) {

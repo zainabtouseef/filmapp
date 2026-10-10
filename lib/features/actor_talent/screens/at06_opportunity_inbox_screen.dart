@@ -74,7 +74,9 @@ class _AT06OpportunityInboxScreenState
   }
 
   void _reload() {
-    setState(() => _rolesFuture = _loadRoles());
+    setState(() {
+      _rolesFuture = _loadRoles();
+    });
   }
 
   @override

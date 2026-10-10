@@ -166,11 +166,13 @@ def _accepted_and_secured_booking(
     producer_signature = client.post(
         f"/api/v1/contracts/{contract_id}/signatures",
         headers=producer_headers,
-        json={},
+        json={"typed_name": "Trust Flow Producer", "consent": True},
     )
     assert producer_signature.status_code == 200, producer_signature.text
     actor_signature = client.post(
-        f"/api/v1/contracts/{contract_id}/signatures", headers=actor_headers, json={}
+        f"/api/v1/contracts/{contract_id}/signatures",
+        headers=actor_headers,
+        json={"typed_name": "Trust Flow Actor", "consent": True},
     )
     assert actor_signature.status_code == 200, actor_signature.text
     assert actor_signature.json["data"]["contract"]["status"] == "signed"

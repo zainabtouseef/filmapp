@@ -138,7 +138,9 @@ class _DPProjectAccountsScreenState extends State<DPProjectAccountsScreen> {
   void _reload() {
     final projects = ProjectsScope.maybeOf(context);
     if (projects == null) return;
-    setState(() => _future = projects.projects(force: true));
+    setState(() {
+      _future = projects.projects(force: true);
+    });
   }
 }
 

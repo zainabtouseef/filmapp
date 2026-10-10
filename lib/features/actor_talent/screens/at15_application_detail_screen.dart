@@ -58,7 +58,9 @@ class _AT15ApplicationDetailScreenState
     return controller.application(id);
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +96,9 @@ class _AT15ApplicationDetailScreenState
                     const SizedBox(height: 12),
                     MeetingNegotiationPanel(
                       thread: application.meetingThread,
-                      meetingLabel:
-                          application.status == 'callback' ? 'Callback' : 'Audition',
+                      meetingLabel: application.status == 'callback'
+                          ? 'Callback'
+                          : 'Audition',
                       currentUserId: application.actorId,
                       working: _working,
                       onPropose: ({
@@ -115,7 +118,8 @@ class _AT15ApplicationDetailScreenState
                         contact: contact,
                         message: message,
                       ),
-                      onAccept: (roundId) => _acceptMeeting(application, roundId),
+                      onAccept: (roundId) =>
+                          _acceptMeeting(application, roundId),
                       onDecline: (roundId, reason) =>
                           _declineMeeting(application, roundId, reason),
                     ),

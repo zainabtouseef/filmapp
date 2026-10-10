@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/director/director_dashboard_models.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/projects/projects_controller.dart';
+import '../../../core/projects/project_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
@@ -100,7 +102,7 @@ DpTone dpToneForStatus(String status) {
   return DpTone.info;
 }
 
-class DPProjectScopePicker extends StatelessWidget {
+class DPProjectScopePicker extends StatefulWidget {
   final String? selectedProjectId;
   final ValueChanged<String?> onChanged;
   final bool includeAll;
@@ -113,9 +115,27 @@ class DPProjectScopePicker extends StatelessWidget {
   });
 
   @override
+  State<DPProjectScopePicker> createState() => _DPProjectScopePickerState();
+}
+
+class _DPProjectScopePickerState extends State<DPProjectScopePicker> {
+  ProjectsController? _controller;
+  Future<List<Project>>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = ProjectsScope.maybeOf(context);
+    if (!identical(controller, _controller)) {
+      _controller = controller;
+      _future = controller?.projects();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final projects = ProjectsScope.maybeOf(context);
+    final projects = _controller;
     if (projects == null) {
       return dpText(context, 'Live project picker unavailable.');
     }
@@ -129,21 +149,35 @@ class DPProjectScopePicker extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: FutureBuilder(
-          future: projects.projects(),
+          future: _future,
           builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return TextButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry loading projects'),
+                onPressed: () => setState(() {
+                  _future = projects.projects(force: true);
+                }),
+              );
+            }
+            if (!snapshot.hasData) {
+              return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Text('Loading projects…'));
+            }
             final rows = snapshot.data ?? const [];
-            final validValue =
-                rows.any((project) => project.publicId == selectedProjectId)
-                    ? selectedProjectId
-                    : null;
+            final validValue = rows.any(
+                    (project) => project.publicId == widget.selectedProjectId)
+                ? widget.selectedProjectId
+                : null;
             return DropdownButton<String?>(
               value: validValue,
               isExpanded: true,
               icon: Icon(Icons.expand_more_rounded, color: colors.iconMuted),
               style: AppTextStyles.label.copyWith(color: colors.textPrimary),
-              onChanged: snapshot.hasError ? null : onChanged,
+              onChanged: widget.onChanged,
               items: [
-                if (includeAll)
+                if (widget.includeAll)
                   const DropdownMenuItem<String?>(
                     value: null,
                     child: Text('All projects'),
@@ -153,7 +187,7 @@ class DPProjectScopePicker extends StatelessWidget {
                     value: project.publicId,
                     child: Text(project.title),
                   ),
-                if (rows.isEmpty && !includeAll)
+                if (rows.isEmpty && !widget.includeAll)
                   const DropdownMenuItem<String?>(
                     value: null,
                     child: Text('No live projects'),
@@ -347,12 +381,18 @@ class ProductionCalendar extends StatefulWidget {
   final String? projectId;
   final ProductionCalendarMode initialMode;
   final int listLimit;
+  final int refreshToken;
+  final DateTime? initialMonth;
+  final VoidCallback? onScheduleChanged;
 
   const ProductionCalendar({
     super.key,
     this.projectId,
     this.initialMode = ProductionCalendarMode.today,
     this.listLimit = 30,
+    this.refreshToken = 0,
+    this.initialMonth,
+    this.onScheduleChanged,
   });
 
   @override
@@ -363,6 +403,10 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
   late ProductionCalendarMode _mode = widget.initialMode;
   Future<DirectorSchedule>? _future;
   int? _selectedDay;
+  late DateTime _displayMonth = DateTime(
+    (widget.initialMonth ?? DateTime.now()).year,
+    (widget.initialMonth ?? DateTime.now()).month,
+  );
 
   @override
   void didChangeDependencies() {
@@ -373,7 +417,8 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
   @override
   void didUpdateWidget(covariant ProductionCalendar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.projectId != widget.projectId) {
+    if (oldWidget.projectId != widget.projectId ||
+        oldWidget.refreshToken != widget.refreshToken) {
       setState(() {
         _mode = ProductionCalendarMode.today;
         _selectedDay = null;
@@ -413,7 +458,10 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
         notes: draft.notes,
       );
       if (!mounted) return;
-      setState(() => _future = _load());
+      setState(() {
+        _future = _load();
+      });
+      widget.onScheduleChanged?.call();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Plan added to the live schedule.')),
       );
@@ -462,7 +510,9 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
                   DPHolographicButton(
                     label: 'Retry',
                     icon: Icons.refresh_rounded,
-                    onTap: () => setState(() => _future = _load()),
+                    onTap: () => setState(() {
+                      _future = _load();
+                    }),
                     secondary: true,
                   ),
                 ],
@@ -473,8 +523,13 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
               ProductionCalendarMode.today => _TodayTimeline(events: events),
               ProductionCalendarMode.month => _MonthCalendar(
                   events: events,
+                  month: _displayMonth,
                   selectedDay: _selectedDay,
                   onDaySelected: (day) => setState(() => _selectedDay = day),
+                  onMonthChanged: (month) => setState(() {
+                    _displayMonth = month;
+                    _selectedDay = null;
+                  }),
                 ),
               ProductionCalendarMode.list =>
                 _AgendaList(events: events.take(widget.listLimit).toList()),
@@ -727,12 +782,14 @@ class _TodayTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final todayEvents = events
-        .where((event) => event.date == 'Today' || event.date == 'Jul 21')
+    final today = DateTime.now();
+    final rows = events
+        .where((event) =>
+            event.startsAt != null &&
+            DateUtils.isSameDay(event.startsAt, today))
         .toList();
-    final rows = todayEvents.isEmpty ? events.take(4).toList() : todayEvents;
     if (rows.isEmpty) {
-      return dpText(context, 'No production events for the selected scope.');
+      return dpText(context, 'No production events scheduled today.');
     }
     return Column(
       children: [
@@ -763,10 +820,14 @@ class _AgendaList extends StatelessWidget {
 class _MonthCalendar extends StatelessWidget {
   final List<DpScheduleItem> events;
   final int? selectedDay;
+  final DateTime month;
+  final ValueChanged<DateTime> onMonthChanged;
   final ValueChanged<int> onDaySelected;
 
   const _MonthCalendar({
     required this.events,
+    required this.month,
+    required this.onMonthChanged,
     required this.selectedDay,
     required this.onDaySelected,
   });
@@ -774,29 +835,67 @@ class _MonthCalendar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final days = List<int>.generate(35, (index) => index + 1);
+    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
+    final leading = DateTime(month.year, month.month).weekday % 7;
+    final cellCount = ((daysInMonth + leading) / 7).ceil() * 7;
+    bool matchesDay(DpScheduleItem event, int day) => DateUtils.isSameDay(
+        event.startsAt, DateTime(month.year, month.month, day));
     final selectedEvents = selectedDay == null
         ? const <DpScheduleItem>[]
-        : events
-            .where((event) => event.date.endsWith(' $selectedDay'))
-            .toList();
+        : events.where((event) => matchesDay(event, selectedDay!)).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(children: [
+          IconButton(
+              tooltip: 'Previous month',
+              icon: const Icon(Icons.chevron_left),
+              onPressed: () =>
+                  onMonthChanged(DateTime(month.year, month.month - 1))),
+          Expanded(
+              child: Text(DateFormat.yMMMM().format(month),
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.panelLabel
+                      .copyWith(color: colors.textPrimary))),
+          IconButton(
+              tooltip: 'Next month',
+              icon: const Icon(Icons.chevron_right),
+              onPressed: () =>
+                  onMonthChanged(DateTime(month.year, month.month + 1))),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          for (final weekday in const [
+            'Sun',
+            'Mon',
+            'Tue',
+            'Wed',
+            'Thu',
+            'Fri',
+            'Sat'
+          ])
+            Expanded(
+                child: Text(weekday,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.smallMeta
+                        .copyWith(color: colors.textSecondary))),
+        ]),
+        const SizedBox(height: 8),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: days.length,
+          itemCount: cellCount,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
             mainAxisSpacing: 6,
             crossAxisSpacing: 6,
-            childAspectRatio: 1.05,
+            mainAxisExtent: 58,
           ),
           itemBuilder: (context, index) {
-            final day = days[index];
+            final day = index - leading + 1;
+            if (day < 1 || day > daysInMonth) return const SizedBox.shrink();
             final matches =
-                events.where((event) => event.date.endsWith(' $day')).toList();
+                events.where((event) => matchesDay(event, day)).toList();
             return _CalendarDayTile(
               day: day,
               events: matches,
@@ -810,7 +909,8 @@ class _MonthCalendar extends StatelessWidget {
           Container(height: 1, color: colors.borderMuted),
           const SizedBox(height: 10),
           Text(
-            'Day $selectedDay',
+            DateFormat.yMMMd()
+                .format(DateTime(month.year, month.month, selectedDay!)),
             style:
                 AppTextStyles.panelLabel.copyWith(color: colors.textSecondary),
           ),
@@ -845,8 +945,9 @@ class _CalendarDayTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
@@ -918,43 +1019,54 @@ class _CalendarEventRow extends StatelessWidget {
         color: colors.surface.withValues(alpha: colors.isLight ? 0.68 : 0.2),
         border: Border.all(color: colors.border),
       ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 70,
-            child: Text(
-              event.time,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      child: LayoutBuilder(builder: (context, constraints) {
+        final status = DPStatusChip(
+          label: event.status,
+          tone: event.conflict ? DpTone.danger : dpToneForStatus(event.status),
+        );
+        final time = Text(event.time,
+            style: AppTextStyles.label.copyWith(
+                color: colors.textPrimary, fontWeight: FontWeight.w900));
+        final details =
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(event.location,
               style: AppTextStyles.label.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          Icon(_iconForEvent(event), color: colors.goldDark, size: 18),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
+                  color: colors.textPrimary, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(
+              [event.date, event.project, ...event.stakeholders]
+                  .where((value) => value.isNotEmpty)
+                  .join(' • '),
+              style: AppTextStyles.smallMeta
+                  .copyWith(color: colors.textSecondary)),
+        ]);
+        if (constraints.maxWidth < 420) {
+          return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                dpText(context, event.location, strong: true),
-                const SizedBox(height: 4),
-                dpText(
-                  context,
-                  '${event.date} • ${event.project} • ${event.stakeholders.join(', ')}',
-                ),
-              ],
-            ),
-          ),
+                Wrap(
+                    spacing: 10,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Icon(_iconForEvent(event),
+                          color: colors.goldDark, size: 18),
+                      time,
+                      status
+                    ]),
+                const SizedBox(height: 10),
+                details,
+              ]);
+        }
+        return Row(children: [
+          SizedBox(width: 70, child: time),
+          Icon(_iconForEvent(event), color: colors.goldDark, size: 18),
+          const SizedBox(width: 9),
+          Expanded(child: details),
           const SizedBox(width: 8),
-          DPStatusChip(
-            label: event.status,
-            tone:
-                event.conflict ? DpTone.danger : dpToneForStatus(event.status),
-          ),
-        ],
-      ),
+          status,
+        ]);
+      }),
     );
   }
 
@@ -1038,7 +1150,8 @@ class _ConsoleProjectCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            DPBudgetHealthBar(value: project.budgetHealth, label: 'Budget'),
+            DPBudgetHealthBar(
+                value: project.progress, label: 'Reported project progress'),
             const SizedBox(height: 8),
             Wrap(
               spacing: 7,
@@ -1061,7 +1174,7 @@ class _ConsoleProjectCard extends StatelessWidget {
               icon: Icons.open_in_new_rounded,
               onTap: () => Navigator.pushNamed(
                 context,
-                DirectorProducerRoutes.projectDetail,
+                DirectorProducerRoutes.projectPath(project.id),
                 arguments: project.id,
               ),
               secondary: true,
@@ -1152,16 +1265,17 @@ class _ProductionStageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final needed = requirements.isEmpty ? 1 : requirements.length;
+    final needed = requirements.length;
     final signed = bookings.where((booking) => booking.statusIndex >= 9).length;
     final shortlisted = requirements.fold<int>(
       0,
       (total, requirement) => total + requirement.candidateCount.clamp(0, 9),
     );
-    final negotiating =
-        bookings.where((booking) => booking.statusIndex > 0).length;
-    final progress = (signed / needed).clamp(0.0, 1.0);
-    final complete = progress >= 1;
+    final negotiating = bookings
+        .where((booking) => booking.statusIndex > 0 && booking.statusIndex < 9)
+        .length;
+    final progress = needed == 0 ? 0.0 : (signed / needed).clamp(0.0, 1.0);
+    final complete = needed > 0 && progress >= 1;
     return Container(
       margin: const EdgeInsets.only(bottom: 9),
       child: DPGlassCard(
@@ -1192,12 +1306,18 @@ class _ProductionStageCard extends StatelessWidget {
                 Expanded(
                   child: dpText(
                     context,
-                    '${stage.label} — $signed of $needed signed',
+                    needed == 0
+                        ? '${stage.label} — no requirements defined'
+                        : '${stage.label} — $signed of $needed signed',
                     strong: true,
                   ),
                 ),
                 DPStatusChip(
-                  label: complete ? 'Green' : 'In progress',
+                  label: needed == 0
+                      ? 'Not configured'
+                      : complete
+                          ? 'Complete'
+                          : 'In progress',
                   tone: complete ? DpTone.success : DpTone.warning,
                 ),
               ],
@@ -1275,7 +1395,7 @@ class DPProjectBreadcrumbs extends StatelessWidget {
       if (project != null)
         _Crumb(
           project!.title,
-          DirectorProducerRoutes.projectDetail,
+          DirectorProducerRoutes.projectPath(project!.id),
           project!.id,
         ),
       _Crumb(current, null),

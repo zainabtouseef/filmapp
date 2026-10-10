@@ -34,8 +34,7 @@ class OpportunityInboxScreen extends StatefulWidget {
   });
 
   @override
-  State<OpportunityInboxScreen> createState() =>
-      _OpportunityInboxScreenState();
+  State<OpportunityInboxScreen> createState() => _OpportunityInboxScreenState();
 }
 
 class _OpportunityInboxScreenState extends State<OpportunityInboxScreen> {
@@ -335,7 +334,9 @@ class _OpportunityRoleCard extends StatelessWidget {
               IconButton(
                 tooltip: role.saved ? 'Unsave' : 'Save',
                 icon: Icon(
-                  role.saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  role.saved
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
                   color: colors.goldDark,
                   size: 20,
                 ),
@@ -348,7 +349,8 @@ class _OpportunityRoleCard extends StatelessWidget {
             role.project.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+            style:
+                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -356,7 +358,8 @@ class _OpportunityRoleCard extends StatelessWidget {
             runSpacing: 6,
             children: [
               if (role.project.city != null)
-                StatusChip(label: role.project.city!.name, color: colors.infoBlue),
+                StatusChip(
+                    label: role.project.city!.name, color: colors.infoBlue),
               StatusChip(label: role.budgetLabel, color: colors.success),
               if (role.isVerifiedOnly)
                 StatusChip(label: 'Verified only', color: colors.infoPurple),

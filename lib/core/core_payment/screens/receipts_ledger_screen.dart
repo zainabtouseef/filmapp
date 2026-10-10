@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core_ui/core_routes.dart';
-import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/models/shared_models.dart';
 import '../../core_ui/widgets/core_widgets.dart';
+import '../../network/save_download.dart';
 import '../../payments/payment_models.dart';
 import '../../payments/payments_controller.dart';
 import '../../theme/app_color_scheme.dart';
@@ -37,27 +37,40 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
     if (payments != null) _ledgerFuture ??= payments.ledger(force: true);
   }
 
-  List<LedgerRowData> get _rows {
-    return SharedMockData.ledgerRows.where((row) {
-      return switch (_filter) {
-        'Incoming' => row.direction == LedgerDirection.incoming,
-        'Outgoing' => row.direction == LedgerDirection.outgoing,
-        'Pending' => row.status == LedgerStatus.pendingVerification,
-        'Verified' => row.status == LedgerStatus.verified,
-        'Refunded' => row.status == LedgerStatus.refunded,
-        'Disputed' => row.status == LedgerStatus.disputed,
-        _ => true,
-      };
-    }).toList();
-  }
-
   void _details(LedgerRowData row) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ReceiptDetailsSheet(row: row),
+      builder: (context) => _ReceiptDetailsSheet(
+        row: row,
+        onDownload: row.receiptId.isEmpty ? null : () => _downloadReceipt(row),
+      ),
     );
+  }
+
+  Future<void> _downloadReceipt(LedgerRowData row) async {
+    try {
+      final download =
+          await PaymentsScope.of(context).downloadReceipt(row.receiptId);
+      if (!mounted) return;
+      final saved =
+          saveDownload(download.filename, download.bytes, download.contentType);
+      showCoreSnack(
+        context,
+        saved
+            ? 'Receipt PDF downloaded'
+            : 'Receipt PDF is ready. Browser download is available on web.',
+      );
+    } catch (error) {
+      if (mounted) showCoreSnack(context, 'Receipt download failed: $error');
+    }
+  }
+
+  void _retry() {
+    setState(() {
+      _ledgerFuture = PaymentsScope.of(context).ledger(force: true);
+    });
   }
 
   @override
@@ -78,18 +91,30 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
           final liveRows = (snapshot.data ?? const [])
               .map((row) => row.toLedgerRow())
               .toList();
-          if (!snapshot.hasError && liveRows.isNotEmpty) {
-            return _ledgerScaffold(context, rows: _filterRows(liveRows));
+          if (snapshot.hasError) {
+            return _ledgerScaffold(
+              context,
+              rows: const [],
+              error: snapshot.error,
+            );
           }
-          return _ledgerScaffold(context, rows: _rows);
+          return _ledgerScaffold(
+            context,
+            rows: _filterRows(liveRows),
+            summaryRows: liveRows,
+          );
         },
       );
     }
-    return _ledgerScaffold(context, rows: _rows);
+    return _ledgerScaffold(context, rows: const []);
   }
 
-  Widget _ledgerScaffold(BuildContext context,
-      {required List<LedgerRowData> rows}) {
+  Widget _ledgerScaffold(
+    BuildContext context, {
+    required List<LedgerRowData> rows,
+    List<LedgerRowData>? summaryRows,
+    Object? error,
+  }) {
     return CoreScreenScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +126,7 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
             icon: Icons.receipt_long_outlined,
           ),
           const SizedBox(height: 18),
-          _summaryGrid(context),
+          _summaryGrid(context, summaryRows ?? rows),
           const SizedBox(height: 18),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -121,11 +146,20 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          if (rows.isEmpty)
+          if (error != null)
+            CoreEmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: 'Ledger unavailable',
+              message:
+                  'CineConnect could not load the live ledger. No preview data is being substituted.',
+              actionLabel: 'Retry',
+              onAction: _retry,
+            )
+          else if (rows.isEmpty)
             const CoreEmptyState(
               icon: Icons.receipt_long_outlined,
               title: 'No ledger rows',
-              message: 'No payments match this filter yet.',
+              message: 'No live payments match this filter yet.',
             )
           else
             CoreGlassCard(
@@ -160,40 +194,64 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
     }).toList();
   }
 
-  Widget _summaryGrid(BuildContext context) {
+  Widget _summaryGrid(BuildContext context, List<LedgerRowData> rows) {
+    final paid = rows
+        .where((row) =>
+            row.direction == LedgerDirection.outgoing &&
+            row.status == LedgerStatus.verified)
+        .fold<int>(0, (total, row) => total + row.amount);
+    final received = rows
+        .where((row) =>
+            row.direction == LedgerDirection.incoming &&
+            row.status == LedgerStatus.verified)
+        .fold<int>(0, (total, row) => total + row.amount);
+    final pending = rows
+        .where((row) => row.status == LedgerStatus.pendingVerification)
+        .fold<int>(0, (total, row) => total + row.amount);
+    final disputed = rows
+        .where((row) => row.status == LedgerStatus.disputed)
+        .fold<int>(0, (total, row) => total + row.amount);
     return MetricStrip(
       title: 'Financial overview',
       items: [
         MetricStripItem(
           label: 'Total paid',
-          value: 'PKR 227K',
+          value: _amountLabel(paid),
           icon: Icons.north_east_rounded,
           tone: CineTone.neutral,
           onTap: () => setState(() => _filter = 'Outgoing'),
         ),
         MetricStripItem(
           label: 'Total received',
-          value: 'PKR 190K',
+          value: _amountLabel(received),
           icon: Icons.south_west_rounded,
           tone: CineTone.positive,
           onTap: () => setState(() => _filter = 'Incoming'),
         ),
         MetricStripItem(
           label: 'Pending verification',
-          value: 'PKR 72K',
+          value: _amountLabel(pending),
           icon: Icons.hourglass_top_rounded,
           tone: CineTone.warning,
           onTap: () => setState(() => _filter = 'Pending'),
         ),
         MetricStripItem(
           label: 'Disputed amount',
-          value: 'PKR 50K',
+          value: _amountLabel(disputed),
           icon: Icons.gpp_maybe_outlined,
           tone: CineTone.critical,
           onTap: () => setState(() => _filter = 'Disputed'),
         ),
       ],
     );
+  }
+
+  String _amountLabel(int amount) {
+    if (amount >= 1000000) {
+      return 'PKR ${(amount / 1000000).toStringAsFixed(1)}M';
+    }
+    if (amount >= 1000) return 'PKR ${(amount / 1000).toStringAsFixed(0)}K';
+    return 'PKR $amount';
   }
 }
 
@@ -288,8 +346,9 @@ class LedgerRowCard extends StatelessWidget {
 
 class _ReceiptDetailsSheet extends StatelessWidget {
   final LedgerRowData row;
+  final VoidCallback? onDownload;
 
-  const _ReceiptDetailsSheet({required this.row});
+  const _ReceiptDetailsSheet({required this.row, required this.onDownload});
 
   @override
   Widget build(BuildContext context) {
@@ -312,19 +371,25 @@ class _ReceiptDetailsSheet extends StatelessWidget {
                   .copyWith(color: colors.textPrimary, fontSize: 19),
             ),
             const SizedBox(height: 14),
-            _line(context, 'Receipt ID', row.receiptId),
-            _line(context, 'Contract ID', 'CC-CON-2026-0041'),
+            _line(
+              context,
+              'Receipt',
+              row.receiptNumber.isNotEmpty
+                  ? row.receiptNumber
+                  : row.receiptId.isNotEmpty
+                      ? row.receiptId
+                      : 'Not issued',
+            ),
+            _line(context, 'Booking', row.bookingId),
             _line(context, 'Admin verification stamp',
                 ledgerStatusLabel(row.status)),
             _line(context, 'Transaction ID', row.transactionId),
             _line(context, 'Amount', 'PKR ${row.amount}'),
-            _line(context, 'Parties', 'Sara Ahmed Productions and Ali Khan'),
             const SizedBox(height: 18),
             CorePrimaryButton(
               icon: Icons.picture_as_pdf_outlined,
-              label: 'Download PDF',
-              onTap: () =>
-                  showCoreSnack(context, 'Receipt PDF download simulated'),
+              label: onDownload == null ? 'Receipt not issued' : 'Download PDF',
+              onTap: onDownload,
             ),
             const SizedBox(height: 10),
             CoreSecondaryButton(

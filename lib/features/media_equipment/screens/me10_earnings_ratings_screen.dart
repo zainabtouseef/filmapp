@@ -95,7 +95,9 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
 
   void _reload() {
     if (_payments == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override
@@ -131,6 +133,7 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
 
   Widget _buildWorkspace(_EarningsData data) {
     final colors = context.appColors;
+    final reviewBookingId = _reviewBookingId(data.bookings);
     final credits = data.ledger
         .where((entry) => entry.direction == 'credit')
         .fold<int>(0, (total, entry) => total + entry.amountMinor);
@@ -238,6 +241,7 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
                   rating: rating,
                   reviews: data.reviews?.reviews ?? const [],
                   reviewCount: reviewCount,
+                  reviewBookingId: reviewBookingId,
                 ),
               ),
               const SizedBox(height: 12),
@@ -337,6 +341,16 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
     }).toList();
   }
 
+  String? _reviewBookingId(List<Booking> bookings) {
+    for (final booking in bookings) {
+      if (booking.status == 'completed') return booking.publicId;
+    }
+    for (final booking in bookings) {
+      if (booking.status == 'secured') return booking.publicId;
+    }
+    return null;
+  }
+
   Future<void> _addSandboxAccount() async {
     final accountName =
         AuthScope.maybeOf(context)?.user?.displayName ?? 'Equipment provider';
@@ -364,11 +378,13 @@ class _RatingsPanel extends StatelessWidget {
   final double rating;
   final int reviewCount;
   final List<ReviewDto> reviews;
+  final String? reviewBookingId;
 
   const _RatingsPanel({
     required this.rating,
     required this.reviewCount,
     required this.reviews,
+    required this.reviewBookingId,
   });
 
   @override
@@ -455,9 +471,17 @@ class _RatingsPanel extends StatelessWidget {
         const SizedBox(height: 4),
         CoreSecondaryButton(
           icon: Icons.rate_review_outlined,
-          label: 'Open review center',
+          label: reviewBookingId == null
+              ? 'No booking ready for review'
+              : 'Review latest booking',
           compact: true,
-          onTap: () => Navigator.pushNamed(context, CoreRoutes.review),
+          onTap: reviewBookingId == null
+              ? null
+              : () => Navigator.pushNamed(
+                    context,
+                    CoreRoutes.review,
+                    arguments: reviewBookingId,
+                  ),
         ),
       ],
     );
@@ -529,7 +553,11 @@ class _LedgerRow extends StatelessWidget {
                 Navigator.pushNamed(
                   context,
                   CoreRoutes.report,
-                  arguments: 'Equipment ledger issue ${item.publicId}',
+                  arguments: {
+                    'reason': 'Equipment ledger issue: ${item.description}',
+                    'entity_type': 'payment_ledger_entry',
+                    'entity_id': item.publicId,
+                  },
                 );
               }
             },

@@ -46,6 +46,8 @@ class DPBudgetHealthBar extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
+            semanticsLabel: label,
+            semanticsValue: '${(value.clamp(0, 1) * 100).round()} percent',
             value: value.clamp(0, 1),
             minHeight: 5,
             color: color,

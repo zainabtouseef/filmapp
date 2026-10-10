@@ -54,8 +54,8 @@ class _PriorityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final route = item.route.contains(':id')
-        ? DirectorProducerRoutes.projectDetail
+    final route = item.route.contains(':id') && item.argument != null
+        ? DirectorProducerRoutes.projectPath(item.argument!)
         : item.route;
     return PortalAttentionRow(
       kindLabel: item.urgency,

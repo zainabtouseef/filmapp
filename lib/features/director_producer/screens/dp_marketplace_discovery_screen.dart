@@ -62,6 +62,7 @@ class _DPMarketplaceDiscoveryScreenState
   late String _category = _normalizeCategory(widget.initialCategory);
   bool _verifiedOnly = false;
   bool _newOnly = false;
+  String _subcategory = 'All';
   _MarketplaceViewMode _viewMode = _MarketplaceViewMode.list;
   final _preferences = const MarketplacePreferences();
   final _search = TextEditingController();
@@ -172,12 +173,15 @@ class _DPMarketplaceDiscoveryScreenState
         candidate.rateRange.toLowerCase().contains(query) ||
         candidate.notes.toLowerCase().contains(query) ||
         candidate.skills.any((skill) => skill.toLowerCase().contains(query));
-    return categoryMatch && trustMatch && queryMatch;
+    final subgroupMatch =
+        _subcategory == 'All' || candidate.subcategories.contains(_subcategory);
+    return categoryMatch && subgroupMatch && trustMatch && queryMatch;
   }
 
   void _setCategory(String category) {
     setState(() {
       _category = _normalizeCategory(category);
+      _subcategory = 'All';
       _candidatesFuture = _load();
     });
   }
@@ -186,7 +190,11 @@ class _DPMarketplaceDiscoveryScreenState
     setState(() {});
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-      if (mounted) setState(() => _candidatesFuture = _load());
+      if (mounted) {
+        setState(() {
+          _candidatesFuture = _load();
+        });
+      }
     });
   }
 
@@ -441,6 +449,28 @@ class _DPMarketplaceDiscoveryScreenState
               ),
             ),
           ),
+          if (_category == 'Crew' || _category == 'Media & Equipment') ...[
+            const SizedBox(height: 10),
+            CineAnimatedFilterRail<String>(
+              values: _category == 'Crew'
+                  ? const [
+                      'All',
+                      'DOP',
+                      'Assistant Direction',
+                      'Camera Crew',
+                      'Lighting & Grip',
+                      'Sound',
+                      'Makeup & Styling',
+                      'Art & Production Design',
+                      'Editing & Post',
+                      'Production Support'
+                    ]
+                  : const ['All', 'Cameras', 'Lighting Equipment'],
+              selected: _subcategory,
+              onSelected: (value) => setState(() => _subcategory = value),
+              labelFor: (value) => value == 'All' ? 'All services' : value,
+            ),
+          ],
           if (_verifiedOnly || _newOnly) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -470,7 +500,9 @@ class _DPMarketplaceDiscoveryScreenState
               if (snapshot.hasError) {
                 return _MarketplaceErrorState(
                   message: _friendlyError(snapshot.error),
-                  onRetry: () => setState(() => _candidatesFuture = _load()),
+                  onRetry: () => setState(() {
+                    _candidatesFuture = _load();
+                  }),
                 );
               }
               final candidates = (snapshot.data ?? const <DpCandidate>[])
@@ -586,7 +618,7 @@ class _DPMarketplaceDiscoveryScreenState
       onRequest: widget.browseOnly
           ? null
           : candidate.marketplaceListingId == null
-              ? () => _showProviderActionPending(candidate)
+              ? null
               : () async {
                   final isPublicBuyer =
                       AuthScope.maybeOf(context)?.user?.primaryRole?.code ==
@@ -607,21 +639,11 @@ class _DPMarketplaceDiscoveryScreenState
                     },
                   );
                 },
-      onShortlist: widget.browseOnly
+      onShortlist: widget.browseOnly ||
+              widget.publicBuyerMode ||
+              candidate.marketplaceListingId == null
           ? null
-          : widget.publicBuyerMode
-              ? () async {
-                  _showSnack(
-                    'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
-                  );
-                  return false;
-                }
-              : candidate.marketplaceListingId == null
-                  ? () async {
-                      _showProviderActionPending(candidate);
-                      return false;
-                    }
-                  : () => _shortlistCandidate(candidate),
+          : () => _shortlistCandidate(candidate),
     );
     return index == 0
         ? TourTarget(id: 'dp.marketplace.firstCard', child: card)
@@ -745,12 +767,6 @@ class _DPMarketplaceDiscoveryScreenState
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
-    );
-  }
-
-  void _showProviderActionPending(DpCandidate candidate) {
-    _showSnack(
-      '${candidate.name} is a live ${candidate.category} profile but does not have a public marketplace listing yet.',
     );
   }
 

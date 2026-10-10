@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -59,8 +60,32 @@ def verify_password(password_hash: str, password: str) -> bool:
         return False
 
 
+def _credential_version(user: User) -> str:
+    # Keyed fingerprint, not the password hash itself. A password update makes
+    # every previously issued access token fail without adding schema state.
+    return hmac.new(
+        str(current_app.config["JWT_SECRET_KEY"]).encode(),
+        user.password_hash.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def access_token_matches_credentials(user: User, payload: dict[str, Any]) -> bool:
+    version = payload.get("credential_version")
+    return isinstance(version, str) and hmac.compare_digest(
+        version, _credential_version(user)
+    )
+
+
 def _jwt_payload(user: User, expires_at: datetime) -> dict[str, Any]:
-    active_role = next((role.role.code for role in user.roles if role.is_primary), None)
+    active_role = next(
+        (
+            role.role.code
+            for role in user.roles
+            if role.is_primary and role.status == "active" and role.role.is_active
+        ),
+        None,
+    )
     return {
         "iss": "cineconnect-api",
         "sub": user.public_id,
@@ -72,6 +97,7 @@ def _jwt_payload(user: User, expires_at: datetime) -> dict[str, Any]:
         ],
         "active_role": active_role,
         "status": user.status,
+        "credential_version": _credential_version(user),
         "iat": int(utc_now().timestamp()),
         "exp": int(expires_at.timestamp()),
         "jti": uuid.uuid4().hex,

@@ -191,9 +191,14 @@ def test_fixed_pricing_hides_bargaining_and_enforces_listed_amount(
     assert listing.status_code == 200, listing.text
     listing_data = listing.json["data"]["listing"]
     assert listing_data["pricing_mode"] == "fixed"
-    assert listing_data["shows_price"] is True
+    assert listing_data["shows_price"] is False
     assert listing_data["allows_bargaining"] is False
-    assert listing_data["price_from_minor"] == 18000000
+    assert listing_data["price_from_minor"] is None
+    assert "configured_price_from_minor" not in listing_data
+    assert all(
+        "180" not in card["price_label"]
+        for card in listing_data["media_kit"]["rate_cards"]
+    )
 
     producer_headers, _ = _register_role(
         client, "director_producer", name="Pricing Producer"

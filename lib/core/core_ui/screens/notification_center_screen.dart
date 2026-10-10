@@ -6,7 +6,6 @@ import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../core_routes.dart';
-import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
 import '../widgets/core_widgets.dart';
 
@@ -22,10 +21,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   int _tab = 0;
   bool _loadedLive = false;
   bool _loadingLive = false;
+  bool _loadFailed = false;
   String? _notice;
-  late List<CoreNotification> _notifications = List.of(
-    SharedMockData.notifications,
-  );
+  List<CoreNotification> _notifications = const [];
 
   List<CoreNotification> get _filtered {
     if (_tab == 0) return _notifications;
@@ -44,26 +42,34 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   Future<void> _loadLiveNotifications() async {
     final trustSafety = TrustSafetyScope.maybeOf(context);
-    if (trustSafety == null) return;
+    if (trustSafety == null) {
+      setState(() {
+        _loadFailed = true;
+        _notifications = const [];
+        _notice = 'Sign in to load your live notifications.';
+      });
+      return;
+    }
     setState(() {
       _loadingLive = true;
+      _loadFailed = false;
       _notice = null;
     });
     try {
       final data = await trustSafety.notifications(force: true);
       if (!mounted) return;
       setState(() {
-        if (data.notifications.isNotEmpty) {
-          _notifications = data.notifications.map(_mapNotification).toList();
-          _notice = '${data.unreadCount} unread live notifications loaded.';
-        } else {
-          _notice = 'No live notifications yet — showing preview examples.';
-        }
+        _notifications = data.notifications.map(_mapNotification).toList();
+        _notice = data.notifications.isEmpty
+            ? 'No live notifications yet.'
+            : '${data.unreadCount} unread live notifications loaded.';
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _notice = 'Live notifications unavailable — showing preview examples.';
+        _loadFailed = true;
+        _notifications = const [];
+        _notice = 'Notifications could not be loaded. Retry when connected.';
       });
     } finally {
       if (mounted) setState(() => _loadingLive = false);
@@ -97,26 +103,12 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   Future<void> _markAllRead() async {
     final trustSafety = TrustSafetyScope.maybeOf(context);
     try {
-      if (trustSafety != null) {
-        await trustSafety.markAllNotificationsRead();
-        await _loadLiveNotifications();
-      } else {
-        setState(() {
-          _notifications = _notifications
-              .map(
-                (item) => CoreNotification(
-                  icon: item.icon,
-                  title: item.title,
-                  message: item.message,
-                  time: item.time,
-                  category: item.category,
-                  routeName: item.routeName,
-                  unread: false,
-                ),
-              )
-              .toList();
-        });
+      if (trustSafety == null) {
+        showCoreSnack(context, 'Sign in to update notifications');
+        return;
       }
+      await trustSafety.markAllNotificationsRead();
+      await _loadLiveNotifications();
       if (mounted) showCoreSnack(context, 'All notifications marked as read');
     } catch (_) {
       if (mounted) showCoreSnack(context, 'Could not update notifications');
@@ -150,9 +142,16 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             icon: Icons.notifications_none_rounded,
             actions: [
               CoreIconButton(
+                icon: Icons.refresh_rounded,
+                tooltip: 'Refresh notifications',
+                onTap: _loadingLive ? null : _loadLiveNotifications,
+              ),
+              CoreIconButton(
                 icon: Icons.done_all_rounded,
                 tooltip: 'Mark all as read',
-                onTap: _markAllRead,
+                onTap: _loadingLive || _notifications.isEmpty
+                    ? null
+                    : _markAllRead,
               ),
             ],
           ),
@@ -165,9 +164,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           if (_notice != null) ...[
             InlineNotice(
               message: _notice!,
-              tone: _notice!.startsWith('Live')
-                  ? CoreStatusTone.warning
-                  : CoreStatusTone.info,
+              tone: _loadFailed ? CoreStatusTone.warning : CoreStatusTone.info,
             ),
             const SizedBox(height: 12),
           ],

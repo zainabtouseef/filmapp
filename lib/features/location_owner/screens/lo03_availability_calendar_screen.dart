@@ -45,7 +45,9 @@ class _LO03AvailabilityCalendarScreenState
 
   void _refresh() {
     if (_bookings == null) return;
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override
@@ -257,7 +259,9 @@ class _LO03AvailabilityCalendarScreenState
         );
       }
       if (!mounted) return;
-      setState(() => _future = _load());
+      setState(() {
+        _future = _load();
+      });
       locationSnack(
         context,
         '$label marked ${locationCalendarLabel(status)}',

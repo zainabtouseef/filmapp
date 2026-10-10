@@ -54,7 +54,9 @@ class _LO06BookingRequestsScreenState extends State<LO06BookingRequestsScreen> {
 
   void _reload() {
     if (_bookings == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override

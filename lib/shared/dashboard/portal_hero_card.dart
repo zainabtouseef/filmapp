@@ -82,6 +82,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
     final colors = context.appColors;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final compact = MediaQuery.sizeOf(context).width < 480;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.radius),
@@ -147,7 +148,13 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                           for (final stat in widget.stats)
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.only(left: 10),
+                                constraints: BoxConstraints(
+                                  minHeight: compact ? 42 : 38,
+                                ),
+                                padding: EdgeInsets.only(
+                                  left: compact ? 7 : 10,
+                                  right: compact ? 3 : 0,
+                                ),
                                 decoration: BoxDecoration(
                                   border: Border(
                                     left: BorderSide(
@@ -160,22 +167,30 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      stat.value,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTextStyles.cardTitle.copyWith(
-                                        fontSize: 18,
-                                        color: colors.textPrimary,
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          stat.value,
+                                          maxLines: 1,
+                                          style:
+                                              AppTextStyles.cardTitle.copyWith(
+                                            fontSize: compact ? 16 : 18,
+                                            color: colors.textPrimary,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                     Text(
                                       stat.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: compact ? 2 : 1,
+                                      overflow: TextOverflow.fade,
                                       style: AppTextStyles.smallMeta.copyWith(
                                         color: colors.textSecondary,
-                                        fontSize: 10.5,
+                                        fontSize: compact ? 9.5 : 10.5,
+                                        height: 1.05,
                                       ),
                                     ),
                                   ],

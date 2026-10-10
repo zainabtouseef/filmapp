@@ -187,8 +187,7 @@ class CastingController extends ChangeNotifier {
     String applicationId,
     String roundId,
   ) async {
-    final result =
-        await _repository.acceptMeetingRound(applicationId, roundId);
+    final result = await _repository.acceptMeetingRound(applicationId, roundId);
     await actorApplications(force: true);
     return result;
   }

@@ -18,6 +18,7 @@ class MarketplaceListing {
   final String? ownerAvatarUrl;
   final List<MarketplaceListingMedia> media;
   final VerifiedMediaKit? mediaKit;
+  final List<String> subcategories;
 
   const MarketplaceListing({
     required this.publicId,
@@ -36,6 +37,7 @@ class MarketplaceListing {
     this.ownerAvatarUrl,
     required this.media,
     this.mediaKit,
+    this.subcategories = const [],
   });
 
   factory MarketplaceListing.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,9 @@ class MarketplaceListing {
       publicId: json['public_id'] as String,
       listingType: json['listing_type'] as String,
       title: json['title'] as String,
+      subcategories: (json['subcategories'] as List? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
       summary: json['summary'] as String,
       cityName: city?['name'] as String? ?? 'Pakistan',
       priceFromMinor: json['price_from_minor'] as int?,
@@ -103,6 +108,7 @@ class MarketplaceListing {
       avatarLabel: initials.isEmpty ? 'CC' : initials,
       imageUrl: coverImageUrl,
       notes: summary,
+      subcategories: subcategories,
     );
   }
 

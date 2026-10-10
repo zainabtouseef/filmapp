@@ -86,6 +86,51 @@ def _public_image_for_current_user(client: FlaskClient, headers: dict[str, str])
         return file.public_id
 
 
+def test_private_project_is_not_accessible_to_another_director(
+    client: FlaskClient,
+) -> None:
+    owner = _register_role(client, "director_producer")
+    stranger = _register_role(client, "director_producer")
+    created = client.post(
+        "/api/v1/projects",
+        headers=owner,
+        json={
+            "title": "Private authorization QA project",
+            "project_type": "film",
+            "visibility": "private",
+            "cover_file_id": _public_image_for_current_user(client, owner),
+        },
+    )
+    assert created.status_code == 201, created.text
+    project_id = created.json["data"]["project"]["public_id"]
+    for suffix in ("", "/room", "/members", "/files", "/requirements"):
+        response = client.get(
+            f"/api/v1/projects/{project_id}{suffix}", headers=stranger
+        )
+        assert response.status_code == 404, (suffix, response.text)
+        assert response.json.get("data") is None
+    forbidden_update = client.patch(
+        f"/api/v1/projects/{project_id}",
+        headers=stranger,
+        json={"title": "Unauthorized replacement"},
+    )
+    assert forbidden_update.status_code == 404
+    listed = client.get("/api/v1/projects", headers=stranger)
+    assert project_id not in {
+        row["public_id"] for row in listed.json["data"]["projects"]
+    }
+    schedule = client.get(
+        f"/api/v1/director/schedule?project_id={project_id}", headers=stranger
+    )
+    assert schedule.status_code == 404
+    assert schedule.json.get("data") is None
+    unchanged = client.get(f"/api/v1/projects/{project_id}", headers=owner)
+    assert unchanged.status_code == 200
+    assert (
+        unchanged.json["data"]["project"]["title"] == "Private authorization QA project"
+    )
+
+
 def test_project_requirement_and_skills_flow(client: FlaskClient) -> None:
     headers = _register_role(client, "director_producer")
     cover_file_id = _public_image_for_current_user(client, headers)

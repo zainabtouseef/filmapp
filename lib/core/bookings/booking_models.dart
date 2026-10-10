@@ -1,5 +1,6 @@
 import '../../features/actor_talent/models/actor_talent_models.dart';
 import '../../features/director_producer/models/dp_negotiation.dart';
+import '../verification/verification_models.dart';
 
 class BookingUser {
   final String publicId;
@@ -299,7 +300,10 @@ class ConversationMessage {
   final BookingUser sender;
   final String? body;
   final String messageType;
+  final String? decisionType;
+  final bool pinned;
   final DateTime? createdAt;
+  final List<ConversationAttachment> attachments;
 
   const ConversationMessage({
     required this.publicId,
@@ -307,6 +311,9 @@ class ConversationMessage {
     required this.body,
     required this.messageType,
     required this.createdAt,
+    this.decisionType,
+    this.pinned = false,
+    this.attachments = const [],
   });
 
   factory ConversationMessage.fromJson(Map<String, dynamic> json) {
@@ -315,15 +322,62 @@ class ConversationMessage {
       sender: BookingUser.fromJson(json['sender'] as Map<String, dynamic>),
       body: json['body'] as String?,
       messageType: json['message_type'] as String? ?? 'text',
+      decisionType: json['decision_type'] as String?,
+      pinned: json['pinned'] as bool? ?? false,
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+      attachments: (json['attachments'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(ConversationAttachment.fromJson)
+          .toList(),
     );
   }
+}
+
+class ConversationAttachment {
+  final UploadedFile file;
+  final String attachmentType;
+  final String? caption;
+
+  const ConversationAttachment({
+    required this.file,
+    required this.attachmentType,
+    this.caption,
+  });
+
+  factory ConversationAttachment.fromJson(Map<String, dynamic> json) {
+    return ConversationAttachment(
+      file: UploadedFile.fromJson(json['file'] as Map<String, dynamic>),
+      attachmentType: json['attachment_type'] as String? ?? 'file',
+      caption: json['caption'] as String?,
+    );
+  }
+}
+
+class ConversationAttachmentInput {
+  final String fileId;
+  final String attachmentType;
+  final String? caption;
+
+  const ConversationAttachmentInput({
+    required this.fileId,
+    this.attachmentType = 'file',
+    this.caption,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'file_id': fileId,
+        'attachment_type': attachmentType,
+        if (caption != null) 'caption': caption,
+      };
 }
 
 class BookingConversation {
   final String publicId;
   final String? bookingId;
   final String title;
+  final String? bookingStatus;
+  final String? projectTitle;
+  final bool contactUnlocked;
   final List<ConversationMessage> messages;
 
   const BookingConversation({
@@ -331,6 +385,9 @@ class BookingConversation {
     required this.bookingId,
     required this.title,
     required this.messages,
+    this.bookingStatus,
+    this.projectTitle,
+    this.contactUnlocked = false,
   });
 
   factory BookingConversation.fromJson(Map<String, dynamic> json) {
@@ -339,6 +396,9 @@ class BookingConversation {
       publicId: json['public_id'] as String,
       bookingId: json['booking_id'] as String?,
       title: json['title'] as String? ?? 'Booking chat',
+      bookingStatus: json['booking_status'] as String?,
+      projectTitle: json['project_title'] as String?,
+      contactUnlocked: json['contact_unlocked'] as bool? ?? false,
       messages: rawMessages
           .map((item) =>
               ConversationMessage.fromJson(item as Map<String, dynamic>))

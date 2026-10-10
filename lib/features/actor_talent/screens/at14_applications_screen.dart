@@ -46,7 +46,9 @@ class _AT14ApplicationsScreenState extends State<AT14ApplicationsScreen> {
     return controller.actorApplications(force: true);
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {

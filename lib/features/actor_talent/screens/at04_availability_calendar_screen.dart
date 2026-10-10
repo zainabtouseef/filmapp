@@ -187,7 +187,9 @@ class _AT04AvailabilityCalendarScreenState
   void _refreshAvailability() {
     final bookings = BookingsScope.maybeOf(context);
     if (bookings == null) return;
-    setState(() => _availabilityFuture = _loadAvailability(bookings));
+    setState(() {
+      _availabilityFuture = _loadAvailability(bookings);
+    });
   }
 
   void _openStatusSheet(BuildContext context, DateTime date) {

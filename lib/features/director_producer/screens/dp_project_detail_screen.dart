@@ -22,6 +22,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/cine_card_system.dart'
     show EntityAvatar, AvatarStack;
 import '../../../shared/scheduling/meeting_negotiation_panel.dart';
+import '../../../shared/projects/project_readiness_summary.dart';
 import '../../../shared/widgets/cine_marketplace_card.dart' show CineTonePlate;
 import '../models/dp_booking.dart';
 import '../models/dp_contract.dart';
@@ -98,15 +99,11 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
     final project = projectId == null
         ? (await projects.projects(force: true)).first
         : await projects.project(projectId);
-    final requirements = await projects
-        .requirements(project.publicId)
-        .catchError((_) => <ProjectRequirement>[]);
+    final requirements = await projects.requirements(project.publicId);
 
     final liveBookings = bookingsController == null
         ? <Booking>[]
-        : await bookingsController.bookings(force: true).catchError(
-              (_) => <Booking>[],
-            );
+        : await bookingsController.bookings(force: true);
     final bookings = liveBookings
         .where((booking) => booking.projectId == project.publicId)
         .map(_toDpBooking)
@@ -114,9 +111,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
 
     final liveContracts = contractsController == null
         ? <CineContract>[]
-        : await contractsController.contracts(force: true).catchError(
-              (_) => <CineContract>[],
-            );
+        : await contractsController.contracts(force: true);
     final contracts = liveContracts
         .where((contract) => contract.projectId == project.publicId)
         .map((contract) => _toDpContract(contract, project.title))
@@ -124,11 +119,7 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
 
     PaymentDashboardDto? liveDashboard;
     if (paymentsController != null) {
-      try {
-        liveDashboard = await paymentsController.dashboard(force: true);
-      } catch (_) {
-        liveDashboard = null;
-      }
+      liveDashboard = await paymentsController.dashboard(force: true);
     }
     final bookingIds = bookings.map((booking) => booking.id).toSet();
     final contractIds = contracts.map((contract) => contract.id).toSet();
@@ -143,16 +134,14 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
         .toList();
     final castingApplications = castingController == null
         ? <CastingApplication>[]
-        : await castingController
-            .directorApplications(project.publicId)
-            .catchError((_) => <CastingApplication>[]);
+        : await castingController.directorApplications(project.publicId);
     final opportunityApplications = opportunitiesController == null
         ? <OpportunityApplication>[]
-        : await opportunitiesController
-            .directorApplications(project.publicId)
-            .catchError((_) => <OpportunityApplication>[]);
+        : await opportunitiesController.directorApplications(project.publicId);
 
     return _ProjectHubData(
+      sourceProject: project,
+      sourceRequirements: requirements,
       project: _toDpProject(
         project,
         bookings: bookings,
@@ -187,9 +176,11 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
             icon: Icons.cloud_off_rounded,
             title: 'Project hub unavailable',
             message:
-                'Could not load this project from the database. Open a real project and retry.',
+                'Could not verify all project, booking, contract, application and payment data. Your saved information has not been changed. Retry to load the complete hub.',
             actionLabel: 'Retry',
-            onAction: () => setState(() => _future = _load()),
+            onAction: () => setState(() {
+              _future = _load();
+            }),
           );
         }
         final data = snapshot.data!;
@@ -244,6 +235,14 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
               payments: data.payments,
               castingApplications: data.castingApplications,
               opportunityApplications: data.opportunityApplications,
+              onTeamChanged: () => setState(() {
+                _future = _load();
+              }),
+            ),
+            const SizedBox(height: 16),
+            ProjectReadinessSummary(
+              project: data.sourceProject,
+              requirements: data.sourceRequirements,
             ),
           ],
         );
@@ -383,6 +382,8 @@ class _DPProjectDetailScreenState extends State<DPProjectDetailScreen> {
 }
 
 class _ProjectHubData {
+  final Project sourceProject;
+  final List<ProjectRequirement> sourceRequirements;
   final DpProject project;
   final List<DpRequirement> requirements;
   final List<DpBooking> bookings;
@@ -392,6 +393,8 @@ class _ProjectHubData {
   final List<OpportunityApplication> opportunityApplications;
 
   const _ProjectHubData({
+    required this.sourceProject,
+    required this.sourceRequirements,
     required this.project,
     required this.requirements,
     required this.bookings,
@@ -608,6 +611,7 @@ class _ProjectTabBody extends StatelessWidget {
   final List<DpPayment> payments;
   final List<CastingApplication> castingApplications;
   final List<OpportunityApplication> opportunityApplications;
+  final VoidCallback onTeamChanged;
 
   const _ProjectTabBody({
     required this.tab,
@@ -618,6 +622,7 @@ class _ProjectTabBody extends StatelessWidget {
     required this.payments,
     required this.castingApplications,
     required this.opportunityApplications,
+    required this.onTeamChanged,
   });
 
   @override
@@ -645,7 +650,7 @@ class _ProjectTabBody extends StatelessWidget {
           initialMode: ProductionCalendarMode.list,
         ),
       'Files' => _FilesTab(project: project),
-      'Team' => _TeamTab(project: project),
+      'Team' => _TeamTab(project: project, onChanged: onTeamChanged),
       _ => const SizedBox.shrink(),
     };
   }
@@ -706,7 +711,8 @@ class _OverviewTab extends StatelessWidget {
                         label: const Text('Open applications'),
                         onPressed: () => Navigator.pushNamed(
                           context,
-                          DirectorProducerRoutes.projectDetail,
+                          DirectorProducerRoutes.projectPath(project.id,
+                              tab: 'Casting'),
                           arguments: {
                             'id': project.id,
                             'tab': 'Casting',
@@ -728,7 +734,7 @@ class _OverviewTab extends StatelessWidget {
         ),
       ),
       right: DPSectionCard(
-        title: 'Today for this project',
+        title: 'Project schedule',
         icon: Icons.today_outlined,
         child: ProductionCalendar(projectId: project.id),
       ),
@@ -2479,8 +2485,7 @@ class _ContractsTab extends StatelessWidget {
                   tooltip: 'Open contract',
                   onPressed: () => Navigator.pushNamed(
                     context,
-                    CoreRoutes.contract,
-                    arguments: {'contract_id': contract.id},
+                    CoreRoutes.contractDetail(contract.id),
                   ),
                   icon: const Icon(Icons.open_in_new_rounded),
                 ),
@@ -2582,8 +2587,30 @@ class _FilesTab extends StatelessWidget {
 
 class _TeamTab extends StatelessWidget {
   final DpProject project;
+  final VoidCallback onChanged;
 
-  const _TeamTab({required this.project});
+  const _TeamTab({required this.project, required this.onChanged});
+
+  Future<void> _invite(BuildContext context) async {
+    final draft = await showDialog<_ProjectMemberDraft>(
+      context: context,
+      builder: (_) => const _InviteProjectMemberDialog(),
+    );
+    if (draft == null || !context.mounted) return;
+    try {
+      final member = await ProjectsScope.of(context).addMember(
+        projectId: project.id,
+        email: draft.email,
+        roleLabel: draft.roleLabel,
+        canEditProject: draft.canEditProject,
+      );
+      if (!context.mounted) return;
+      onChanged();
+      showCoreSnack(context, '${member.displayName} added to the project');
+    } on ApiException catch (error) {
+      if (context.mounted) showCoreSnack(context, error.message);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2604,11 +2631,129 @@ class _TeamTab extends StatelessWidget {
           DPHolographicButton(
             label: 'Invite co-producer',
             icon: Icons.person_add_alt_1_outlined,
-            onTap: () {},
+            onTap: () => _invite(context),
             secondary: true,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProjectMemberDraft {
+  final String email;
+  final String roleLabel;
+  final bool canEditProject;
+
+  const _ProjectMemberDraft({
+    required this.email,
+    required this.roleLabel,
+    required this.canEditProject,
+  });
+}
+
+class _InviteProjectMemberDialog extends StatefulWidget {
+  const _InviteProjectMemberDialog();
+
+  @override
+  State<_InviteProjectMemberDialog> createState() =>
+      _InviteProjectMemberDialogState();
+}
+
+class _InviteProjectMemberDialogState
+    extends State<_InviteProjectMemberDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _role = TextEditingController(text: 'Co-producer');
+  bool _canEdit = true;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _role.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _ProjectMemberDraft(
+        email: _email.text.trim(),
+        roleLabel: _role.text.trim(),
+        canEditProject: _canEdit,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Invite project member'),
+      content: SizedBox(
+        width: 460,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const InlineNotice(
+                message:
+                    'The person must already have a CineConnect account. They will receive an in-app notification.',
+                icon: Icons.mark_email_read_outlined,
+                tone: CoreStatusTone.info,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'CineConnect account email',
+                  prefixIcon: Icon(Icons.alternate_email_rounded),
+                ),
+                validator: (value) {
+                  final email = value?.trim() ?? '';
+                  return email.contains('@') && email.contains('.')
+                      ? null
+                      : 'Enter a valid email address';
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _role,
+                decoration: const InputDecoration(
+                  labelText: 'Project role',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                validator: (value) => (value?.trim().length ?? 0) < 2
+                    ? 'Enter a project role'
+                    : null,
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Can edit project and requirements'),
+                subtitle: const Text(
+                  'Team-management permission remains owner-only.',
+                ),
+                value: _canEdit,
+                onChanged: (value) => setState(() => _canEdit = value),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: const Text('Add member'),
+        ),
+      ],
     );
   }
 }

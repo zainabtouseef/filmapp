@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 
+import '../../auth/auth_controller.dart';
 import '../../bookings/booking_models.dart' as booking_models;
 import '../../bookings/bookings_controller.dart';
 import '../../core_ui/core_routes.dart';
-import '../../core_ui/mock_data/shared_mock_data.dart';
 import '../../core_ui/models/shared_models.dart';
 import '../../core_ui/widgets/core_widgets.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../../uploads/upload_repository.dart';
 
 class BookingChatScreen extends StatefulWidget {
   final String? conversationId;
@@ -20,18 +23,22 @@ class BookingChatScreen extends StatefulWidget {
 
 class _BookingChatScreenState extends State<BookingChatScreen> {
   final _composer = TextEditingController();
-  late final List<ChatMessage> _messages = List.of(SharedMockData.chatMessages);
   Future<booking_models.BookingConversation>? _conversationFuture;
-  bool _securedBooking = false;
+  bool _contactUnlocked = false;
+  bool _attaching = false;
+  bool _sending = false;
 
-  bool get _live => widget.conversationId?.startsWith('CONV-') ?? false;
+  bool get _live => widget.conversationId?.trim().isNotEmpty ?? false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_live) {
-      _conversationFuture ??=
-          BookingsScope.of(context).conversation(widget.conversationId!);
+      final bookings = BookingsScope.maybeOf(context);
+      if (bookings != null) {
+        _conversationFuture ??=
+            bookings.conversation(widget.conversationId!.trim());
+      }
     }
   }
 
@@ -42,7 +49,7 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
   }
 
   String _maskPhoneNumbers(String value) {
-    if (_securedBooking) return value;
+    if (_contactUnlocked) return value;
     return value.replaceAllMapped(
       RegExp(r'(\+?92|0)?3\d{9}'),
       (match) => '03XX-XXXXXXX',
@@ -52,34 +59,104 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
   void _send() {
     final text = _composer.text.trim();
     if (text.isEmpty) return;
-    if (_live) {
-      _sendLive(text);
+    if (!_live) {
+      showCoreSnack(context, 'Open a live booking conversation first.');
       return;
     }
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          sender: 'You',
-          message: _maskPhoneNumbers(text),
-          time: 'Now',
-          mine: true,
-        ),
-      );
-      _composer.clear();
-    });
+    _sendLive(text);
   }
 
   Future<void> _sendLive(String text) async {
-    await BookingsScope.of(context).sendMessage(
-      conversationId: widget.conversationId!,
-      body: _maskPhoneNumbers(text),
-    );
-    if (!mounted) return;
-    _composer.clear();
+    setState(() => _sending = true);
+    try {
+      await BookingsScope.of(context).sendMessage(
+        conversationId: widget.conversationId!,
+        body: _maskPhoneNumbers(text),
+      );
+      if (!mounted) return;
+      _composer.clear();
+      _refreshConversation();
+    } catch (error) {
+      if (mounted) showCoreSnack(context, 'Message not sent: $error');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _refreshConversation() {
     setState(() {
       _conversationFuture =
           BookingsScope.of(context).conversation(widget.conversationId!);
     });
+  }
+
+  Future<void> _pickAttachment() async {
+    if (!_live) {
+      showCoreSnack(
+          context, 'Attachments require a live booking conversation.');
+      return;
+    }
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      showCoreSnack(context, 'Sign in to attach a file.');
+      return;
+    }
+    setState(() => _attaching = true);
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const [
+          'jpg',
+          'jpeg',
+          'png',
+          'webp',
+          'pdf',
+          'mp3',
+          'm4a',
+          'aac',
+          'wav',
+        ],
+        withData: true,
+      );
+      final file = picked?.files.single;
+      final bytes = file?.bytes;
+      if (file == null || bytes == null) return;
+      if (bytes.length > 25 * 1024 * 1024) {
+        throw StateError('Chat attachments must be 25 MB or smaller.');
+      }
+      final mimeType = _mimeFor(file.extension);
+      final uploaded = await UploadRepository(auth.apiClient).uploadFile(
+        purpose: 'project_document',
+        file: PickedFileData(
+          name: file.name,
+          mimeType: mimeType,
+          bytes: bytes,
+        ),
+      );
+      if (!mounted) return;
+      await BookingsScope.of(context).sendMessage(
+        conversationId: widget.conversationId!,
+        body: '',
+        attachments: [
+          booking_models.ConversationAttachmentInput(
+            fileId: uploaded.publicId,
+            attachmentType: mimeType.startsWith('image/')
+                ? 'image'
+                : mimeType.startsWith('audio/')
+                    ? 'audio'
+                    : 'file',
+            caption: file.name,
+          ),
+        ],
+      );
+      if (!mounted) return;
+      _refreshConversation();
+      showCoreSnack(context, '${file.name} attached');
+    } catch (error) {
+      if (mounted) showCoreSnack(context, 'Attachment not sent: $error');
+    } finally {
+      if (mounted) setState(() => _attaching = false);
+    }
   }
 
   void _messageActions(ChatMessage message) {
@@ -87,28 +164,43 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => _MessageActionsSheet(
-        onPin: () {
+        onPin: () async {
           Navigator.pop(context);
-          if (message.id != null) {
-            BookingsScope.of(context).pinMessage(message.id!);
+          final id = message.id;
+          if (id == null) return;
+          try {
+            await BookingsScope.of(this.context).pinMessage(id);
+            if (!mounted) return;
+            _refreshConversation();
+            showCoreSnack(this.context, 'Decision pinned');
+          } catch (error) {
+            if (mounted) {
+              showCoreSnack(this.context, 'Decision not pinned: $error');
+            }
           }
-          showCoreSnack(context, 'Decision pinned');
         },
         onAddendum: () {
           Navigator.pop(context);
-          Navigator.pushNamed(
-            context,
-            CoreRoutes.contract,
-            arguments: {'addendum': true},
+          showCoreSnack(
+            this.context,
+            'Open the related agreement from Contracts to request an addendum.',
           );
         },
         onReport: () {
           Navigator.pop(context);
-          Navigator.pushNamed(context, CoreRoutes.report);
+          Navigator.pushNamed(
+            context,
+            CoreRoutes.report,
+            arguments: {
+              'entity_type': 'conversation',
+              'entity_id': widget.conversationId,
+            },
+          );
         },
         onCopy: () {
           Navigator.pop(context);
-          showCoreSnack(context, 'Copied: ${message.message}');
+          Clipboard.setData(ClipboardData(text: message.message));
+          showCoreSnack(context, 'Message copied');
         },
       ),
     );
@@ -117,36 +209,86 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
   @override
   Widget build(BuildContext context) {
     if (_live) {
+      if (_conversationFuture == null) {
+        return const CoreScreenScaffold(
+          child: CoreEmptyState(
+            icon: Icons.forum_outlined,
+            title: 'Conversation unavailable',
+            message: 'Sign in again and reopen this chat from a live booking.',
+          ),
+        );
+      }
       return FutureBuilder<booking_models.BookingConversation>(
         future: _conversationFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return CoreScreenScaffold(
+              child: CoreEmptyState(
+                icon: Icons.forum_outlined,
+                title: 'Conversation could not be loaded',
+                message: 'Check your connection and reopen the booking chat.',
+                actionLabel: 'Retry',
+                onAction: _refreshConversation,
+              ),
+            );
+          }
           final conversation = snapshot.data;
+          _contactUnlocked = conversation?.contactUnlocked ?? false;
+          final currentUserId = AuthScope.maybeOf(context)?.user?.publicId;
           final messages = conversation == null
               ? const <ChatMessage>[]
-              : conversation.messages
-                  .map(
-                    (item) => ChatMessage(
+              : conversation.messages.map(
+                  (item) {
+                    final attachments = item.attachments;
+                    final attachment =
+                        attachments.isEmpty ? null : attachments.first;
+                    final attachmentLabel = attachments.isEmpty
+                        ? ''
+                        : attachments.length == 1
+                            ? attachment!.file.originalName
+                            : '${attachment!.file.originalName} +${attachments.length - 1} more';
+                    final body = item.body?.trim() ?? '';
+                    final displayText = [body, attachmentLabel]
+                        .where((part) => part.isNotEmpty)
+                        .join('\n');
+                    final mime = attachment?.file.mimeType ?? '';
+                    return ChatMessage(
                       id: item.publicId,
                       sender: item.sender.displayName,
-                      message: item.body ?? '',
+                      message: displayText,
                       time: _relative(item.createdAt),
-                      mine: false,
-                    ),
-                  )
-                  .toList();
+                      mine: item.sender.publicId == currentUserId,
+                      pinned: item.pinned,
+                      type: item.decisionType != null
+                          ? ChatMessageType.decision
+                          : mime.startsWith('image/')
+                              ? ChatMessageType.image
+                              : mime.startsWith('audio/')
+                                  ? ChatMessageType.voice
+                                  : attachments.isNotEmpty
+                                      ? ChatMessageType.pdf
+                                      : ChatMessageType.text,
+                    );
+                  },
+                ).toList();
           return _chatScaffold(
             title: conversation?.title ?? 'Booking chat',
             bookingId: conversation?.bookingId ?? 'Live booking',
             messages: messages,
+            bookingStatus: conversation?.bookingStatus,
+            projectTitle: conversation?.projectTitle,
+            contactUnlocked: conversation?.contactUnlocked ?? false,
             loading: snapshot.connectionState == ConnectionState.waiting,
           );
         },
       );
     }
-    return _chatScaffold(
-      title: 'TVC Shoot — Lahore',
-      bookingId: 'BK-2048',
-      messages: _messages,
+    return const CoreScreenScaffold(
+      child: CoreEmptyState(
+        icon: Icons.forum_outlined,
+        title: 'Choose a live booking conversation',
+        message: 'Open chat from a booking or negotiation workspace.',
+      ),
     );
   }
 
@@ -154,6 +296,9 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     required String title,
     required String bookingId,
     required List<ChatMessage> messages,
+    String? bookingStatus,
+    String? projectTitle,
+    bool contactUnlocked = false,
     bool loading = false,
   }) {
     return CoreScreenScaffold(
@@ -161,9 +306,16 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         children: [
-          _contextHeader(context, title: title, bookingId: bookingId),
+          _contextHeader(
+            context,
+            title: title,
+            bookingId: bookingId,
+            bookingStatus: bookingStatus,
+            projectTitle: projectTitle,
+            contactUnlocked: contactUnlocked,
+          ),
           const SizedBox(height: 12),
-          _pinnedSection(),
+          _pinnedSection(messages),
           const SizedBox(height: 10),
           Expanded(
             child: ListView.builder(
@@ -191,6 +343,9 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     BuildContext context, {
     required String title,
     required String bookingId,
+    String? bookingStatus,
+    String? projectTitle,
+    required bool contactUnlocked,
   }) {
     final colors = context.appColors;
     return CoreGlassCard(
@@ -215,17 +370,23 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Booking ID: $bookingId',
+                      [
+                        'Booking ID: $bookingId',
+                        if (projectTitle?.trim().isNotEmpty ?? false)
+                          projectTitle!.trim(),
+                      ].join(' · '),
                       style: AppTextStyles.caption
                           .copyWith(color: colors.textSecondary),
                     ),
                   ],
                 ),
               ),
-              Switch.adaptive(
-                value: _securedBooking,
-                activeThumbColor: colors.goldMid,
-                onChanged: (value) => setState(() => _securedBooking = value),
+              StatusBadge(
+                label:
+                    contactUnlocked ? 'Contact unlocked' : 'Contact protected',
+                tone: contactUnlocked
+                    ? CoreStatusTone.success
+                    : CoreStatusTone.neutral,
               ),
             ],
           ),
@@ -233,51 +394,40 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: const [
+            children: [
               StatusBadge(
-                  label: 'Under Negotiation', tone: CoreStatusTone.warning),
-              StatusBadge(label: 'Contract: Draft', tone: CoreStatusTone.info),
-              StatusBadge(
-                  label: 'Payment: Not Paid', tone: CoreStatusTone.neutral),
+                label:
+                    (bookingStatus ?? 'Live conversation').replaceAll('_', ' '),
+                tone: bookingStatus == 'secured'
+                    ? CoreStatusTone.success
+                    : CoreStatusTone.info,
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.description_outlined,
-                  label: 'View Contract',
-                  compact: true,
-                  onTap: () =>
-                      Navigator.pushNamed(context, CoreRoutes.contract),
-                ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: CoreSecondaryButton(
+              icon: Icons.flag_outlined,
+              label: 'Report booking',
+              compact: true,
+              onTap: () => Navigator.pushNamed(
+                context,
+                CoreRoutes.report,
+                arguments: {
+                  'entity_type': 'booking',
+                  'entity_id': bookingId,
+                },
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.payments_outlined,
-                  label: 'View Payment',
-                  compact: true,
-                  onTap: () =>
-                      Navigator.pushNamed(context, CoreRoutes.paymentProof),
-                ),
-              ),
-              const SizedBox(width: 8),
-              CoreIconButton(
-                icon: Icons.flag_outlined,
-                tooltip: 'Report',
-                onTap: () => Navigator.pushNamed(context, CoreRoutes.report),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _pinnedSection() {
-    final pinned = _messages.where((message) => message.pinned).toList();
+  Widget _pinnedSection(List<ChatMessage> messages) {
+    final pinned = messages.where((message) => message.pinned).toList();
     if (pinned.isEmpty) return const SizedBox.shrink();
     return CoreGlassCard(
       padding: const EdgeInsets.all(12),
@@ -312,11 +462,21 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Row(
         children: [
-          CoreIconButton(
-            icon: Icons.attach_file_rounded,
-            tooltip: 'Attach',
-            onTap: () => showCoreSnack(context, 'Attachment picker simulated'),
-          ),
+          if (_attaching)
+            const SizedBox(
+              width: 42,
+              height: 42,
+              child: Padding(
+                padding: EdgeInsets.all(11),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            CoreIconButton(
+              icon: Icons.attach_file_rounded,
+              tooltip: 'Attach a file',
+              onTap: _pickAttachment,
+            ),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -335,23 +495,16 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
           CoreIconButton(
             icon: Icons.mic_none_rounded,
             tooltip: 'Voice note',
-            onTap: () => setState(() {
-              _messages.add(
-                const ChatMessage(
-                  sender: 'You',
-                  message: 'Voice note · 0:08',
-                  time: 'Now',
-                  mine: true,
-                  type: ChatMessageType.voice,
-                ),
-              );
-            }),
+            onTap: () => showCoreSnack(
+              context,
+              'Microphone recording is not available yet. Attach an audio file instead.',
+            ),
           ),
           const SizedBox(width: 8),
           CoreIconButton(
             icon: Icons.send_rounded,
             tooltip: 'Send',
-            onTap: _send,
+            onTap: _sending ? null : _send,
           ),
         ],
       ),
@@ -365,6 +518,20 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     if (diff.inHours < 1) return '${diff.inMinutes}m';
     if (diff.inDays < 1) return '${diff.inHours}h';
     return '${diff.inDays}d';
+  }
+
+  String _mimeFor(String? extension) {
+    return switch (extension?.toLowerCase()) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'pdf' => 'application/pdf',
+      'mp3' => 'audio/mpeg',
+      'm4a' => 'audio/mp4',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
+      _ => 'application/octet-stream',
+    };
   }
 }
 

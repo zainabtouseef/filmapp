@@ -215,10 +215,17 @@ def test_contract_signature_legal_review_and_addendum_flow(
     actor_detail = client.get(f"/api/v1/contracts/{contract_id}", headers=actor_headers)
     assert actor_detail.status_code == 200
 
+    missing_consent = client.post(
+        f"/api/v1/contracts/{contract_id}/signatures",
+        headers=producer_headers,
+        json={"typed_name": "Contract Producer", "consent": False},
+    )
+    assert missing_consent.status_code == 422
+
     producer_signature = client.post(
         f"/api/v1/contracts/{contract_id}/signatures",
         headers=producer_headers,
-        json={},
+        json={"typed_name": "Contract Producer", "consent": True},
     )
     assert producer_signature.status_code == 200, producer_signature.text
     assert producer_signature.json["data"]["contract"]["signature_progress"] == "0.500"
@@ -226,11 +233,18 @@ def test_contract_signature_legal_review_and_addendum_flow(
     actor_signature = client.post(
         f"/api/v1/contracts/{contract_id}/signatures",
         headers=actor_headers,
-        json={},
+        json={"typed_name": "Contract Actor", "consent": True},
     )
     assert actor_signature.status_code == 200, actor_signature.text
     assert actor_signature.json["data"]["contract"]["status"] == "signed"
     assert actor_signature.json["data"]["contract"]["signature_progress"] == "1.000"
+
+    contract_pdf = client.get(
+        f"/api/v1/contracts/{contract_id}.pdf", headers=producer_headers
+    )
+    assert contract_pdf.status_code == 200
+    assert contract_pdf.mimetype == "application/pdf"
+    assert contract_pdf.data.startswith(b"%PDF")
 
     review = client.post(
         "/api/v1/legal-reviews",

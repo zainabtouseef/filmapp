@@ -120,7 +120,9 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
   void _reload() {
     final contracts = ContractsScope.maybeOf(context);
     if (contracts == null) return;
-    setState(() => _future = contracts.contracts(force: true));
+    setState(() {
+      _future = contracts.contracts(force: true);
+    });
   }
 
   Future<void> _openContractWizard() async {
@@ -158,8 +160,7 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
       });
       Navigator.pushNamed(
         context,
-        CoreRoutes.contract,
-        arguments: generated.publicId,
+        CoreRoutes.contractDetail(generated.publicId),
       );
     } catch (error) {
       if (!mounted) return;
@@ -1178,11 +1179,12 @@ class _ContractCard extends StatelessWidget {
           DPHolographicButton(
             label: 'Open Contract',
             icon: Icons.open_in_new_rounded,
-            onTap: () => Navigator.pushNamed(
-              context,
-              CoreRoutes.contract,
-              arguments: contractId,
-            ),
+            onTap: contractId == null
+                ? null
+                : () => Navigator.pushNamed(
+                      context,
+                      CoreRoutes.contractDetail(contractId!),
+                    ),
             secondary: true,
           ),
           if (contractId != null) ...[

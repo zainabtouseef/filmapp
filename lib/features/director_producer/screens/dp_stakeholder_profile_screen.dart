@@ -100,7 +100,9 @@ class _DPStakeholderProfileScreenState
   }
 
   void _retry() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override
@@ -404,7 +406,11 @@ class _ProfileHero extends StatelessWidget {
       role: type,
       city: candidate.city,
       summary: candidate.notes,
-      portraitUrl: candidate.imageUrl,
+      portraitUrl: candidate.category == 'Media & Equipment' &&
+              {'arr camera rentals', 'arri camera rentals'}
+                  .contains(candidate.name.trim().toLowerCase())
+          ? 'asset:assets/images/arr-camera-rentals-v1.jpg'
+          : candidate.imageUrl,
       verified: candidate.verified,
       available: candidate.available,
       rateLabel:

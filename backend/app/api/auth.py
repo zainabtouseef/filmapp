@@ -18,10 +18,12 @@ from app.models.identity import (
     Role,
     User,
     UserRole,
+    UserSession,
     UserSettings,
 )
 from app.responses import success
 from app.security import (
+    access_token_matches_credentials,
     as_utc,
     decode_access_token,
     hash_password,
@@ -33,6 +35,7 @@ from app.security import (
     rotate_refresh_token,
     verify_password,
 )
+from app.services.auth_email import reset_email_available, send_password_reset_email
 
 auth_blueprint = Blueprint("auth", __name__)
 
@@ -115,6 +118,36 @@ def _serialize_tokens(token_pair: Any) -> dict[str, Any]:
     }
 
 
+def _settings_rows(user: User) -> tuple[UserSettings, NotificationPreference]:
+    settings = db.session.execute(
+        select(UserSettings).where(UserSettings.user_id == user.id)
+    ).scalar_one_or_none()
+    if settings is None:
+        settings = UserSettings(user_id=user.id)
+        db.session.add(settings)
+    notifications = db.session.execute(
+        select(NotificationPreference).where(NotificationPreference.user_id == user.id)
+    ).scalar_one_or_none()
+    if notifications is None:
+        notifications = NotificationPreference(user_id=user.id)
+        db.session.add(notifications)
+    return settings, notifications
+
+
+def _serialize_settings(
+    settings: UserSettings, notifications: NotificationPreference
+) -> dict[str, Any]:
+    return {
+        "timezone": settings.timezone,
+        "locale": settings.locale,
+        "notifications": {
+            "email_enabled": notifications.email_enabled,
+            "sms_enabled": notifications.sms_enabled,
+            "push_enabled": notifications.push_enabled,
+        },
+    }
+
+
 def _current_user() -> User:
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -129,7 +162,7 @@ def _current_user() -> User:
     user = db.session.execute(
         select(User).where(User.public_id == payload["sub"])
     ).scalar_one_or_none()
-    if user is None:
+    if user is None or not access_token_matches_credentials(user, payload):
         raise APIError(
             "auth.invalid_token", "Authentication token is invalid.", status=401
         )
@@ -278,6 +311,12 @@ def logout() -> Response:
 def forgot_password() -> Response:
     payload = _json_body()
     email = _normal_email(payload.get("email"))
+    if not reset_email_available():
+        raise APIError(
+            "auth.email_delivery_unavailable",
+            "Password recovery email is not configured. Please contact support.",
+            status=503,
+        )
     user = db.session.execute(
         select(User).where(User.email == email)
     ).scalar_one_or_none()
@@ -292,6 +331,16 @@ def forgot_password() -> Response:
         )
         record_auth_event("password_reset_requested", success=True, user=user)
     db.session.commit()
+    if user is not None:
+        try:
+            send_password_reset_email(user.email, token)
+        except Exception as exc:
+            # Never include the token, SMTP credentials or recipient in errors.
+            raise APIError(
+                "auth.email_delivery_failed",
+                "Recovery email could not be delivered. Please try again later.",
+                status=503,
+            ) from exc
     return jsonify(
         success(
             {
@@ -325,6 +374,12 @@ def reset_password() -> Response:
         )
     reset.user.password_hash = hash_password(new_password)
     reset.used_at = utc_now()
+    for session in db.session.execute(
+        select(UserSession).where(
+            UserSession.user_id == reset.user_id, UserSession.revoked_at.is_(None)
+        )
+    ).scalars():
+        session.revoked_at = utc_now()
     record_auth_event("password_reset_completed", success=True, user=reset.user)
     db.session.commit()
     return jsonify(success({"reset": True}))
@@ -340,6 +395,72 @@ def me() -> Response:
 def my_roles() -> Response:
     user = _current_user()
     return jsonify(success(_serialize_user(user)["roles"]))
+
+
+@auth_blueprint.get("/me/settings")
+def my_settings() -> Response:
+    user = _current_user()
+    settings, notifications = _settings_rows(user)
+    db.session.commit()
+    return jsonify(success(_serialize_settings(settings, notifications)))
+
+
+@auth_blueprint.patch("/me/settings")
+def update_my_settings() -> Response:
+    user = _current_user()
+    payload = _json_body()
+    settings, notifications = _settings_rows(user)
+
+    if "locale" in payload:
+        locale = str(payload["locale"]).strip()
+        if locale not in {"en-PK", "ur-PK", "ur-Latn-PK"}:
+            raise APIError(
+                "validation.invalid",
+                "Request validation failed.",
+                status=422,
+                fields={"locale": ["Select a supported language."]},
+            )
+        settings.locale = locale
+    if "timezone" in payload:
+        timezone = str(payload["timezone"]).strip()
+        if not timezone or len(timezone) > 64:
+            raise APIError(
+                "validation.invalid",
+                "Request validation failed.",
+                status=422,
+                fields={"timezone": ["Enter a valid timezone."]},
+            )
+        settings.timezone = timezone
+
+    notification_payload = payload.get("notifications")
+    if notification_payload is not None:
+        if not isinstance(notification_payload, dict):
+            raise APIError(
+                "validation.invalid",
+                "Request validation failed.",
+                status=422,
+                fields={"notifications": ["Notification settings must be an object."]},
+            )
+        notification_fields = {
+            "email_enabled": "email_enabled",
+            "sms_enabled": "sms_enabled",
+            "push_enabled": "push_enabled",
+        }
+        for api_name, attribute_name in notification_fields.items():
+            if api_name not in notification_payload:
+                continue
+            value = notification_payload[api_name]
+            if not isinstance(value, bool):
+                raise APIError(
+                    "validation.invalid",
+                    "Request validation failed.",
+                    status=422,
+                    fields={f"notifications.{api_name}": ["Use true or false."]},
+                )
+            setattr(notifications, attribute_name, value)
+
+    db.session.commit()
+    return jsonify(success(_serialize_settings(settings, notifications)))
 
 
 @auth_blueprint.post("/me/roles")

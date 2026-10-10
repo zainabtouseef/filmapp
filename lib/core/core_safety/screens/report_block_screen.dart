@@ -47,7 +47,6 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
   late String _reason;
   late final TextEditingController _description;
   String _urgency = 'Normal';
-  bool _uploaded = false;
   bool _block = false;
   bool _submitting = false;
   String? _notice;
@@ -132,8 +131,7 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
         'entity_id': entityId,
         'reported_user_id': widget.reportedUserId,
         'reason': _reasonCode(),
-        'description':
-            '${_description.text.trim()}\nUrgency: $_urgency\nEvidence attached: $_uploaded',
+        'description': '${_description.text.trim()}\nUrgency: $_urgency',
       });
       if (_block && widget.reportedUserId != null) {
         await trustSafety.blockUser(widget.reportedUserId!,
@@ -168,6 +166,8 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final entityId = widget.entityId ?? widget.reportedUserId;
+    final hasTarget = entityId?.trim().isNotEmpty ?? false;
     return CoreScreenScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,7 +204,9 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Reported user/project: Ali Khan · TVC Shoot — Lahore',
+                          hasTarget
+                              ? 'Reported ${widget.entityType.replaceAll('_', ' ')}: $entityId'
+                              : 'No live report target selected',
                           style: AppTextStyles.label
                               .copyWith(color: colors.textPrimary),
                         ),
@@ -226,13 +228,6 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
                       setState(() => _reason = value ?? _reason),
                 ),
                 const SizedBox(height: 14),
-                UploadCard(
-                  title: 'Evidence attachment',
-                  subtitle: 'Attach screenshots, contracts or payment proof',
-                  uploaded: _uploaded,
-                  onTap: () => setState(() => _uploaded = true),
-                ),
-                const SizedBox(height: 14),
                 CoreTextField(
                   controller: _description,
                   label: 'Description',
@@ -252,14 +247,18 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
                   contentPadding: EdgeInsets.zero,
                   activeThumbColor: colors.goldMid,
                   value: _block,
-                  onChanged: (value) => setState(() => _block = value),
+                  onChanged: widget.reportedUserId == null
+                      ? null
+                      : (value) => setState(() => _block = value),
                   title: Text(
                     'Block user',
                     style:
                         AppTextStyles.label.copyWith(color: colors.textPrimary),
                   ),
                   subtitle: Text(
-                    'This user will no longer be able to contact you.',
+                    widget.reportedUserId == null
+                        ? 'Open Report from a user profile to block that account.'
+                        : 'This user will no longer be able to contact you.',
                     style: AppTextStyles.caption
                         .copyWith(color: colors.textSecondary),
                   ),
@@ -268,7 +267,7 @@ class _ReportBlockScreenState extends State<ReportBlockScreen> {
                 CorePrimaryButton(
                   icon: Icons.outbox_outlined,
                   label: _submitting ? 'Submitting...' : 'Submit report',
-                  onTap: _submitting ? null : _submit,
+                  onTap: _submitting || !hasTarget ? null : _submit,
                 ),
                 const SizedBox(height: 10),
                 CoreSecondaryButton(

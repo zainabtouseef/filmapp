@@ -48,7 +48,9 @@ class OpportunityRole {
   bool get isVerifiedOnly => visibility == 'verified_only';
 
   String get budgetLabel {
-    if (budgetMinMinor == null && budgetMaxMinor == null) return 'Rate on request';
+    if (budgetMinMinor == null && budgetMaxMinor == null) {
+      return 'Rate on request';
+    }
     final min = budgetMinMinor == null ? null : (budgetMinMinor! / 100).round();
     final max = budgetMaxMinor == null ? null : (budgetMaxMinor! / 100).round();
     if (min != null && max != null) return '$currency $min - $max';
@@ -66,9 +68,10 @@ class OpportunityRole {
       summary: json['summary'] as String?,
       visibility: json['visibility'] as String? ?? 'all',
       quantity: json['quantity'] as int? ?? 1,
-      requiredDocuments: (json['required_documents'] as List<dynamic>? ?? const [])
-          .map((item) => item.toString())
-          .toList(),
+      requiredDocuments:
+          (json['required_documents'] as List<dynamic>? ?? const [])
+              .map((item) => item.toString())
+              .toList(),
       budgetMinMinor: json['budget_min_minor'] as int?,
       budgetMaxMinor: json['budget_max_minor'] as int?,
       currency: json['currency'] as String? ?? 'PKR',
@@ -232,9 +235,8 @@ class OpportunityApplication {
       withdrawnAt: json['withdrawn_at'] == null
           ? null
           : DateTime.tryParse(json['withdrawn_at'] as String),
-      meeting: meeting == null
-          ? null
-          : OpportunityMeetingSnapshot.fromJson(meeting),
+      meeting:
+          meeting == null ? null : OpportunityMeetingSnapshot.fromJson(meeting),
       meetingThread: MeetingThread.fromJsonOrNull(
         json['meeting_thread'] as Map<String, dynamic>?,
       ),

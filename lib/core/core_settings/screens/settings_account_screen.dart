@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/auth_controller.dart';
+import '../../auth/auth_models.dart';
 import '../../core_ui/core_routes.dart';
 import '../../core_ui/widgets/core_widgets.dart';
+import '../../network/api_exception.dart';
+import '../../payments/payment_models.dart';
+import '../../payments/payments_controller.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
+import '../../trust_safety/trust_safety_controller.dart';
 
 class SettingsAccountScreen extends StatefulWidget {
   const SettingsAccountScreen({super.key});
@@ -14,19 +19,95 @@ class SettingsAccountScreen extends StatefulWidget {
 }
 
 class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
-  bool _inApp = true;
+  final bool _inApp = true;
   bool _push = true;
   bool _email = true;
   bool _sms = false;
-  bool _whatsapp = false;
-  bool _hidePhone = true;
-  bool _hideLocation = true;
-  bool _watermark = true;
-  bool _discovery = true;
-  bool _biometric = false;
-  bool _twoFactor = false;
+  final bool _whatsapp = false;
+  final bool _hidePhone = true;
+  final bool _hideLocation = true;
+  final bool _watermark = true;
+  final bool _discovery = true;
+  final bool _biometric = false;
+  final bool _twoFactor = false;
   bool _loggingOut = false;
+  bool _loadingSettings = true;
+  bool _savingSettings = false;
   String _language = 'English';
+  String? _settingsError;
+  Future<void>? _settingsFuture;
+  Future<List<PayoutAccountDto>>? _payoutAccountsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _settingsFuture ??= _loadSettings();
+    final payments = PaymentsScope.maybeOf(context);
+    if (payments != null) {
+      _payoutAccountsFuture ??= payments.payoutAccounts();
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await AuthScope.of(context).settings();
+      if (mounted) _applySettings(settings);
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() {
+          _settingsError = error.message;
+          _loadingSettings = false;
+        });
+      }
+    }
+  }
+
+  void _applySettings(AuthSettings settings) {
+    setState(() {
+      _language = switch (settings.locale) {
+        'ur-PK' => 'Urdu',
+        'ur-Latn-PK' => 'Roman Urdu',
+        _ => 'English',
+      };
+      _push = settings.pushEnabled;
+      _email = settings.emailEnabled;
+      _sms = settings.smsEnabled;
+      _settingsError = null;
+      _loadingSettings = false;
+      _savingSettings = false;
+    });
+  }
+
+  Future<void> _saveSettings({
+    String? locale,
+    bool? pushEnabled,
+    bool? emailEnabled,
+    bool? smsEnabled,
+  }) async {
+    if (_savingSettings) return;
+    setState(() {
+      _savingSettings = true;
+      _settingsError = null;
+    });
+    try {
+      final settings = await AuthScope.of(context).updateSettings(
+        locale: locale,
+        pushEnabled: pushEnabled,
+        emailEnabled: emailEnabled,
+        smsEnabled: smsEnabled,
+      );
+      if (!mounted) return;
+      _applySettings(settings);
+      showCoreSnack(context, 'Settings saved');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _settingsError = error.message;
+        _savingSettings = false;
+      });
+      showCoreSnack(context, error.message);
+    }
+  }
 
   Future<void> _logout() async {
     setState(() => _loggingOut = true);
@@ -39,46 +120,44 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
     );
   }
 
-  void _otpPaymentModal() {
-    final otp = TextEditingController();
-    showModalBottomSheet<void>(
+  Future<void> _addPayoutAccount() async {
+    final payments = PaymentsScope.maybeOf(context);
+    if (payments == null) return;
+    final draft = await showDialog<_PayoutAccountDraft>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: _SettingsSheet(
-          title: 'Confirm Payment Account Change',
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const InlineNotice(
-                message:
-                    'Payment account changes require OTP confirmation and may be reviewed by admin.',
-                icon: Icons.admin_panel_settings_outlined,
-                tone: CoreStatusTone.warning,
-              ),
-              const SizedBox(height: 14),
-              OtpInputRow(controller: otp),
-              const SizedBox(height: 16),
-              CorePrimaryButton(
-                icon: Icons.verified_user_outlined,
-                label: 'Confirm Change',
-                onTap: () {
-                  Navigator.pop(context);
-                  showCoreSnack(
-                    context,
-                    'Payment account change sent for high-value review',
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (_) => const _PayoutAccountDialog(),
     );
+    if (draft == null || !mounted) return;
+    try {
+      await payments.createPayoutAccount(
+        provider: draft.provider,
+        accountName: draft.accountName,
+        accountIdentifier: draft.accountIdentifier,
+      );
+      if (!mounted) return;
+      setState(() {
+        _payoutAccountsFuture = payments.payoutAccounts();
+      });
+      showCoreSnack(context, 'Payout account submitted for verification');
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    }
+  }
+
+  Future<void> _contactSupport() async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null) return;
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (_) => _SupportDialog(trustSafety: trustSafety),
+    );
+    if (created == true && mounted) {
+      showCoreSnack(context, 'Support ticket created');
+    }
+  }
+
+  void _notAvailable(String feature) {
+    showCoreSnack(context, '$feature is not available in this build yet');
   }
 
   void _faqSheet() {
@@ -109,60 +188,6 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
     );
   }
 
-  void _confirmDanger(String title, {required bool irreversible}) {
-    final colors = context.appColors;
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(
-          children: [
-            Icon(
-              irreversible
-                  ? Icons.warning_amber_rounded
-                  : Icons.pause_circle_outline_rounded,
-              color: irreversible ? colors.danger : colors.goldDark,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles.sectionTitle.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          irreversible
-              ? 'This permanently deletes your account and cannot be undone.'
-              : 'You can reactivate your account any time by logging back in.',
-          style: AppTextStyles.bodyMuted.copyWith(color: colors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              showCoreSnack(context, '$title requested');
-            },
-            style: irreversible
-                ? TextButton.styleFrom(foregroundColor: colors.danger)
-                : null,
-            child: Text(irreversible ? 'Delete' : 'Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return CoreScreenScaffold(
@@ -180,7 +205,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             _navRow(
               Icons.person_outline,
               'Edit basic info',
-              () => showCoreSnack(context, 'Edit profile simulated'),
+              () => _notAvailable('Basic profile editing'),
+              subtitle:
+                  'Profile-specific editors remain available in each role portal.',
             ),
             _navRow(
               Icons.lock_reset_rounded,
@@ -204,35 +231,51 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             ),
           ]),
           _section('Notifications', [
+            if (_loadingSettings)
+              const LinearProgressIndicator(minHeight: 2)
+            else if (_settingsError != null)
+              InlineNotice(
+                message: _settingsError!,
+                icon: Icons.cloud_off_outlined,
+                tone: CoreStatusTone.warning,
+              ),
             _toggle(
               Icons.notifications_none_rounded,
               'In-app',
               _inApp,
-              (v) => setState(() => _inApp = v),
+              null,
+              subtitle: 'Required for booking and security updates.',
             ),
             _toggle(
               Icons.phone_iphone_rounded,
               'Push',
               _push,
-              (v) => setState(() => _push = v),
+              _loadingSettings || _savingSettings
+                  ? null
+                  : (value) => _saveSettings(pushEnabled: value),
             ),
             _toggle(
               Icons.email_outlined,
               'Email',
               _email,
-              (v) => setState(() => _email = v),
+              _loadingSettings || _savingSettings
+                  ? null
+                  : (value) => _saveSettings(emailEnabled: value),
             ),
             _toggle(
               Icons.sms_outlined,
               'SMS',
               _sms,
-              (v) => setState(() => _sms = v),
+              _loadingSettings || _savingSettings
+                  ? null
+                  : (value) => _saveSettings(smsEnabled: value),
             ),
             _toggle(
               Icons.chat_outlined,
               'WhatsApp consent',
               _whatsapp,
-              (v) => setState(() => _whatsapp = v),
+              null,
+              subtitle: 'WhatsApp delivery is not configured yet.',
             ),
           ]),
           _languageSection(),
@@ -241,25 +284,29 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
               Icons.phone_locked_outlined,
               'Hide phone number until secured booking',
               _hidePhone,
-              (v) => setState(() => _hidePhone = v),
+              null,
+              subtitle: 'Enforced by CineConnect booking policy.',
             ),
             _toggle(
               Icons.location_off_outlined,
               'Hide exact location until secured stage',
               _hideLocation,
-              (v) => setState(() => _hideLocation = v),
+              null,
+              subtitle: 'Enforced by CineConnect booking policy.',
             ),
             _toggle(
               Icons.water_drop_outlined,
               'Watermark public portfolio previews',
               _watermark,
-              (v) => setState(() => _watermark = v),
+              null,
+              subtitle: 'Portfolio-level control is not available yet.',
             ),
             _toggle(
               Icons.travel_explore_outlined,
               'Allow profile discovery',
               _discovery,
-              (v) => setState(() => _discovery = v),
+              null,
+              subtitle: 'Manage visibility from your role profile.',
             ),
           ]),
           _paymentSection(),
@@ -273,18 +320,21 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
               Icons.fingerprint_rounded,
               'Enable biometric login',
               _biometric,
-              (v) => setState(() => _biometric = v),
+              null,
+              subtitle: 'Device biometric sign-in is not configured yet.',
             ),
             _toggle(
               Icons.password_rounded,
               'Two-factor authentication',
               _twoFactor,
-              (v) => setState(() => _twoFactor = v),
+              null,
+              subtitle: 'Two-factor enrollment is not available yet.',
             ),
             _navRow(
               Icons.devices_other_outlined,
               'Active sessions',
-              () => showCoreSnack(context, 'Active sessions simulated'),
+              () => _notAvailable('Session management'),
+              subtitle: 'Remote session revocation is not available yet.',
             ),
           ]),
           _section('Support', [
@@ -292,7 +342,7 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             _navRow(
               Icons.support_agent_outlined,
               'Contact support',
-              () => showCoreSnack(context, 'Contact support simulated'),
+              _contactSupport,
             ),
             _navRow(
               Icons.report_problem_outlined,
@@ -304,12 +354,14 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             _navRow(
               Icons.pause_circle_outline_rounded,
               'Deactivate account',
-              () => _confirmDanger('Deactivate account', irreversible: false),
+              () => _notAvailable('Account deactivation'),
+              subtitle: 'Contact support for an assisted deactivation.',
             ),
             _navRow(
               Icons.delete_outline_rounded,
               'Delete account',
-              () => _confirmDanger('Delete account', irreversible: true),
+              () => _notAvailable('Account deletion'),
+              subtitle: 'Contact support for a verified deletion request.',
             ),
           ]),
         ],
@@ -330,8 +382,15 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             values: const ['English', 'Urdu', 'Roman Urdu'],
             label: 'Language',
             icon: Icons.translate_rounded,
-            onChanged: (value) =>
-                setState(() => _language = value ?? _language),
+            onChanged: (value) {
+              if (_loadingSettings || _savingSettings) return;
+              final locale = switch (value) {
+                'Urdu' => 'ur-PK',
+                'Roman Urdu' => 'ur-Latn-PK',
+                _ => 'en-PK',
+              };
+              _saveSettings(locale: locale);
+            },
           ),
         ],
       ),
@@ -349,53 +408,80 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
           const SizedBox(height: 10),
           const InlineNotice(
             message:
-                'Payment account changes require OTP confirmation and may be reviewed by admin.',
-            icon: Icons.admin_panel_settings_outlined,
-            tone: CoreStatusTone.warning,
+                'Account identifiers are encrypted and new accounts remain pending until verified.',
+            icon: Icons.lock_outline_rounded,
+            tone: CoreStatusTone.info,
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.border),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.account_balance_outlined, color: colors.goldDark),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'HBL · Sara Ahmed Productions · **** 4821',
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
+          if (_payoutAccountsFuture == null)
+            const Text('Sign in to manage payout accounts.')
+          else
+            FutureBuilder<List<PayoutAccountDto>>(
+              future: _payoutAccountsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const LinearProgressIndicator(minHeight: 2);
+                }
+                if (snapshot.hasError) {
+                  return const InlineNotice(
+                    message: 'Payout accounts could not be loaded.',
+                    icon: Icons.cloud_off_outlined,
+                    tone: CoreStatusTone.warning,
+                  );
+                }
+                final accounts = snapshot.data ?? const [];
+                if (accounts.isEmpty) {
+                  return Text(
+                    'No payout account added.',
+                    style: AppTextStyles.bodyMuted.copyWith(
+                      color: colors.textSecondary,
                     ),
-                  ),
-                ),
-              ],
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final account in accounts)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.account_balance_outlined,
+                              color: colors.goldDark,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                '${account.provider.toUpperCase()} · ${account.accountName} · ${account.accountMasked}',
+                                style: AppTextStyles.label.copyWith(
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              account.status,
+                              style: AppTextStyles.caption.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
-          ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.add_rounded,
-                  label: 'Add account',
-                  compact: true,
-                  onTap: _otpPaymentModal,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.edit_outlined,
-                  label: 'Change account',
-                  compact: true,
-                  onTap: _otpPaymentModal,
-                ),
-              ),
-            ],
+          CoreSecondaryButton(
+            icon: Icons.add_rounded,
+            label: 'Add payout account',
+            compact: true,
+            onTap: _payoutAccountsFuture == null ? null : _addPayoutAccount,
           ),
         ],
       ),
@@ -423,8 +509,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
     IconData icon,
     String title,
     bool value,
-    ValueChanged<bool> onChanged,
-  ) {
+    ValueChanged<bool>? onChanged, {
+    String? subtitle,
+  }) {
     return Builder(
       builder: (context) {
         final colors = context.appColors;
@@ -438,12 +525,25 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             title,
             style: AppTextStyles.label.copyWith(color: colors.textPrimary),
           ),
+          subtitle: subtitle == null
+              ? null
+              : Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
         );
       },
     );
   }
 
-  Widget _navRow(IconData icon, String title, VoidCallback onTap) {
+  Widget _navRow(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    String? subtitle,
+  }) {
     return Builder(
       builder: (context) {
         final colors = context.appColors;
@@ -454,10 +554,227 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             title,
             style: AppTextStyles.label.copyWith(color: colors.textPrimary),
           ),
+          subtitle: subtitle == null
+              ? null
+              : Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
           trailing: Icon(Icons.chevron_right_rounded, color: colors.iconMuted),
           onTap: onTap,
         );
       },
+    );
+  }
+}
+
+class _PayoutAccountDraft {
+  final String provider;
+  final String accountName;
+  final String accountIdentifier;
+
+  const _PayoutAccountDraft({
+    required this.provider,
+    required this.accountName,
+    required this.accountIdentifier,
+  });
+}
+
+class _PayoutAccountDialog extends StatefulWidget {
+  const _PayoutAccountDialog();
+
+  @override
+  State<_PayoutAccountDialog> createState() => _PayoutAccountDialogState();
+}
+
+class _PayoutAccountDialogState extends State<_PayoutAccountDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _accountName = TextEditingController();
+  final _identifier = TextEditingController();
+  String _provider = 'bank';
+
+  @override
+  void dispose() {
+    _accountName.dispose();
+    _identifier.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _PayoutAccountDraft(
+        provider: _provider,
+        accountName: _accountName.text.trim(),
+        accountIdentifier: _identifier.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add payout account'),
+      content: SizedBox(
+        width: 440,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _provider,
+                decoration: const InputDecoration(labelText: 'Account type'),
+                items: const [
+                  DropdownMenuItem(value: 'bank', child: Text('Bank account')),
+                  DropdownMenuItem(
+                      value: 'wallet', child: Text('Mobile wallet')),
+                ],
+                onChanged: (value) =>
+                    setState(() => _provider = value ?? _provider),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _accountName,
+                decoration: const InputDecoration(labelText: 'Account name'),
+                validator: (value) => (value?.trim().length ?? 0) < 2
+                    ? 'Enter the account holder name'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _identifier,
+                decoration: const InputDecoration(
+                  labelText: 'IBAN, account number, or wallet number',
+                ),
+                obscureText: true,
+                validator: (value) => (value?.trim().length ?? 0) < 4
+                    ? 'Enter a valid account identifier'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Submit')),
+      ],
+    );
+  }
+}
+
+class _SupportDialog extends StatefulWidget {
+  final TrustSafetyController trustSafety;
+
+  const _SupportDialog({required this.trustSafety});
+
+  @override
+  State<_SupportDialog> createState() => _SupportDialogState();
+}
+
+class _SupportDialogState extends State<_SupportDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _subject = TextEditingController();
+  final _message = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await widget.trustSafety.createSupportTicket({
+        'category': 'general',
+        'priority': 'normal',
+        'subject': _subject.text.trim(),
+        'message': _message.text.trim(),
+      });
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = 'Could not create the ticket. Please try again.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Contact support'),
+      content: SizedBox(
+        width: 460,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _subject,
+                enabled: !_submitting,
+                decoration: const InputDecoration(labelText: 'Subject'),
+                validator: (value) =>
+                    (value?.trim().length ?? 0) < 2 ? 'Enter a subject' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _message,
+                enabled: !_submitting,
+                minLines: 4,
+                maxLines: 7,
+                decoration: const InputDecoration(
+                  labelText: 'How can we help?',
+                  alignLabelWithHint: true,
+                ),
+                validator: (value) =>
+                    (value?.trim().isEmpty ?? true) ? 'Enter a message' : null,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: TextStyle(color: context.appColors.danger),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: Text(_submitting ? 'Submitting...' : 'Create ticket'),
+        ),
+      ],
     );
   }
 }

@@ -66,6 +66,10 @@ class PaymentsController extends ChangeNotifier {
     return _repository.payoutAccounts();
   }
 
+  Future<ApiDownload> downloadReceipt(String publicId) {
+    return _repository.downloadReceipt(publicId);
+  }
+
   Future<PayoutAccountDto> createSandboxPayoutAccount({
     required String accountName,
   }) {

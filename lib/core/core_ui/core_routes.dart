@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/portal_access_guard.dart';
 
 import '../theme/app_breakpoints.dart';
 import '../theme/app_durations.dart';
@@ -81,6 +82,7 @@ class CoreRoutes {
   static const login = '/login';
   static const signup = '/signup';
   static const forgotPassword = '/forgot-password';
+  static const resetPassword = '/reset-password';
   static const kyc = '/verification/upload';
   static const verificationStatus = '/verification/status';
   static const profileRoles = '/profile/roles';
@@ -98,6 +100,17 @@ class CoreRoutes {
   static const forceUpdate = '/utility/force-update';
   static const maintenance = '/utility/maintenance';
   static const dashboard = '/portal/dashboard';
+
+  /// Stable, refresh-safe route for a live contract.
+  ///
+  /// Passing a contract only through [RouteSettings.arguments] works for an
+  /// in-memory Navigator transition, but web URL synchronization can rebuild
+  /// the route without those arguments. Keep the identifier in the path so a
+  /// browser refresh and mobile/deep-link navigation open the same contract.
+  static String contractDetail(String contractId, {bool addendum = false}) {
+    final path = '$contract/${Uri.encodeComponent(contractId)}';
+    return addendum ? '$path?addendum=true' : path;
+  }
 
   static final _marketplaceLibrary =
       _DeferredLibrary(marketplace_portal.loadLibrary);
@@ -254,6 +267,16 @@ class CoreRoutes {
       );
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
+    final resetUri = Uri.tryParse(routeSettings.name ?? '');
+    if (resetUri?.path == resetPassword) {
+      return MaterialPageRoute<void>(
+        settings: routeSettings,
+        builder: (_) => AuthSplitScaffold(
+            content: ForgotPasswordScreen(
+          resetToken: resetUri?.queryParameters['token'],
+        )),
+      );
+    }
     final directorDeepLink = _directorProducerDeepLink(routeSettings.name);
     final generalPublicDeepLink = _generalPublicDeepLink(routeSettings.name);
     final influencerDeepLink = _influencerDeepLink(routeSettings.name);
@@ -304,7 +327,12 @@ class CoreRoutes {
               : null,
         );
       case _ when contractDeepLinkId != null:
-        page = ContractViewerScreen(contractId: contractDeepLinkId);
+        page = ContractViewerScreen(
+          contractId: contractDeepLinkId,
+          showAddendumBanner: Uri.tryParse(routeSettings.name ?? '')
+                  ?.queryParameters['addendum'] ==
+              'true',
+        );
       case contract:
         page = ContractViewerScreen(
           contractId: routeSettings.arguments is String
@@ -544,6 +572,7 @@ class CoreRoutes {
         transitionDuration: const Duration(milliseconds: 420),
         pageBuilder: (_, __, ___) => shellPage,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          if (MediaQuery.of(context).disableAnimations) return child;
           final wide =
               MediaQuery.sizeOf(context).width >= AppBreakpoints.tablet;
           final begin = wide ? const Offset(1, 0) : const Offset(0, 1);
@@ -561,6 +590,7 @@ class CoreRoutes {
         generalPublicDeepLink?.routeName ??
         actorDeepLink?.routeName ??
         routeSettings.name;
+    page = PortalAccessGuard(routeName: canonicalRouteName ?? '', child: page);
     if (_heroRevealRoutes.contains(canonicalRouteName)) {
       return _heroRevealRoute(page, routeSettings);
     }
@@ -592,6 +622,7 @@ class CoreRoutes {
       reverseTransitionDuration: AppDurations.heroReveal,
       pageBuilder: (_, __, ___) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        if (MediaQuery.of(context).disableAnimations) return child;
         final curved = CurvedAnimation(
           parent: animation,
           curve: Curves.easeOutCubic,

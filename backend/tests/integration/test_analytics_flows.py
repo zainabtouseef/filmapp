@@ -170,10 +170,12 @@ def _accepted_and_secured_booking(
     client.post(
         f"/api/v1/contracts/{contract_id}/signatures",
         headers=producer_headers,
-        json={},
+        json={"typed_name": "Analytics Flow Producer", "consent": True},
     )
     client.post(
-        f"/api/v1/contracts/{contract_id}/signatures", headers=actor_headers, json={}
+        f"/api/v1/contracts/{contract_id}/signatures",
+        headers=actor_headers,
+        json={"typed_name": "Analytics Flow Actor", "consent": True},
     )
 
     schedules = client.get("/api/v1/payment-schedules", headers=producer_headers)

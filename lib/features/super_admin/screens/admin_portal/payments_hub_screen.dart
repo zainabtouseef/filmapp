@@ -31,7 +31,9 @@ class _PaymentsHubScreenState extends State<PaymentsHubScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   AdminPaymentProof _toAdminProof(PaymentProofDto proof) {

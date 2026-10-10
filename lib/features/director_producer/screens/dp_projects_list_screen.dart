@@ -134,7 +134,7 @@ class _DPProjectsListScreenState extends State<DPProjectsListScreen> {
                       project: project,
                       onOpen: () => Navigator.pushNamed(
                         context,
-                        DirectorProducerRoutes.projectDetail,
+                        DirectorProducerRoutes.projectPath(project.id),
                         arguments: project.id,
                       ),
                     );

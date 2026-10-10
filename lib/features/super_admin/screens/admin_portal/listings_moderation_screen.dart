@@ -38,7 +38,9 @@ class _AdminListingsControlViewState extends State<AdminListingsControlView> {
   }
 
   void _refresh() {
-    setState(() => _future = AdminScope.of(context).listings(force: true));
+    setState(() {
+      _future = AdminScope.of(context).listings(force: true);
+    });
   }
 
   List<AdminListingRecordDto> _visible(

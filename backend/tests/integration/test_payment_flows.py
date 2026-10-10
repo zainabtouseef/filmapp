@@ -164,7 +164,7 @@ def _signed_contract(
     accepted = client.post(
         f"/api/v1/offers/{offer_id}/accept",
         headers=actor_headers,
-        json={},
+        json={"typed_name": "Payment Producer", "consent": True},
     )
     assert accepted.status_code == 200, accepted.text
     contract = client.post(
@@ -177,13 +177,13 @@ def _signed_contract(
     producer_signature = client.post(
         f"/api/v1/contracts/{contract_id}/signatures",
         headers=producer_headers,
-        json={},
+        json={"typed_name": "Payment Producer", "consent": True},
     )
     assert producer_signature.status_code == 200, producer_signature.text
     actor_signature = client.post(
         f"/api/v1/contracts/{contract_id}/signatures",
         headers=actor_headers,
-        json={},
+        json={"typed_name": "Payment Actor", "consent": True},
     )
     assert actor_signature.status_code == 200, actor_signature.text
     assert actor_signature.json["data"]["contract"]["status"] == "signed"
@@ -258,7 +258,9 @@ def test_payment_proof_review_ledger_receipt_and_payout_account_flow(
     producer_ledger = client.get("/api/v1/ledger", headers=producer_headers)
     assert producer_ledger.status_code == 200
     assert any(
-        row["status"] == "posted" and row["direction"] == "debit"
+        row["status"] == "posted"
+        and row["direction"] == "debit"
+        and row["receipt_id"] == receipt["public_id"]
         for row in producer_ledger.json["data"]["entries"]
     )
 
@@ -270,6 +272,13 @@ def test_payment_proof_review_ledger_receipt_and_payout_account_flow(
         f"/api/v1/receipts/{receipt['public_id']}", headers=producer_headers
     )
     assert receipt_detail.status_code == 200
+
+    receipt_pdf = client.get(
+        f"/api/v1/receipts/{receipt['public_id']}.pdf", headers=producer_headers
+    )
+    assert receipt_pdf.status_code == 200
+    assert receipt_pdf.mimetype == "application/pdf"
+    assert receipt_pdf.data.startswith(b"%PDF")
 
     payout_account = client.post(
         "/api/v1/payout-accounts",

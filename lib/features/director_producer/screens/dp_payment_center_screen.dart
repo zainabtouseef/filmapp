@@ -94,7 +94,9 @@ class _DPPaymentCenterScreenState extends State<DPPaymentCenterScreen>
   void _reload() {
     final payments = PaymentsScope.maybeOf(context);
     if (payments == null) return;
-    setState(() => _future = payments.dashboard(force: true));
+    setState(() {
+      _future = payments.dashboard(force: true);
+    });
   }
 
   List<DpPayment> _toDpPayments(List<PaymentScheduleDto> schedules) {

@@ -20,7 +20,6 @@ import '../widgets/dashboard/dp_financial_centre.dart';
 import '../widgets/dashboard/dp_mini_calendar_section.dart';
 import '../widgets/dashboard/dp_priority_actions.dart';
 import '../widgets/dashboard/dp_project_deck.dart';
-import '../widgets/dashboard/dp_today_timeline.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_layout_helpers.dart';
 
@@ -36,7 +35,7 @@ class DPHomeDashboardScreen extends StatefulWidget {
 }
 
 class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
-  Future<DirectorDashboard>? _future;
+  Future<_DirectorHomeData>? _future;
 
   @override
   void didChangeDependencies() {
@@ -44,7 +43,7 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
     _future ??= _load();
   }
 
-  Future<DirectorDashboard> _load() async {
+  Future<_DirectorHomeData> _load() async {
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) {
       throw const ApiException(
@@ -52,16 +51,25 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
         message: 'Sign in to load the live Director dashboard.',
       );
     }
-    return auth.directorDashboard();
+    final results = await Future.wait<Object>([
+      auth.directorDashboard(),
+      auth.directorSchedule(),
+    ]);
+    return _DirectorHomeData(
+      dashboard: results[0] as DirectorDashboard,
+      schedule: results[1] as DirectorSchedule,
+    );
   }
 
   void _retry() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<DirectorDashboard>(
+    return FutureBuilder<_DirectorHomeData>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -73,7 +81,8 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
               : 'Could not load the live Director dashboard.';
           return _DashboardErrorState(message: message, onRetry: _retry);
         }
-        final dashboard = snapshot.data!;
+        final dashboard = snapshot.data!.dashboard;
+        final schedule = snapshot.data!.schedule;
         final displayName = AuthScope.maybeOf(context)?.user?.displayName;
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -86,7 +95,14 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
                   displayName: displayName,
                 ),
                 const SizedBox(height: 14),
-                _WidgetGridSection(dashboard: dashboard),
+                _CinePlannerEntry(dashboard: dashboard),
+                const SizedBox(height: 14),
+                _WidgetGridSection(
+                  dashboard: dashboard,
+                  schedule: schedule,
+                ),
+                const SizedBox(height: 14),
+                _ProjectDeckSection(dashboard: dashboard),
                 const SizedBox(height: 14),
                 _ProductionWorkflowSection(dashboard: dashboard),
                 const SizedBox(height: 14),
@@ -103,15 +119,62 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
   }
 }
 
-/// Compact live widgets backed by the dashboard response.
-class _WidgetGridSection extends StatelessWidget {
+class _DirectorHomeData {
+  final DirectorDashboard dashboard;
+  final DirectorSchedule schedule;
+
+  const _DirectorHomeData({
+    required this.dashboard,
+    required this.schedule,
+  });
+}
+
+/// Planner sits directly below the Console header and uses live project counts.
+class _CinePlannerEntry extends StatelessWidget {
   final DirectorDashboard dashboard;
 
-  const _WidgetGridSection({required this.dashboard});
+  const _CinePlannerEntry({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    return DPSectionCard(
+      title: 'CinePlanner',
+      icon: Icons.view_timeline_rounded,
+      actionText: 'Open planner',
+      onActionTap: () =>
+          Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
+      child: Text(
+        '${dashboard.projects.length} ${dashboard.projects.length == 1 ? 'project' : 'projects'} · Screenplays, breakdowns, '
+        'resources, schedules and call sheets in one production workspace.',
+        style: AppTextStyles.body.copyWith(
+          color: context.appColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact live widgets backed by the dashboard response.
+class _WidgetGridSection extends StatefulWidget {
+  final DirectorDashboard dashboard;
+  final DirectorSchedule schedule;
+
+  const _WidgetGridSection({
+    required this.dashboard,
+    required this.schedule,
+  });
+
+  @override
+  State<_WidgetGridSection> createState() => _WidgetGridSectionState();
+}
+
+class _WidgetGridSectionState extends State<_WidgetGridSection> {
+  DateTime _selectedDay = DateTime.now();
 
   static const _clockRingWidth = 168.0 * 2 + 14;
   static const _calendarWidth = 340.0;
   static const _calendarPipelineWidth = _calendarWidth * 2 + 14;
+  static const _calendarPanelHeight = 318.0;
 
   /// Below this, there's room for both groups side by side exactly as
   /// designed — nothing changes from the wide desktop layout.
@@ -124,19 +187,19 @@ class _WidgetGridSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dashboard = widget.dashboard;
     final summary = dashboard.summary;
     final paid = summary.paidMinor ~/ 100;
     final pending = summary.pendingPaymentMinor ~/ 100;
     final total = paid + pending;
     final progress = total == 0 ? 0.0 : paid / total;
 
-    final now = DateTime.now();
-    final todayEvents = dashboard.timeline.where((event) {
+    final selectedEvents = widget.schedule.events.where((event) {
       final startsAt = event.startsAt;
       return startsAt != null &&
-          startsAt.year == now.year &&
-          startsAt.month == now.month &&
-          startsAt.day == now.day;
+          startsAt.year == _selectedDay.year &&
+          startsAt.month == _selectedDay.month &&
+          startsAt.day == _selectedDay.day;
     }).toList()
       ..sort((a, b) => a.startsAt!.compareTo(b.startsAt!));
 
@@ -155,9 +218,17 @@ class _WidgetGridSection extends StatelessWidget {
     );
     final calendarCard = PortalGlassWidgetCard(
       width: _calendarWidth,
-      child: DPMiniCalendarSection(dashboard: dashboard, decorated: false),
+      child: DPMiniCalendarSection(
+        events: widget.schedule.events,
+        selectedDate: _selectedDay,
+        onDaySelected: (day) => setState(() => _selectedDay = day),
+        decorated: false,
+      ),
     );
-    final pipelineCard = _TodayPipelineWidget(events: todayEvents);
+    final pipelineCard = _TodayPipelineWidget(
+      selectedDate: _selectedDay,
+      events: selectedEvents,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -185,14 +256,17 @@ class _WidgetGridSection extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                width: _calendarPipelineWidth,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    calendarCard,
-                    const SizedBox(width: 14),
-                    SizedBox(width: _calendarWidth, child: pipelineCard),
-                  ],
+                height: _calendarPanelHeight,
+                child: SizedBox(
+                  width: _calendarPipelineWidth,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      calendarCard,
+                      const SizedBox(width: 14),
+                      SizedBox(width: _calendarWidth, child: pipelineCard),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -231,13 +305,16 @@ class _WidgetGridSection extends StatelessWidget {
                   pipelineCard,
                 ],
               )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  calendarCard,
-                  const SizedBox(width: 14),
-                  Expanded(child: pipelineCard),
-                ],
+            : SizedBox(
+                height: _calendarPanelHeight,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    calendarCard,
+                    const SizedBox(width: 14),
+                    Expanded(child: pipelineCard),
+                  ],
+                ),
               );
 
         return PortalStaggeredReveal(
@@ -267,11 +344,15 @@ class _ActivityNewsWidget extends StatelessWidget {
             children: [
               Icon(Icons.campaign_outlined, size: 18, color: colors.goldDark),
               const SizedBox(width: 8),
-              Text(
-                'Live production news',
-                style: AppTextStyles.sectionSerifHeading.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 15,
+              Expanded(
+                child: Text(
+                  'Live production news',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sectionSerifHeading.copyWith(
+                    color: colors.textPrimary,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
@@ -286,9 +367,13 @@ class _ActivityNewsWidget extends StatelessWidget {
 
 /// Compact preview of the current planner day.
 class _TodayPipelineWidget extends StatelessWidget {
-  final List<DirectorTimelineItem> events;
+  final DateTime selectedDate;
+  final List<DirectorScheduleEvent> events;
 
-  const _TodayPipelineWidget({required this.events});
+  const _TodayPipelineWidget({
+    required this.selectedDate,
+    required this.events,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +386,9 @@ class _TodayPipelineWidget extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Planner snapshot',
+                _isToday(selectedDate)
+                    ? "Today's schedule"
+                    : '${selectedDate.day} ${_shortMonth(selectedDate.month)} schedule',
                 style: AppTextStyles.sectionSerifHeading
                     .copyWith(color: colors.textPrimary, fontSize: 15),
               ),
@@ -328,7 +415,7 @@ class _TodayPipelineWidget extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           if (events.isEmpty)
             Text(
-              'No production events scheduled today.',
+              'No production events scheduled for this date.',
               style:
                   AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
             )
@@ -341,10 +428,32 @@ class _TodayPipelineWidget extends StatelessWidget {
       ),
     );
   }
+
+  static bool _isToday(DateTime value) {
+    final today = DateTime.now();
+    return value.year == today.year &&
+        value.month == today.month &&
+        value.day == today.day;
+  }
+
+  static String _shortMonth(int month) => const [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ][month - 1];
 }
 
 class _TodayPipelineRow extends StatelessWidget {
-  final DirectorTimelineItem event;
+  final DirectorScheduleEvent event;
 
   const _TodayPipelineRow({required this.event});
 
@@ -420,7 +529,7 @@ class _ProductionWorkflowSection extends StatelessWidget {
         dashboard.dpPayments.where((p) => p.status == 'Due').length;
 
     final workflows = [
-      PortalModuleCard(
+      _WorkflowAction(
         icon: Icons.view_timeline_rounded,
         name: 'Plan production',
         description: 'Build schedules, scenes, and call sheets.',
@@ -429,31 +538,27 @@ class _ProductionWorkflowSection extends StatelessWidget {
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
       ),
-      TourTarget(
-        id: 'dp.reviewApplications',
-        child: PortalModuleCard(
-          icon: Icons.how_to_reg_outlined,
-          name: 'Build your cast',
-          description: 'Review applications and auditions.',
-          actionLabel: 'Review talent',
-          tone: CineTone.premium,
-          onTap: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-        ),
+      _WorkflowAction(
+        tourId: 'dp.reviewApplications',
+        icon: Icons.how_to_reg_outlined,
+        name: 'Build your cast',
+        description: 'Review applications and auditions.',
+        actionLabel: 'Review talent',
+        tone: CineTone.premium,
+        onTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.projects),
       ),
-      TourTarget(
-        id: 'dp.findProviders',
-        child: PortalModuleCard(
-          icon: Icons.travel_explore_outlined,
-          name: 'Find collaborators',
-          description: 'Discover talent, crew, locations, and gear.',
-          actionLabel: 'Open marketplace',
-          tone: CineTone.information,
-          onTap: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
-        ),
+      _WorkflowAction(
+        tourId: 'dp.findProviders',
+        icon: Icons.travel_explore_outlined,
+        name: 'Find collaborators',
+        description: 'Discover talent, crew, locations, and gear.',
+        actionLabel: 'Open marketplace',
+        tone: CineTone.information,
+        onTap: () =>
+            Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
       ),
-      PortalModuleCard(
+      _WorkflowAction(
         icon: Icons.handshake_outlined,
         name: 'Close negotiations',
         count: negotiating > 0 ? negotiating : null,
@@ -463,7 +568,7 @@ class _ProductionWorkflowSection extends StatelessWidget {
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
       ),
-      PortalModuleCard(
+      _WorkflowAction(
         icon: Icons.description_outlined,
         name: 'Contracts to sign',
         count: contractsPending > 0 ? contractsPending : null,
@@ -473,7 +578,7 @@ class _ProductionWorkflowSection extends StatelessWidget {
         onTap: () =>
             Navigator.pushNamed(context, DirectorProducerRoutes.contracts),
       ),
-      PortalModuleCard(
+      _WorkflowAction(
         icon: Icons.shield_outlined,
         name: 'Payment milestones',
         count: paymentsDue > 0 ? paymentsDue : null,
@@ -495,21 +600,196 @@ class _ProductionWorkflowSection extends StatelessWidget {
             Navigator.pushNamed(context, DirectorProducerRoutes.projects),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            const gap = AppSpacing.md;
-            final columns = (constraints.maxWidth / 216).floor().clamp(1, 3);
-            final width =
-                (constraints.maxWidth - gap * (columns - 1)) / columns;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final workflow in workflows)
-                  SizedBox(width: width, child: workflow),
-              ],
+            final tileWidth = constraints.maxWidth >= 1120
+                ? constraints.maxWidth / workflows.length
+                : 218.0;
+            return SizedBox(
+              height: 178,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < workflows.length; i++)
+                        SizedBox(
+                          width: tileWidth,
+                          child: _WorkflowStepTile(
+                            step: i + 1,
+                            action: workflows[i],
+                            showDivider: i != workflows.length - 1,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             );
           },
         ),
       ),
+    );
+  }
+}
+
+class _WorkflowAction {
+  final String? tourId;
+  final IconData icon;
+  final String name;
+  final int? count;
+  final String description;
+  final String actionLabel;
+  final CineTone tone;
+  final VoidCallback onTap;
+
+  const _WorkflowAction({
+    this.tourId,
+    required this.icon,
+    required this.name,
+    this.count,
+    required this.description,
+    required this.actionLabel,
+    required this.tone,
+    required this.onTap,
+  });
+}
+
+class _WorkflowStepTile extends StatefulWidget {
+  final int step;
+  final _WorkflowAction action;
+  final bool showDivider;
+
+  const _WorkflowStepTile({
+    required this.step,
+    required this.action,
+    required this.showDivider,
+  });
+
+  @override
+  State<_WorkflowStepTile> createState() => _WorkflowStepTileState();
+}
+
+class _WorkflowStepTileState extends State<_WorkflowStepTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final tone = cineToneColor(context, widget.action.tone);
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    Widget tile = MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration:
+            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.translationValues(0, _hovered ? -3 : 0, 0),
+        constraints: const BoxConstraints(minHeight: 150),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              tone.withValues(alpha: _hovered ? 0.12 : 0.055),
+              colors.elevatedSurface.withValues(alpha: 0.72),
+            ],
+          ),
+          border: widget.showDivider
+              ? Border(right: BorderSide(color: colors.border))
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.action.onTap,
+            hoverColor: tone.withValues(alpha: 0.035),
+            splashColor: tone.withValues(alpha: 0.10),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconBadge(
+                        icon: widget.action.icon,
+                        tone: widget.action.tone,
+                        compact: true,
+                      ),
+                      const Spacer(),
+                      Text(
+                        widget.step.toString().padLeft(2, '0'),
+                        style: AppTextStyles.micro.copyWith(
+                          color: tone,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.3,
+                        ),
+                      ),
+                      if (widget.action.count != null) ...[
+                        const SizedBox(width: 8),
+                        CountBadge(
+                          count: widget.action.count!,
+                          tone: widget.action.tone,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    widget.action.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.cardTitle.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.action.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 11.5,
+                      height: 1.4,
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.action.actionLabel,
+                        style: AppTextStyles.smallMeta.copyWith(
+                          color: tone,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_rounded, size: 13, color: tone),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (widget.action.tourId != null) {
+      tile = TourTarget(id: widget.action.tourId!, child: tile);
+    }
+    return Semantics(
+      button: true,
+      label: '${widget.action.name}. ${widget.action.actionLabel}',
+      child: tile,
     );
   }
 }
@@ -529,10 +809,6 @@ class _WideBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TodaySection(dashboard: dashboard),
-              const SizedBox(height: 14),
-              _ProjectDeckSection(dashboard: dashboard),
-              const SizedBox(height: 14),
               _FinancialSection(dashboard: dashboard),
               const SizedBox(height: 14),
               _PipelineSection(dashboard: dashboard),
@@ -561,10 +837,6 @@ class _CompactBody extends StatelessWidget {
       children: [
         _PrioritySection(dashboard: dashboard),
         const SizedBox(height: 14),
-        _TodaySection(dashboard: dashboard),
-        const SizedBox(height: 14),
-        _ProjectDeckSection(dashboard: dashboard),
-        const SizedBox(height: 14),
         _FinancialSection(dashboard: dashboard),
         const SizedBox(height: 14),
         _PipelineSection(dashboard: dashboard),
@@ -590,24 +862,6 @@ class _PrioritySection extends StatelessWidget {
             Navigator.pushNamed(context, CoreRoutes.notifications),
         child: DPPriorityActions(items: dashboard.priorityActions),
       ),
-    );
-  }
-}
-
-class _TodaySection extends StatelessWidget {
-  final DirectorDashboard dashboard;
-
-  const _TodaySection({required this.dashboard});
-
-  @override
-  Widget build(BuildContext context) {
-    return DPSectionCard(
-      title: "Today's Production Timeline",
-      icon: Icons.today_outlined,
-      actionText: 'Full schedule',
-      onActionTap: () =>
-          Navigator.pushNamed(context, DirectorProducerRoutes.schedule),
-      child: DPTodayTimeline(events: dashboard.dpTimeline),
     );
   }
 }

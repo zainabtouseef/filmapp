@@ -318,7 +318,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageEnvelope"
+                $ref: "#/components/schemas/SimpleMessageEnvelope"
         "429":
           $ref: "#/components/responses/RateLimited"
   /auth/password/reset:
@@ -365,6 +365,39 @@ paths:
                 $ref: "#/components/schemas/UserEnvelope"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /me/settings:
+    get:
+      tags: [Authentication]
+      operationId: getMySettings
+      responses:
+        "200":
+          description: Current locale, timezone, and notification preferences.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettingsEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Authentication]
+      operationId: updateMySettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettingsUpdateRequest"
+      responses:
+        "200":
+          description: Updated locale, timezone, and notification preferences.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettingsEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /me/roles:
     get:
       tags: [Roles]
@@ -1040,6 +1073,42 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Projects]
+      operationId: addProjectMember
+      parameters:
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectMemberCreateRequest"
+      responses:
+        "201":
+          description: Existing CineConnect user added to the project team.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMemberEnvelope"
+        "200":
+          description: Existing project membership reactivated or updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectMemberEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /projects/{project_id}/room:
     get:
       tags: [Projects]
@@ -1953,6 +2022,28 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /contracts/{contract_id}.pdf:
+    get:
+      tags: [Contracts]
+      operationId: downloadContractPdf
+      parameters:
+        - in: path
+          name: contract_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Authenticated contract-party PDF download.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /contracts/{contract_id}/signatures:
     post:
       tags: [Contracts]
@@ -1964,7 +2055,7 @@ paths:
           schema:
             type: string
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -2208,6 +2299,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReceiptEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /receipts/{receipt_id}.pdf:
+    get:
+      tags: [Finance]
+      operationId: downloadReceiptPdf
+      parameters:
+        - in: path
+          name: receipt_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Authenticated receipt PDF download.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -5293,6 +5406,57 @@ components:
           $ref: "#/components/schemas/UserSummary"
         meta:
           $ref: "#/components/schemas/Meta"
+    UserSettings:
+      type: object
+      additionalProperties: false
+      required: [timezone, locale, notifications]
+      properties:
+        timezone:
+          type: string
+          maxLength: 64
+        locale:
+          type: string
+          enum: [en-PK, ur-PK, ur-Latn-PK]
+        notifications:
+          type: object
+          additionalProperties: false
+          required: [email_enabled, sms_enabled, push_enabled]
+          properties:
+            email_enabled:
+              type: boolean
+            sms_enabled:
+              type: boolean
+            push_enabled:
+              type: boolean
+    UserSettingsEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/UserSettings"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    UserSettingsUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        timezone:
+          type: string
+          maxLength: 64
+        locale:
+          type: string
+          enum: [en-PK, ur-PK, ur-Latn-PK]
+        notifications:
+          type: object
+          additionalProperties: false
+          properties:
+            email_enabled:
+              type: boolean
+            sms_enabled:
+              type: boolean
+            push_enabled:
+              type: boolean
     UserRoleListEnvelope:
       type: object
       additionalProperties: false
@@ -5894,6 +6058,35 @@ components:
           type: object
         status:
           type: string
+    ProjectMemberCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [email, role_label]
+      properties:
+        email:
+          type: string
+          format: email
+        role_label:
+          type: string
+          minLength: 2
+          maxLength: 120
+        can_edit_project:
+          type: boolean
+          default: true
+    ProjectMemberEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [member]
+          properties:
+            member:
+              $ref: "#/components/schemas/ProjectMember"
+        meta:
+          $ref: "#/components/schemas/Meta"
     ProjectFile:
       type: object
       additionalProperties: false
@@ -6804,7 +6997,14 @@ components:
     ContractSignatureRequest:
       type: object
       additionalProperties: false
+      required: [typed_name, consent]
       properties:
+        typed_name:
+          type: string
+          minLength: 2
+        consent:
+          type: boolean
+          const: true
         signature_file_id:
           type: string
     ContractAddendumRequest:
@@ -7088,6 +7288,10 @@ components:
           type: string
           format: date-time
         description:
+          type: [string, "null"]
+        receipt_id:
+          type: [string, "null"]
+        receipt_number:
           type: [string, "null"]
     Receipt:
       type: object
@@ -8204,7 +8408,7 @@ components:
               type: boolean
         meta:
           $ref: "#/components/schemas/Meta"
-    MessageEnvelope:
+    SimpleMessageEnvelope:
       type: object
       additionalProperties: false
       required: [data, meta]

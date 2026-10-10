@@ -78,7 +78,9 @@ class _GeneralPublicCinemaScreenState extends State<GeneralPublicCinemaScreen> {
                 DPHolographicButton(
                   label: 'Retry',
                   icon: Icons.refresh_rounded,
-                  onTap: () => setState(() => _future = _load()),
+                  onTap: () => setState(() {
+                    _future = _load();
+                  }),
                 ),
               ],
             ),
@@ -109,7 +111,9 @@ class _GeneralPublicCinemaScreenState extends State<GeneralPublicCinemaScreen> {
             const SizedBox(height: 14),
             if (allItems.isEmpty)
               _CinemaEmptyState(
-                  onRefresh: () => setState(() => _future = _load()))
+                  onRefresh: () => setState(() {
+                        _future = _load();
+                      }))
             else if (items.isEmpty)
               _CinemaNoResults(onClear: _clearFilters)
             else

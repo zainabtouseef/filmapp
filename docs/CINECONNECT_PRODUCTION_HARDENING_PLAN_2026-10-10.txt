@@ -1,0 +1,137 @@
+CINECONNECT — PRODUCTION HARDENING AND LAUNCH GATE PLAN
+Date: 10 October 2026
+Scope: CineConnect only; NREX and other VPS applications are excluded.
+Current release: cineconnect-prod-api:20261010-f
+Public URL: https://cine.nalexustechnologies.com
+
+PURPOSE
+
+This is the approval plan for changes that were deliberately not made during the
+code release. It records the live configuration facts without exposing any secret
+values and defines backup, change, verification and rollback requirements.
+
+CURRENT OBSERVATIONS
+
+- The live environment file is `/var/www/cineconnect/release/backend/.env`, mode
+  600 and owned by root. Its contents were not copied into release candidates.
+- `APP_ENV` is development.
+- `PAYMENT_MODE` is sandbox.
+- `PUBLIC_WEB_ORIGIN` is not the production HTTPS URL.
+- SECRET_KEY and JWT_SECRET_KEY are set, but do not meet the project's production
+  length policy. Their values were never printed.
+- FIELD_ENCRYPTION_KEY is unset.
+- SMTP host/username/password/from, FCM project/credentials and SENTRY_DSN are
+  unset. No delivery or monitoring provider should be advertised as active.
+- CORS is an explicit allowlist rather than a wildcard.
+- Aggregate read-only inspection found 11 payment-proof rows and 10 payout-account
+  rows. None contains the current `fernet:` format and none is an `encrypted:`
+  placeholder. Therefore none is protected by the present Fernet scheme, despite
+  the historical encrypted-column names. This is a data-protection migration issue,
+  not permission to delete or overwrite those 21 values.
+- Per-device logout revokes its refresh session; an already issued access token can
+  continue for up to the configured 15-minute lifetime. Password reset has stronger
+  credential-version invalidation and revokes refresh sessions.
+
+APPROVAL BUNDLE A — SAFE CONFIGURATION CORRECTIONS
+
+Owner approval required before editing the live environment:
+
+1. Set `APP_ENV=production`.
+2. Set `PUBLIC_WEB_ORIGIN=https://cine.nalexustechnologies.com`.
+3. Choose the honest payment operating model:
+   - approved manual bank-transfer proof/review: set the project's exact documented
+     production manual mode (proposed `manual_bank_transfer` after confirming the
+     accepted enum); or
+   - a real gateway: integrate and certify the selected merchant provider first.
+   Never label sandbox/card simulation as a live gateway.
+4. Configure SMTP, FCM and Sentry only after the owner supplies authorized provider
+   accounts and the required privacy/retention decisions. Values must be delivered
+   through a secure server secret channel, never chat or source control.
+
+Expected impact: a simultaneous API/worker/scheduler restart lasting roughly the
+normal readiness window. No database migration is expected. Rollback: restore the
+timestamped environment backup, restart the three containers on image
+`cineconnect-prod-api:pre-20261010-f`, confirm readiness and re-run the affected
+provider checks.
+
+APPROVAL BUNDLE B — KEY SEPARATION AND ROTATION
+
+This change must not be combined casually with Bundle A.
+
+1. Generate three distinct, random production keys of at least 64 characters for
+   SECRET_KEY, JWT_SECRET_KEY and FIELD_ENCRYPTION_KEY.
+2. Implement versioned field encryption first. New writes use the dedicated field
+   key; reads support the old version during migration. Inventory and migrate the 21
+   legacy payment/payout values in an isolated restored copy before production.
+3. Back up the live database and storage, restore both into isolated QA, and prove:
+   record counts, decrypt/read behavior, payment/payout owner access, contract and
+   receipt reads, and a complete rollback using the old keys.
+4. Rotate keys during a controlled restart of all three containers so no mixed JWT
+   signing state exists.
+
+Session consequences:
+
+- JWT_SECRET_KEY rotation invalidates currently issued access JWTs immediately.
+  Existing opaque refresh sessions remain usable and can mint a new access token;
+  clients without a usable refresh session must sign in again.
+- SECRET_KEY rotation invalidates outstanding signed file-download tokens.
+- FIELD_ENCRYPTION_KEY rotation without dual-key/versioned migration can make field
+  data unreadable. Do not perform a blind one-key replacement.
+- Rolling back after new-key encrypted writes requires the prior image/config to
+  retain read support for the new key version, or those new writes become unreadable.
+
+BACKUP AND RESTORE GATE
+
+Before Bundles A/B or launch approval:
+
+- Record database engine/version and schema head (`d2f3a4b5c6d7`).
+- Create timestamped database and `/var/www/cineconnect/storage` backups outside the
+  active release directories; encrypt and access-control them.
+- Restore into isolated QA with no production outbound email, push or payment access.
+- Verify checksums/counts and run auth, project, booking, contract, payment, receipt,
+  file-download and role-authorization smoke checks.
+- Record restore duration and recovery owner. A backup that has not been restored is
+  not accepted as a launch-ready backup.
+
+MONITORING GATE
+
+Start with local-only, privacy-minimized monitoring so no production data is sent to
+a third party without approval:
+
+- HTTPS liveness/readiness, certificate-expiry and disk-capacity checks.
+- Container restart/health alerts for API, worker and scheduler.
+- Structured error-rate, latency, background-job failure, database and Redis health
+  thresholds. Redact authorization headers, tokens, email bodies and uploaded data.
+- Log rotation, retention, access ownership and an incident contact/runbook.
+
+Sentry or another external telemetry provider may be added only after DSN ownership,
+data residency, sampling, PII scrubbing and retention are approved and tested.
+
+MOBILE RELEASE GATES
+
+Android:
+
+- Current package/namespace is `com.example.cineconnect` and release signing uses the
+  Android debug certificate. The tested APK is QA-only.
+- Required: owner-selected registered application ID, Play Console ownership,
+  protected upload/app-signing configuration, release build, Play integrity/testing
+  track checks, notification/deep-link verification and real-device coverage.
+- Latest release-f debug APK built, installed and rendered at 1080x2400 on Android
+  API 36.1 with no fatal/Flutter error in the captured launch log. This is not store
+  signing or authenticated real-device certification.
+
+iOS:
+
+- Xcode 26.4.1 and the iOS 26.4 SDK exist, but no Simulator runtime is installed.
+- Bundle identifier remains an example value; DEVELOPMENT_TEAM, signing identities,
+  provisioning profiles and ExportOptions/App Store configuration are absent.
+- Required: owner-selected registered bundle ID, Apple Developer team/profiles,
+  installed simulator runtime, archive/export, TestFlight and physical-device tests.
+
+LAUNCH DECISION
+
+Release 20261010-f is a deployed, verified partial release, not a full launch
+approval. Code health, public readiness, Director read journeys and authenticated
+contract/receipt PDFs passed. Launch remains blocked by production configuration,
+honest payment-provider choice, real delivery credentials, backup/restore proof,
+store signing, iOS runtime/signing, provider-backed flows and full-role UAT.

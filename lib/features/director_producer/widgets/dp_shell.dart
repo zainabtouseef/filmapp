@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_assets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/core_back_navigation.dart';
 import '../../../core/core_ui/core_logout.dart';
@@ -51,14 +50,14 @@ class DPShell extends StatelessWidget {
 
   static const navItems = [
     DpNavItem(
-      label: 'CinePlanner',
-      icon: Icons.view_timeline_rounded,
-      route: DirectorProducerRoutes.cinePlanner,
-    ),
-    DpNavItem(
       label: 'Console',
       icon: Icons.dashboard_customize_rounded,
       route: DirectorProducerRoutes.console,
+    ),
+    DpNavItem(
+      label: 'CinePlanner',
+      icon: Icons.view_timeline_rounded,
+      route: DirectorProducerRoutes.cinePlanner,
     ),
     DpNavItem(
       label: 'Projects',
@@ -122,7 +121,7 @@ class DPShell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showHeading) _DPRouteHeading(title: title, route: currentRoute),
-        if (showHeading) const SizedBox(height: 14),
+        if (showHeading) const SizedBox(height: 10),
         if (fillsAvailableHeight) Expanded(child: child) else child,
       ],
     );
@@ -352,35 +351,43 @@ class _DPSearchPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      height: compact ? 38 : 44,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 13),
-      decoration: BoxDecoration(
-        gradient: colors.searchGradient,
-        borderRadius: BorderRadius.circular(compact ? 15 : 18),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search_rounded,
-              color: colors.icon, size: compact ? 18 : 21),
-          SizedBox(width: compact ? 7 : 9),
-          Expanded(
-            child: Text(
-              compact
-                  ? 'Search...'
-                  : isPublicBuyer
-                      ? 'Search actors, models, influencers...'
-                      : 'Search productions, talent...',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: colors.textSecondary,
-                fontSize: compact ? 12 : 13,
+    return InkWell(
+      borderRadius: BorderRadius.circular(compact ? 15 : 18),
+      onTap: () => Navigator.pushNamed(
+          context,
+          isPublicBuyer
+              ? '/public/browse'
+              : DirectorProducerRoutes.marketplace),
+      child: Container(
+        height: compact ? 38 : 44,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 13),
+        decoration: BoxDecoration(
+          gradient: colors.searchGradient,
+          borderRadius: BorderRadius.circular(compact ? 15 : 18),
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search_rounded,
+                color: colors.icon, size: compact ? 18 : 21),
+            SizedBox(width: compact ? 7 : 9),
+            Expanded(
+              child: Text(
+                compact
+                    ? 'Search...'
+                    : isPublicBuyer
+                        ? 'Search actors, models, influencers...'
+                        : 'Search talent and resources...',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: colors.textSecondary,
+                  fontSize: compact ? 12 : 13,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -481,18 +488,26 @@ class _DPAvatarButton extends StatelessWidget {
             border: Border.all(color: colors.border),
           ),
           child: ClipOval(
-            child: Image.asset(
-              AppAssets.bilalAbbas,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: colors.softSurface,
-                alignment: Alignment.center,
-                child: Text(
-                  'P',
-                  style: AppTextStyles.cardLabel.copyWith(
-                    color: colors.goldDark,
-                    fontWeight: FontWeight.w800,
-                  ),
+            child: Container(
+              color: colors.softSurface,
+              alignment: Alignment.center,
+              child: Text(
+                (AuthScope.maybeOf(context)
+                            ?.user
+                            ?.displayName
+                            .trim()
+                            .isNotEmpty ??
+                        false)
+                    ? AuthScope.of(context)
+                        .user!
+                        .displayName
+                        .trim()
+                        .substring(0, 1)
+                        .toUpperCase()
+                    : 'P',
+                style: AppTextStyles.cardLabel.copyWith(
+                  color: colors.goldDark,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),

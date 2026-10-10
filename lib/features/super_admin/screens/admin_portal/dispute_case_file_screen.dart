@@ -43,7 +43,9 @@ class _DisputeCaseFileScreenState extends State<DisputeCaseFileScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   Future<void> _decide(DisputeDto dispute, String decision) async {

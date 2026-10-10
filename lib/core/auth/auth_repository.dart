@@ -72,6 +72,34 @@ class AuthRepository {
     return AuthUser.fromJson(response['data'] as Map<String, dynamic>);
   }
 
+  Future<AuthSettings> settings() async {
+    final response = await _client.get('/me/settings');
+    return AuthSettings.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<AuthSettings> updateSettings({
+    String? locale,
+    String? timezone,
+    bool? emailEnabled,
+    bool? smsEnabled,
+    bool? pushEnabled,
+  }) async {
+    final notifications = <String, dynamic>{
+      if (emailEnabled != null) 'email_enabled': emailEnabled,
+      if (smsEnabled != null) 'sms_enabled': smsEnabled,
+      if (pushEnabled != null) 'push_enabled': pushEnabled,
+    };
+    final response = await _client.patch(
+      '/me/settings',
+      body: {
+        if (locale != null) 'locale': locale,
+        if (timezone != null) 'timezone': timezone,
+        if (notifications.isNotEmpty) 'notifications': notifications,
+      },
+    );
+    return AuthSettings.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
   Future<AuthUser> setPrimaryRole(String roleCode) async {
     final response = await _client.patch(
       '/me/primary-role',

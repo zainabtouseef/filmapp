@@ -69,6 +69,13 @@ class PaymentsRepository {
     return ReceiptDto.fromJson(data['receipt'] as Map<String, dynamic>);
   }
 
+  Future<ApiDownload> downloadReceipt(String publicId) {
+    return _client.getBytes(
+      '/receipts/$publicId.pdf',
+      fallbackFilename: 'cineconnect-receipt-$publicId.pdf',
+    );
+  }
+
   Future<List<PayoutAccountDto>> payoutAccounts() async {
     final response = await _client.get('/payout-accounts');
     final data = response['data'] as Map<String, dynamic>;

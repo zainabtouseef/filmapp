@@ -44,12 +44,16 @@ class AuthUser {
 
   AuthRole? get primaryRole {
     for (final role in roles) {
-      if (role.isPrimary) return role;
+      if (role.isPrimary && role.status == 'active') return role;
     }
-    return roles.isEmpty ? null : roles.first;
+    for (final role in roles) {
+      if (role.status == 'active') return role;
+    }
+    return null;
   }
 
-  bool hasRole(String code) => roles.any((role) => role.code == code);
+  bool hasRole(String code) =>
+      roles.any((role) => role.code == code && role.status == 'active');
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     final roles = (json['roles'] as List<dynamic>? ?? [])
@@ -99,6 +103,34 @@ class AuthSession {
     return AuthSession(
       user: AuthUser.fromJson(data['user'] as Map<String, dynamic>),
       tokens: AuthTokens.fromJson(data['tokens'] as Map<String, dynamic>),
+    );
+  }
+}
+
+class AuthSettings {
+  final String timezone;
+  final String locale;
+  final bool emailEnabled;
+  final bool smsEnabled;
+  final bool pushEnabled;
+
+  const AuthSettings({
+    required this.timezone,
+    required this.locale,
+    required this.emailEnabled,
+    required this.smsEnabled,
+    required this.pushEnabled,
+  });
+
+  factory AuthSettings.fromJson(Map<String, dynamic> json) {
+    final notifications =
+        json['notifications'] as Map<String, dynamic>? ?? const {};
+    return AuthSettings(
+      timezone: json['timezone'] as String? ?? 'Asia/Karachi',
+      locale: json['locale'] as String? ?? 'en-PK',
+      emailEnabled: notifications['email_enabled'] as bool? ?? true,
+      smsEnabled: notifications['sms_enabled'] as bool? ?? false,
+      pushEnabled: notifications['push_enabled'] as bool? ?? true,
     );
   }
 }

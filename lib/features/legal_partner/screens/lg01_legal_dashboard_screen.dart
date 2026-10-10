@@ -42,7 +42,9 @@ class _LG01LegalDashboardScreenState extends State<LG01LegalDashboardScreen> {
     );
   }
 
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {

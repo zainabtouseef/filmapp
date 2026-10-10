@@ -75,7 +75,9 @@ class _AT09ContractSigningScreenState extends State<AT09ContractSigningScreen> {
   void _refresh() {
     final contracts = ContractsScope.maybeOf(context);
     if (contracts == null) return;
-    setState(() => _future = contracts.contracts(force: true));
+    setState(() {
+      _future = contracts.contracts(force: true);
+    });
   }
 }
 
@@ -170,8 +172,7 @@ class _LiveContracts extends StatelessWidget {
                       ? null
                       : () => Navigator.pushNamed(
                             context,
-                            CoreRoutes.contract,
-                            arguments: primary.publicId,
+                            CoreRoutes.contractDetail(primary.publicId),
                           ).then((_) => onRefresh()),
                 ),
               ),
@@ -182,11 +183,10 @@ class _LiveContracts extends StatelessWidget {
                 compact: true,
                 onTap: () => Navigator.pushNamed(
                   context,
-                  CoreRoutes.contract,
-                  arguments: {
-                    'contract_id': primary.publicId,
-                    'addendum': true
-                  },
+                  CoreRoutes.contractDetail(
+                    primary.publicId,
+                    addendum: true,
+                  ),
                 ).then((_) => onRefresh()),
               ),
             ],
@@ -229,8 +229,7 @@ class _ContractQueueRow extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pushNamed(
               context,
-              CoreRoutes.contract,
-              arguments: contract.publicId,
+              CoreRoutes.contractDetail(contract.publicId),
             ),
             child: Text(contract.isSigned ? 'View' : 'Review'),
           ),

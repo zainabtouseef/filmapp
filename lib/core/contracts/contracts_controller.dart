@@ -35,10 +35,22 @@ class ContractsController extends ChangeNotifier {
     return contract;
   }
 
-  Future<CineContract> sign(String contractId) async {
-    final contract = await _repository.sign(contractId);
+  Future<CineContract> sign(
+    String contractId, {
+    required String typedName,
+    required bool consent,
+  }) async {
+    final contract = await _repository.sign(
+      contractId,
+      typedName: typedName,
+      consent: consent,
+    );
     await contracts(force: true);
     return contract;
+  }
+
+  Future<ApiDownload> downloadContract(String contractId) {
+    return _repository.downloadContract(contractId);
   }
 
   Future<ContractAddendum> createAddendum({

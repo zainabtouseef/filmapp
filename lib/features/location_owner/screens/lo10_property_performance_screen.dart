@@ -60,7 +60,9 @@ class _LO10PropertyPerformanceScreenState
 
   void _reload() {
     if (_operations == null || _bookings == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override

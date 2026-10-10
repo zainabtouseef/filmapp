@@ -5,6 +5,7 @@ import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/contracts/contract_models.dart';
 import '../../../core/contracts/contracts_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../core/core_ui/core_routes.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -78,7 +79,9 @@ class _CR06ContractsPaymentsScreenState
 
   void _reload() {
     if (_bookings == null) return;
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   @override
@@ -253,17 +256,11 @@ class _CR06ContractsPaymentsScreenState
   }
 
   Future<void> _sign(CineContract contract) async {
-    setState(() => _busyId = contract.publicId);
-    try {
-      await _contracts!.sign(contract.publicId);
-      if (!mounted) return;
-      crewSnack(context, 'Contract signature recorded');
-      _reload();
-    } catch (error) {
-      if (mounted) crewSnack(context, 'Could not sign contract: $error');
-    } finally {
-      if (mounted) setState(() => _busyId = null);
-    }
+    await Navigator.pushNamed(
+      context,
+      CoreRoutes.contractDetail(contract.publicId),
+    );
+    if (mounted) _reload();
   }
 }
 
@@ -382,7 +379,7 @@ class _ContractCard extends StatelessWidget {
                         OutlinedButton.icon(
                           onPressed: busy ? null : onSign,
                           icon: const Icon(Icons.draw_outlined, size: 17),
-                          label: Text(busy ? 'Signing...' : 'Sign contract'),
+                          label: Text(busy ? 'Opening...' : 'Review & sign'),
                         ),
                       ],
                     ],

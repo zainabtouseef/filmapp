@@ -13,7 +13,8 @@ class ME12OpportunitiesScreen extends StatelessWidget {
     return const OpportunityInboxScreen(
       category: 'equipment',
       sectionTitle: 'Open Equipment Requests',
-      emptyMessage: 'New equipment requirements from directors will appear here.',
+      emptyMessage:
+          'New equipment requirements from directors will appear here.',
       detailRoute: MediaEquipmentRoutes.opportunityApplicationDetail,
     );
   }

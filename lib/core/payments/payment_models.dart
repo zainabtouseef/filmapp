@@ -238,6 +238,8 @@ class LedgerEntryDto {
   final String status;
   final DateTime? occurredAt;
   final String description;
+  final String? receiptId;
+  final String? receiptNumber;
 
   const LedgerEntryDto({
     required this.publicId,
@@ -250,6 +252,8 @@ class LedgerEntryDto {
     required this.status,
     required this.occurredAt,
     required this.description,
+    required this.receiptId,
+    required this.receiptNumber,
   });
 
   factory LedgerEntryDto.fromJson(Map<String, dynamic> json) {
@@ -264,6 +268,8 @@ class LedgerEntryDto {
       status: json['status'] as String? ?? 'pending',
       occurredAt: DateTime.tryParse(json['occurred_at'] as String? ?? ''),
       description: json['description'] as String? ?? 'Ledger entry',
+      receiptId: json['receipt_id'] as String?,
+      receiptNumber: json['receipt_number'] as String?,
     );
   }
 
@@ -278,7 +284,8 @@ class LedgerEntryDto {
           : LedgerDirection.outgoing,
       status: _ledgerStatus(status),
       date: occurredAt == null ? 'Now' : _shortDate(occurredAt!),
-      receiptId: publicId,
+      receiptId: receiptId ?? '',
+      receiptNumber: receiptNumber ?? '',
       transactionId: transactionId ?? publicId,
     );
   }

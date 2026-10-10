@@ -6,13 +6,42 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:cineconnect/core/auth/auth_controller.dart';
+import 'package:cineconnect/core/auth/auth_models.dart';
 import 'package:cineconnect/core/auth/auth_repository.dart';
 import 'package:cineconnect/core/auth/token_store.dart';
 import 'package:cineconnect/core/network/api_client.dart';
+import 'package:cineconnect/core/theme/app_color_scheme.dart';
 import 'package:cineconnect/core/theme/theme_controller.dart';
 import 'package:cineconnect/features/super_admin/routes/super_admin_routes.dart';
 import 'package:cineconnect/features/super_admin/screens/super_admin_screens.dart';
+import 'package:cineconnect/features/super_admin/widgets/admin_widgets.dart';
 import 'package:cineconnect/main.dart';
+
+class _AdminTestAuth extends AuthController {
+  _AdminTestAuth(
+      {required super.repository,
+      required super.client,
+      required super.tokenStore});
+
+  @override
+  bool get ready => true;
+  @override
+  bool get isAuthenticated => true;
+  @override
+  AuthUser get user => const AuthUser(
+        publicId: 'test-admin',
+        email: 'admin@example.com',
+        displayName: 'QA Admin',
+        status: 'active',
+        roles: [
+          AuthRole(
+              code: 'super_admin',
+              name: 'Admin',
+              portalRoute: '/admin/dashboard',
+              requiresKyc: false)
+        ],
+      );
+}
 
 void main() {
   void setViewport(WidgetTester tester, Size size) {
@@ -39,7 +68,7 @@ void main() {
       ),
       baseUrl: 'https://admin.test/api/v1',
     );
-    final authController = AuthController(
+    final authController = _AdminTestAuth(
       repository: AuthRepository(client),
       client: client,
       tokenStore: const TokenStore(),
@@ -93,10 +122,10 @@ void main() {
     );
   }
 
-  testWidgets('header theme control starts light and switches to dark',
+  testWidgets('header theme control switches an explicit light theme to dark',
       (tester) async {
     setViewport(tester, const Size(1440, 1000));
-    final themeController = ThemeController();
+    final themeController = ThemeController(initialThemeMode: ThemeMode.light);
 
     await tester.pumpWidget(
       adminApp(
@@ -135,6 +164,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final route in <String>[
+    SuperAdminRoutes.verifications,
+    SuperAdminRoutes.contentModeration,
+    SuperAdminRoutes.listingsModeration,
+    SuperAdminRoutes.fees,
+    SuperAdminRoutes.adminRoles,
+    SuperAdminRoutes.support,
+  ]) {
+    testWidgets('$route highlights exactly one desktop navigation item',
+        (tester) async {
+      setViewport(tester, const Size(1440, 1000));
+
+      await tester.pumpWidget(adminApp(route: route));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sidebar = find.byType(AdminSidebar);
+      final colors = tester.element(sidebar).appColors;
+      final navContainers = find.descendant(
+        of: sidebar,
+        matching: find.byType(AnimatedContainer),
+      );
+      final highlighted = navContainers.evaluate().where((element) {
+        final widget = element.widget as AnimatedContainer;
+        final decoration = widget.decoration;
+        if (decoration is! BoxDecoration) return false;
+        final border = decoration.border;
+        return border is Border && border.top.color == colors.goldMid;
+      });
+
+      expect(highlighted, hasLength(1));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final deepLink in <String, String>{
     SuperAdminRoutes.bookingPath('BK-42'): 'Case Detail',
     SuperAdminRoutes.verificationPath('KYC-42'): 'Verification Detail',
@@ -161,7 +225,7 @@ void main() {
         ),
         baseUrl: 'https://admin.test/api/v1',
       );
-      final authController = AuthController(
+      final authController = _AdminTestAuth(
         repository: AuthRepository(client),
         client: client,
         tokenStore: const TokenStore(),

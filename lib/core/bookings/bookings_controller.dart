@@ -160,8 +160,13 @@ class BookingsController extends ChangeNotifier {
   Future<ConversationMessage> sendMessage({
     required String conversationId,
     required String body,
+    List<ConversationAttachmentInput> attachments = const [],
   }) {
-    return _repository.sendMessage(conversationId: conversationId, body: body);
+    return _repository.sendMessage(
+      conversationId: conversationId,
+      body: body,
+      attachments: attachments,
+    );
   }
 
   Future<void> pinMessage(String messageId) {

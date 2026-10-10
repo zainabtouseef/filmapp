@@ -77,7 +77,9 @@ class _AT07OfferDetailScreenState extends State<AT07OfferDetailScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   Future<void> _accept(Booking booking) async {
@@ -262,9 +264,7 @@ class _LiveOfferDetail extends StatelessWidget {
               icon: booking.allowsBargaining
                   ? Icons.edit_note_outlined
                   : Icons.lock_outline_rounded,
-              label: booking.allowsBargaining
-                  ? 'Counteroffer'
-                  : 'Fixed price',
+              label: booking.allowsBargaining ? 'Counteroffer' : 'Fixed price',
               compact: true,
               onTap: canRespond && booking.allowsBargaining
                   ? () => Navigator.pushNamed(

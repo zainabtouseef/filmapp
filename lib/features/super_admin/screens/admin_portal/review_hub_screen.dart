@@ -43,7 +43,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override

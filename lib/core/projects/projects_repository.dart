@@ -120,6 +120,24 @@ class ProjectsRepository {
     return Project.fromJson(data['project'] as Map<String, dynamic>);
   }
 
+  Future<ProjectMember> addMember({
+    required String projectId,
+    required String email,
+    required String roleLabel,
+    bool canEditProject = true,
+  }) async {
+    final response = await _client.post(
+      '/projects/$projectId/members',
+      body: {
+        'email': email.trim(),
+        'role_label': roleLabel.trim(),
+        'can_edit_project': canEditProject,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return ProjectMember.fromJson(data['member'] as Map<String, dynamic>);
+  }
+
   Future<List<ProjectRequirement>> requirements(String projectId) async {
     final response = await _client.get('/projects/$projectId/requirements');
     final data = response['data'] as Map<String, dynamic>;

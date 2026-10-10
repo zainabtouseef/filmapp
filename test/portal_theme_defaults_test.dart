@@ -7,8 +7,8 @@ import 'package:cineconnect/features/media_equipment/routes/media_equipment_rout
 import 'package:cineconnect/features/media_equipment/screens/media_equipment_portal_screen.dart';
 
 void main() {
-  test('portal theme defaults to light', () {
-    expect(ThemeController().themeMode, ThemeMode.light);
+  test('portal theme defaults to cinematic dark', () {
+    expect(ThemeController().themeMode, ThemeMode.dark);
   });
 
   testWidgets('portal header switches between light and dark modes',
@@ -20,7 +20,7 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    final controller = ThemeController();
+    final controller = ThemeController(initialThemeMode: ThemeMode.light);
     await tester.pumpWidget(
       ThemeControllerProvider(
         controller: controller,

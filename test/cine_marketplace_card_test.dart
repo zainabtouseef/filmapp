@@ -111,7 +111,11 @@ void main() {
     expect(profileCalls, 1);
     expect(requestCalls, 1);
     expect(shortlistCalls, 1);
-    expect(find.byTooltip('Remove from shortlist'), findsOneWidget);
+    expect(find.byTooltip('Saved — manage in Shortlist'), findsOneWidget);
+    final savedButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.favorite_rounded),
+    );
+    expect(savedButton.onPressed, isNull);
   });
 
   testWidgets('shows the fixed-price action label when bargaining is off',

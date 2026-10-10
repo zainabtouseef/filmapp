@@ -120,8 +120,7 @@ class _DpDotChipState extends State<DpDotChip> {
             color: active
                 ? null
                 : colors.surface.withValues(alpha: colors.isLight ? 0.7 : 0.2),
-            border:
-                Border.all(color: active ? colors.goldMid : colors.border),
+            border: Border.all(color: active ? colors.goldMid : colors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

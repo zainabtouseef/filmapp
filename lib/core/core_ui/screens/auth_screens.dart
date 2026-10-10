@@ -459,7 +459,8 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
 }
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  final String? resetToken;
+  const ForgotPasswordScreen({super.key, this.resetToken});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -473,6 +474,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _confirm = TextEditingController();
   String? _error;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final token = widget.resetToken;
+    if (token != null && token.isNotEmpty) {
+      _otp.text = token;
+      _step = 2;
+    }
+  }
 
   @override
   void dispose() {
@@ -502,15 +513,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
       if (!mounted) return;
     }
-    if (_step == 1 && _otp.text.trim().length != 6) {
-      setState(() => _error = 'Enter any 6-digit OTP');
+    if (_step == 1 && _otp.text.trim().length < 16) {
+      setState(() => _error =
+          'Use the secure token from your reset email, not a six-digit OTP.');
       return;
     }
     if (_step == 2) {
-      if (_password.text.isEmpty || _password.text != _confirm.text) {
-        setState(() => _error = 'New passwords must match');
+      if (_password.text.length < 10 || _password.text != _confirm.text) {
+        setState(() =>
+            _error = 'Passwords must match and contain at least 10 characters');
         return;
       }
+      setState(() => _loading = true);
+      try {
+        await AuthScope.of(context)
+            .resetPassword(token: _otp.text.trim(), password: _password.text);
+      } on ApiException catch (error) {
+        if (mounted) setState(() => _error = error.message);
+        return;
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
+      if (!mounted) return;
       setState(() => _step = 3);
       showCoreSuccessDialog(
         context,
@@ -533,7 +557,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         children: [
           const CoreAppHeader(
             title: 'Reset Password',
-            subtitle: 'Use OTP confirmation to create a new password.',
+            subtitle:
+                'Request a secure reset link, then choose a new password.',
             icon: Icons.lock_reset_rounded,
           ),
           const SizedBox(height: 20),
@@ -551,7 +576,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     keyboardType: TextInputType.emailAddress,
                   )
                 else if (_step == 1)
-                  OtpInputRow(controller: _otp, errorText: _error)
+                  CoreTextField(
+                      controller: _otp,
+                      label: 'Secure token from your reset email',
+                      icon: Icons.key_outlined,
+                      errorText: _error)
                 else if (_step == 2) ...[
                   CoreTextField(
                     controller: _password,
@@ -581,7 +610,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   label: _step == 0
                       ? 'Send Reset Email'
                       : _step == 1
-                          ? 'Verify OTP'
+                          ? 'Continue with reset token'
                           : _step == 2
                               ? 'Update Password'
                               : 'Back to Login',

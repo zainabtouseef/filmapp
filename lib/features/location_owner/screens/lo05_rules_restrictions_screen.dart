@@ -169,7 +169,9 @@ class _LO05RulesRestrictionsScreenState
             title: 'Rules unavailable',
             message: locationApiMessage(snapshot.error!),
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load(force: true)),
+            onAction: () => setState(() {
+              _future = _load(force: true);
+            }),
           );
         }
         if (_property == null) {

@@ -46,7 +46,9 @@ class _AT11ReputationReviewsScreenState
   }
 
   void _refresh() {
-    setState(() => _reviewsFuture = _loadReviews());
+    setState(() {
+      _reviewsFuture = _loadReviews();
+    });
   }
 
   @override

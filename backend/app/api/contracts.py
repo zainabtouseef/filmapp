@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import hashlib
+import html
+import io
 import json
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, jsonify, request, send_file
 from flask.typing import ResponseReturnValue
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy import select
 
 from app.api.auth import _current_user, _json_body
@@ -129,6 +135,70 @@ def _contract_payload(item: Contract) -> dict[str, Any]:
         "signatures": [_signature_payload(row) for row in signatures],
         "addendums": [_addendum_payload(row) for row in item.addendums],
     }
+
+
+def _render_contract_pdf(item: Contract) -> io.BytesIO:
+    buffer = io.BytesIO()
+    styles = getSampleStyleSheet()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+        title=f"CineConnect contract {item.public_id}",
+        author="CineConnect",
+    )
+    parties = ", ".join(
+        f"{party.user.display_name} ({party.party_role}, {party.status})"
+        for party in item.parties
+    )
+    signatures = [signature for party in item.parties for signature in party.signatures]
+    story = [
+        Paragraph(html.escape(item.title), styles["Title"]),
+        Spacer(1, 5 * mm),
+        Paragraph(f"Contract ID: {html.escape(item.public_id)}", styles["BodyText"]),
+        Paragraph(
+            f"Booking ID: {html.escape(item.booking.public_id)}", styles["BodyText"]
+        ),
+        Paragraph(
+            f"Value: {item.currency} {(item.value_minor or 0) / 100:,.2f}",
+            styles["BodyText"],
+        ),
+        Paragraph(f"Status: {html.escape(item.status)}", styles["BodyText"]),
+        Paragraph(f"Parties: {html.escape(parties)}", styles["BodyText"]),
+        Spacer(1, 6 * mm),
+    ]
+    for clause in item.clauses:
+        story.extend(
+            [
+                Paragraph(html.escape(clause.title), styles["Heading3"]),
+                Paragraph(html.escape(clause.body_text), styles["BodyText"]),
+                Spacer(1, 3 * mm),
+            ]
+        )
+    if signatures:
+        story.extend(
+            [
+                Spacer(1, 5 * mm),
+                Paragraph("Signatures", styles["Heading2"]),
+            ]
+        )
+        for signature in signatures:
+            story.append(
+                Paragraph(
+                    html.escape(
+                        f"{signature.signer.display_name} — "
+                        f"{signature.signed_at.isoformat()} — "
+                        f"hash {signature.signature_hash}"
+                    ),
+                    styles["BodyText"],
+                )
+            )
+    document.build(story)
+    buffer.seek(0)
+    return buffer
 
 
 def _risk_payload(item: LegalClauseRisk) -> dict[str, Any]:
@@ -311,6 +381,18 @@ def contract_detail(public_id: str) -> Response:
     )
 
 
+@contracts_blueprint.get("/contracts/<public_id>.pdf")
+def contract_pdf(public_id: str) -> Response:
+    user = _current_user()
+    contract = _contract_for_user(public_id, user)
+    return send_file(
+        _render_contract_pdf(contract),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"cineconnect-contract-{contract.public_id}.pdf",
+    )
+
+
 @contracts_blueprint.post("/contracts/<public_id>/signatures")
 def sign_contract(public_id: str) -> Response:
     user = _current_user()
@@ -323,6 +405,15 @@ def sign_contract(public_id: str) -> Response:
     if party.status == "signed":
         return jsonify(success({"contract": _contract_payload(contract)}))
     payload = _json_body()
+    typed_name = str(payload.get("typed_name", "")).strip()
+    if typed_name.casefold() != user.display_name.strip().casefold():
+        raise _field_error(
+            "typed_name", "Typed name must match the signed-in account name."
+        )
+    if payload.get("consent") is not True:
+        raise _field_error(
+            "consent", "You must confirm that you agree to sign this contract."
+        )
     signature_file_id = None
     raw_file_id = str(payload.get("signature_file_id", "")).strip()
     if raw_file_id:
@@ -341,7 +432,10 @@ def sign_contract(public_id: str) -> Response:
         signature_file_id = file.id
     signed_at = utc_now()
     signature_hash = hashlib.sha256(
-        f"{contract.public_id}:{party.public_id}:{user.public_id}:{signed_at.isoformat()}".encode()
+        (
+            f"{contract.public_id}:{party.public_id}:{user.public_id}:"
+            f"{user.display_name.strip().casefold()}:{signed_at.isoformat()}"
+        ).encode()
     ).hexdigest()
     db.session.add(
         ContractSignature(

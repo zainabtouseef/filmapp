@@ -38,7 +38,9 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override

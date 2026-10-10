@@ -199,10 +199,15 @@ class BookingsRepository {
   Future<ConversationMessage> sendMessage({
     required String conversationId,
     required String body,
+    List<ConversationAttachmentInput> attachments = const [],
   }) async {
     final response = await _client.post(
       '/conversations/$conversationId/messages',
-      body: {'body': body},
+      body: {
+        'body': body,
+        if (attachments.isNotEmpty)
+          'attachments': attachments.map((item) => item.toJson()).toList(),
+      },
     );
     final data = response['data'] as Map<String, dynamic>;
     return ConversationMessage.fromJson(

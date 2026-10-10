@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
+import io
 from typing import Any
 
 from cryptography.fernet import Fernet
-from flask import Blueprint, Response, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask.typing import ResponseReturnValue
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy import or_, select
 
 from app.api.auth import _current_user, _json_body
@@ -33,6 +39,13 @@ from app.services.payments import post_verified_payment
 payments_blueprint = Blueprint("payments", __name__)
 
 PAYMENT_METHODS = {"bank_transfer", "card_sandbox"}
+
+
+def _validate_payment_method(method: str) -> None:
+    if method not in PAYMENT_METHODS:
+        raise _field_error("method", "Unsupported payment method.")
+    if method == "card_sandbox" and current_app.config["APP_ENV"] == "production":
+        raise _field_error("method", "Sandbox payments are unavailable in production.")
 
 
 def _encrypt_private_value(value: str) -> str:
@@ -161,7 +174,9 @@ def _proof_payload(item: PaymentProof) -> dict[str, Any]:
     }
 
 
-def _ledger_payload(item: LedgerEntry) -> dict[str, Any]:
+def _ledger_payload(
+    item: LedgerEntry, receipt: Receipt | None = None
+) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
         "user": _user_payload(item.user),
@@ -174,6 +189,8 @@ def _ledger_payload(item: LedgerEntry) -> dict[str, Any]:
         "status": item.status,
         "occurred_at": item.occurred_at.isoformat(),
         "description": item.description,
+        "receipt_id": receipt.public_id if receipt else None,
+        "receipt_number": receipt.receipt_number if receipt else None,
     }
 
 
@@ -187,6 +204,45 @@ def _receipt_payload(item: Receipt) -> dict[str, Any]:
         "currency": item.currency,
         "status": item.status,
     }
+
+
+def _render_receipt_pdf(item: Receipt) -> io.BytesIO:
+    buffer = io.BytesIO()
+    styles = getSampleStyleSheet()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=22 * mm,
+        leftMargin=22 * mm,
+        topMargin=22 * mm,
+        bottomMargin=22 * mm,
+        title=f"CineConnect receipt {item.receipt_number}",
+        author="CineConnect",
+    )
+    rows = [
+        ("Receipt number", item.receipt_number),
+        ("Receipt ID", item.public_id),
+        ("Transaction ID", item.transaction.public_id),
+        ("Issued to", item.issued_to.display_name),
+        ("Amount", f"{item.currency} {item.amount_minor / 100:,.2f}"),
+        ("Status", item.status),
+        ("Issued at", item.created_at.isoformat()),
+    ]
+    story = [
+        Paragraph("CineConnect payment receipt", styles["Title"]),
+        Spacer(1, 8 * mm),
+    ]
+    for label, value in rows:
+        story.append(
+            Paragraph(
+                f"<b>{html.escape(label)}:</b> {html.escape(str(value))}",
+                styles["BodyText"],
+            )
+        )
+        story.append(Spacer(1, 2 * mm))
+    document.build(story)
+    buffer.seek(0)
+    return buffer
 
 
 def _payout_account_payload(item: PayoutAccount) -> dict[str, Any]:
@@ -284,8 +340,7 @@ def submit_payment_proof() -> ResponseReturnValue:
             "payment.already_verified", "Milestone is already verified.", status=409
         )
     method = str(payload.get("method", "bank_transfer")).strip()
-    if method not in PAYMENT_METHODS:
-        raise _field_error("method", "Unsupported sandbox payment method.")
+    _validate_payment_method(method)
     claimed_amount = int(payload.get("claimed_amount_minor") or milestone.amount_minor)
     if claimed_amount <= 0 or claimed_amount != milestone.amount_minor:
         raise _field_error(
@@ -370,13 +425,39 @@ def submit_payment_proof() -> ResponseReturnValue:
 @payments_blueprint.get("/ledger")
 def ledger() -> Response:
     user = _current_user()
-    rows = db.session.execute(
-        select(LedgerEntry)
-        .where(LedgerEntry.user_id == user.id)
-        .order_by(LedgerEntry.occurred_at.desc())
-        .limit(100)
-    ).scalars()
-    return jsonify(success({"entries": [_ledger_payload(row) for row in rows]}))
+    rows = list(
+        db.session.execute(
+            select(LedgerEntry)
+            .where(LedgerEntry.user_id == user.id)
+            .order_by(LedgerEntry.occurred_at.desc())
+            .limit(100)
+        ).scalars()
+    )
+    transaction_ids = [row.transaction_id for row in rows if row.transaction_id]
+    receipt_by_transaction = {}
+    if transaction_ids:
+        receipts = db.session.execute(
+            select(Receipt).where(
+                Receipt.issued_to_user_id == user.id,
+                Receipt.transaction_id.in_(transaction_ids),
+            )
+        ).scalars()
+        receipt_by_transaction = {row.transaction_id: row for row in receipts}
+    return jsonify(
+        success(
+            {
+                "entries": [
+                    _ledger_payload(
+                        row,
+                        receipt_by_transaction.get(row.transaction_id)
+                        if row.transaction_id is not None
+                        else None,
+                    )
+                    for row in rows
+                ]
+            }
+        )
+    )
 
 
 @payments_blueprint.get("/receipts/<public_id>")
@@ -388,6 +469,22 @@ def receipt_detail(public_id: str) -> Response:
     if receipt is None or receipt.issued_to_user_id != user.id:
         raise APIError("receipt.not_found", "Receipt was not found.", status=404)
     return jsonify(success({"receipt": _receipt_payload(receipt)}))
+
+
+@payments_blueprint.get("/receipts/<public_id>.pdf")
+def receipt_pdf(public_id: str) -> Response:
+    user = _current_user()
+    receipt = db.session.execute(
+        select(Receipt).where(Receipt.public_id == public_id)
+    ).scalar_one_or_none()
+    if receipt is None or receipt.issued_to_user_id != user.id:
+        raise APIError("receipt.not_found", "Receipt was not found.", status=404)
+    return send_file(
+        _render_receipt_pdf(receipt),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"cineconnect-receipt-{receipt.receipt_number}.pdf",
+    )
 
 
 @payments_blueprint.get("/payout-accounts")

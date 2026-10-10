@@ -32,7 +32,9 @@ class _UserVerificationQueueScreenState
   }
 
   void _refresh() {
-    setState(() => _submissionsFuture = _load());
+    setState(() {
+      _submissionsFuture = _load();
+    });
   }
 
   List<verification.KycSubmission> _rows(

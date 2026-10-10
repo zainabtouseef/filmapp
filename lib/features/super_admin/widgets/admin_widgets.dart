@@ -2335,10 +2335,6 @@ bool _isRouteActive(String currentRoute, String itemRoute) {
         SuperAdminRoutes.reviewHubPeople,
         SuperAdminRoutes.reviewHubListings,
         SuperAdminRoutes.reviewHubContent,
-        SuperAdminRoutes.verifications,
-        SuperAdminRoutes.verificationDetail,
-        SuperAdminRoutes.contentModeration,
-        SuperAdminRoutes.listingsModeration,
       }.contains(currentRoute)) {
     return true;
   }
@@ -2351,7 +2347,6 @@ bool _isRouteActive(String currentRoute, String itemRoute) {
         SuperAdminRoutes.paymentReview,
         SuperAdminRoutes.paymentLedger,
         SuperAdminRoutes.paymentRevenue,
-        SuperAdminRoutes.fees,
       }.contains(currentRoute)) {
     return true;
   }
@@ -2363,10 +2358,6 @@ bool _isRouteActive(String currentRoute, String itemRoute) {
   }
   if (currentRoute == SuperAdminRoutes.contractTemplateDetail) {
     return itemRoute == SuperAdminRoutes.contractTemplates;
-  }
-  if (currentRoute == SuperAdminRoutes.support ||
-      currentRoute == SuperAdminRoutes.adminRoles) {
-    return itemRoute == SuperAdminRoutes.users;
   }
   return false;
 }

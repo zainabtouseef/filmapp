@@ -28,7 +28,12 @@ class _KycStatusBannerState extends State<KycStatusBanner> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final auth = AuthScope.maybeOf(context);
-    if (auth != null && auth.isAuthenticated && auth.kycStatus == null) {
+    if (auth != null &&
+        auth.isAuthenticated &&
+        auth.kycStatus == null &&
+        auth.user?.roles
+                .any((role) => role.status == 'active' && role.requiresKyc) ==
+            true) {
       auth.refreshKycStatus();
     }
   }
@@ -37,6 +42,11 @@ class _KycStatusBannerState extends State<KycStatusBanner> {
   Widget build(BuildContext context) {
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) return const SizedBox.shrink();
+    if (auth.user?.roles
+            .any((role) => role.status == 'active' && role.requiresKyc) !=
+        true) {
+      return const SizedBox.shrink();
+    }
     final status = auth.kycStatus;
     if (status == null || status == 'approved') return const SizedBox.shrink();
 
@@ -71,27 +81,35 @@ class _KycStatusBannerState extends State<KycStatusBanner> {
         tone: tone,
         accentEdge: true,
         onTap: () => _openVerification(context, status),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: tint),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: AppTextStyles.caption.copyWith(
-                  color: colors.textPrimary,
-                  height: 1.3,
+        child: LayoutBuilder(builder: (context, constraints) {
+          final compact = constraints.maxWidth < 480;
+          final action = TextButton(
+            onPressed: () => _openVerification(context, status),
+            child: Text(ctaLabel),
+          );
+          final messageRow = Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: tint),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textPrimary,
+                    height: 1.3,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () => _openVerification(context, status),
-              child: Text(ctaLabel),
-            ),
-          ],
-        ),
+              if (!compact) ...[const SizedBox(width: 8), action],
+            ],
+          );
+          return compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [messageRow, action])
+              : messageRow;
+        }),
       ),
     );
   }

@@ -28,7 +28,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override

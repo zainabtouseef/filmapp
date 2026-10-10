@@ -44,7 +44,9 @@ class _IN01InsuranceDashboardScreenState
     );
   }
 
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {

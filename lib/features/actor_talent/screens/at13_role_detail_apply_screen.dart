@@ -91,7 +91,9 @@ class _AT13RoleDetailApplyScreenState extends State<AT13RoleDetailApplyScreen> {
                 ? (snapshot.error! as ApiException).message
                 : 'Could not load this casting role.',
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load()),
+            onAction: () => setState(() {
+              _future = _load();
+            }),
           );
         }
         final data = snapshot.data!;

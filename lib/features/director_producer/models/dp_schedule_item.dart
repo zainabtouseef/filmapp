@@ -7,6 +7,7 @@ class DpScheduleItem {
   final List<String> stakeholders;
   final String status;
   final bool conflict;
+  final DateTime? startsAt;
 
   const DpScheduleItem({
     required this.id,
@@ -17,5 +18,6 @@ class DpScheduleItem {
     required this.stakeholders,
     required this.status,
     required this.conflict,
+    this.startsAt,
   });
 }

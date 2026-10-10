@@ -51,6 +51,7 @@ class DirectorDiscoveryItem {
   final int ratingAverage;
   final bool available;
   final List<String> tags;
+  final List<String> subcategories;
   final List<MarketplaceListingMedia> media;
   final List<DirectorDiscoverySection> sections;
   final UploadedFile? resumeFile;
@@ -78,6 +79,7 @@ class DirectorDiscoveryItem {
     required this.ratingAverage,
     required this.available,
     required this.tags,
+    this.subcategories = const [],
     required this.media,
     required this.sections,
     this.resumeFile,
@@ -108,6 +110,9 @@ class DirectorDiscoveryItem {
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       ratingAverage: (json['rating_average'] as num?)?.toInt() ?? 0,
       available: json['available'] as bool? ?? true,
+      subcategories: (json['subcategories'] as List? ?? const [])
+          .map((item) => item.toString())
+          .toList(),
       tags: (json['tags'] as List<dynamic>? ?? const [])
           .map((item) => '$item')
           .where((item) => item.trim().isNotEmpty)
@@ -165,6 +170,7 @@ class DirectorDiscoveryItem {
       imageUrl: coverImageUrl,
       notes: summary,
       trustMetrics: trustMetrics,
+      subcategories: subcategories,
     );
   }
 

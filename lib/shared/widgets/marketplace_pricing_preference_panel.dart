@@ -48,7 +48,9 @@ class _MarketplacePricingPreferencePanelState
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override
@@ -119,8 +121,7 @@ class _MarketplacePricingPreferencePanelState
                       busy: _saving,
                       onEdit: () => _edit(listings[index]),
                     ),
-                    if (index != listings.length - 1)
-                      const SizedBox(height: 8),
+                    if (index != listings.length - 1) const SizedBox(height: 8),
                   ],
                 ],
               );
@@ -220,7 +221,8 @@ class _MarketplacePricingPreferencePanelState
                       final whole = int.tryParse(
                         amount.text.replaceAll(RegExp(r'[^0-9]'), ''),
                       );
-                      if (mode != 'on_request' && (whole == null || whole <= 0)) {
+                      if (mode != 'on_request' &&
+                          (whole == null || whole <= 0)) {
                         setDialogState(
                           () => error = 'Add a valid public price.',
                         );

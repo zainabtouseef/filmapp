@@ -25,6 +25,8 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
   String? _projectId;
   Future<DirectorSchedule>? _scheduleFuture;
   bool _synced = false;
+  bool _syncing = false;
+  int _refreshToken = 0;
   Timer? _syncResetTimer;
 
   @override
@@ -39,12 +41,26 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
     super.dispose();
   }
 
-  void _sync() {
+  Future<void> _sync() async {
+    if (_syncing) return;
     _syncResetTimer?.cancel();
     setState(() {
-      _synced = true;
+      _synced = false;
+      _syncing = true;
       _scheduleFuture = _loadSchedule();
     });
+    try {
+      await _scheduleFuture;
+      if (!mounted) return;
+      setState(() {
+        _synced = true;
+        _refreshToken++;
+      });
+    } catch (_) {
+      if (mounted) dpSnack(context, 'Schedule sync failed. Please retry.');
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
     _syncResetTimer = Timer(const Duration(milliseconds: 1600), () {
       if (mounted) setState(() => _synced = false);
     });
@@ -87,7 +103,11 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
           trailing: TourTarget(
             id: 'dp.schedule.sync',
             child: DPHolographicButton(
-              label: _synced ? 'Synced ✓' : 'Sync',
+              label: _syncing
+                  ? 'Syncing…'
+                  : _synced
+                      ? 'Synced ✓'
+                      : 'Sync',
               icon: _synced ? Icons.check_rounded : Icons.sync_rounded,
               onTap: _sync,
             ),
@@ -115,6 +135,10 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
                 id: 'dp.schedule.calendar',
                 child: ProductionCalendar(
                   projectId: _projectId,
+                  refreshToken: _refreshToken,
+                  onScheduleChanged: () => setState(() {
+                    _scheduleFuture = _loadSchedule();
+                  }),
                   initialMode: ProductionCalendarMode.today,
                 ),
               ),
@@ -134,7 +158,7 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
         TourTarget(
           id: 'dp.schedule.callSheet',
           child: DPHolographicButton(
-            label: 'Create Call Sheet',
+            label: 'View Call Sheet',
             icon: Icons.description_outlined,
             onTap: _openCallSheet,
             secondary: true,
@@ -242,8 +266,8 @@ class _CallSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     DPHolographicButton(
-                      label: 'Send to team',
-                      icon: Icons.send_rounded,
+                      label: 'Close preview',
+                      icon: Icons.close_rounded,
                       onTap: () => Navigator.pop(context),
                     ),
                   ],

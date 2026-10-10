@@ -10,6 +10,8 @@ class DirectorProducerRoutes {
   static const createProject = '/director/projects/create';
   static const projectDetail = '/director/projects/:id';
   static const projectPathPrefix = '/project/';
+  static String projectPath(String id, {String? tab}) =>
+      '$projectPathPrefix${Uri.encodeComponent(id)}${tab == null ? '' : '/${Uri.encodeComponent(tab)}'}';
   static const requirements = '/director/projects/:id/requirements';
   static const marketplace = '/director/marketplace';
   static const discover = '/discover';

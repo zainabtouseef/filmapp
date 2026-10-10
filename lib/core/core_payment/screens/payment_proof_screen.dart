@@ -3,8 +3,6 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../core_ui/core_routes.dart';
-import '../../core_ui/mock_data/shared_mock_data.dart';
-import '../../core_ui/models/shared_models.dart';
 import '../../core_ui/widgets/core_widgets.dart';
 import '../../payments/payment_models.dart';
 import '../../payments/payments_controller.dart';
@@ -49,24 +47,24 @@ class PaymentProofUploadScreen extends StatefulWidget {
 }
 
 class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
-  PaymentMilestone _milestone = SharedMockData.milestones.first;
   PaymentMilestoneDto? _liveMilestone;
+  PaymentScheduleDto? _liveSchedule;
+  List<PaymentScheduleDto> _liveSchedules = const [];
   List<PaymentMilestoneDto> _liveMilestones = const [];
   String _method = 'Bank Transfer';
   bool _uploaded = false;
   bool _submitting = false;
   String? _uploadedFileId;
   Future<List<PaymentScheduleDto>>? _schedulesFuture;
+  String? _schedulesError;
   String _status = 'Not Paid';
-  final _amount = TextEditingController(text: '72000');
+  final _amount = TextEditingController();
   final _transaction = TextEditingController();
-  final _notes = TextEditingController();
 
   @override
   void dispose() {
     _amount.dispose();
     _transaction.dispose();
-    _notes.dispose();
     super.dispose();
   }
 
@@ -75,34 +73,105 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
     super.didChangeDependencies();
     final payments = PaymentsScope.maybeOf(context);
     if (payments != null) {
-      _schedulesFuture ??= payments.schedules().then((schedules) {
-        final milestones =
-            schedules.expand((schedule) => schedule.milestones).toList();
-        if (mounted && milestones.isNotEmpty) {
-          final selected = widget.milestoneId == null
-              ? milestones.first
-              : milestones.firstWhere(
-                  (item) => item.publicId == widget.milestoneId,
-                  orElse: () => milestones.first,
-                );
-          setState(() {
-            _liveMilestones = milestones;
-            _liveMilestone = selected;
-            _amount.text = '${selected.amountMinor ~/ 100}';
-          });
-        }
-        return schedules;
-      });
+      _schedulesFuture ??= _loadSchedules(payments);
+    } else if (_schedulesFuture == null && _schedulesError == null) {
+      _schedulesError = 'Sign in to load a live payment schedule.';
     }
   }
 
-  bool get _amountMismatch =>
-      int.tryParse(_amount.text.trim()) !=
-      ((_liveMilestone?.amountMinor ?? (_milestone.amount * 100)) ~/ 100);
+  Future<List<PaymentScheduleDto>> _loadSchedules(
+    PaymentsController payments,
+  ) async {
+    try {
+      final schedules = await payments.schedules();
+      final milestones =
+          schedules.expand((schedule) => schedule.milestones).toList();
+      if (!mounted) return schedules;
+      if (milestones.isEmpty) {
+        setState(() {
+          _liveSchedules = schedules;
+          _liveMilestones = const [];
+          _liveMilestone = null;
+          _liveSchedule = null;
+          _schedulesError = 'No payable milestones are available.';
+        });
+        return schedules;
+      }
+      final requestedId = widget.milestoneId?.trim();
+      PaymentMilestoneDto? requested;
+      if (requestedId != null && requestedId.isNotEmpty) {
+        for (final item in milestones) {
+          if (item.publicId == requestedId) {
+            requested = item;
+            break;
+          }
+        }
+      }
+      if (requestedId != null && requestedId.isNotEmpty && requested == null) {
+        setState(() {
+          _liveSchedules = schedules;
+          _liveMilestones = const [];
+          _liveMilestone = null;
+          _liveSchedule = null;
+          _schedulesError = 'The requested payment milestone was not found.';
+        });
+        return schedules;
+      }
+      final selected = requested ?? milestones.first;
+      setState(() {
+        _liveSchedules = schedules;
+        _liveMilestones = milestones;
+        _liveMilestone = selected;
+        _liveSchedule = _scheduleFor(schedules, selected.publicId);
+        _schedulesError = null;
+        _status = selected.status.replaceAll('_', ' ');
+        _amount.text = '${selected.amountMinor ~/ 100}';
+      });
+      return schedules;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _liveMilestones = const [];
+          _liveSchedules = const [];
+          _liveMilestone = null;
+          _liveSchedule = null;
+          _schedulesError =
+              'Payment details could not be loaded. Retry from the booking.';
+        });
+      }
+      return const [];
+    }
+  }
+
+  PaymentScheduleDto? _scheduleFor(
+    List<PaymentScheduleDto> schedules,
+    String milestoneId,
+  ) {
+    for (final schedule in schedules) {
+      if (schedule.milestones.any((item) => item.publicId == milestoneId)) {
+        return schedule;
+      }
+    }
+    return null;
+  }
+
+  bool get _amountMismatch {
+    final milestone = _liveMilestone;
+    if (milestone == null) return false;
+    return int.tryParse(_amount.text.trim()) != milestone.amountMinor ~/ 100;
+  }
 
   Future<void> _pickProof() async {
+    if (_liveMilestone == null) {
+      showCoreSnack(context, 'Choose a live milestone before uploading proof.');
+      return;
+    }
     try {
       final auth = AuthScope.maybeOf(context);
+      if (auth == null || !auth.isAuthenticated) {
+        showCoreSnack(context, 'Sign in to upload payment proof.');
+        return;
+      }
       final picked = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
@@ -111,10 +180,6 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
       final file = picked?.files.single;
       final bytes = file?.bytes;
       if (file == null || bytes == null) return;
-      if (auth == null) {
-        setState(() => _uploaded = true);
-        return;
-      }
       final uploaded = await UploadRepository(auth.apiClient).uploadFile(
         purpose: 'payment_proof',
         file: PickedFileData(
@@ -147,7 +212,7 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
         await payments.submitProof(
           milestoneId: milestone.publicId,
           claimedAmountMinor: (int.tryParse(_amount.text.trim()) ?? 0) * 100,
-          method: _method == 'Card Sandbox' ? 'card_sandbox' : 'bank_transfer',
+          method: 'bank_transfer',
           idempotencyKey:
               'flutter-${milestone.publicId}-${DateTime.now().millisecondsSinceEpoch}',
           transactionReference: _transaction.text.trim(),
@@ -165,11 +230,9 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
         return;
       }
     } else {
-      if (!_uploaded) {
-        showCoreSnack(context, 'Transaction ID and proof upload are required');
-        return;
-      }
-      setState(() => _status = 'Payment Under Verification');
+      showCoreSnack(context,
+          'Payment details are unavailable. Reload the booking before submitting proof.');
+      return;
     }
     widget.onSubmitted?.call();
     showCoreSuccessDialog(
@@ -221,7 +284,16 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
-              if (_schedulesFuture != null) const SizedBox(height: 10),
+              if (_schedulesFuture != null || _schedulesError != null)
+                const SizedBox(height: 10),
+              if (_schedulesError != null) ...[
+                InlineNotice(
+                  message: _schedulesError!,
+                  icon: Icons.info_outline_rounded,
+                  tone: CoreStatusTone.warning,
+                ),
+                const SizedBox(height: 14),
+              ],
               if (_liveMilestones.isNotEmpty)
                 CoreDropdownField<PaymentMilestoneDto>(
                   value: _liveMilestone ?? _liveMilestones.first,
@@ -234,25 +306,21 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
                     if (value == null) return;
                     setState(() {
                       _liveMilestone = value;
+                      _liveSchedule = _scheduleFor(
+                        _liveSchedules,
+                        value.publicId,
+                      );
+                      _status = value.status.replaceAll('_', ' ');
                       _amount.text = '${value.amountMinor ~/ 100}';
                     });
                   },
                 )
               else
-                CoreDropdownField<PaymentMilestone>(
-                  value: _milestone,
-                  values: SharedMockData.milestones,
-                  label: 'Milestone',
+                const CoreEmptyState(
                   icon: Icons.flag_outlined,
-                  labelBuilder: (value) =>
-                      '${value.name} · PKR ${value.amount}',
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _milestone = value;
-                      _amount.text = value.amount.toString();
-                    });
-                  },
+                  title: 'No live milestone selected',
+                  message:
+                      'Open payment proof from a booking with an active payment schedule.',
                 ),
               const SizedBox(height: 14),
               CoreTextField(
@@ -260,6 +328,7 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
                 label: 'Amount',
                 icon: Icons.money_rounded,
                 keyboardType: TextInputType.number,
+                enabled: _liveMilestone != null,
                 onChanged: (_) => setState(() {}),
               ),
               if (_amountMismatch) ...[
@@ -275,7 +344,6 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
                 value: _method,
                 values: const [
                   'Bank Transfer',
-                  'Card Sandbox',
                 ],
                 label: 'Payment method',
                 icon: Icons.account_balance_wallet_outlined,
@@ -295,21 +363,14 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
                     ? 'Attach image or PDF receipt'
                     : 'Uploaded $_uploadedFileId',
                 uploaded: _uploaded,
-                onTap: _pickProof,
-              ),
-              const SizedBox(height: 14),
-              CoreTextField(
-                controller: _notes,
-                label: 'Notes',
-                icon: Icons.notes_outlined,
-                maxLines: 4,
+                onTap: _liveMilestone == null ? null : _pickProof,
               ),
               const SizedBox(height: 18),
               CorePrimaryButton(
                 icon: Icons.verified_outlined,
                 label: 'Submit Proof for Verification',
                 loading: _submitting,
-                onTap: _submit,
+                onTap: _liveMilestone == null ? null : _submit,
               ),
             ],
           ),
@@ -322,12 +383,14 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
 
   Widget _summary(BuildContext context) {
     final colors = context.appColors;
+    final milestone = _liveMilestone;
+    final schedule = _liveSchedule;
     return CoreGlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'TVC Shoot — Lahore',
+            milestone?.name ?? 'Payment schedule required',
             style: AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
           ),
           const SizedBox(height: 12),
@@ -336,10 +399,10 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
             runSpacing: 8,
             children: [
               StatusBadge(
-                  label: _liveMilestone?.publicId ?? 'BK-2048',
+                  label: milestone?.publicId ?? 'No milestone',
                   tone: CoreStatusTone.info),
               StatusBadge(
-                  label: _liveMilestone?.status ?? 'CC-CON-2026-0041',
+                  label: schedule?.bookingId ?? 'No booking',
                   tone: CoreStatusTone.neutral),
               StatusBadge(
                   label: _status,
@@ -350,7 +413,9 @@ class _PaymentProofUploadScreenState extends State<PaymentProofUploadScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Payee: Ali Khan',
+            schedule == null
+                ? 'Open this screen from a live booking or payment record.'
+                : 'Booking ${schedule.bookingId}${schedule.contractId == null ? '' : ' · Contract ${schedule.contractId}'}',
             style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
         ],

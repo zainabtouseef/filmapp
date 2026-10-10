@@ -56,7 +56,7 @@ class DPPageHeader extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.heroSerifNumber.copyWith(
             color: colors.textPrimary,
-            fontSize: 30,
+            fontSize: 28,
           ),
         ),
       ],
@@ -70,7 +70,7 @@ class DPPageHeader extends StatelessWidget {
         final titlePainter = TextPainter(
           text: TextSpan(
             text: title,
-            style: AppTextStyles.heroSerifNumber.copyWith(fontSize: 30),
+            style: AppTextStyles.heroSerifNumber.copyWith(fontSize: 28),
           ),
           textDirection: TextDirection.ltr,
           maxLines: 1,

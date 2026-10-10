@@ -8,7 +8,7 @@ from flask import Blueprint, Response, jsonify, request
 from flask.typing import ResponseReturnValue
 from sqlalchemy import desc, select
 
-from app.api.auth import _current_user, _json_body
+from app.api.auth import _current_user, _json_body, _normal_email
 from app.api.marketplace import (
     _city_by_public_id,
     _city_payload,
@@ -32,6 +32,7 @@ from app.models.projects import (
 )
 from app.responses import success
 from app.services.cineplanner_productions import ensure_cineplanner_production
+from app.services.notifications import notify_user
 
 projects_blueprint = Blueprint("projects", __name__)
 
@@ -311,6 +312,29 @@ def _project_for_user(public_id: str, user: User) -> Project:
     if project is None:
         raise APIError("project.not_found", "Project was not found.", status=404)
     return project
+
+
+def _require_member_manager(project: Project, user: User) -> None:
+    if project.owner_user_id == user.id or _has_role(user, "super_admin"):
+        return
+    member = next(
+        (
+            row
+            for row in project.members
+            if row.user_id == user.id and row.status == "active"
+        ),
+        None,
+    )
+    if (
+        member is not None
+        and _member_permissions_payload(member).get("manage_members") is True
+    ):
+        return
+    raise APIError(
+        "projects.member_management_forbidden",
+        "You do not have permission to manage this project team.",
+        status=403,
+    )
 
 
 def _requirement_for_user(public_id: str, user: User) -> ProjectRequirement:
@@ -812,6 +836,69 @@ def project_members(public_id: str) -> Response:
     return jsonify(
         success({"members": [_member_payload(row) for row in project.members]})
     )
+
+
+@projects_blueprint.post("/projects/<public_id>/members")
+def add_project_member(public_id: str) -> ResponseReturnValue:
+    user = _current_user()
+    project = _project_for_user(public_id, user)
+    _require_member_manager(project, user)
+    payload = _json_body()
+    email = _normal_email(payload.get("email"))
+    invited_user = db.session.execute(
+        select(User).where(User.email == email, User.status != "deleted")
+    ).scalar_one_or_none()
+    if invited_user is None:
+        raise _field_error(
+            "email", "No active CineConnect account was found for this email."
+        )
+    if invited_user.id == user.id:
+        raise _field_error("email", "You are already a member of this project.")
+    role_label = str(payload.get("role_label", "Co-producer")).strip()
+    if len(role_label) < 2:
+        raise _field_error("role_label", "Enter a project role.")
+    can_edit = payload.get("can_edit_project", True)
+    if not isinstance(can_edit, bool):
+        raise _field_error("can_edit_project", "Use true or false.")
+
+    member = db.session.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project.id,
+            ProjectMember.user_id == invited_user.id,
+        )
+    ).scalar_one_or_none()
+    status_code = 201
+    if member is None:
+        member = ProjectMember(
+            project_id=project.id,
+            user_id=invited_user.id,
+            role_label=role_label[:120],
+        )
+        db.session.add(member)
+    else:
+        status_code = 200
+        member.role_label = role_label[:120]
+    member.status = "active"
+    member.permissions_json = json.dumps(
+        {
+            "manage_project": can_edit,
+            "manage_requirements": can_edit,
+            "manage_members": False,
+        },
+        sort_keys=True,
+    )
+    notify_user(
+        invited_user.id,
+        category="projects",
+        title="Added to a CineConnect project",
+        body=(
+            f"{user.display_name} added you to {project.title} as {member.role_label}."
+        ),
+        route_name=f"/director/projects/{project.public_id}",
+        route_params={"project_id": project.public_id},
+    )
+    db.session.commit()
+    return jsonify(success({"member": _member_payload(member)})), status_code
 
 
 @projects_blueprint.get("/projects/<public_id>/files")

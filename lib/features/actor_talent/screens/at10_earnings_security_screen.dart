@@ -98,7 +98,9 @@ class _AT10EarningsSecurityScreenState
         accountIdentifier: draft.accountIdentifier,
       );
       if (!mounted) return;
-      setState(() => _accountsFuture = _safePayoutAccounts(payments));
+      setState(() {
+        _accountsFuture = _safePayoutAccounts(payments);
+      });
       actorSnack(context, 'Payout account submitted for verification');
     } catch (error) {
       if (!mounted) return;

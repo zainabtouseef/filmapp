@@ -34,7 +34,7 @@ class DPProjectDeck extends StatelessWidget {
                 project: project,
                 onOpen: () => Navigator.pushNamed(
                   context,
-                  DirectorProducerRoutes.projectDetail,
+                  DirectorProducerRoutes.projectPath(project.id),
                   arguments: project.id,
                 ),
               ),

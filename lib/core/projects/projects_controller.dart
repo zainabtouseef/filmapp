@@ -98,6 +98,22 @@ class ProjectsController extends ChangeNotifier {
     return _repository.project(publicId);
   }
 
+  Future<ProjectMember> addMember({
+    required String projectId,
+    required String email,
+    required String roleLabel,
+    bool canEditProject = true,
+  }) async {
+    final member = await _repository.addMember(
+      projectId: projectId,
+      email: email,
+      roleLabel: roleLabel,
+      canEditProject: canEditProject,
+    );
+    await projects(force: true);
+    return member;
+  }
+
   Future<List<ProjectSkill>> skills({String? category}) {
     return _repository.skills(category: category);
   }

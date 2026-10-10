@@ -43,7 +43,9 @@ class _ContractTemplateDetailScreenState
   }
 
   void _refresh() {
-    setState(() => _future = _load(force: true));
+    setState(() {
+      _future = _load(force: true);
+    });
   }
 
   Future<void> _saveClauses(

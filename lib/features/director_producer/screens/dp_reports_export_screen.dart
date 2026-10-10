@@ -164,7 +164,9 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
             ? 'Export ${job.publicId} downloaded (${job.rowCount} rows)'
             : 'Export ${job.publicId} ready with ${job.rowCount} rows',
       );
-      setState(() => _future = analytics.exports(force: true));
+      setState(() {
+        _future = analytics.exports(force: true);
+      });
     } catch (error) {
       if (!mounted) return;
       dpSnack(context, 'Could not generate live export right now');
@@ -176,7 +178,9 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
   void _reload() {
     final analytics = AnalyticsScope.maybeOf(context);
     if (analytics == null) return;
-    setState(() => _future = analytics.exports(force: true));
+    setState(() {
+      _future = analytics.exports(force: true);
+    });
   }
 
   String _titleCase(String value) {

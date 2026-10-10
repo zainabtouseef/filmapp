@@ -1,0 +1,324 @@
+CINECONNECT — IMPLEMENTATION AND RELEASE AUDIT
+Date: 10 October 2026
+Project: /Users/zainabtouseef/filmapp
+Status: DEPLOYED VERIFIED PARTIAL RELEASE; NOT APPROVED FOR FULL PUBLIC LAUNCH
+Existing public site: https://cine.nalexustechnologies.com
+The verified 20261010-f code candidate is now served at the existing public site.
+
+A. COMPLETED IMPROVEMENTS
+
+Director and CinePlanner
+- Console first, CinePlanner second in Director navigation. Added a compact
+  live-data CinePlanner entry directly beneath the Console identity/statistics
+  section, before the other dashboard content.
+- Shared dark theme is the default; existing light-mode switching remains.
+- Added bottom-of-preview Completed / Missing / Pending planning summaries
+  using saved project fields and requirements. Explicitly distinguishes setup
+  readiness from filming completion. CinePlanner reports actual saved scripts,
+  scenes, shoot days, crew and budget, plus review/conflict backlog.
+- Project previews were exercised in Chrome desktop and 390x844 mobile views;
+  the bottom readiness summary is reachable by scrolling.
+- Changed project navigation from literal :id URLs to stable /project/<id>
+  links. A saved local QA project successfully reopened after browser refresh.
+- Removed invented default booking/follower/new-member counts, a fabricated
+  verified-producer badge, and the unrelated stock portrait in the header.
+- Corrected misleading labels: project progress was labeled budget health;
+  AI breakdown approvals were labeled overall production progress.
+- Empty resource stages no longer invent one required resource per category.
+  Project date-only milestones no longer display invented shoot times.
+- Header search now opens the real discovery workspace. Director action buttons
+  use focusable InkWell controls and explicit button semantics.
+- Corrected the production calendar's fixed 35-day grid and hardcoded July 21
+  Today filter. It now uses real event timestamps, correct weekday alignment,
+  leap-year/month lengths, previous/next month navigation and exact year/date
+  filtering. Compact 58px day cells retain a scrollable layout.
+- Sync reports success only after the backend request succeeds and refreshes
+  the calendar itself. The call-sheet preview no longer pretends closing it
+  sends anything: controls are accurately named View Call Sheet/Close preview.
+- Project picker now retains one load future across controller notifications,
+  disables premature selection while loading and provides an explicit retry.
+- Browser-created QA schedule event saved through the real local backend and
+  remained visible after refresh. Mobile month/date selection was exercised.
+  Schedule event details now wrap completely in narrow layouts rather than
+  hiding long titles and project names behind ellipses.
+
+Marketplace and pricing
+- All public actor/talent/model/influencer prices are suppressed server-side,
+  including fixed prices. Stored pricing and authorized owner access remain.
+  Discovery media-kit rate labels are also protected.
+- Added backend-derived crew subdivisions including a visible DOP filter.
+  Classification uses existing declared listing titles/descriptions; no records
+  or roles were invented or deleted.
+- Added Cameras and Lighting Equipment filter subdivisions from declared
+  equipment service categories and real published inventory categories.
+  Other valid equipment categories are retained.
+- Created original cinema-camera promotional artwork for the actual existing
+  ARRI Camera Rentals provider. It uses the existing business name as ordinary
+  text, not a fabricated manufacturer logo. Shared cards and its profile use it.
+  Asset: assets/images/arr-camera-rentals-v1.jpg (optimized JPEG, 1200px wide).
+  Generated source: task/generated_images/exec-a948fff3-2725-48e6-acce-d3d02dffb057.png.
+  Generation/edit prompt: professional cinema-camera rental still life, restrained
+  black/champagne-gold lighting; preserve composition and set the existing
+  provider's exact name to ARRI Camera Rentals without implying affiliation.
+- Removed fake local shortlist removal. Saved cards accurately indicate Saved;
+  removal remains in the actual shortlist-management workspace.
+- Unsupported public-customer shortlist and unpublished-listing booking controls
+  are not presented as available actions. Saving handles failures and exits its
+  loading state reliably.
+
+Shared UI, accessibility and security
+- Shared theme/component architecture was preserved rather than replaced.
+- Added a mouse-only circular gold trailing ring. Native text, click and resize
+  cursor semantics are deliberately retained. Touch and reduced-motion users
+  have the native fallback. The ring cannot intercept pointer events.
+- Floating bubble controllers stop under reduced motion. Shared page transitions,
+  auth transitions, profile entrances and hero transitions respect reduced motion.
+- Fixed cursor-controller initialization/disposal regression and verified retests.
+- Fixed the mobile KYC banner overflow; staff without KYC requirements are exempt.
+- Added frontend portal access gating and active-role checks. Backend authorization
+  remains the actual security boundary; frontend gates are not a replacement.
+- Extended access gating to direct project links and shared private account,
+  contract, payment, notification, booking and verification screens.
+- Project hub no longer treats failed booking/contract/payment/application
+  requests as empty records; failures show an honest retry state.
+- Corrected 72 Future-assignment setState callbacks across the portals to use
+  synchronous block callbacks. A real retry regression test exposed this issue;
+  Flutter assertions could otherwise interrupt refresh/retry operations.
+- Bubble loops now complete whole cycles without a repeat-boundary jump;
+  decorated surfaces are cached as animation children, with repaint isolation,
+  clipping, excluded decorative semantics and preserved pointer passthrough.
+- Removed the payment screen's false-success fallback when a real milestone was
+  unavailable. Removed the public Card Sandbox option and reject sandbox proofs
+  in production server-side. Genuine bank-transfer proof review remains supported.
+- Replaced simulated password recovery (any six-digit OTP, no backend password
+  update) with the real one-time-token reset endpoint and reset-link routing.
+  Successful reset revokes existing refresh sessions and immediately invalidates
+  prior access tokens through a keyed credential-version claim. The password hash
+  is not exposed in tokens, and this requires no database migration. New login
+  after reset succeeds; old access/refresh tokens and reset-token reuse fail.
+  Legacy access tokens without this claim are rejected by the candidate; valid
+  non-revoked refresh sessions can issue updated tokens. Failed tokens cannot show
+  success. Added encrypted SMTP delivery support (STARTTLS/implicit TLS).
+  Missing SMTP returns an honest 503 rather than claiming an email was sent.
+- Connected Settings and Account preferences to the real `/me/settings` API,
+  connected payout-account reads and support-ticket creation, and removed
+  fabricated banking/success states. Unsupported security controls are disabled
+  with honest explanations rather than pretending to complete work.
+- Connected Director project-member invitations to the real backend endpoint for
+  existing CineConnect users, including permissions, validation, refresh and
+  notification behavior.
+- Replaced simulated booking-chat attachments with the existing secure upload and
+  live conversation APIs. Images, PDF and audio files are restricted by type and
+  a 25 MB client limit, then must pass backend ownership/scan/readiness checks.
+  Fake voice-note creation was removed; microphone recording is explicitly marked
+  unavailable while real audio-file attachment remains supported.
+- Replaced simulated contract and receipt exports with authenticated server-created
+  PDFs. Existing Director and Talent demo contracts returned genuine PDFs from the
+  live service; an existing Director demo ledger receipt also returned a genuine
+  PDF. The receipts screen no longer substitutes mock rows after a live error.
+- Removed the contract screen's fake OTP and drawing-pad ceremony. Signing now
+  requires the authenticated account name plus an explicit consent acknowledgement;
+  the backend verifies the typed name and includes it in the signature hash. Crew
+  contract actions now open the shared review-and-sign flow instead of mutating the
+  contract immediately. No production signature was created during verification.
+- Corrected an OpenAPI component-name collision so password-recovery text messages
+  and conversation-message objects now have distinct, parseable response schemas.
+- Pinned VS Code to the selected local Flutter SDK after detecting two installed
+  SDKs overwriting generated package configuration. Preserved existing package
+  versions except the three test-library updates required by the selected SDK.
+
+B. PORTAL-BY-PORTAL STATUS
+
+Director / Producer: directly changed and browser-tested login, dashboard,
+  project navigation/preview, city picker and date picker. The production Director
+  demo login, locale/timezone, dashboard and 29-project read passed after release.
+  Backend project CRUD is covered by integration tests. Full control-by-control
+  production UAT remains pending.
+Actor / Talent: shared dark/access/motion changes; public-price protection;
+  existing route/layout tests pass. Complete live role journey not verified.
+Model: shared theme/access/motion and public-price protection; existing rendering
+  tests pass. Complete live portfolio/campaign journey not verified.
+Influencer: shared theme/access/motion and public-price protection. Complete live
+  influencer workflow and standalone visual review not verified.
+General Public: shared theme/access/motion and protected talent pricing;
+  unsupported saved-list action hidden. Real customer journey not fully verified.
+Crew / Services: shared theme/access/motion; backend-derived discovery subdivisions
+  including DOP. Full real crew-provider journey not verified.
+Media / Equipment: shared theme/access/motion, real category mapping and ARRI
+  artwork. Inventory API workflows covered in existing operations tests;
+  complete production rental/handover journey not verified.
+Location Owner: shared theme/access/motion; route/layout coverage passes;
+  location operations covered by existing integration tests, not full live UAT.
+Casting Agency: shared theme/access/motion; rendering tests and casting-related
+  backend tests pass. Full production agency journey not verified.
+Brand / Sponsor: shared theme/access/motion and shared marketplace improvements;
+  relevant integration/rendering tests pass. Full production campaign journey pending.
+Legal Partner: shared theme/access/motion; existing contract integration and
+  rendering tests pass. Real signatures/legal acceptance not exercised.
+Insurance / Safety Partner: shared theme/access/motion; insurance/operations
+  integration and rendering tests pass. Actual insurer processing not verified.
+Distribution / Release Partner: shared theme/access/motion; rendering and relevant
+  specialist integration tests pass. Real external distribution not verified.
+Super Admin: shared theme/access/motion; authenticated mobile/desktop test fixtures
+  now exercise authorized rendering; role privacy and KYC-banner fixes tested.
+  Full live finance/moderation/support UAT remains pending.
+
+These are fourteen existing portal families, including administration. Passing
+rendering tests does NOT certify every control or business workflow. This work
+does not constitute a completed screen-by-screen audit of all 456 Dart files.
+
+C. BACKEND CONNECTION STATUS
+
+- Live domain readiness endpoint returned HTTP 200 with API, MySQL and Redis OK.
+- SSH connection verified using the supplied local key; its contents were never
+  displayed or included in a release archive.
+- Production API, worker and scheduler were inspected read-only. Other VPS
+  applications and NREX were left untouched.
+- Isolated local MySQL 8.4 and Redis 7 QA instances used separate loopback ports
+  and a dedicated cineconnect_qa database. All existing migrations applied there.
+- 46 integration tests passed against that real isolated database, covering the
+  existing auth, profile/marketplace, projects, booking, contract, payment-proof,
+  scheduling, casting, opportunities, specialist, insurance, operations,
+  analytics, verification and CinePlanner test flows.
+- A backend candidate image was built on the VPS without replacing active images.
+  An ephemeral, network-disabled container with no production mounts passed
+  liveness (200), talent-price suppression, equipment mapping and DOP smoke checks.
+- SMTP delivery is unit-tested with a mocked transport, NOT a real provider.
+- Live CinePlanner AI parsing, actual external payments, push notifications,
+  actual email/SMS delivery and real-device native uploads are not certified.
+
+D. TEST RESULTS AND FUNCTIONALITY CHECKLIST
+
+PASS: Flutter suite — 774 tests, 0 failures (latest complete run).
+PASS: backend unit suite — 102 tests, 0 failures, including private-operation
+  checks (22 operations, missing and invalid bearer credentials).
+PASS: backend integration suite — 46 tests, 0 failures, separate MySQL/Redis QA;
+  includes cross-account private-project and schedule protection.
+PASS: flutter analyze — no issues.
+PASS: Ruff lint and format check.
+PASS: mypy using backend/pyproject.toml — 68 source files.
+PASS: git diff --check.
+PASS: release web compilation and current Android debug APK compilation.
+PASS: current Android APK installed and rendered the complete login screen at
+  1080x2400 on `Medium_Phone_API_36.1`; the fatal/Flutter-error log scan was empty.
+  Evidence: task-2/cineconnect-android-f-login.png. Authenticated ADB text injection
+  was unreliable, so the emulator run is not claimed as authenticated mobile UAT.
+PASS: browser local Director login with a disposable QA account.
+PASS: real city dropdown data and project date-range picker selection.
+PASS: real local backend project creation (201), retrieval, preview and refresh.
+PASS: mobile scrolling to accurate Completed 5 / Missing 1 / Pending 0 summary.
+PASS: browser-created schedule event persisted after refresh and displayed fully
+  on mobile. Evidence: task/cineconnect-mobile-schedule-verified.jpg.
+PASS: password-recovery UI tests for successful and rejected backend reset tokens.
+PASS: backend reset-token single use and refresh-session revocation tests.
+PASS: talent-price privacy across four talent types and three pricing modes.
+
+Integration tests and widget fixtures are narrower than production end-to-end
+certification. Some upload tests use prepared ready-file fixtures. No real
+payments, contracts, bookings with real people, or production QA records were
+created. Primary controls outside covered journeys remain to be audited.
+
+E. VISUAL AND PERFORMANCE REVIEW
+
+- Retained and extended existing centralized black/gold themes, card styles,
+  floating bubbles, glass surfaces, typography and responsive layouts.
+- Direct browser inspection completed for login, Director Console, project list,
+  creation inputs and project preview on desktop/mobile Chrome.
+- Mobile screenshot evidence saved in the task workspace as
+  cineconnect-mobile-readiness.jpg.
+- Shared automated portal layout tests pass at their defined viewports/themes.
+- Browser resize briefly produced a stale Flutter rendering-scale artifact;
+  reloading at the target viewport rendered correctly. This is not proof that
+  every live browser/runtime resize scenario is flawless.
+- No measured FPS/memory/performance budget or Safari/Firefox/device benchmark
+  has been completed. Release builds are not a substitute for these measurements.
+- WebAssembly dry run identified secure-storage dependencies using dart:html.
+  Standard JavaScript web release succeeds; no Wasm readiness claim is made.
+- Existing Cupertino font warning remains; no broad dependency upgrade was used.
+
+F. REMAINING PROBLEMS
+
+Critical launch blockers
+1. Live APP_ENV is development and both authentication secrets fail the project's
+   production length requirements. Production hardening remains. Secret rotation
+   must preserve field encryption: legacy encrypted values may derive their key
+   from SECRET_KEY. Do not blindly change it or delete stored financial data.
+2. Live PAYMENT_MODE is sandbox. Decide/configure the legitimate production
+   payment workflow: existing manual bank-transfer verification or an actual
+   merchant gateway integration. No fake gateway may be labeled live.
+3. Configure actual SMTP sender credentials and verify delivery and recovery
+   end-to-end. Provide credentials securely in server environment configuration,
+   not chat. SMS/push provider delivery, where promised, remains unverified.
+4. Android release configuration still uses com.example.cineconnect and debug
+   signing. The generated APK is for QA, not a Play Store release. Need the
+   product's registered identifier and authorized release signing configuration.
+5. Xcode 26.4.1 and the iOS 26.4 SDK are present, but no iOS Simulator runtime is
+   installed. The project also has no Apple Developer team, signing identity,
+   provisioning profile or export configuration, and still uses an example bundle
+   identifier. A simulator/device/App Store release cannot honestly be certified.
+6. Full screen-by-screen interaction audit and authenticated production UAT across
+   every role remain incomplete. Do not declare every button/calendar verified.
+
+Important non-blocking / scope-dependent items
+- No configured Sentry DSN was found. Structured logs exist, but operational
+  alerting, retention and restore-tested offsite backups need verification.
+- Per-device logout currently revokes refresh sessions; unlike password reset,
+  immediate invalidation of an already issued access token for individual-device
+  logout is not separately certified.
+- AI outputs/retries, large uploads, notifications, payment disputes and actual
+  external legal/insurance/distribution flows need provider-backed tests.
+- Further compactness and screen-by-screen visual refinement across all portals
+  remain; this is not a claim of the entire sixteen-phase transformation finishing.
+- Physical mobile performance, assistive-technology audit and browser compatibility
+  beyond the tested Chrome views remain.
+
+Optional enhancements
+- Wasm-compatible secure storage; further media caching and measured bundle budgets.
+- More nuanced contextual cursor states without sacrificing native interaction.
+- Configurable project planning checklists rather than one shared saved-field list.
+
+G. PRODUCTION LAUNCH READINESS AND DELIVERABLES
+
+Verdict: NOT FULLY LAUNCH-READY. The verified code candidate was deployed to the
+existing live URL with a rollback copy and prior image retained. Database migration
+was a no-op at the existing Alembic head; no production records were deleted, no
+auth secret was rotated, and no Nginx/domain configuration was changed. The API,
+worker and scheduler now run cineconnect-prod-api:20261010-f. External HTTPS
+liveness/readiness, MySQL, Redis, authenticated Director login, settings, dashboard
+and project-list reads passed after deployment. Authenticated live contract and
+receipt PDF downloads also passed using existing demo records. This code deployment
+does not clear the provider, signing, security, legal and full-role UAT blockers in
+section F.
+
+Deliverables:
+- Existing full-stack project: /Users/zainabtouseef/filmapp
+- Web artifact: build/web (must use production CINECONNECT_API_BASE_URL for release).
+- Android QA APK: build/app/outputs/flutter-apk/app-debug.apk
+- Original branded asset and generated source listed in section A.
+- VPS candidate `/var/www/cineconnect/release-candidates/20261010-f` and rollback
+  copy `/var/www/cineconnect/release-candidates/pre-20261010-f`.
+- Deployed backend image: `cineconnect-prod-api:20261010-f`; the prior image is
+  retained as `cineconnect-prod-api:pre-20261010-f`. The prior web directory is
+  retained at `/var/www/cineconnect/web-pre-20261010-f`.
+- Live web JavaScript SHA-256:
+  `a5bc2700840c607f844518ac251ec9a594c53d622e9e79f74bfa57302595d5b8`.
+- Live OpenAPI SHA-256:
+  `9ccd61066b7314f937b4998dca9d564c8df6ff5a68933069b0d34d3ba11df7bf`.
+
+Next release gate: complete secure production configuration and real service
+credentials/signing, finish the remaining portal/business-flow audit, rerun
+provider-backed UAT and device/browser checks, back up and restore-test, then
+perform a reversible public release and verify the live journeys again.
+
+H. DEFENSIBLE FULL-SCOPE REQUIREMENT COUNT
+
+The saved row-by-row product ledger remains the conservative source of truth:
+- Product requirements: 19 completed, 206 partial, 3 pending, 4 blocked = 232.
+- Separate verification obligations: 4 completed, 2 partial, 0 pending,
+  2 blocked = 8.
+- All obligations: 23 completed, 208 partial, 3 pending, 6 blocked = 240.
+
+Automated test cases are evidence and are not counted as product requirements.
+The post-ledger settings, team-invite, visual, attachment and deployment work is
+recorded without bulk-promoting broad screen contracts; those rows require
+individual acceptance review before their status can defensibly change.

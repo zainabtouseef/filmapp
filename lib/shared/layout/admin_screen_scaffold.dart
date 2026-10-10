@@ -145,8 +145,11 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                 final reservedNavHeight = navBarWide ? 156.0 : 112.0;
                 final headingTopGap =
                     widget.currentRoute.endsWith('/dashboard') ? 32.0 : 18.0;
+                // Keep the command surface visually connected to its top bar.
+                // Dashboards previously carried a larger empty band than the
+                // denser portal screens beneath them.
                 final contentTopGap =
-                    widget.currentRoute.endsWith('/dashboard') ? 30.0 : 20.0;
+                    widget.currentRoute.endsWith('/dashboard') ? 20.0 : 18.0;
 
                 return Stack(
                   children: [

@@ -13,6 +13,7 @@ class DpCandidate {
   final bool verified;
   final bool available;
   final List<String> skills;
+  final List<String> subcategories;
   final String avatarLabel;
   final String? imageUrl;
   final String notes;
@@ -37,15 +38,16 @@ class DpCandidate {
     required this.verified,
     required this.available,
     required this.skills,
+    this.subcategories = const [],
     required this.avatarLabel,
     this.imageUrl,
     required this.notes,
     String? profileId,
     this.marketplaceListingId,
-    this.joinedDaysAgo = 45,
-    this.completedBookings = 18,
-    this.instagramHandle = '@cineconnect.profile',
-    this.instagramFollowers = 12800,
+    this.joinedDaysAgo = 365,
+    this.completedBookings = 0,
+    this.instagramHandle = '',
+    this.instagramFollowers = 0,
     this.trustMetrics,
   }) : profileId = profileId ?? id;
 

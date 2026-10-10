@@ -40,7 +40,9 @@ class _LG05ReviewHistoryBillingScreenState
     );
   }
 
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {

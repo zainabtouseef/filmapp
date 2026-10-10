@@ -28,7 +28,9 @@ class _LG03TemplateReviewScreenState extends State<LG03TemplateReviewScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = ContractsScope.maybeOf(context)?.templates());
+    setState(() {
+      _future = ContractsScope.maybeOf(context)?.templates();
+    });
   }
 
   @override

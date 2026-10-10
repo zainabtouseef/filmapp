@@ -37,6 +37,7 @@ from app.models.operations import (
 from app.models.projects import Project, ProjectMember, ProjectRequirement
 from app.responses import success
 from app.services.local_storage import public_url_for
+from app.services.marketplace_categories import crew_categories, equipment_categories
 
 marketplace_blueprint = Blueprint("marketplace", __name__)
 
@@ -306,7 +307,12 @@ def _pricing_payload(
     reveal_private_price: bool = False,
 ) -> dict[str, Any]:
     mode = _normalized_pricing_mode(listing)
-    shows_price = mode != "on_request"
+    # Talent rates are confidential even if a provider selected fixed pricing.
+    # Only owner-management responses may include configured commercial terms;
+    # booking validation still uses the unchanged stored rate and pricing mode.
+    shows_price = mode != "on_request" and (
+        reveal_private_price or listing.listing_type not in TALENT_LISTING_TYPES
+    )
     payload: dict[str, Any] = {
         "pricing_mode": mode,
         "shows_price": shows_price,
@@ -496,6 +502,30 @@ def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None
     }
 
 
+def _listing_subcategories(listing: MarketplaceListing) -> list[str]:
+    if listing.listing_type == "crew":
+        return crew_categories(listing.title, listing.summary)
+    if listing.listing_type != "equipment":
+        return []
+    provider = db.session.execute(
+        select(EquipmentProviderProfile).where(
+            EquipmentProviderProfile.public_id == listing.profile_entity_id
+        )
+    ).scalar_one_or_none()
+    if provider is None:
+        return []
+    labels = (provider.service_categories or "").split(",")
+    labels.extend(
+        db.session.execute(
+            select(EquipmentItem.category).where(
+                EquipmentItem.provider_profile_id == provider.id,
+                EquipmentItem.status.in_(["available", "published", "active"]),
+            )
+        ).scalars()
+    )
+    return equipment_categories(labels)
+
+
 def _listing_payload(
     listing: MarketplaceListing,
     *,
@@ -511,6 +541,7 @@ def _listing_payload(
         "profile_entity_id": listing.profile_entity_id,
         "title": listing.title,
         "summary": listing.summary,
+        "subcategories": _listing_subcategories(listing),
         "city": _city_payload(listing.city),
         "currency": listing.currency,
         "verification_status": listing.verification_status,

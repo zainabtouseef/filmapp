@@ -33,7 +33,9 @@ class _CA01AgencyDashboardScreenState extends State<CA01AgencyDashboardScreen> {
   }
 
   void _refresh() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override

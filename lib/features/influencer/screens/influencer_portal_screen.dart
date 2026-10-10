@@ -271,7 +271,9 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
             title: 'Influencer workspace unavailable',
             message: _friendlyError(snapshot.error),
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load(context)),
+            onAction: () => setState(() {
+              _future = _load(context);
+            }),
           );
         }
         final data = snapshot.data!;
@@ -488,7 +490,9 @@ class _InfluencerMediaKitScreenState extends State<InfluencerMediaKitScreen> {
             title: 'Could not load media kit',
             message: _friendlyError(snapshot.error),
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load()),
+            onAction: () => setState(() {
+              _future = _load();
+            }),
           );
         }
         return ActorTwoColumn(
@@ -702,7 +706,9 @@ class _InfluencerPackagesScreenState extends State<InfluencerPackagesScreen> {
             title: 'Could not load packages',
             message: _friendlyError(snapshot.error),
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load()),
+            onAction: () => setState(() {
+              _future = _load();
+            }),
           );
         }
         return Column(
@@ -838,7 +844,9 @@ class _InfluencerCampaignsScreenState extends State<InfluencerCampaignsScreen> {
             title: 'Could not load campaigns',
             message: _friendlyError(snapshot.error),
             actionLabel: 'Try again',
-            onAction: () => setState(() => _future = _load()),
+            onAction: () => setState(() {
+              _future = _load();
+            }),
           );
         }
         final rows = snapshot.data ?? const [];

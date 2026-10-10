@@ -49,7 +49,9 @@ class _AT12SafetyControlsScreenState extends State<AT12SafetyControlsScreen> {
   void _refreshDisputes() {
     final trustSafety = TrustSafetyScope.maybeOf(context);
     if (trustSafety == null) return;
-    setState(() => _disputesFuture = trustSafety.disputes());
+    setState(() {
+      _disputesFuture = trustSafety.disputes();
+    });
   }
 
   @override

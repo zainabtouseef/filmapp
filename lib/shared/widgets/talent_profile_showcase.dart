@@ -64,7 +64,9 @@ class TalentProfileShowcase extends StatelessWidget {
         return TweenAnimationBuilder<double>(
           key: const ValueKey('talent-profile-showcase'),
           tween: Tween(begin: 0, end: 1),
-          duration: AppDurations.pageEntrance,
+          duration: MediaQuery.of(context).disableAnimations
+              ? Duration.zero
+              : AppDurations.pageEntrance,
           curve: Curves.easeOutCubic,
           builder: (context, reveal, child) => Opacity(
             opacity: reveal,
@@ -776,6 +778,12 @@ class _ShowcaseImage extends StatelessWidget {
       ),
     );
     if (url == null || url.trim().isEmpty) return fallback;
+    if (url.startsWith('asset:')) {
+      return Image.asset(url.substring(6),
+          fit: BoxFit.cover,
+          alignment: alignment,
+          errorBuilder: (_, __, ___) => fallback);
+    }
     return Image.network(
       url,
       webHtmlElementStrategy: WebHtmlElementStrategy.prefer,

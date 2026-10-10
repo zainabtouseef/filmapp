@@ -231,7 +231,9 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
         if (snapshot.hasError || !snapshot.hasData) {
           return _BookingErrorState(
             message: _friendlyError(snapshot.error),
-            onRetry: () => setState(() => _future = _load()),
+            onRetry: () => setState(() {
+              _future = _load();
+            }),
           );
         }
         _acceptData(snapshot.data!);

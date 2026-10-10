@@ -149,7 +149,10 @@ class DirectorScheduleEvent {
     return DpScheduleItem(
       id: publicId,
       date: _dateLabel(startsAt),
-      time: _timeLabel(startsAt),
+      startsAt: startsAt,
+      time: {'project_start', 'project_wrap'}.contains(kind)
+          ? 'Date only'
+          : _timeLabel(startsAt),
       project: projectTitle,
       location: title,
       stakeholders: [
@@ -313,6 +316,7 @@ class DirectorTimelineItem {
     return DpScheduleItem(
       id: publicId,
       date: _dateLabel(startsAt),
+      startsAt: startsAt,
       time: _timeLabel(startsAt),
       project: projectTitle,
       location: title,

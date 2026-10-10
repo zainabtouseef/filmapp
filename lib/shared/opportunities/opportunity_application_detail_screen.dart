@@ -61,7 +61,9 @@ class _OpportunityApplicationDetailScreenState
     return controller.application(id);
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -119,8 +121,7 @@ class _OpportunityApplicationDetailScreenState
                       contact: contact,
                       message: message,
                     ),
-                    onAccept: (roundId) =>
-                        _acceptMeeting(application, roundId),
+                    onAccept: (roundId) => _acceptMeeting(application, roundId),
                     onDecline: (roundId, reason) =>
                         _declineMeeting(application, roundId, reason),
                   ),

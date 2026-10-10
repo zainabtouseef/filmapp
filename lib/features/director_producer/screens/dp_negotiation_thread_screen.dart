@@ -104,7 +104,9 @@ class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
   }
 
   void _reload() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   Future<void> _sendCounter(NegotiationThread thread) async {

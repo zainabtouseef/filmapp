@@ -47,7 +47,9 @@ class _AT17BookingsMessagesScreenState
     return controller.bookings(force: true);
   }
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() => setState(() {
+        _future = _load();
+      });
 
   @override
   Widget build(BuildContext context) {

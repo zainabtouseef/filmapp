@@ -164,6 +164,15 @@ class AuthController extends ChangeNotifier {
     return _repository.forgotPassword(email);
   }
 
+  Future<void> resetPassword(
+      {required String token, required String password}) async {
+    await _client.post('/auth/password/reset', body: {
+      'token': token,
+      'new_password': password,
+    });
+    await clearSession();
+  }
+
   Future<void> logout() async {
     final token = _refreshToken;
     try {
@@ -180,6 +189,26 @@ class AuthController extends ChangeNotifier {
   Future<void> setPrimaryRole(String roleCode) async {
     _user = await _repository.setPrimaryRole(roleCode);
     notifyListeners();
+  }
+
+  Future<AuthSettings> settings() {
+    return _repository.settings();
+  }
+
+  Future<AuthSettings> updateSettings({
+    String? locale,
+    String? timezone,
+    bool? emailEnabled,
+    bool? smsEnabled,
+    bool? pushEnabled,
+  }) {
+    return _repository.updateSettings(
+      locale: locale,
+      timezone: timezone,
+      emailEnabled: emailEnabled,
+      smsEnabled: smsEnabled,
+      pushEnabled: pushEnabled,
+    );
   }
 
   Future<UploadedFile> completeDemoUpload({

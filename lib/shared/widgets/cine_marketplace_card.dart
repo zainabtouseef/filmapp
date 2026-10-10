@@ -143,7 +143,7 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
               _pressed = false;
             }),
             child: AnimatedScale(
-              scale: _pressed ? 0.994 : (_hovered ? 1.004 : 1),
+              scale: _pressed ? 0.994 : (_hovered ? 1.008 : 1),
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
               child: AnimatedContainer(
@@ -199,6 +199,7 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
                             children: [
                               CineMarketplaceMediaFrame(
                                 imageUrl: widget.imageUrl,
+                                listingTitle: widget.title,
                                 kind: widget.kind,
                                 width: imageSize,
                                 height: imageSize,
@@ -266,18 +267,23 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
 
   Future<void> _toggleShortlist() async {
     if (_shortlisted) {
-      setState(() => _shortlisted = false);
       return;
     }
     final action = widget.onShortlist;
     if (action == null) return;
     setState(() => _savingShortlist = true);
-    final saved = await action();
-    if (!mounted) return;
-    setState(() {
-      _savingShortlist = false;
-      _shortlisted = saved;
-    });
+    try {
+      final saved = await action();
+      if (mounted) setState(() => _shortlisted = saved);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to save. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingShortlist = false);
+    }
   }
 }
 
@@ -545,9 +551,9 @@ class _ShortlistButton extends StatelessWidget {
       width: 34,
       height: 34,
       child: IconButton(
-        tooltip: active ? 'Remove from shortlist' : 'Add to shortlist',
+        tooltip: active ? 'Saved — manage in Shortlist' : 'Add to shortlist',
         padding: EdgeInsets.zero,
-        onPressed: busy ? null : onTap,
+        onPressed: busy || active ? null : onTap,
         icon: busy
             ? SizedBox(
                 width: 15,
@@ -691,6 +697,7 @@ class _RevealRow extends StatelessWidget {
 
 /// Reusable image frame for marketplace rows, profiles and galleries.
 class CineMarketplaceMediaFrame extends StatelessWidget {
+  final String? listingTitle;
   final String? imageUrl;
   final String kind;
   final double width;
@@ -701,6 +708,7 @@ class CineMarketplaceMediaFrame extends StatelessWidget {
 
   const CineMarketplaceMediaFrame({
     super.key,
+    this.listingTitle,
     required this.imageUrl,
     required this.kind,
     required this.width,
@@ -714,30 +722,36 @@ class CineMarketplaceMediaFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final source = imageUrl?.trim() ?? '';
     final fallback = _MarketplacePlate(kind: kind);
+    final brandedRental = kind == 'equipment' &&
+        {'arr camera rentals', 'arri camera rentals'}
+            .contains(listingTitle?.trim().toLowerCase());
     final media = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
         width: width,
         height: height,
-        child: source.isEmpty
-            ? fallback
-            : Stack(
-                fit: StackFit.expand,
-                children: [
-                  fallback,
-                  Image.network(
-                    source,
-                    webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                    fit: fit,
-                    alignment: {'actor', 'model', 'influencer'}.contains(kind)
-                        ? Alignment.topCenter
-                        : Alignment.center,
-                    filterQuality: FilterQuality.medium,
-                    gaplessPlayback: true,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        child: brandedRental
+            ? Image.asset('assets/images/arr-camera-rentals-v1.jpg', fit: fit)
+            : source.isEmpty
+                ? fallback
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      fallback,
+                      Image.network(
+                        source,
+                        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                        fit: fit,
+                        alignment:
+                            {'actor', 'model', 'influencer'}.contains(kind)
+                                ? Alignment.topCenter
+                                : Alignment.center,
+                        filterQuality: FilterQuality.medium,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ],
                   ),
-                ],
-              ),
       ),
     );
     final framed = DecoratedBox(

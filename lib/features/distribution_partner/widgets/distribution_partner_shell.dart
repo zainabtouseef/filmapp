@@ -63,11 +63,8 @@ const _bottomDestinations = [
     label: 'Release',
     icon: Icons.rocket_launch_outlined,
   ),
-  CineBottomNavDestination(
-    label: 'Windows',
-    icon: Icons.event_available_outlined,
-  ),
   CineBottomNavDestination(label: 'Reports', icon: Icons.analytics_outlined),
+  CineBottomNavDestination(label: 'More', icon: Icons.menu_rounded),
 ];
 
 class DistributionPartnerShell extends StatelessWidget {
@@ -104,7 +101,9 @@ class DistributionPartnerShell extends StatelessWidget {
               AdminBottomNavSlot(
         child: _DistributionBottomNav(
           currentRoute: currentRoute,
+          menuOpen: menuOpen,
           onRouteTap: onRouteTap,
+          onMoreTap: onMoreTap,
         ),
       ),
       floatingMenuBuilder: (context, open, currentRoute, onClose, onRouteTap) =>
@@ -363,11 +362,15 @@ class _DistributionNavTile extends StatelessWidget {
 
 class _DistributionBottomNav extends StatelessWidget {
   final String currentRoute;
+  final bool menuOpen;
   final ValueChanged<String> onRouteTap;
+  final VoidCallback onMoreTap;
 
   const _DistributionBottomNav({
     required this.currentRoute,
+    required this.menuOpen,
     required this.onRouteTap,
+    required this.onMoreTap,
   });
 
   @override
@@ -376,11 +379,18 @@ class _DistributionBottomNav extends StatelessWidget {
       currentIndex: _currentIndex(currentRoute),
       destinations: _bottomDestinations,
       compactCenter: true,
-      onTap: (index) => onRouteTap(DistributionPartnerRoutes.primaryNav[index]),
+      onTap: (index) {
+        if (index == _bottomDestinations.length - 1) {
+          onMoreTap();
+          return;
+        }
+        onRouteTap(DistributionPartnerRoutes.primaryNav[index]);
+      },
     );
   }
 
   int _currentIndex(String route) {
+    if (menuOpen) return _bottomDestinations.length - 1;
     final index = DistributionPartnerRoutes.primaryNav.indexOf(route);
     return index == -1 ? 0 : index;
   }

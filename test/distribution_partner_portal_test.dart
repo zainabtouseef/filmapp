@@ -37,4 +37,41 @@ void main() {
       });
     }
   }
+
+  testWidgets('mobile Reports destination opens the reports route',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      ThemeControllerProvider(
+        controller: ThemeController(initialThemeMode: ThemeMode.dark),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: ThemeMode.dark,
+          onGenerateRoute: (settings) => MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => Scaffold(body: Text(settings.name ?? 'unknown')),
+          ),
+          home: const DistributionPartnerPortalScreen(
+            routeName: DistributionPartnerRoutes.home,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Windows'), findsNothing);
+    expect(find.text('More'), findsOneWidget);
+    await tester.tap(find.text('Reports'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(DistributionPartnerRoutes.reports), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

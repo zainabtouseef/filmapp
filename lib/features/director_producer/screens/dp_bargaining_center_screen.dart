@@ -249,7 +249,9 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
   void _reload() {
     final bookings = BookingsScope.maybeOf(context);
     if (bookings == null) return;
-    setState(() => _future = bookings.negotiations());
+    setState(() {
+      _future = bookings.negotiations();
+    });
   }
 
   String _statusLabel(String status, String state) {
