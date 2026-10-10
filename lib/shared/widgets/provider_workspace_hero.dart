@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'status_chip.dart';
+import 'cine_v3_motion.dart';
 
 class ProviderHeroFact {
   final IconData icon;
@@ -84,30 +85,61 @@ class ProviderWorkspaceHero extends StatelessWidget {
           secondaryIcon: secondaryIcon,
           onSecondary: onSecondary,
         );
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.appColors.card,
-              border: Border.all(color: context.appColors.border),
-            ),
-            child: compact
-                ? Column(
-                    children: [
-                      AspectRatio(aspectRatio: 16 / 9, child: image),
-                      details,
-                    ],
-                  )
-                : SizedBox(
-                    height: 342,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 6, child: image),
-                        Expanded(flex: 4, child: details),
-                      ],
+        final content = compact
+            ? Column(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: CineV3NetflixZoom(
+                      webScale: 1.06,
+                      mobileScale: 1.025,
+                      child: image,
                     ),
                   ),
+                  details,
+                ],
+              )
+            : SizedBox(
+                height: 342,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: CineV3NetflixZoom(
+                        webScale: 1.06,
+                        mobileScale: 1.025,
+                        child: image,
+                      ),
+                    ),
+                    Expanded(flex: 4, child: details),
+                  ],
+                ),
+              );
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: context.appColors.card,
+            border: Border.all(color: context.appColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: context.appColors.shadow.withValues(alpha: .22),
+                blurRadius: 34,
+                spreadRadius: -22,
+                offset: const Offset(0, 16),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              const Positioned.fill(child: CineV3AtmosphericWash()),
+              const Positioned.fill(
+                child: Opacity(opacity: .62, child: CineV3BubbleField(count: 7)),
+              ),
+              const Positioned.fill(child: CineV3LightSweep()),
+              content,
+            ],
           ),
         );
       },

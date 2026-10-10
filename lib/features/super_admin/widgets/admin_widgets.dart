@@ -16,6 +16,7 @@ import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_section_header.dart' as shared_layout;
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../../../shared/sections/admin_filter_bar.dart' as shared_filters;
 import '../../../shared/widgets/premium_data_table.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -205,73 +206,17 @@ class _AdminRouteHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final heading = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 22,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: colors.goldMid,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    _eyebrow,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.micro.copyWith(
-                      color: colors.goldDark,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Text(
-              title,
-              maxLines: constraints.maxWidth < 440 ? 2 : 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.heroSerifNumber.copyWith(
-                color: colors.textPrimary,
-                fontSize: constraints.maxWidth < 440 ? 26 : 30,
-              ),
-            ),
-            const SizedBox(height: 5),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: Text(
-                subtitle,
-                style: AppTextStyles.bodyMuted.copyWith(
-                  color: colors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        );
-        if (constraints.maxWidth < 660) return heading;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: heading),
-            const SizedBox(width: 16),
-            const AdminStatusBadge(
-              label: 'Super Admin',
-              icon: Icons.admin_panel_settings_outlined,
-              tone: AdminDecisionTone.warning,
-            ),
-          ],
-        );
-      },
+    return CineV3PageHero(
+      title: title,
+      kicker: _eyebrow,
+      subtitle: subtitle,
+      actions: const [
+        AdminStatusBadge(
+          label: 'Super Admin',
+          icon: Icons.admin_panel_settings_outlined,
+          tone: AdminDecisionTone.warning,
+        ),
+      ],
     );
   }
 

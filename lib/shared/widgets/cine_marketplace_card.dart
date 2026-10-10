@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
@@ -26,6 +27,7 @@ class CineMarketplaceCard extends StatefulWidget {
   final bool busy;
   final bool featured;
   final VoidCallback? onProfile;
+  final VoidCallback? onQuickView;
   final VoidCallback? onRequest;
   final Future<bool> Function()? onShortlist;
 
@@ -47,6 +49,7 @@ class CineMarketplaceCard extends StatefulWidget {
     required this.busy,
     required this.featured,
     this.onProfile,
+    this.onQuickView,
     this.onRequest,
     this.onShortlist,
   });
@@ -58,84 +61,298 @@ class CineMarketplaceCard extends StatefulWidget {
 class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
   bool _shortlisted = false;
   bool _savingShortlist = false;
+  bool _hovered = false;
+  bool _mobileExpanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final accent = cineMarketplaceKindColor(context, widget.kind);
-    return CardShell(
-      variant: CardVariant.media,
-      padding: EdgeInsets.zero,
-      radius: 26,
-      selected: _shortlisted,
-      tone: cineToneFromColor(context, accent),
-      semanticLabel: '${widget.title}, ${widget.category}',
-      child: Stack(
+    final mobile = MediaQuery.sizeOf(context).width < 700;
+    final active = _hovered || _mobileExpanded;
+    final verified = const {'approved', 'verified', 'published', 'active'}
+        .contains(widget.verificationStatus.toLowerCase());
+    final source = widget.imageUrl?.trim() ?? '';
+
+    Widget art = _MarketplaceFallback(kind: widget.kind, accent: accent);
+    if (source.isNotEmpty) {
+      art = Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: 5,
-              decoration: BoxDecoration(
-                color: accent,
-                boxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.25),
-                    blurRadius: 14,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 5),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final horizontal = constraints.maxWidth >= 720;
-                if (!horizontal) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _MarketplaceVisual(
-                        imageUrl: widget.imageUrl,
-                        title: widget.title,
-                        kind: widget.kind,
-                        category: widget.category,
-                        status: widget.verificationStatus,
-                        featured: false,
-                      ),
-                      _body(context, accent, compact: true),
-                    ],
-                  );
-                }
-                return SizedBox(
-                  height: widget.featured ? 400 : 370,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        flex: widget.featured ? 11 : 9,
-                        child: _MarketplaceVisual(
-                          imageUrl: widget.imageUrl,
-                          title: widget.title,
-                          kind: widget.kind,
-                          category: widget.category,
-                          status: widget.verificationStatus,
-                          featured: widget.featured,
-                        ),
-                      ),
-                      Expanded(
-                        flex: widget.featured ? 10 : 11,
-                        child: _body(context, accent, compact: false),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+          art,
+          Image.network(
+            source,
+            webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+            fit: BoxFit.cover,
+            alignment: {'actor', 'model', 'influencer'}.contains(widget.kind)
+                ? Alignment.topCenter
+                : Alignment.center,
+            filterQuality: FilterQuality.medium,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           ),
         ],
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: kIsWeb
+            ? null
+            : () => setState(() => _mobileExpanded = !_mobileExpanded),
+        child: CardShell(
+          variant: CardVariant.media,
+          padding: EdgeInsets.zero,
+          radius: 22,
+          selected: _shortlisted,
+          tone: cineToneFromColor(context, accent),
+          semanticLabel: '${widget.title}, ${widget.category}',
+          child: SizedBox(
+            height: mobile ? 420 : (widget.featured ? 500 : 470),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                art,
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: colors.isLight
+                          ? [
+                              Colors.black.withValues(alpha: .02),
+                              Colors.black.withValues(alpha: .08),
+                              Colors.black.withValues(alpha: .72),
+                              Colors.black.withValues(alpha: .93),
+                            ]
+                          : [
+                              Colors.black.withValues(alpha: .04),
+                              Colors.black.withValues(alpha: .16),
+                              Colors.black.withValues(alpha: .72),
+                              Colors.black.withValues(alpha: .95),
+                            ],
+                      stops: const [0, .42, .72, 1],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  top: 12,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          CineStatusBadge(
+                            label: widget.rating > 0
+                                ? widget.rating.toStringAsFixed(1)
+                                : widget.category,
+                            tone: CineTone.premium,
+                            icon: widget.rating > 0
+                                ? Icons.star_rounded
+                                : cineMarketplaceKindIcon(widget.kind),
+                            showDot: false,
+                          ),
+                          if (verified)
+                            const CineStatusBadge(
+                              label: 'Verified',
+                              tone: CineTone.positive,
+                              icon: Icons.verified_rounded,
+                              showDot: false,
+                            ),
+                        ],
+                      ),
+                      const Spacer(),
+                      if (widget.onShortlist != null)
+                        Material(
+                          color: Colors.black.withValues(alpha: .28),
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            tooltip: _shortlisted
+                                ? 'Remove from shortlist'
+                                : 'Add to shortlist',
+                            onPressed: widget.busy || _savingShortlist
+                                ? null
+                                : _toggleShortlist,
+                            icon: Icon(
+                              _shortlisted
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: _shortlisted ? colors.goldLight : Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 14,
+                  right: 14,
+                  bottom: 14,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: widget.available ? colors.success : colors.warning,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (widget.available ? colors.success : colors.warning)
+                                      .withValues(alpha: .65),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              widget.available ? 'AVAILABLE' : 'CHECK AVAILABILITY',
+                              style: AppTextStyles.micro.copyWith(
+                                color: widget.available
+                                    ? const Color(0xFFA8E0C0)
+                                    : const Color(0xFFE8D08E),
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            widget.rateLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.smallMeta.copyWith(
+                              color: colors.goldLight,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: Colors.white,
+                          fontFamily: 'Georgia',
+                          fontSize: mobile ? 21 : (widget.featured ? 27 : 23),
+                          fontWeight: FontWeight.w700,
+                          height: 1.04,
+                          shadows: const [Shadow(color: Colors.black, blurRadius: 10)],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.subtitle.trim().isEmpty
+                            ? widget.category
+                            : widget.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.smallMeta.copyWith(
+                          color: Colors.white.withValues(alpha: .76),
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined,
+                              color: Colors.white.withValues(alpha: .72), size: 14),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              widget.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.smallMeta.copyWith(
+                                color: Colors.white.withValues(alpha: .78),
+                              ),
+                            ),
+                          ),
+                          if (widget.trustScore != null)
+                            Text(
+                              'Trust ${widget.trustScore}',
+                              style: AppTextStyles.smallMeta.copyWith(
+                                color: Colors.white.withValues(alpha: .78),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 380),
+                        curve: const Cubic(.2, .9, .25, 1),
+                        height: active ? 44 : 0,
+                        margin: EdgeInsets.only(top: active ? 10 : 0),
+                        child: AnimatedOpacity(
+                          opacity: active ? 1 : 0,
+                          duration: const Duration(milliseconds: 260),
+                          child: Row(
+                            children: [
+                              if (widget.onQuickView != null) ...[
+                                SizedBox(
+                                  width: 40,
+                                  child: OutlinedButton(
+                                    onPressed: widget.busy ? null : widget.onQuickView,
+                                    style: OutlinedButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      foregroundColor: Colors.white,
+                                      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
+                                      backgroundColor: Colors.black.withValues(alpha: .22),
+                                    ),
+                                    child: const Icon(Icons.visibility_outlined, size: 17),
+                                  ),
+                                ),
+                                const SizedBox(width: 7),
+                              ],
+                              if (widget.onProfile != null)
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: widget.busy ? null : widget.onProfile,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: BorderSide(color: Colors.white.withValues(alpha: .35)),
+                                      backgroundColor: Colors.black.withValues(alpha: .22),
+                                    ),
+                                    child: const Text('Profile'),
+                                  ),
+                                ),
+                              if (widget.onProfile != null && widget.onRequest != null)
+                                const SizedBox(width: 7),
+                              if (widget.onRequest != null)
+                                Expanded(
+                                  child: FilledButton(
+                                    onPressed: widget.busy ? null : widget.onRequest,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: colors.goldMid,
+                                      foregroundColor: colors.onGold,
+                                    ),
+                                    child: const Text('Request'),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -277,10 +494,16 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              if (widget.onQuickView != null)
+                OutlinedButton.icon(
+                  onPressed: widget.busy ? null : widget.onQuickView,
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  label: const Text('Quick view'),
+                ),
               OutlinedButton.icon(
                 onPressed: widget.busy ? null : widget.onProfile,
-                icon: const Icon(Icons.person_search_outlined, size: 18),
-                label: const Text('View profile'),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: const Text('Full profile'),
               ),
               FilledButton.icon(
                 onPressed: widget.busy ? null : widget.onRequest,
@@ -321,34 +544,22 @@ class CineMarketplaceResults extends StatelessWidget {
     if (cards.isEmpty) return const SizedBox.shrink();
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 860 || cards.length == 1) {
-          return Column(
-            children: [
-              for (var index = 0; index < cards.length; index++) ...[
-                cards[index],
-                if (index != cards.length - 1) const SizedBox(height: 12),
-              ],
-            ],
-          );
-        }
-        final supporting = cards.skip(1).toList();
-        final gap = 14.0;
-        final width = (constraints.maxWidth - gap) / 2;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        final width = constraints.maxWidth;
+        final columns = width >= 1320
+            ? 4
+            : width >= 940
+                ? 3
+                : width >= 620
+                    ? 2
+                    : 1;
+        const gap = 14.0;
+        final cardWidth = (width - (columns - 1) * gap) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: 18,
           children: [
-            cards.first,
-            if (supporting.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: gap,
-                runSpacing: gap,
-                children: [
-                  for (final card in supporting)
-                    SizedBox(width: width, child: card),
-                ],
-              ),
-            ],
+            for (final card in cards)
+              SizedBox(width: cardWidth, child: card),
           ],
         );
       },

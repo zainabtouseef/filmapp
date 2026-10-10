@@ -6,6 +6,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../models/role_portal_models.dart';
 
 class PortalPanel extends StatelessWidget {
@@ -278,25 +279,10 @@ class PortalSearchFilterBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final filter in filters)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => onFilterChanged(filter),
-                      child: StatusChip(
-                        label: filter,
-                        color: selectedFilter == filter
-                            ? colors.goldMid
-                            : colors.textSecondary,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+          CineV3SlidingFilterBar(
+            labels: filters,
+            selected: selectedFilter,
+            onChanged: onFilterChanged,
           ),
         ],
       ),

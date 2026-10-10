@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../cards/cine_card_system.dart';
+import '../widgets/cine_v3_motion.dart';
 
 class AdminScreenHeading extends StatelessWidget {
   final String title;
@@ -14,16 +15,10 @@ class AdminScreenHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.left,
-        style: AppTextStyles.screenTitle.copyWith(color: colors.textPrimary),
-      ),
+    return CineV3PageHero(
+      title: title,
+      kicker: 'CINECONNECT · LIVE WORKSPACE',
+      subtitle: 'Live production data, actions and collaboration in one cinematic workspace.',
     );
   }
 }

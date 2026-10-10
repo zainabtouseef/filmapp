@@ -6,6 +6,7 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../formatters/cine_format.dart';
+import '../widgets/cine_v3_motion.dart';
 
 enum CardVariant { standard, compact, hero, section, soft, alert, media }
 
@@ -102,7 +103,7 @@ class _CardShellState extends State<CardShell> {
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final tone = cineToneColor(context, widget.tone);
     final interactive = widget.onTap != null;
-    final elevated = _hovered && interactive;
+    final elevated = _hovered;
     final surface = switch (widget.variant) {
       CardVariant.soft => colors.softSurface,
       CardVariant.media => colors.surface,
@@ -116,39 +117,94 @@ class _CardShellState extends State<CardShell> {
                 ? Color.lerp(colors.border, tone, 0.2)!
                 : colors.border;
 
+    final hoveredScale = widget.variant == CardVariant.media
+        ? 1.065
+        : widget.variant == CardVariant.hero
+            ? 1.025
+            : 1.018;
+    final selectedGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: colors.isLight
+          ? [
+              Colors.white.withValues(alpha: .98),
+              const Color(0xFFE9F5FD).withValues(alpha: .92),
+              const Color(0xFFF0EAFD).withValues(alpha: .88),
+              const Color(0xFFFFF0DC).withValues(alpha: .9),
+            ]
+          : [
+              Colors.white.withValues(alpha: .07),
+              colors.infoBlue.withValues(alpha: .11),
+              colors.infoPurple.withValues(alpha: .10),
+              colors.goldMid.withValues(alpha: .08),
+            ],
+    );
+    final regularGradient = widget.variant == CardVariant.soft
+        ? null
+        : colors.cardGradient;
+
     final content = AnimatedScale(
-      scale: _pressed ? 0.995 : 1,
-      duration: reduceMotion ? Duration.zero : AppDurations.press,
-      curve: AppDurations.standardCurve,
+      scale: _pressed
+          ? 0.992
+          : elevated
+              ? hoveredScale
+              : 1,
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 380),
+      curve: const Cubic(.2, .9, .25, 1),
       child: AnimatedContainer(
         duration: reduceMotion ? Duration.zero : AppDurations.hover,
         curve: AppDurations.standardCurve,
         constraints: BoxConstraints(minHeight: widget.minHeight ?? 0),
-        transform: Matrix4.translationValues(0, elevated ? -1.5 : 0, 0),
+        transform: Matrix4.translationValues(0, elevated ? -3.0 : 0, 0),
         decoration: BoxDecoration(
-          color: surface,
+          color: widget.selected
+              ? null
+              : regularGradient == null
+                  ? surface
+                  : null,
+          gradient: widget.selected ? selectedGradient : regularGradient,
           borderRadius: BorderRadius.circular(_radius),
           border: Border.all(
             color: borderColor,
-            width: _focused || widget.selected ? 1.4 : 1,
+            width: _focused || widget.selected || elevated ? 1.35 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: colors.shadow.withValues(
                 alpha: colors.isLight
-                    ? (elevated ? 0.1 : 0.055)
-                    : (elevated ? 0.32 : 0.22),
+                    ? (elevated ? 0.18 : 0.07)
+                    : (elevated ? 0.48 : 0.26),
               ),
-              blurRadius: elevated ? 20 : 14,
-              spreadRadius: elevated ? -8 : -7,
-              offset: Offset(0, elevated ? 9 : 6),
+              blurRadius: elevated ? 30 : 16,
+              spreadRadius: elevated ? -12 : -8,
+              offset: Offset(0, elevated ? 14 : 7),
             ),
+            if (elevated || widget.selected)
+              BoxShadow(
+                color: colors.goldGlow,
+                blurRadius: elevated ? 28 : 18,
+                spreadRadius: -8,
+              ),
           ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_radius - 1),
           child: Stack(
             children: [
+              if (widget.variant == CardVariant.hero)
+                const Positioned.fill(
+                  child: Opacity(
+                    opacity: .55,
+                    child: CineV3BubbleField(count: 5),
+                  ),
+                ),
+              if (widget.variant == CardVariant.hero || widget.selected || elevated)
+                Positioned.fill(
+                  child: CineV3LightSweep(
+                    duration: const Duration(seconds: 8),
+                    opacity: elevated ? .22 : .14,
+                  ),
+                ),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -173,7 +229,13 @@ class _CardShellState extends State<CardShell> {
                     width: 3,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3),
-                      color: tone,
+                      gradient: widget.selected || elevated
+                          ? colors.goldGradient
+                          : null,
+                      color: widget.selected || elevated ? null : tone,
+                      boxShadow: widget.selected || elevated
+                          ? [BoxShadow(color: colors.goldGlow, blurRadius: 10)]
+                          : null,
                     ),
                   ),
                 ),
@@ -186,7 +248,18 @@ class _CardShellState extends State<CardShell> {
     return Semantics(
       button: interactive,
       label: widget.semanticLabel,
-      child: content,
+      child: Listener(
+        onPointerDown: (_) {
+          if (!_pressed) setState(() => _pressed = true);
+        },
+        onPointerUp: (_) {
+          if (_pressed) setState(() => _pressed = false);
+        },
+        onPointerCancel: (_) {
+          if (_pressed) setState(() => _pressed = false);
+        },
+        child: content,
+      ),
     );
   }
 }

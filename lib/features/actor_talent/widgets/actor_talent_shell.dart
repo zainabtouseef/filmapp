@@ -16,6 +16,7 @@ import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../../../shared/widgets/cinematic_backdrop.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -314,7 +315,19 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1180),
-                        child: widget.child,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CineV3PageHero(
+                              title: widget.title,
+                              kicker: widget.portalLabel,
+                              subtitle:
+                                  'Cinematic workspace with live actions, production data and collaboration.',
+                            ),
+                            const SizedBox(height: 14),
+                            widget.child,
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -503,36 +516,11 @@ class _ActorRouteHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                eyebrowBuilder?.call(route) ?? _eyebrow,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.micro.copyWith(
-                  color: colors.goldDark,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heroSerifNumber.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 30,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
+    return CineV3PageHero(
+      title: title,
+      kicker: _eyebrow,
+      subtitle: 'Casting-ready profile, opportunities, bookings and production collaboration.',
+      actions: [
         StatusChip(
           label: badgeLabel,
           icon: icon,

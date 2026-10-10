@@ -9,26 +9,12 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../general_public/routes/general_public_routes.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
-import '../widgets/dp_candidate_card.dart';
 import '../widgets/dp_empty_state.dart';
 import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
-import '../widgets/dp_status_chip.dart';
+import '../widgets/dp_marketplace_v3.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
-import '../../../shared/widgets/cine_marketplace_card.dart';
-
-const _categoryKeys = [
-  'All',
-  'Actors',
-  'Models',
-  'Influencers',
-  'Crew',
-  'Locations',
-  'Media & Equipment',
-  'Agencies',
-  'Distribution',
-];
 
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
   final String? initialCategory;
@@ -50,17 +36,8 @@ class DPMarketplaceDiscoveryScreen extends StatefulWidget {
 class _DPMarketplaceDiscoveryScreenState
     extends State<DPMarketplaceDiscoveryScreen> {
   late String _category = _normalizeCategory(widget.initialCategory);
-  bool _verifiedOnly = false;
-  bool _newOnly = false;
-  final _search = TextEditingController();
   String? _projectId;
   Future<List<DpCandidate>>? _candidatesFuture;
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
 
   @override
   void didChangeDependencies() {
@@ -70,9 +47,6 @@ class _DPMarketplaceDiscoveryScreenState
   }
 
   Future<List<DpCandidate>> _load() async {
-    if (!_categoryHasLiveFeed(_category)) {
-      return const <DpCandidate>[];
-    }
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) {
       throw const ApiException(
@@ -82,270 +56,110 @@ class _DPMarketplaceDiscoveryScreenState
     }
     if (widget.publicBuyerMode) {
       final listings = await auth.marketplaceListings(
-        type: _publicListingType(_category),
-        query: _search.text.trim(),
+        query: null,
+        type: null,
       );
       return listings.map((item) => item.toCandidate()).toList();
     }
-    final discovery = await auth.directorDiscovery(category: _category);
+    final discovery = await auth.directorDiscovery(category: 'All');
     return discovery.items.map((item) => item.toCandidate()).toList();
   }
 
-  String? _publicListingType(String category) {
-    return switch (category) {
-      'Actors' => 'actor',
-      'Models' => 'model',
-      'Influencers' => 'influencer',
-      'Locations' => 'location',
-      'Media & Equipment' => 'equipment',
-      'Agencies' => 'agency',
-      _ => null,
-    };
-  }
-
-  bool _categoryHasLiveFeed(String category) {
-    return category == 'All' ||
-        category == 'Actors' ||
-        category == 'Models' ||
-        category == 'Influencers' ||
-        category == 'Crew' ||
-        category == 'Locations' ||
-        category == 'Media & Equipment' ||
-        category == 'Agencies' ||
-        category == 'Distribution';
-  }
-
-  bool _matchesFilters(DpCandidate candidate) {
-    final categoryMatch = _category == 'All' || candidate.category == _category;
-    final trustMatch = (!_verifiedOnly || candidate.verified) &&
-        (!_newOnly || candidate.isNew);
-    final query = _search.text.trim().toLowerCase();
-    final queryMatch = query.isEmpty ||
-        candidate.name.toLowerCase().contains(query) ||
-        candidate.city.toLowerCase().contains(query) ||
-        candidate.category.toLowerCase().contains(query) ||
-        candidate.rateRange.toLowerCase().contains(query) ||
-        candidate.notes.toLowerCase().contains(query) ||
-        candidate.skills.any((skill) => skill.toLowerCase().contains(query));
-    return categoryMatch && trustMatch && queryMatch;
-  }
-
-  void _setCategory(String category) {
-    setState(() {
-      _category = _normalizeCategory(category);
-      _candidatesFuture = _load();
-    });
-  }
-
   String _normalizeCategory(String? category) {
-    return category == 'Talent' ? 'Actors' : (category ?? 'All');
+    if (category == null || category.trim().isEmpty) return 'All';
+    final normalized = dpMarketplaceCanonicalCategory(
+      category == 'Talent' ? 'Actors' : category,
+    );
+    return dpMarketplaceCategories.contains(normalized) ? normalized : 'All';
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = widget.publicBuyerMode
-        ? const ['All', 'Actors', 'Models', 'Influencers']
-        : _categoryKeys;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DPPageHeader(
-          eyebrow: widget.publicBuyerMode
-              ? 'Book actors, models and influencers'
-              : _categoryHasLiveFeed(_category)
-                  ? 'Live marketplace listings'
-                  : 'Backend feed pending for $_category',
-          title: widget.publicBuyerMode
-              ? 'Find talent for your campaign'
-              : 'Marketplace',
-          trailing: _MarketplaceHeaderActions(
-            showAudition: !widget.publicBuyerMode,
-            onCreateAudition: _openAuditionBuilder,
-            onFilters: () =>
-                Navigator.pushNamed(context, DirectorProducerRoutes.filters),
-          ),
-        ),
-        const SizedBox(height: 14),
-        _MarketplaceSearchBar(
-          controller: _search,
-          hintText: widget.publicBuyerMode
-              ? 'Search actors, models, influencers…'
-              : null,
-          onChanged: () => setState(() {}),
-          onFilters: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.filters),
+    return FutureBuilder<List<DpCandidate>>(
+      future: _candidatesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const MarketplaceLoadingState();
+        }
+        if (snapshot.hasError) {
+          return MarketplaceErrorStateV3(
+            message: _friendlyError(snapshot.error),
+            onRetry: () => setState(() => _candidatesFuture = _load()),
+          );
+        }
+        return DPMarketplaceV3(
+          candidates: snapshot.data ?? const <DpCandidate>[],
+          initialCategory: _category,
+          publicBuyerMode: widget.publicBuyerMode,
+          onCreateAudition: _openAuditionBuilder,
           onSaveSearch: _saveCurrentSearch,
-        ),
-        const SizedBox(height: 10),
-        if (!widget.publicBuyerMode && _projectId != null) ...[
-          DPGlassCard(
-            padding: const EdgeInsets.all(11),
-            child: Row(
-              children: [
-                const Icon(Icons.account_tree_outlined, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: dpText(
+          onOpenShortlist: widget.publicBuyerMode
+              ? () => _showSnack(
+                    'Saved lists for customer campaigns are coming next.',
+                  )
+              : () => Navigator.pushNamed(
                     context,
-                    'Discover is scoped to ${_projectTitle(_projectId)}. Returning from profiles keeps these filters alive.',
-                    strong: true,
+                    DirectorProducerRoutes.shortlist,
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final category in categories)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: DpDotChip(
-                    label: category,
-                    active: _category == category,
-                    onTap: () => _setCategory(category),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            DpDotChip(
-              label: 'Verified only',
-              active: _verifiedOnly,
-              onTap: () => setState(() => _verifiedOnly = !_verifiedOnly),
-            ),
-            DpDotChip(
-              label: 'New this week',
-              active: _newOnly,
-              onTap: () => setState(() => _newOnly = !_newOnly),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        FutureBuilder<List<DpCandidate>>(
-          future: _candidatesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const DPGlassCard(
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            if (snapshot.hasError) {
-              return _MarketplaceErrorState(
-                message: _friendlyError(snapshot.error),
-                onRetry: () => setState(() => _candidatesFuture = _load()),
-              );
-            }
-            final candidates = (snapshot.data ?? const <DpCandidate>[])
-                .where(_matchesFilters)
-                .toList()
-              ..sort((a, b) {
-                final verified =
-                    b.verified.toString().compareTo(a.verified.toString());
-                if (verified != 0) return verified;
-                final trust = (b.trustMetrics?.score ?? -1)
-                    .compareTo(a.trustMetrics?.score ?? -1);
-                if (trust != 0) return trust;
-                final rating = b.rating.compareTo(a.rating);
-                if (rating != 0) return rating;
-                return a.name.compareTo(b.name);
-              });
-            if (candidates.isEmpty) {
-              return DPEmptyState(
-                icon: _categoryHasLiveFeed(_category)
-                    ? Icons.manage_search_outlined
-                    : Icons.construction_outlined,
-                title: _categoryHasLiveFeed(_category)
-                    ? 'No live listings match'
-                    : 'Live $_category feed is not connected yet',
-                message: _categoryHasLiveFeed(_category)
-                    ? 'Try clearing filters or searching another city, name, or category.'
-                    : 'This portal no longer shows fake $_category records. Add the planned Director discovery endpoint to populate this category from the database.',
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CineMarketplaceResults(
-                  cards: candidates.indexed
-                      .map(
-                        (entry) => DPCandidateCard(
-                          featured: entry.$1 == 0,
-                          candidate: entry.$2,
-                          onProfile: () => Navigator.pushNamed(
-                            context,
-                            widget.publicBuyerMode
-                                ? GeneralPublicRoutes.profile
-                                : DirectorProducerRoutes.profile,
-                            arguments: {
-                              'candidateId': widget.publicBuyerMode
-                                  ? entry.$2.marketplaceListingId ??
-                                      entry.$2.profileId
-                                  : entry.$2.profileId,
-                              'type': entry.$2.category,
-                              if (!widget.publicBuyerMode)
-                                'projectId': _projectId,
-                            },
-                          ),
-                          onRequest: entry.$2.marketplaceListingId == null
-                              ? () => _showProviderActionPending(entry.$2)
-                              : () async {
-                                  final isPublicBuyer =
-                                      AuthScope.maybeOf(context)
-                                              ?.user
-                                              ?.primaryRole
-                                              ?.code ==
-                                          'general_public';
-                                  if (!isPublicBuyer &&
-                                      !await ensureKycApproved(context)) {
-                                    return;
-                                  }
-                                  if (!context.mounted) return;
-                                  Navigator.pushNamed(
-                                    context,
-                                    widget.publicBuyerMode
-                                        ? GeneralPublicRoutes.bookingRequest
-                                        : DirectorProducerRoutes.bookingRequest,
-                                    arguments: {
-                                      'candidateId':
-                                          entry.$2.marketplaceListingId,
-                                      if (!widget.publicBuyerMode)
-                                        'projectId': _projectId,
-                                      'category': entry.$2.category,
-                                    },
-                                  );
-                                },
-                          onShortlist: widget.publicBuyerMode
-                              ? () async {
-                                  _showSnack(
-                                    'Saved lists for customer campaigns are coming next. Use Request to send a booking now.',
-                                  );
-                                  return false;
-                                }
-                              : entry.$2.marketplaceListingId == null
-                                  ? () async {
-                                      _showProviderActionPending(entry.$2);
-                                      return false;
-                                    }
-                                  : () => _shortlistCandidate(entry.$2),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
+          onCategoryChanged: (category) => _category = category,
+          onProfile: _openCandidateProfile,
+          onOffer: _openCandidateOffer,
+          onFavourite: _favouriteCandidate,
+        );
+      },
     );
+  }
+
+  void _openCandidateProfile(DpCandidate candidate) {
+    Navigator.pushNamed(
+      context,
+      widget.publicBuyerMode
+          ? GeneralPublicRoutes.profile
+          : DirectorProducerRoutes.profile,
+      arguments: {
+        'candidateId': widget.publicBuyerMode
+            ? candidate.marketplaceListingId ?? candidate.profileId
+            : candidate.profileId,
+        'type': candidate.category,
+        if (!widget.publicBuyerMode) 'projectId': _projectId,
+      },
+    );
+  }
+
+  Future<void> _openCandidateOffer(DpCandidate candidate) async {
+    if (candidate.marketplaceListingId == null) {
+      _showProviderActionPending(candidate);
+      return;
+    }
+    final isPublicBuyer =
+        AuthScope.maybeOf(context)?.user?.primaryRole?.code == 'general_public';
+    if (!isPublicBuyer && !await ensureKycApproved(context)) return;
+    if (!mounted) return;
+    Navigator.pushNamed(
+      context,
+      widget.publicBuyerMode
+          ? GeneralPublicRoutes.bookingRequest
+          : DirectorProducerRoutes.bookingRequest,
+      arguments: {
+        'candidateId': candidate.marketplaceListingId,
+        if (!widget.publicBuyerMode) 'projectId': _projectId,
+        'category': candidate.category,
+      },
+    );
+  }
+
+  Future<bool> _favouriteCandidate(DpCandidate candidate) async {
+    if (widget.publicBuyerMode) {
+      _showSnack(
+        'Saved lists for customer campaigns are coming next. This profile is saved for this session.',
+      );
+      return true;
+    }
+    if (candidate.marketplaceListingId == null) {
+      _showProviderActionPending(candidate);
+      return false;
+    }
+    return _shortlistCandidate(candidate);
   }
 
   Future<void> _saveCurrentSearch() async {
@@ -363,6 +177,7 @@ class _DPMarketplaceDiscoveryScreenState
           'Influencers' => 'influencer',
           'Locations' => 'location',
           'Media & Equipment' => 'equipment',
+          'Equipment' => 'equipment',
           'Agencies' => 'agency',
           _ => null,
         },
@@ -688,61 +503,6 @@ class _ShortlistTarget {
   const _ShortlistTarget(this.project, this.requirement);
 }
 
-class _MarketplaceHeaderActions extends StatelessWidget {
-  final VoidCallback onCreateAudition;
-  final VoidCallback onFilters;
-  final bool showAudition;
-
-  const _MarketplaceHeaderActions({
-    required this.onCreateAudition,
-    required this.onFilters,
-    this.showAudition = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final stack = constraints.maxWidth < 310;
-        final buttons = [
-          if (showAudition)
-            DPHolographicButton(
-              label: 'Create Audition',
-              icon: Icons.campaign_outlined,
-              onTap: onCreateAudition,
-            ),
-          DPHolographicButton(
-            label: 'Smart Filters',
-            icon: Icons.tune_rounded,
-            secondary: true,
-            onTap: onFilters,
-          ),
-        ];
-        if (stack) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final button in buttons) ...[
-                SizedBox(width: double.infinity, child: button),
-                if (button != buttons.last) const SizedBox(height: 8),
-              ],
-            ],
-          );
-        }
-        if (buttons.length == 1) return buttons.first;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: buttons.first),
-            const SizedBox(width: 8),
-            Flexible(child: buttons.last),
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _AuditionProjectPicker extends StatelessWidget {
   final List<Project> projects;
 
@@ -845,164 +605,6 @@ class _AuditionProjectPicker extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MarketplaceErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _MarketplaceErrorState({
-    required this.message,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DPGlassCard(
-      accentColor: colors.warning,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.cloud_off_outlined, color: colors.warning, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Could not load live marketplace',
-                  style: AppTextStyles.cardTitle.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  message,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Retry'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MarketplaceSearchBar extends StatelessWidget {
-  final TextEditingController controller;
-  final String? hintText;
-  final VoidCallback onChanged;
-  final VoidCallback onFilters;
-  final VoidCallback onSaveSearch;
-
-  const _MarketplaceSearchBar({
-    required this.controller,
-    this.hintText,
-    required this.onChanged,
-    required this.onFilters,
-    required this.onSaveSearch,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            decoration: BoxDecoration(
-              gradient: colors.searchGradient,
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: colors.border),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search_rounded, color: colors.goldDark, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    onChanged: (_) => onChanged(),
-                    style: AppTextStyles.smallMeta
-                        .copyWith(color: colors.textPrimary),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      hintText: hintText ?? 'Search talent, crew, locations…',
-                      hintStyle: AppTextStyles.smallMeta
-                          .copyWith(color: colors.textSecondary),
-                    ),
-                  ),
-                ),
-                if (controller.text.isNotEmpty)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      controller.clear();
-                      onChanged();
-                    },
-                    child: Icon(Icons.close_rounded,
-                        color: colors.iconMuted, size: 18),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: 'Save search',
-          child: GestureDetector(
-            onTap: onSaveSearch,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13),
-                color: colors.surface
-                    .withValues(alpha: colors.isLight ? 0.7 : 0.2),
-                border: Border.all(color: colors.border),
-              ),
-              child: Icon(Icons.bookmark_add_outlined,
-                  color: colors.icon, size: 19),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: 'Filters',
-          child: GestureDetector(
-            onTap: onFilters,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13),
-                color: colors.surface
-                    .withValues(alpha: colors.isLight ? 0.7 : 0.2),
-                border: Border.all(color: colors.border),
-              ),
-              child: Icon(Icons.tune_rounded, color: colors.icon, size: 19),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

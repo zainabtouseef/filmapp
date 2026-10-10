@@ -126,9 +126,16 @@ class DPShell extends StatelessWidget {
     final isPublicBuyer =
         AuthScope.maybeOf(context)?.user?.primaryRole?.code == 'general_public';
     final showMobileDemo =
-        MediaQuery.sizeOf(context).width < AppBreakpoints.laptop;
+        MediaQuery.sizeOf(context).width < AppBreakpoints.laptop &&
+        currentRoute != DirectorProducerRoutes.marketplace &&
+        currentRoute != DirectorProducerRoutes.discover &&
+        currentRoute != DirectorProducerRoutes.profile &&
+        currentRoute != DirectorProducerRoutes.shortlist &&
+        currentRoute != DirectorProducerRoutes.bargaining &&
+        currentRoute != DirectorProducerRoutes.cinePlanner;
     final fillsAvailableHeight =
-        currentRoute == DirectorProducerRoutes.cinePlanner;
+        currentRoute == DirectorProducerRoutes.cinePlanner ||
+        currentRoute == DirectorProducerRoutes.shortlist;
     final routedChild = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -154,10 +161,20 @@ class DPShell extends StatelessWidget {
         if (fillsAvailableHeight) Expanded(child: child) else child,
       ],
     );
-    return AdminScreenScaffold(
+    final isV3Dashboard = currentRoute == DirectorProducerRoutes.console ||
+        currentRoute == DirectorProducerRoutes.home;
+    final isMarketplace = currentRoute == DirectorProducerRoutes.marketplace ||
+        currentRoute == DirectorProducerRoutes.discover;
+    final isProfile = currentRoute == DirectorProducerRoutes.profile;
+    final isShortlist = currentRoute == DirectorProducerRoutes.shortlist;
+    final isBargaining = currentRoute == DirectorProducerRoutes.bargaining;
+    final isCinematicPortal = isV3Dashboard || isMarketplace;
+    final scaffold = AdminScreenScaffold(
       title: title,
       currentRoute: currentRoute,
       showHeading: false,
+      showKycStatusBanner:
+          !isCinematicPortal && !isProfile && !isShortlist && !isBargaining,
       scrollBody: !fillsAvailableHeight,
       floatingActionBuilder: floatingActionBuilder,
       topBarBuilder: (context, wide, onMenuTap) => _DPTopBar(
@@ -190,6 +207,26 @@ class DPShell extends StatelessWidget {
       ),
       onRouteSelected: (context, route) => Navigator.pushNamed(context, route),
       child: routedChild,
+    );
+    if (!isCinematicPortal) return scaffold;
+
+    final colors = isMarketplace
+        ? _dpMarketplacePortalColors(context.appColors)
+        : _dpV3PortalColors(context.appColors);
+    return Theme(
+      data: Theme.of(context).copyWith(
+        scaffoldBackgroundColor: colors.background,
+        canvasColor: colors.background,
+        dividerColor: colors.border,
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: colors.goldMid,
+              secondary: colors.goldLight,
+              surface: colors.surface,
+              onSurface: colors.textPrimary,
+            ),
+        extensions: <ThemeExtension<dynamic>>[colors],
+      ),
+      child: scaffold,
     );
   }
 }
@@ -809,4 +846,323 @@ bool _active(String currentRoute, String route) {
     return currentRoute == route;
   }
   return currentRoute == route || currentRoute.startsWith(route);
+}
+
+
+CineThemeColors _dpMarketplacePortalColors(CineThemeColors base) {
+  if (base.isLight) {
+    return base.copyWith(
+      background: const Color(0xFFF7F5F0),
+      surface: const Color(0xFFFFFFFF),
+      softSurface: const Color(0xFFF8F1DE),
+      elevatedSurface: const Color(0xFFFFFFFF),
+      mutedSurface: const Color(0xFFFBFAF6),
+      overlaySurface: const Color(0xFAFFFFFF),
+      card: const Color(0xFFFFFFFF),
+      textPrimary: const Color(0xFF17150E),
+      textSecondary: const Color(0xFF4A463B),
+      textTertiary: const Color(0xFF8A8475),
+      icon: const Color(0xFF4A463B),
+      iconMuted: const Color(0xFF8A8475),
+      border: const Color(0x1417150E),
+      borderMuted: const Color(0x0D17150E),
+      goldLight: const Color(0xFFEBD48F),
+      goldMid: const Color(0xFFD3B55F),
+      goldDark: const Color(0xFF9C7614),
+      goldGlow: const Color(0x40D3B55F),
+      shadow: const Color(0x2416130A),
+      success: const Color(0xFF6FBF8B),
+      warning: const Color(0xFFE0B85A),
+      infoBlue: const Color(0xFF6EA6CC),
+      infoPurple: const Color(0xFF8975C8),
+      danger: const Color(0xFFD98472),
+      onGold: const Color(0xFF1A1408),
+      porcelain: const Color(0xFFFBFAF6),
+      holographicTeal: const Color(0xFF8EC3E6),
+      holographicCyan: const Color(0xFFB7A8EC),
+      focusRing: const Color(0xFFD3B55F),
+      surfaceHighlight: const Color(0xFFFFFFFF),
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFF7F5F0), Color(0xFFF7F5F0)],
+      ),
+      glassGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFBFAF6)],
+      ),
+      searchGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFBFAF6)],
+      ),
+      activeChipGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFEBD48F), Color(0xFFD3B55F)],
+      ),
+      inactiveChipGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFBFAF6)],
+      ),
+      filterGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFBFAF6)],
+      ),
+      cardGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFBFAF6)],
+      ),
+      navGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFFFFF), Color(0xF7FFFFFF)],
+      ),
+      goldGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFEBD48F), Color(0xFFD3B55F), Color(0xFF9C7614)],
+      ),
+    );
+  }
+  return base.copyWith(
+    background: const Color(0xFF09090B),
+    surface: const Color(0xFF131316),
+    softSurface: const Color(0x211D1710),
+    elevatedSurface: const Color(0xFF17171B),
+    mutedSurface: const Color(0xFF17171B),
+    overlaySurface: const Color(0xF2141418),
+    card: const Color(0xFF131316),
+    textPrimary: const Color(0xFFF3F0E7),
+    textSecondary: const Color(0xFFC6C0B0),
+    textTertiary: const Color(0xFF8B8677),
+    icon: const Color(0xFFC6C0B0),
+    iconMuted: const Color(0xFF8B8677),
+    border: const Color(0x14FFFFFF),
+    borderMuted: const Color(0x0BFFFFFF),
+    goldLight: const Color(0xFFEDD48A),
+    goldMid: const Color(0xFFD4AF37),
+    goldDark: const Color(0xFFE5C46E),
+    goldGlow: const Color(0x38D4AF37),
+    shadow: const Color(0xB3000000),
+    success: const Color(0xFF6FBF8B),
+    warning: const Color(0xFFE0B85A),
+    infoBlue: const Color(0xFF78AFD0),
+    infoPurple: const Color(0xFFA395E6),
+    danger: const Color(0xFFD98472),
+    onGold: const Color(0xFF16120A),
+    porcelain: const Color(0xFF17171B),
+    holographicTeal: const Color(0xFF7EAAD0),
+    holographicCyan: const Color(0xFFA395E6),
+    focusRing: const Color(0xFFD4AF37),
+    surfaceHighlight: const Color(0xFF1A1A1D),
+    backgroundGradient: const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF09090B), Color(0xFF09090B)],
+    ),
+    glassGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF17171B), Color(0xFF131316)],
+    ),
+    searchGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF17171B), Color(0xFF131316)],
+    ),
+    activeChipGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFEDD48A), Color(0xFFD4AF37)],
+    ),
+    inactiveChipGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF17171B), Color(0xFF131316)],
+    ),
+    filterGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF17171B), Color(0xFF131316)],
+    ),
+    cardGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF17171B), Color(0xFF131316)],
+    ),
+    navGradient: const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF141417), Color(0xFF101012)],
+    ),
+    goldGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFEDD48A), Color(0xFFD4AF37), Color(0xFFE5C46E)],
+    ),
+  );
+}
+
+CineThemeColors _dpV3PortalColors(CineThemeColors base) {
+  if (base.isLight) {
+    return base.copyWith(
+      background: const Color(0xFFF5F3EE),
+      surface: const Color(0xFFFAF8F3),
+      softSurface: const Color(0xFFF8F1DE),
+      elevatedSurface: const Color(0xFFFFFFFF),
+      mutedSurface: const Color(0xFFF3E8CB),
+      overlaySurface: const Color(0xFAFFFFFF),
+      card: const Color(0xFFFFFFFF),
+      textPrimary: const Color(0xFF17150E),
+      textSecondary: const Color(0xFF4A4539),
+      textTertiary: const Color(0xFF857F6E),
+      icon: const Color(0xFF4A4539),
+      iconMuted: const Color(0xFF857F6E),
+      border: const Color(0x1717150E),
+      borderMuted: const Color(0x0D17150E),
+      goldLight: const Color(0xFFE9D08A),
+      goldMid: const Color(0xFFD3B55F),
+      goldDark: const Color(0xFF9C7614),
+      goldGlow: const Color(0x339C7614),
+      shadow: const Color(0x2616130A),
+      success: const Color(0xFF2F7A4C),
+      warning: const Color(0xFFA66A14),
+      infoBlue: const Color(0xFF2F6690),
+      infoPurple: const Color(0xFF6150A8),
+      danger: const Color(0xFFB0402F),
+      onGold: const Color(0xFF1A1408),
+      porcelain: const Color(0xFFFAF8F3),
+      holographicTeal: const Color(0xFF8EC3E6),
+      holographicCyan: const Color(0xFFB7A8EC),
+      focusRing: const Color(0xFF9C7614),
+      surfaceHighlight: const Color(0xFFFFFFFF),
+      backgroundGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFF5F3EE), Color(0xFFF5F3EE)],
+      ),
+      glassGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFAF8F3)],
+      ),
+      searchGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFAF8F3), Color(0xFFFFFFFF)],
+      ),
+      activeChipGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFF8F1DE), Color(0xFFF3E8CB)],
+      ),
+      inactiveChipGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFAF8F3)],
+      ),
+      filterGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFAF8F3)],
+      ),
+      cardGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFAF8F3)],
+      ),
+      navGradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFFFFF), Color(0xFFFAF8F3)],
+      ),
+      goldGradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFE9D08A), Color(0xFFD3B55F), Color(0xFF9C7614)],
+      ),
+    );
+  }
+  return base.copyWith(
+    background: const Color(0xFF070708),
+    surface: const Color(0xFF161618),
+    softSurface: const Color(0x211D1710),
+    elevatedSurface: const Color(0xFF111113),
+    mutedSurface: const Color(0xFF161618),
+    overlaySurface: const Color(0xF2111113),
+    card: const Color(0xFF111113),
+    textPrimary: const Color(0xFFF4F1E8),
+    textSecondary: const Color(0xFFC7C1B1),
+    textTertiary: const Color(0xFF8C8778),
+    icon: const Color(0xFFC7C1B1),
+    iconMuted: const Color(0xFF8C8778),
+    border: const Color(0x14FFFFFF),
+    borderMuted: const Color(0x0BFFFFFF),
+    goldLight: const Color(0xFFF0D78C),
+    goldMid: const Color(0xFFD4AF37),
+    goldDark: const Color(0xFFE6C46C),
+    goldGlow: const Color(0x38D4AF37),
+    shadow: const Color(0xB3000000),
+    success: const Color(0xFF6CB887),
+    warning: const Color(0xFFDDA75A),
+    infoBlue: const Color(0xFF7EAAD0),
+    infoPurple: const Color(0xFFA395E6),
+    danger: const Color(0xFFE07F6D),
+    onGold: const Color(0xFF15110A),
+    porcelain: const Color(0xFF161618),
+    holographicTeal: const Color(0xFF7EAAD0),
+    holographicCyan: const Color(0xFFA395E6),
+    focusRing: const Color(0xFFD4AF37),
+    surfaceHighlight: const Color(0xFF1A1A1D),
+    backgroundGradient: const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF070708), Color(0xFF070708)],
+    ),
+    glassGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF161618), Color(0xFF111113)],
+    ),
+    searchGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF161618), Color(0xFF111113)],
+    ),
+    activeChipGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0x331D1710), Color(0x3DD4AF37)],
+    ),
+    inactiveChipGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF161618), Color(0xFF111113)],
+    ),
+    filterGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF161618), Color(0xFF111113)],
+    ),
+    cardGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF161618), Color(0xFF111113)],
+    ),
+    navGradient: const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF111113), Color(0xFF0D0D0F)],
+    ),
+    goldGradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFF0D78C), Color(0xFFD4AF37), Color(0xFFE6C46C)],
+    ),
+  );
 }

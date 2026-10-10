@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/cinematic_backdrop.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/dark_outline_button.dart';
@@ -874,40 +875,71 @@ class CoreChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: selected
-              ? colors.activeChipGradient
-              : colors.inactiveChipGradient,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: selected ? colors.goldMid : colors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon,
-                  size: 16,
-                  color: selected ? colors.goldDark : colors.iconMuted),
-              const SizedBox(width: 7),
-            ],
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180),
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
-                  color: selected ? colors.goldDark : colors.textSecondary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+    return CineV3NetflixZoom(
+      webScale: selected ? 1.05 : 1.035,
+      mobileScale: selected ? 1.025 : 1.015,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 320),
+          curve: const Cubic(.2, .9, .25, 1),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? colors.goldGradient
+                : colors.inactiveChipGradient,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: selected ? colors.goldMid : colors.border,
             ),
-          ],
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: colors.goldGlow,
+                      blurRadius: 18,
+                      spreadRadius: -4,
+                    ),
+                  ]
+                : null,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (selected)
+                const Positioned.fill(
+                  child: CineV3LightSweep(
+                    duration: Duration(milliseconds: 1500),
+                    opacity: .42,
+                  ),
+                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 16,
+                      color: selected ? colors.onGold : colors.iconMuted,
+                    ),
+                    const SizedBox(width: 7),
+                  ],
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(
+                        color: selected ? colors.onGold : colors.textSecondary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

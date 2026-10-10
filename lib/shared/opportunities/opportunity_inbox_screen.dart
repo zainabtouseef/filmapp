@@ -309,13 +309,12 @@ class _OpportunityRoleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final alreadyApplied = role.applicationStatus != null;
-    return Container(
+    return CardShell(
+      variant: CardVariant.media,
+      density: CardDensity.compact,
+      tone: CineTone.premium,
+      radius: 18,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: colors.surface,
-        border: Border.all(color: colors.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

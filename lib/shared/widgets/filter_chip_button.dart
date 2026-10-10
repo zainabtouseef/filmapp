@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'glass_card.dart';
+import 'cine_v3_motion.dart';
 
 /// Secondary rounded-rectangle filter control (Lahore / Budget / ...).
 class FilterChipBox extends StatelessWidget {
@@ -27,9 +28,12 @@ class FilterChipBox extends StatelessWidget {
     final tablet = MediaQuery.sizeOf(context).width >= 700;
     final height = tablet ? 56.0 : 50.0;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: GlassContainer(
+    return CineV3NetflixZoom(
+      webScale: 1.035,
+      mobileScale: 1.015,
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassContainer(
         height: height,
         radius: tablet ? 16 : 15,
         blur: 14,
@@ -76,6 +80,7 @@ class FilterChipBox extends StatelessWidget {
               ),
             ],
           ],
+        ),
         ),
       ),
     );

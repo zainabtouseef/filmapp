@@ -25,6 +25,10 @@ class TrustSafetyController extends ChangeNotifier {
     return _repository.createReview(body);
   }
 
+  Future<Map<String, dynamic>> reviewEligibility(String bookingId) {
+    return _repository.reviewEligibility(bookingId);
+  }
+
   Future<UserReviewsDto> userReviews(String userId) {
     return _repository.userReviews(userId);
   }

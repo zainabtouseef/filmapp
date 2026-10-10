@@ -17,6 +17,7 @@ import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../routes/location_owner_routes.dart';
@@ -298,36 +299,11 @@ class _LocationRouteHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _eyebrow,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.micro.copyWith(
-                  color: colors.goldDark,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heroSerifNumber.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 30,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
+    return CineV3PageHero(
+      title: title,
+      kicker: _eyebrow,
+      subtitle: 'Properties, bookings, availability and production operations in one live workspace.',
+      actions: [
         StatusChip(
           label: 'Location Owner',
           icon: Icons.verified_outlined,

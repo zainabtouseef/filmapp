@@ -9,6 +9,7 @@ void main() {
     var shortlistCalls = 0;
     var requestCalls = 0;
     var profileCalls = 0;
+    var quickViewCalls = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -34,6 +35,7 @@ void main() {
                 busy: false,
                 featured: true,
                 onProfile: () => profileCalls++,
+                onQuickView: () => quickViewCalls++,
                 onRequest: () => requestCalls++,
                 onShortlist: () async {
                   shortlistCalls++;
@@ -51,12 +53,14 @@ void main() {
     expect(find.text('PKR 220K'), findsOneWidget);
     expect(find.text('Trust 92/100'), findsOneWidget);
 
-    await tester.tap(find.text('View profile'));
+    await tester.tap(find.text('Quick view'));
+    await tester.tap(find.text('Full profile'));
     await tester.tap(find.text('Request'));
     await tester.tap(find.byTooltip('Add to shortlist'));
     await tester.pump();
 
     expect(profileCalls, 1);
+    expect(quickViewCalls, 1);
     expect(requestCalls, 1);
     expect(shortlistCalls, 1);
     expect(find.byTooltip('Remove from shortlist'), findsOneWidget);

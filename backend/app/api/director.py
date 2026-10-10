@@ -22,6 +22,7 @@ from app.models.bookings import Booking, Offer
 from app.models.contracts import Contract
 from app.models.identity import User, UserRole
 from app.models.marketplace import (
+    CreditEntry,
     MarketplaceListing,
     ModelProfile,
     PortfolioItem,
@@ -217,6 +218,72 @@ def _split_tags(value: str | None) -> list[str]:
     if not value:
         return []
     return [part.strip() for part in value.replace("|", ",").split(",") if part.strip()]
+
+
+def _structured_profile_rows(value: str | None, fallback_label: str) -> list[dict[str, str]]:
+    if not value:
+        return []
+    try:
+        decoded = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        decoded = value
+    if isinstance(decoded, dict):
+        return [
+            _detail_row(str(key).replace("_", " ").title(), item)
+            for key, item in decoded.items()
+            if str(item).strip()
+        ]
+    if not isinstance(decoded, list):
+        return [_detail_row(fallback_label, decoded)]
+    rows: list[dict[str, str]] = []
+    for index, item in enumerate(decoded, start=1):
+        if isinstance(item, dict):
+            label = str(
+                item.get("title")
+                or item.get("name")
+                or item.get("production_name")
+                or f"{fallback_label} {index}"
+            )
+            detail = " · ".join(
+                str(entry)
+                for key, entry in item.items()
+                if key not in {"title", "name", "production_name"}
+                and str(entry).strip()
+            )
+            rows.append(_detail_row(label, detail or fallback_label))
+        elif str(item).strip():
+            rows.append(_detail_row(fallback_label, item))
+    return rows
+
+
+def _credit_rows(profile_type: str, profile_id: str) -> list[dict[str, str]]:
+    credits = list(
+        db.session.execute(
+            select(CreditEntry)
+            .where(
+                CreditEntry.profile_type == profile_type,
+                CreditEntry.profile_id == profile_id,
+            )
+            .order_by(CreditEntry.sort_order.asc(), CreditEntry.year.desc())
+            .limit(30)
+        ).scalars()
+    )
+    return [
+        _detail_row(
+            row.title,
+            " · ".join(
+                part
+                for part in [
+                    row.production_name,
+                    row.role_label or "",
+                    str(row.year) if row.year else "",
+                    row.description or "",
+                ]
+                if part
+            ),
+        )
+        for row in credits
+    ]
 
 
 def _owner_payload(user: User | None) -> dict[str, Any] | None:
@@ -814,7 +881,30 @@ def _talent_model_discovery_detail(item: TalentProfile) -> dict[str, Any]:
                 "Available as",
                 ", ".join(_talent_availability_categories(item)),
             ),
-        )
+        ),
+        {
+            "title": "Skills & campaign strengths",
+            "rows": [
+                *_structured_profile_rows(item.skills_json, "Skill"),
+                *_structured_profile_rows(item.special_abilities_json, "Special ability"),
+            ],
+        },
+        {
+            "title": "Physical details",
+            "rows": _structured_profile_rows(item.physical_details_json, "Detail"),
+        },
+        {
+            "title": "Experience & training",
+            "rows": [
+                *_credit_rows("talent", item.public_id),
+                *_structured_profile_rows(item.credits_json, "Credit"),
+                *_structured_profile_rows(item.training_json, "Training"),
+            ],
+        },
+        {
+            "title": "Representation",
+            "rows": _structured_profile_rows(item.representation_json, "Representative"),
+        },
     ]
     return card
 
@@ -866,6 +956,30 @@ def _actor_discovery_detail(item: TalentProfile) -> dict[str, Any]:
             "rows": [
                 _detail_row(row.language, row.proficiency) for row in item.languages
             ],
+        },
+        {
+            "title": "Skills, accents & abilities",
+            "rows": [
+                *_structured_profile_rows(item.skills_json, "Skill"),
+                *_structured_profile_rows(item.accents_json, "Accent"),
+                *_structured_profile_rows(item.special_abilities_json, "Special ability"),
+            ],
+        },
+        {
+            "title": "Physical details",
+            "rows": _structured_profile_rows(item.physical_details_json, "Detail"),
+        },
+        {
+            "title": "Credits & training",
+            "rows": [
+                *_credit_rows("talent", item.public_id),
+                *_structured_profile_rows(item.credits_json, "Credit"),
+                *_structured_profile_rows(item.training_json, "Training"),
+            ],
+        },
+        {
+            "title": "Representation",
+            "rows": _structured_profile_rows(item.representation_json, "Representative"),
         },
         _detail_section(
             "Public profile",
@@ -937,9 +1051,52 @@ def _model_discovery_detail(item: ModelProfile) -> dict[str, Any]:
         _detail_section(
             "Model profile",
             ("Screen name", item.talent_profile.screen_name),
+            ("Age range", item.talent_profile.age_range),
+            ("Gender identity", item.talent_profile.gender_identity),
+            (
+                "Height",
+                f"{item.talent_profile.height_cm} cm"
+                if item.talent_profile.height_cm
+                else None,
+            ),
+            (
+                "Experience",
+                f"{item.talent_profile.experience_years} years"
+                if item.talent_profile.experience_years
+                else None,
+            ),
             ("Public visibility", item.public_visibility),
             ("Brand safety notes", item.brand_safety_notes),
         ),
+        {
+            "title": "Skills & campaign strengths",
+            "rows": [
+                *_structured_profile_rows(item.talent_profile.skills_json, "Skill"),
+                *_structured_profile_rows(
+                    item.talent_profile.special_abilities_json, "Special ability"
+                ),
+            ],
+        },
+        {
+            "title": "Physical details",
+            "rows": _structured_profile_rows(
+                item.talent_profile.physical_details_json, "Detail"
+            ),
+        },
+        {
+            "title": "Credits & training",
+            "rows": [
+                *_credit_rows("model", item.public_id),
+                *_structured_profile_rows(item.talent_profile.credits_json, "Credit"),
+                *_structured_profile_rows(item.talent_profile.training_json, "Training"),
+            ],
+        },
+        {
+            "title": "Representation",
+            "rows": _structured_profile_rows(
+                item.talent_profile.representation_json, "Representative"
+            ),
+        },
         {
             "title": "Campaign categories",
             "rows": [

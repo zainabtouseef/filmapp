@@ -14,6 +14,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../widgets/dp_cineplanner_v3.dart';
 
 class CinePlannerConsoleScreen extends StatefulWidget {
   const CinePlannerConsoleScreen({super.key});
@@ -101,92 +102,13 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     Map<String, dynamic> snapshot,
   ) {
-    final wide = MediaQuery.sizeOf(context).width >= 1100;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
-            _showCommandPalette(controller),
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
-            _showCommandPalette(controller),
-        const SingleActivator(LogicalKeyboardKey.keyR, alt: true): () =>
-            controller.loadProductions(selectFirst: false),
-      },
-      child: Focus(
-        autofocus: true,
-        child: Column(
-          key: const ValueKey('cineplanner-premium-shell'),
-          children: [
-            _CineCommandBar(
-              productions: controller.productions,
-              selectedId: controller.selectedProductionId,
-              onSelected: (value) {
-                if (value != null) controller.selectProduction(value);
-              },
-              onUpload: () => _uploadScreenplay(controller),
-              onCreateProject: () => _showNewProjectDialog(controller),
-              onRefresh: () => controller.loadProductions(selectFirst: false),
-              onCommandPalette: () => _showCommandPalette(controller),
-              onModuleSearch: (value) => setState(() => _query = value),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: wide
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(
-                          width: 188,
-                          child: _CineSidebar(
-                            modules: _modules,
-                            selected: _selectedModule,
-                            onSelected: (value) =>
-                                setState(() => _selectedModule = value),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _CinePanel(
-                            child: _moduleContent(controller, snapshot),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          initialValue: _selectedModule,
-                          decoration: const InputDecoration(
-                            labelText: 'CinePlanner module',
-                            prefixIcon:
-                                Icon(Icons.dashboard_customize_outlined),
-                          ),
-                          items: _modules
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item.label,
-                                  child: Text(item.label),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedModule = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: _CinePanel(
-                            child: _moduleContent(controller, snapshot),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ],
-        ),
-      ),
+    return DPCinePlannerV3(
+      controller: controller,
+      snapshot: snapshot,
+      onUploadScript: () => _uploadScreenplay(controller),
+      onNewProject: () => _showNewProjectDialog(controller),
+      onRefresh: () => controller.loadProductions(selectFirst: false),
+      onScriptConsole: () => _showCommandPalette(controller),
     );
   }
 

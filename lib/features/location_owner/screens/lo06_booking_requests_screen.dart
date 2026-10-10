@@ -8,6 +8,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../widgets/location_owner_components.dart';
 import '../widgets/location_owner_live.dart';
 
@@ -426,35 +427,24 @@ class _RequestCommandBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          CineV3SlidingFilterBar(
+            labels: const ['All', 'New', 'Negotiation', 'Accepted', 'Closed'],
+            selected: selectedFilter,
+            onChanged: onFilterChanged,
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                for (final filter in [
-                  'All',
-                  'New',
-                  'Negotiation',
-                  'Accepted',
-                  'Closed',
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CoreChip(
-                      label: filter,
-                      selected: selectedFilter == filter,
-                      onTap: () => onFilterChanged(filter),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                for (final sort in ['Newest', 'Fee'])
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CoreChip(
-                      label: sort,
-                      selected: selectedSort == sort,
-                      icon: Icons.sort_rounded,
-                      onTap: () => onSortChanged(sort),
-                    ),
+                for (final sort in const ['Newest', 'Fee'])
+                  CoreChip(
+                    label: sort,
+                    selected: selectedSort == sort,
+                    icon: Icons.sort_rounded,
+                    onTap: () => onSortChanged(sort),
                   ),
               ],
             ),

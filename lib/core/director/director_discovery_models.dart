@@ -40,6 +40,7 @@ class DirectorDiscoveryItem {
   final String summary;
   final String cityName;
   final String? ownerName;
+  final String? ownerPublicId;
   final String? ownerAvatarUrl;
   final int? rateFromMinor;
   final String currency;
@@ -64,6 +65,7 @@ class DirectorDiscoveryItem {
     required this.summary,
     required this.cityName,
     required this.ownerName,
+    this.ownerPublicId,
     this.ownerAvatarUrl,
     required this.rateFromMinor,
     required this.currency,
@@ -92,6 +94,7 @@ class DirectorDiscoveryItem {
       summary: json['summary'] as String? ?? '',
       cityName: city?['name'] as String? ?? 'Pakistan',
       ownerName: owner?['display_name'] as String?,
+      ownerPublicId: owner?['public_id'] as String?,
       ownerAvatarUrl: owner?['avatar_url'] as String?,
       rateFromMinor: (json['rate_from_minor'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'PKR',

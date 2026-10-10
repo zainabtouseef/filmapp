@@ -7,6 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../models/actor_talent_models.dart';
 
 Color actorToneColor(BuildContext context, ActorTone tone) {
@@ -850,31 +851,10 @@ class ActorSearchFilterBar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final filter in filters)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => onFilterChanged(filter),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 44),
-                        child: Center(
-                          child: StatusChip(
-                            label: filter,
-                            color: selectedFilter == filter
-                                ? colors.goldMid
-                                : colors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+          CineV3SlidingFilterBar(
+            labels: filters,
+            selected: selectedFilter,
+            onChanged: onFilterChanged,
           ),
         ],
       ),

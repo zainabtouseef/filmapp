@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
-import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/theme/app_breakpoints.dart';
-import '../../../core/theme/app_color_scheme.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../routes/director_producer_routes.dart';
-import '../widgets/dp_glass_card.dart';
-import '../widgets/dp_holographic_button.dart';
-import '../widgets/dp_layout_helpers.dart';
-import '../widgets/dp_status_chip.dart';
+import '../widgets/dp_shortlist_v3.dart';
 
 class DPShortlistBoardScreen extends StatefulWidget {
   const DPShortlistBoardScreen({super.key});
@@ -21,512 +14,418 @@ class DPShortlistBoardScreen extends StatefulWidget {
 }
 
 class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
-  Future<MarketplaceShortlistBundle>? _bundleFuture;
+  MarketplaceShortlistBundle? _bundle;
+  bool _loading = true;
+  String? _error;
   String? _notice;
+  String? _activeBoardId;
   String? _mutatingId;
+  final Set<String> _checkedIds = <String>{};
+  final Map<String, bool> _alertState = <String, bool>{};
+  final Map<String, int> _rankBumps = <String, int>{};
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _bundleFuture ??= _load();
+    if (_loading && _bundle == null && _error == null) {
+      _load();
+    }
   }
 
-  Future<MarketplaceShortlistBundle> _load() async {
+  Future<void> _load() async {
     final auth = AuthScope.maybeOf(context);
     if (auth == null || !auth.isAuthenticated) {
-      throw const ApiException(
-        code: 'auth.required',
-        message: 'Sign in to load live shortlists.',
-      );
+      setState(() {
+        _loading = false;
+        _error = 'Sign in to load live shortlists.';
+      });
+      return;
     }
-    return auth.shortlistBundle();
+    try {
+      final bundle = await auth.shortlistBundle();
+      if (!mounted) return;
+      setState(() {
+        _bundle = bundle;
+        _loading = false;
+        _error = null;
+        _notice = null;
+        if (_activeBoardId == null ||
+            !bundle.shortlists.any((board) => board.publicId == _activeBoardId)) {
+          _activeBoardId = bundle.shortlists.isEmpty
+              ? null
+              : bundle.shortlists.first.publicId;
+        }
+        for (final search in bundle.savedSearches) {
+          _alertState.putIfAbsent(search.publicId, () => search.notifyEnabled);
+        }
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Could not load shortlists right now.';
+      });
+    }
   }
 
-  void _refresh() {
+  MarketplaceShortlist? get _activeBoard {
+    final bundle = _bundle;
+    if (bundle == null || bundle.shortlists.isEmpty) return null;
+    for (final board in bundle.shortlists) {
+      if (board.publicId == _activeBoardId) return board;
+    }
+    return bundle.shortlists.first;
+  }
+
+  Future<void> _createShortlist() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated || _mutatingId != null) return;
+    final number = (_bundle?.shortlists.length ?? 0) + 1;
     setState(() {
-      _notice = null;
-      _bundleFuture = _load();
-    });
-  }
-
-  Future<void> _deleteSavedSearch(String publicId) async {
-    await _mutate(
-        publicId, () => AuthScope.of(context).deleteSavedSearch(publicId));
-  }
-
-  Future<void> _deleteShortlistItem(String publicId) async {
-    await _mutate(
-        publicId, () => AuthScope.of(context).deleteShortlistItem(publicId));
-  }
-
-  Future<void> _moveShortlistItem(
-    MarketplaceShortlistItem item,
-    int direction,
-  ) async {
-    final nextRank = (item.rank + direction).clamp(1, 999);
-    await _mutate(
-      item.publicId,
-      () => AuthScope.of(context).updateShortlistItem(
-        publicId: item.publicId,
-        rank: nextRank,
-      ),
-    );
-  }
-
-  Future<void> _selectShortlistItem(MarketplaceShortlistItem item) async {
-    await _mutate(
-      item.publicId,
-      () => AuthScope.of(context).updateShortlistItem(
-        publicId: item.publicId,
-        status: item.status == 'selected' ? 'active' : 'selected',
-      ),
-    );
-  }
-
-  Future<void> _mutate(String id, Future<void> Function() action) async {
-    setState(() {
-      _mutatingId = id;
+      _mutatingId = '__new__';
       _notice = null;
     });
     try {
-      await action();
+      final board = await auth.createShortlist(name: 'Shortlist $number');
       if (!mounted) return;
-      _refresh();
+      final current = _bundle ?? const MarketplaceShortlistBundle(
+        savedSearches: <MarketplaceSavedSearch>[],
+        shortlists: <MarketplaceShortlist>[],
+      );
+      setState(() {
+        _bundle = MarketplaceShortlistBundle(
+          savedSearches: current.savedSearches,
+          shortlists: <MarketplaceShortlist>[...current.shortlists, board],
+        );
+        _activeBoardId = board.publicId;
+        _checkedIds.clear();
+        _notice = 'New shortlist created.';
+      });
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _notice = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _notice = 'Could not update shortlist right now.');
+      setState(() => _notice = 'Could not create shortlist right now.');
     } finally {
       if (mounted) setState(() => _mutatingId = null);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        dpHeaderAction(
-          context,
-          icon: Icons.manage_search_rounded,
-          label: 'Discover',
-          onTap: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
-        ),
-        const SizedBox(height: 8),
-        FutureBuilder<MarketplaceShortlistBundle>(
-          future: _bundleFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const DPGlassCard(
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            if (snapshot.hasError) {
-              return CoreEmptyState(
-                icon: Icons.cloud_off_rounded,
-                title: 'Shortlists unavailable',
-                message:
-                    'Could not load saved searches and shortlist boards from the database. Check the API connection and try again.',
-                actionLabel: 'Retry',
-                onAction: _refresh,
-              );
-            }
-            final bundle = snapshot.data!;
-            final hasLiveRows = bundle.savedSearches.isNotEmpty ||
-                bundle.shortlists.any((board) => board.items.isNotEmpty);
-            if (!hasLiveRows) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DPGlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'No saved shortlists yet',
-                          style: AppTextStyles.sectionHeaderStyle.copyWith(
-                            color: context.appColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        dpText(
-                          context,
-                          'Save searches and shortlist candidates from marketplace discovery.',
-                        ),
-                        const SizedBox(height: 12),
-                        DPHolographicButton(
-                          label: 'Open Marketplace',
-                          icon: Icons.storefront_outlined,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            DirectorProducerRoutes.marketplace,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_notice != null) ...[
-                  DPStatusChip(label: _notice!, tone: DpTone.warning),
-                  const SizedBox(height: 10),
-                ],
-                _SavedSearchStrip(
-                  searches: bundle.savedSearches,
-                  mutatingId: _mutatingId,
-                  onDelete: _deleteSavedSearch,
-                ),
-                const SizedBox(height: 12),
-                _LiveShortlistColumns(
-                  boards: bundle.shortlists,
-                  mutatingId: _mutatingId,
-                  onDelete: _deleteShortlistItem,
-                  onMove: _moveShortlistItem,
-                  onSelect: _selectShortlistItem,
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _SavedSearchStrip extends StatelessWidget {
-  final List<MarketplaceSavedSearch> searches;
-  final String? mutatingId;
-  final ValueChanged<String> onDelete;
-
-  const _SavedSearchStrip({
-    required this.searches,
-    required this.mutatingId,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'SAVED SEARCHES',
-            style: AppTextStyles.sectionHeaderStyle.copyWith(
-              color: colors.textPrimary,
-              fontSize: 14,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (searches.isEmpty)
-            dpText(context, 'No saved searches yet.')
-          else
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: searches
-                  .map(
-                    (search) => _SavedSearchPill(
-                      search: search,
-                      loading: mutatingId == search.publicId,
-                      onDelete: () => onDelete(search.publicId),
-                    ),
-                  )
-                  .toList(),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SavedSearchPill extends StatelessWidget {
-  final MarketplaceSavedSearch search;
-  final bool loading;
-  final VoidCallback onDelete;
-
-  const _SavedSearchPill({
-    required this.search,
-    required this.loading,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 280),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: colors.surface.withValues(alpha: 0.44),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.manage_search_rounded, color: colors.goldDark, size: 18),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  search.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style:
-                      AppTextStyles.label.copyWith(color: colors.textPrimary),
-                ),
-                Text(
-                  search.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Delete search',
-            onPressed: loading ? null : onDelete,
-            icon: loading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.close_rounded, size: 18),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LiveShortlistColumns extends StatelessWidget {
-  final List<MarketplaceShortlist> boards;
-  final String? mutatingId;
-  final ValueChanged<String> onDelete;
-  final void Function(MarketplaceShortlistItem item, int direction) onMove;
-  final ValueChanged<MarketplaceShortlistItem> onSelect;
-
-  const _LiveShortlistColumns({
-    required this.boards,
-    required this.mutatingId,
-    required this.onDelete,
-    required this.onMove,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final visibleBoards =
-        boards.where((board) => board.items.isNotEmpty).toList();
-    if (visibleBoards.isEmpty) {
-      return DPGlassCard(
-          child: dpText(context, 'No shortlist candidates yet.'));
+  Future<void> _moveItem(MarketplaceShortlistItem item, int direction) async {
+    final board = _activeBoard;
+    final auth = AuthScope.maybeOf(context);
+    if (board == null || auth == null || _mutatingId != null) return;
+    final ordered = [...board.items]..sort((a, b) => a.rank.compareTo(b.rank));
+    final index = ordered.indexWhere((entry) => entry.publicId == item.publicId);
+    final nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= ordered.length) return;
+    final other = ordered[nextIndex];
+    final itemRank = item.rank;
+    final otherRank = other.rank;
+    ordered[index] = _copyItem(other, rank: itemRank);
+    ordered[nextIndex] = _copyItem(item, rank: otherRank);
+    setState(() {
+      _mutatingId = item.publicId;
+      _replaceBoardItems(board, ordered);
+      _rankBumps[item.publicId] = (_rankBumps[item.publicId] ?? 0) + 1;
+      _rankBumps[other.publicId] = (_rankBumps[other.publicId] ?? 0) + 1;
+    });
+    try {
+      await auth.updateShortlistItem(publicId: item.publicId, rank: otherRank);
+      await auth.updateShortlistItem(publicId: other.publicId, rank: itemRank);
+      if (!mounted) return;
+      final normalized = <MarketplaceShortlistItem>[];
+      for (var i = 0; i < ordered.length; i++) {
+        final source = ordered[i];
+        normalized.add(_copyItem(source, rank: i + 1));
+      }
+      setState(() => _replaceBoardItems(board, normalized));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notice = 'Could not update ranking. Refresh and try again.');
+      await _load();
+    } finally {
+      if (mounted) setState(() => _mutatingId = null);
     }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = context.isDesktopWidth
-            ? (constraints.maxWidth - 24) / visibleBoards.length.clamp(1, 3)
-            : 300.0;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final board in visibleBoards) ...[
-                SizedBox(
-                  width: width.clamp(280.0, 390.0),
-                  child: _LiveShortlistColumn(
-                    board: board,
-                    mutatingId: mutatingId,
-                    onDelete: onDelete,
-                    onMove: onMove,
-                    onSelect: onSelect,
-                  ),
-                ),
-                if (board != visibleBoards.last) const SizedBox(width: 12),
-              ],
-            ],
-          ),
+  }
+
+  Future<void> _toggleSelect(MarketplaceShortlistItem item) async {
+    final board = _activeBoard;
+    final auth = AuthScope.maybeOf(context);
+    if (board == null || auth == null || _mutatingId != null) return;
+    final nextStatus = item.status == 'selected' ? 'active' : 'selected';
+    setState(() {
+      _mutatingId = item.publicId;
+      _replaceBoardItem(board, _copyItem(item, status: nextStatus));
+    });
+    try {
+      final updated = await auth.updateShortlistItem(
+        publicId: item.publicId,
+        status: nextStatus,
+      );
+      if (!mounted) return;
+      setState(() => _replaceBoardItem(board, updated));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _replaceBoardItem(board, item);
+        _notice = 'Could not update selection right now.';
+      });
+    } finally {
+      if (mounted) setState(() => _mutatingId = null);
+    }
+  }
+
+  Future<void> _removeItem(MarketplaceShortlistItem item) async {
+    final board = _activeBoard;
+    final auth = AuthScope.maybeOf(context);
+    if (board == null || auth == null || _mutatingId != null) return;
+    final previous = [...board.items];
+    setState(() {
+      _mutatingId = item.publicId;
+      _checkedIds.remove(item.publicId);
+      _replaceBoardItems(
+        board,
+        previous.where((entry) => entry.publicId != item.publicId).toList(),
+      );
+    });
+    try {
+      await auth.deleteShortlistItem(item.publicId);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _replaceBoardItems(board, previous);
+        _notice = 'Could not remove this shortlist item.';
+      });
+    } finally {
+      if (mounted) setState(() => _mutatingId = null);
+    }
+  }
+
+  Future<void> _selectChecked() async {
+    final board = _activeBoard;
+    final auth = AuthScope.maybeOf(context);
+    if (board == null || auth == null || _checkedIds.isEmpty || _mutatingId != null) {
+      return;
+    }
+    final ids = {..._checkedIds};
+    setState(() => _mutatingId = '__bulk_select__');
+    try {
+      for (final item in board.items.where((entry) => ids.contains(entry.publicId))) {
+        if (item.status != 'selected') {
+          await auth.updateShortlistItem(publicId: item.publicId, status: 'selected');
+        }
+      }
+      if (!mounted) return;
+      final next = board.items
+          .map((item) => ids.contains(item.publicId)
+              ? _copyItem(item, status: 'selected')
+              : item)
+          .toList();
+      setState(() {
+        _replaceBoardItems(board, next);
+        _checkedIds.clear();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _notice = 'Could not select all checked items.');
+      await _load();
+    } finally {
+      if (mounted) setState(() => _mutatingId = null);
+    }
+  }
+
+  Future<void> _removeChecked() async {
+    final board = _activeBoard;
+    final auth = AuthScope.maybeOf(context);
+    if (board == null || auth == null || _checkedIds.isEmpty || _mutatingId != null) {
+      return;
+    }
+    final ids = {..._checkedIds};
+    final previous = [...board.items];
+    setState(() {
+      _mutatingId = '__bulk_remove__';
+      _replaceBoardItems(
+        board,
+        previous.where((entry) => !ids.contains(entry.publicId)).toList(),
+      );
+      _checkedIds.clear();
+    });
+    try {
+      for (final id in ids) {
+        await auth.deleteShortlistItem(id);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _replaceBoardItems(board, previous);
+        _notice = 'Some checked items could not be removed.';
+      });
+      await _load();
+    } finally {
+      if (mounted) setState(() => _mutatingId = null);
+    }
+  }
+
+  Future<void> _deleteSavedSearch(MarketplaceSavedSearch search) async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || _mutatingId != null) return;
+    final current = _bundle;
+    if (current == null) return;
+    setState(() {
+      _mutatingId = search.publicId;
+      _bundle = MarketplaceShortlistBundle(
+        savedSearches: current.savedSearches
+            .where((entry) => entry.publicId != search.publicId)
+            .toList(),
+        shortlists: current.shortlists,
+      );
+      _alertState.remove(search.publicId);
+    });
+    try {
+      await auth.deleteSavedSearch(search.publicId);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _bundle = current;
+        _alertState[search.publicId] = search.notifyEnabled;
+        _notice = 'Could not remove saved search.';
+      });
+    } finally {
+      if (mounted) setState(() => _mutatingId = null);
+    }
+  }
+
+  void _replaceBoardItems(
+    MarketplaceShortlist board,
+    List<MarketplaceShortlistItem> items,
+  ) {
+    final bundle = _bundle;
+    if (bundle == null) return;
+    final sorted = [...items]..sort((a, b) => a.rank.compareTo(b.rank));
+    _bundle = MarketplaceShortlistBundle(
+      savedSearches: bundle.savedSearches,
+      shortlists: bundle.shortlists
+          .map((entry) => entry.publicId == board.publicId
+              ? MarketplaceShortlist(
+                  publicId: entry.publicId,
+                  projectId: entry.projectId,
+                  requirementId: entry.requirementId,
+                  name: entry.name,
+                  items: sorted,
+                  createdAt: entry.createdAt,
+                )
+              : entry)
+          .toList(),
+    );
+  }
+
+  void _replaceBoardItem(
+    MarketplaceShortlist board,
+    MarketplaceShortlistItem replacement,
+  ) {
+    _replaceBoardItems(
+      board,
+      board.items
+          .map((item) => item.publicId == replacement.publicId ? replacement : item)
+          .toList(),
+    );
+  }
+
+  MarketplaceShortlistItem _copyItem(
+    MarketplaceShortlistItem item, {
+    int? rank,
+    String? status,
+  }) {
+    return MarketplaceShortlistItem(
+      publicId: item.publicId,
+      listing: item.listing,
+      rank: rank ?? item.rank,
+      notes: item.notes,
+      status: status ?? item.status,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DPShortlistV3(
+      loading: _loading,
+      error: _error,
+      notice: _notice,
+      bundle: _bundle,
+      activeBoardId: _activeBoardId,
+      mutatingId: _mutatingId,
+      checkedIds: _checkedIds,
+      alertState: _alertState,
+      rankBumps: _rankBumps,
+      onRetry: _load,
+      onDiscover: () => Navigator.pushNamed(
+        context,
+        DirectorProducerRoutes.marketplace,
+      ),
+      onCreateShortlist: _createShortlist,
+      onBoardChanged: (id) {
+        setState(() {
+          _activeBoardId = id;
+          _checkedIds.clear();
+        });
+      },
+      onCheckItem: (id, checked) {
+        setState(() {
+          if (checked) {
+            _checkedIds.add(id);
+          } else {
+            _checkedIds.remove(id);
+          }
+        });
+      },
+      onToggleAll: () {
+        final board = _activeBoard;
+        if (board == null) return;
+        setState(() {
+          final allOn = board.items.isNotEmpty &&
+              board.items.every((item) => _checkedIds.contains(item.publicId));
+          if (allOn) {
+            for (final item in board.items) {
+              _checkedIds.remove(item.publicId);
+            }
+          } else {
+            for (final item in board.items) {
+              _checkedIds.add(item.publicId);
+            }
+          }
+        });
+      },
+      onMoveUp: (item) => _moveItem(item, -1),
+      onMoveDown: (item) => _moveItem(item, 1),
+      onToggleSelect: _toggleSelect,
+      onRemoveItem: _removeItem,
+      onSelectChecked: _selectChecked,
+      onRemoveChecked: _removeChecked,
+      onClearChecked: () => setState(_checkedIds.clear),
+      onToggleAlert: (search) {
+        setState(() {
+          final current = _alertState[search.publicId] ?? search.notifyEnabled;
+          _alertState[search.publicId] = !current;
+        });
+      },
+      onRunSearch: (search) {
+        Navigator.pushNamed(
+          context,
+          DirectorProducerRoutes.marketplace,
+          arguments: <String, String>{
+            if (search.listingType != null) 'category': search.listingType!,
+          },
         );
       },
-    );
-  }
-}
-
-class _LiveShortlistColumn extends StatelessWidget {
-  final MarketplaceShortlist board;
-  final String? mutatingId;
-  final ValueChanged<String> onDelete;
-  final void Function(MarketplaceShortlistItem item, int direction) onMove;
-  final ValueChanged<MarketplaceShortlistItem> onSelect;
-
-  const _LiveShortlistColumn({
-    required this.board,
-    required this.mutatingId,
-    required this.onDelete,
-    required this.onMove,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  board.name.toUpperCase(),
-                  style: AppTextStyles.sectionHeaderStyle.copyWith(
-                    color: colors.textPrimary,
-                    fontSize: 14,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-              ),
-              DPStatusChip(label: '${board.items.length}', tone: DpTone.info),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ...board.items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _LiveShortlistCard(
-                item: item,
-                loading: mutatingId == item.publicId,
-                onDelete: () => onDelete(item.publicId),
-                onMoveUp: () => onMove(item, -1),
-                onMoveDown: () => onMove(item, 1),
-                onSelect: () => onSelect(item),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LiveShortlistCard extends StatelessWidget {
-  final MarketplaceShortlistItem item;
-  final bool loading;
-  final VoidCallback onDelete;
-  final VoidCallback onMoveUp;
-  final VoidCallback onMoveDown;
-  final VoidCallback onSelect;
-
-  const _LiveShortlistCard({
-    required this.item,
-    required this.loading,
-    required this.onDelete,
-    required this.onMoveUp,
-    required this.onMoveDown,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final candidate = item.listing.toCandidate();
-    final selected = item.status == 'selected';
-    return DPGlassCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: dpText(context, candidate.name, strong: true)),
-              DPStatusChip(
-                label: selected ? 'Selected' : '#${item.rank}',
-                tone: selected ? DpTone.success : DpTone.warning,
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          dpText(context, '${candidate.city} · ${candidate.rateRange}'),
-          if (item.notes != null && item.notes!.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            dpText(context, item.notes!),
-          ],
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _MiniAction(
-                icon: Icons.keyboard_arrow_up_rounded,
-                label: 'Rank up',
-                loading: loading,
-                onTap: onMoveUp,
-              ),
-              _MiniAction(
-                icon: Icons.keyboard_arrow_down_rounded,
-                label: 'Rank down',
-                loading: loading,
-                onTap: onMoveDown,
-              ),
-              _MiniAction(
-                icon: selected
-                    ? Icons.undo_rounded
-                    : Icons.check_circle_outline_rounded,
-                label: selected ? 'Unselect' : 'Select',
-                loading: loading,
-                onTap: onSelect,
-              ),
-              _MiniAction(
-                icon: Icons.delete_outline_rounded,
-                label: 'Remove',
-                loading: loading,
-                onTap: onDelete,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool loading;
-  final VoidCallback onTap;
-
-  const _MiniAction({
-    required this.icon,
-    required this.label,
-    required this.loading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DPHolographicButton(
-      label: label,
-      icon: icon,
-      onTap: loading ? null : onTap,
-      secondary: true,
+      onDeleteSearch: _deleteSavedSearch,
     );
   }
 }

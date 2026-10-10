@@ -15,6 +15,7 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
+import '../widgets/dp_stakeholder_profile_v3.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
 
@@ -115,118 +116,53 @@ class _DPStakeholderProfileScreenState
         if (data is DirectorDiscoveryItem) {
           final candidate = data.toCandidate();
           final type = widget.profileType ?? candidate.category;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DPProjectBreadcrumbs(
-                project: null,
-                current: candidate.name,
-              ),
-              const SizedBox(height: 10),
-              _ProfileHero(candidate: candidate, type: type),
-              const SizedBox(height: 14),
-              _LiveDirectorDiscoveryProfile(item: data, candidate: candidate),
-              const SizedBox(height: 14),
-              DPGlassCard(
-                selected: true,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: DPHolographicButton(
-                        label: candidate.marketplaceListingId == null
-                            ? 'Provider action pending'
-                            : 'Shortlist to project',
-                        icon: candidate.marketplaceListingId == null
-                            ? Icons.link_off_rounded
-                            : Icons.favorite_border_rounded,
-                        onTap: candidate.marketplaceListingId == null
-                            ? () => _showProviderActionPending(
-                                  context,
-                                  candidate,
-                                )
-                            : () => _showShortlistHint(context, candidate),
-                        secondary: true,
-                      ),
-                    ),
-                    if (candidate.marketplaceListingId != null) ...[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: DPHolographicButton(
-                          label: 'Select / Send Request',
-                          icon: Icons.send_rounded,
-                          onTap: () async {
-                            if (!await ensureKycApproved(context)) return;
-                            if (!context.mounted) return;
-                            Navigator.pushNamed(
-                              context,
-                              DirectorProducerRoutes.bookingRequest,
-                              arguments: {
-                                'candidateId': candidate.marketplaceListingId,
-                                'projectId': widget.projectId,
-                                'category': type,
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+          return DPStakeholderProfileV3(
+            candidate: candidate,
+            type: type,
+            directorItem: data,
+            onShortlist: () => _showShortlistHint(context, candidate),
+            onProviderPending: () => _showProviderActionPending(
+              context,
+              candidate,
+            ),
+            onFinalize: candidate.marketplaceListingId == null
+                ? null
+                : () async {
+                    if (!await ensureKycApproved(context)) return;
+                    if (!context.mounted) return;
+                    Navigator.pushNamed(
+                      context,
+                      DirectorProducerRoutes.bookingRequest,
+                      arguments: {
+                        'candidateId': candidate.marketplaceListingId,
+                        'projectId': widget.projectId,
+                        'category': type,
+                      },
+                    );
+                  },
           );
         }
         final listing = data as MarketplaceListing;
         final candidate = listing.toCandidate();
         final type = widget.profileType ?? candidate.category;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DPProjectBreadcrumbs(
-              project: null,
-              current: candidate.name,
-            ),
-            const SizedBox(height: 10),
-            _ProfileHero(candidate: candidate, type: type),
-            const SizedBox(height: 14),
-            _LiveListingProfile(listing: listing, candidate: candidate),
-            const SizedBox(height: 14),
-            DPGlassCard(
-              selected: true,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: DPHolographicButton(
-                      label: 'Shortlist to project',
-                      icon: Icons.favorite_border_rounded,
-                      onTap: () => _showShortlistHint(context, candidate),
-                      secondary: true,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: DPHolographicButton(
-                      label: 'Select / Send Request',
-                      icon: Icons.send_rounded,
-                      onTap: () async {
-                        if (!await ensureKycApproved(context)) return;
-                        if (!context.mounted) return;
-                        Navigator.pushNamed(
-                          context,
-                          DirectorProducerRoutes.bookingRequest,
-                          arguments: {
-                            'candidateId': candidate.id,
-                            'projectId': widget.projectId,
-                            'category': type,
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        return DPStakeholderProfileV3(
+          candidate: candidate,
+          type: type,
+          listing: listing,
+          onShortlist: () => _showShortlistHint(context, candidate),
+          onFinalize: () async {
+            if (!await ensureKycApproved(context)) return;
+            if (!context.mounted) return;
+            Navigator.pushNamed(
+              context,
+              DirectorProducerRoutes.bookingRequest,
+              arguments: {
+                'candidateId': candidate.id,
+                'projectId': widget.projectId,
+                'category': type,
+              },
+            );
+          },
         );
       },
     );

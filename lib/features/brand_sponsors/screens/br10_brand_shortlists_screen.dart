@@ -13,6 +13,7 @@ import '../widgets/brand_booking_dialog.dart';
 import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
+import 'br09_brand_marketplace_screen.dart' show BrandMarketplaceProfileScreen;
 
 class BR10BrandShortlistsScreen extends StatefulWidget {
   const BR10BrandShortlistsScreen({super.key});
@@ -174,6 +175,7 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
                     onNotes: _editNotes,
                     onRemove: _remove,
                     onRequest: (item) => _request(board, item),
+                    onProfile: (item) => _openProfile(board, item),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -303,6 +305,29 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
     );
     if (sent && mounted) brandSnack(context, 'Booking request sent');
   }
+
+  void _openProfile(
+    MarketplaceShortlist board,
+    MarketplaceShortlistItem item,
+  ) {
+    final listing = item.listing;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        settings: RouteSettings(
+          name: '/brand/discover/${listing.listingType}/${listing.publicId}',
+        ),
+        builder: (_) => BrandMarketplaceProfileScreen(
+          title: listing.title,
+          detail: _auth!.brandDiscoveryItem(
+            kind: listing.listingType,
+            publicId: listing.publicId,
+          ),
+          bookings: const [],
+          onRequest: (_) => _request(board, item),
+        ),
+      ),
+    );
+  }
 }
 
 class _ShortlistBoard extends StatelessWidget {
@@ -313,6 +338,7 @@ class _ShortlistBoard extends StatelessWidget {
   final ValueChanged<MarketplaceShortlistItem> onNotes;
   final ValueChanged<MarketplaceShortlistItem> onRemove;
   final ValueChanged<MarketplaceShortlistItem> onRequest;
+  final ValueChanged<MarketplaceShortlistItem> onProfile;
 
   const _ShortlistBoard({
     required this.board,
@@ -322,6 +348,7 @@ class _ShortlistBoard extends StatelessWidget {
     required this.onNotes,
     required this.onRemove,
     required this.onRequest,
+    required this.onProfile,
   });
 
   @override
@@ -354,6 +381,7 @@ class _ShortlistBoard extends StatelessWidget {
                     onNotes: () => onNotes(item),
                     onRemove: () => onRemove(item),
                     onRequest: () => onRequest(item),
+                    onProfile: () => onProfile(item),
                   ),
               ],
             ),
@@ -370,6 +398,7 @@ class _ShortlistCandidate extends StatelessWidget {
   final VoidCallback onNotes;
   final VoidCallback onRemove;
   final VoidCallback onRequest;
+  final VoidCallback onProfile;
 
   const _ShortlistCandidate({
     required this.item,
@@ -378,6 +407,7 @@ class _ShortlistCandidate extends StatelessWidget {
     required this.onNotes,
     required this.onRemove,
     required this.onRequest,
+    required this.onProfile,
   });
 
   @override
@@ -385,76 +415,195 @@ class _ShortlistCandidate extends StatelessWidget {
     final listing = item.listing;
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    listing.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: context.appColors.textPrimary,
-                      fontWeight: FontWeight.w900,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: busy ? null : onProfile,
+            child: SizedBox(
+              height: 178,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _ShortlistProfileImage(
+                    imageUrl: listing.coverImageUrl,
+                    label: listing.title,
+                  ),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0xB8000000)],
+                      ),
                     ),
                   ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Chip(
+                      avatar: const Icon(Icons.verified_rounded, size: 18),
+                      label: Text(
+                        listing.verificationStatus == 'approved'
+                            ? 'Verified'
+                            : readableBrandStatus(
+                                listing.verificationStatus,
+                              ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 14,
+                    right: 14,
+                    bottom: 12,
+                    child: Text(
+                      listing.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    BrandLiveStatusChip(status: item.status),
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      enabled: !busy,
+                      tooltip: 'Shortlist actions',
+                      onSelected: (value) {
+                        if (value == 'notes') return onNotes();
+                        if (value == 'remove') return onRemove();
+                        onStatus(value);
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'selected',
+                          child: Text('Mark selected'),
+                        ),
+                        PopupMenuItem(
+                          value: 'active',
+                          child: Text('Keep active'),
+                        ),
+                        PopupMenuItem(
+                          value: 'rejected',
+                          child: Text('Mark rejected'),
+                        ),
+                        PopupMenuDivider(),
+                        PopupMenuItem(
+                          value: 'notes',
+                          child: Text('Edit notes'),
+                        ),
+                        PopupMenuItem(
+                          value: 'remove',
+                          child: Text('Remove'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                PopupMenuButton<String>(
-                  enabled: !busy,
-                  tooltip: 'Shortlist actions',
-                  onSelected: (value) {
-                    if (value == 'notes') return onNotes();
-                    if (value == 'remove') return onRemove();
-                    onStatus(value);
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                        value: 'selected', child: Text('Mark selected')),
-                    PopupMenuItem(value: 'active', child: Text('Keep active')),
-                    PopupMenuItem(
-                        value: 'rejected', child: Text('Mark rejected')),
-                    PopupMenuDivider(),
-                    PopupMenuItem(value: 'notes', child: Text('Edit notes')),
-                    PopupMenuItem(value: 'remove', child: Text('Remove')),
+                const SizedBox(height: 8),
+                Text(
+                  '${listing.cityName} · ${listing.toCandidate().rateRange}',
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  listing.summary,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
+                ),
+                if (item.notes?.isNotEmpty == true) ...[
+                  const SizedBox(height: 7),
+                  Text(
+                    'Notes: ${item.notes}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: busy ? null : onProfile,
+                          icon: const Icon(Icons.person_search_outlined),
+                          label: const Text('View profile'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          onPressed: busy ? null : onRequest,
+                          icon: const Icon(Icons.send_rounded),
+                          label: const Text('Request'),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            BrandLiveStatusChip(status: item.status),
-            const SizedBox(height: 8),
-            Text('${listing.cityName} · ${listing.toCandidate().rateRange}'),
-            const SizedBox(height: 5),
-            Text(
-              listing.summary,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: context.appColors.textSecondary,
-              ),
-            ),
-            if (item.notes?.isNotEmpty == true) ...[
-              const SizedBox(height: 7),
-              Text(
-                'Notes: ${item.notes}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: busy ? null : onRequest,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text('Request booking'),
-              ),
-            ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShortlistProfileImage extends StatelessWidget {
+  final String? imageUrl;
+  final String label;
+
+  const _ShortlistProfileImage({
+    required this.imageUrl,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final url = imageUrl?.trim();
+    if (url == null || url.isEmpty) return _fallback(context);
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      alignment: Alignment.topCenter,
+      errorBuilder: (_, __, ___) => _fallback(context),
+    );
+  }
+
+  Widget _fallback(BuildContext context) {
+    final words =
+        label.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).take(2);
+    final initials = words.map((word) => word[0].toUpperCase()).join();
+    return ColoredBox(
+      color: context.appColors.softSurface,
+      child: Center(
+        child: Text(
+          initials.isEmpty ? 'CC' : initials,
+          style: AppTextStyles.heroSerifNumber.copyWith(
+            color: context.appColors.goldDark,
+            fontSize: 44,
+          ),
         ),
       ),
     );

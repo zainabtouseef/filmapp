@@ -11,6 +11,7 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/widgets/cine_v3_motion.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_sponsor_components.dart';
@@ -224,28 +225,17 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
                   onChanged: (value) => setState(() => _query = value),
                 ),
                 const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final status in const [
-                        'All',
-                        'Draft',
-                        'Active',
-                        'Paused',
-                        'Completed',
-                        'Archived',
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(right: 7),
-                          child: FilterChip(
-                            label: Text(status),
-                            selected: _status == status,
-                            onSelected: (_) => setState(() => _status = status),
-                          ),
-                        ),
-                    ],
-                  ),
+                CineV3SlidingFilterBar(
+                  labels: const [
+                    'All',
+                    'Draft',
+                    'Active',
+                    'Paused',
+                    'Completed',
+                    'Archived',
+                  ],
+                  selected: _status,
+                  onChanged: (status) => setState(() => _status = status),
                 ),
                 const SizedBox(height: 8),
                 if (_visibleProjects.isEmpty)
@@ -322,7 +312,7 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
   }
 
   Future<void> _createProject() async {
-    final draft = await _showProjectDialog(context, cities: _cities);
+    final draft = await showBrandProjectDialog(context, cities: _cities);
     if (draft == null || !mounted) return;
     setState(() => _loading = true);
     try {
@@ -346,7 +336,7 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
   }
 
   Future<void> _editProject(Project project) async {
-    final draft = await _showProjectDialog(
+    final draft = await showBrandProjectDialog(
       context,
       cities: _cities,
       existing: project,
@@ -559,6 +549,10 @@ class _ProjectDetail extends StatelessWidget {
       0,
       (total, board) => total + board.items.length,
     );
+    final resourcesByType = <String, List<MarketplaceShortlistItem>>{};
+    for (final item in shortlists.expand((board) => board.items)) {
+      resourcesByType.putIfAbsent(item.listing.listingType, () => []).add(item);
+    }
     return BrandSectionCard(
       title: project.title,
       icon: Icons.account_tree_outlined,
@@ -662,21 +656,39 @@ class _ProjectDetail extends StatelessWidget {
               'No resources shortlisted yet. Use Discover to build the production team.',
             )
           else
-            for (final board in shortlists)
-              for (final item in board.items)
+            for (final entry in resourcesByType.entries) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      _categoryIcon(entry.key),
+                      color: context.appColors.goldDark,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${readableBrandStatus(entry.key)} · ${entry.value.length}',
+                      style: AppTextStyles.cardLabel.copyWith(
+                        color: context.appColors.textPrimary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              for (final item in entry.value)
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    _categoryIcon(item.listing.listingType),
-                    color: context.appColors.goldDark,
+                  leading: CircleAvatar(
+                    child: Text(item.listing.title.characters.first),
                   ),
                   title: Text(item.listing.title),
-                  subtitle: Text(
-                    '${readableBrandStatus(item.listing.listingType)} · ${item.listing.cityName}',
-                  ),
+                  subtitle: Text(item.listing.cityName),
                   trailing: BrandLiveStatusChip(status: item.status),
                 ),
+            ],
           if (selectedResources.isNotEmpty) ...[
             const SizedBox(height: 4),
             InlineNotice(
@@ -730,7 +742,7 @@ class _ProjectDetail extends StatelessWidget {
   }
 }
 
-typedef _ProjectDraft = ({
+typedef BrandProjectDraft = ({
   String title,
   String type,
   String description,
@@ -741,7 +753,7 @@ typedef _ProjectDraft = ({
   String status,
 });
 
-Future<_ProjectDraft?> _showProjectDialog(
+Future<BrandProjectDraft?> showBrandProjectDialog(
   BuildContext context, {
   required List<ProfileCity> cities,
   Project? existing,
@@ -762,7 +774,7 @@ Future<_ProjectDraft?> _showProjectDialog(
   }
   var status = existing?.status ?? 'draft';
   String? error;
-  final result = await showDialog<_ProjectDraft>(
+  final result = await showDialog<BrandProjectDraft>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(

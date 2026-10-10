@@ -8,6 +8,9 @@ import '../../../core/director/director_dashboard_models.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/payments/payment_models.dart';
 import '../../../core/payments/payments_controller.dart';
+import '../../../core/profile/profile_models.dart';
+import '../../../core/projects/project_models.dart';
+import '../../../core/projects/projects_controller.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -18,6 +21,7 @@ import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_demo_journey.dart';
 import '../widgets/brand_sponsor_live.dart';
 import '../widgets/brand_sponsor_shell.dart' show startBrandTour;
+import 'br08_brand_projects_screen.dart' show showBrandProjectDialog;
 
 class BR01BrandDashboardScreen extends StatefulWidget {
   const BR01BrandDashboardScreen({super.key});
@@ -31,6 +35,7 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
   SpecialistController? _specialist;
   PaymentsController? _payments;
   BookingsController? _bookingsController;
+  ProjectsController? _projectsController;
   AuthController? _auth;
   BrandProfileDto? _profile;
   List<BrandOpportunityDto> _opportunities = const [];
@@ -40,6 +45,7 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
   DirectorDashboard? _productionDashboard;
   List<Booking> _productionBookings = const [];
   MarketplaceShortlistBundle? _shortlistBundle;
+  List<ProfileCity> _cities = const [];
   bool _loading = false;
   bool _loaded = false;
   String? _error;
@@ -50,16 +56,19 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
     final specialist = SpecialistScope.maybeOf(context);
     final payments = PaymentsScope.maybeOf(context);
     final bookings = BookingsScope.maybeOf(context);
+    final projects = ProjectsScope.maybeOf(context);
     final auth = AuthScope.maybeOf(context);
     if (identical(specialist, _specialist) &&
         identical(payments, _payments) &&
         identical(bookings, _bookingsController) &&
+        identical(projects, _projectsController) &&
         identical(auth, _auth)) {
       return;
     }
     _specialist = specialist;
     _payments = payments;
     _bookingsController = bookings;
+    _projectsController = projects;
     _auth = auth;
     if (specialist != null) _load(force: true);
   }
@@ -95,6 +104,7 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         final productionValues = await Future.wait<Object>([
           _auth!.brandProductionDashboard(),
           _auth!.shortlistBundle(),
+          _auth!.cities(),
           if (_bookingsController != null)
             _bookingsController!.bookings(force: force)
           else
@@ -102,7 +112,8 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         ]);
         productionDashboard = productionValues[0] as DirectorDashboard;
         shortlistBundle = productionValues[1] as MarketplaceShortlistBundle;
-        productionBookings = productionValues[2] as List<Booking>;
+        _cities = productionValues[2] as List<ProfileCity>;
+        productionBookings = productionValues[3] as List<Booking>;
       }
       if (!mounted) return;
       setState(() {
@@ -214,6 +225,7 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
     ];
     final active = activeBrandOpportunity(_opportunities);
     final production = _productionDashboard?.summary;
+    final projects = _productionDashboard?.projects ?? const <Project>[];
     final demoProject = isBrandDemoAccount(_auth)
         ? selectBrandDemoProject(_productionDashboard?.projects ?? const [])
         : null;
@@ -268,6 +280,32 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
           const SizedBox(height: 12),
         ],
+        _DashboardHero(
+          projectCount: projects.length,
+          busy: _loading,
+          onCreate: _createProject,
+          onBrowse: () => Navigator.pushNamed(
+            context,
+            BrandSponsorRoutes.marketplace,
+          ),
+          onDemo: demoProject == null ? null : () => startBrandTour(context),
+        ),
+        const SizedBox(height: 14),
+        BrandKpiRail(metrics: productionMetrics),
+        const SizedBox(height: 12),
+        BrandKpiRail(metrics: metrics),
+        const SizedBox(height: 12),
+        _ProjectOverview(
+          projects: projects,
+          bookings: _productionBookings,
+          shortlists: _shortlistBundle?.shortlists ?? const [],
+          onCreate: _createProject,
+          onOpenAll: () => Navigator.pushNamed(
+            context,
+            BrandSponsorRoutes.projects,
+          ),
+        ),
+        const SizedBox(height: 12),
         if (demoProject != null) ...[
           BrandDemoJourneyCard(
             project: demoProject,
@@ -285,12 +323,8 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                 .length,
             onPlay: () => startBrandTour(context),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
         ],
-        BrandKpiRail(metrics: productionMetrics),
-        const SizedBox(height: 12),
-        BrandKpiRail(metrics: metrics),
-        const SizedBox(height: 12),
         BrandTwoColumn(
           left: BrandSectionCard(
             title: active == null ? 'Opportunity portfolio' : 'Active brief',
@@ -371,6 +405,282 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _createProject() async {
+    final controller = _projectsController;
+    if (controller == null) {
+      Navigator.pushNamed(context, BrandSponsorRoutes.projects);
+      return;
+    }
+    final draft = await showBrandProjectDialog(context, cities: _cities);
+    if (draft == null || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await controller.createProject(
+        title: draft.title,
+        projectType: draft.type,
+        description: draft.description,
+        cityId: draft.cityId.isEmpty ? null : draft.cityId,
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        estimatedBudgetMinor: draft.budgetMinor,
+        status: draft.status,
+      );
+      await _load(force: true);
+      if (mounted) brandSnack(context, 'Campaign created');
+    } catch (error) {
+      if (mounted) setState(() => _error = brandApiMessage(error));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
+
+class _DashboardHero extends StatelessWidget {
+  final int projectCount;
+  final bool busy;
+  final VoidCallback onCreate;
+  final VoidCallback onBrowse;
+  final VoidCallback? onDemo;
+
+  const _DashboardHero({
+    required this.projectCount,
+    required this.busy,
+    required this.onCreate,
+    required this.onBrowse,
+    required this.onDemo,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: colors.goldMid.withValues(alpha: 0.7)),
+        gradient: LinearGradient(
+          colors: [
+            colors.goldMid.withValues(alpha: colors.isLight ? 0.16 : 0.24),
+            colors.softSurface,
+          ],
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 760;
+          final copy = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'CAMPAIGN COMMAND CENTER',
+                style: AppTextStyles.micro.copyWith(
+                  color: colors.goldDark,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Create, cast and deliver your next campaign.',
+                style: AppTextStyles.heroSerifNumber.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: compact ? 32 : 40,
+                  height: 1.05,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '$projectCount project${projectCount == 1 ? '' : 's'} in this workspace. Build the brief, shortlist verified production resources and manage every request in one place.',
+                style: AppTextStyles.body.copyWith(
+                  color: colors.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          );
+          final actions = Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              SizedBox(
+                height: 56,
+                child: FilledButton.icon(
+                  key: const ValueKey('brand-create-project-primary'),
+                  onPressed: busy ? null : onCreate,
+                  icon: const Icon(Icons.add_rounded, size: 24),
+                  label: const Text('Create project'),
+                ),
+              ),
+              SizedBox(
+                height: 56,
+                child: OutlinedButton.icon(
+                  onPressed: onBrowse,
+                  icon: const Icon(Icons.travel_explore_outlined),
+                  label: const Text('Browse marketplace'),
+                ),
+              ),
+              if (onDemo != null)
+                SizedBox(
+                  height: 56,
+                  child: TextButton.icon(
+                    onPressed: onDemo,
+                    icon: const Icon(Icons.play_circle_outline_rounded),
+                    label: const Text('How to create a campaign'),
+                  ),
+                ),
+            ],
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [copy, const SizedBox(height: 20), actions],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(flex: 6, child: copy),
+              const SizedBox(width: 24),
+              Expanded(flex: 4, child: actions),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ProjectOverview extends StatelessWidget {
+  final List<Project> projects;
+  final List<Booking> bookings;
+  final List<MarketplaceShortlist> shortlists;
+  final VoidCallback onCreate;
+  final VoidCallback onOpenAll;
+
+  const _ProjectOverview({
+    required this.projects,
+    required this.bookings,
+    required this.shortlists,
+    required this.onCreate,
+    required this.onOpenAll,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BrandSectionCard(
+      title: 'All projects',
+      icon: Icons.view_list_outlined,
+      selected: true,
+      actionText: projects.isEmpty ? null : 'Open project workspace',
+      onActionTap: projects.isEmpty ? null : onOpenAll,
+      child: projects.isEmpty
+          ? CoreEmptyState(
+              icon: Icons.movie_creation_outlined,
+              title: 'No campaign projects yet',
+              message:
+                  'Create a project, add the production brief, then shortlist actors, models, locations, crew and equipment.',
+              actionLabel: 'Create first project',
+              onAction: onCreate,
+            )
+          : BrandResponsiveGrid(
+              minWidth: 280,
+              children: [
+                for (final project in projects)
+                  _DashboardProjectCard(
+                    project: project,
+                    shortlistCount: shortlists
+                        .where((row) => row.projectId == project.publicId)
+                        .fold<int>(0, (sum, row) => sum + row.items.length),
+                    bookingCount: bookings
+                        .where((row) => row.projectId == project.publicId)
+                        .length,
+                    onTap: onOpenAll,
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class _DashboardProjectCard extends StatelessWidget {
+  final Project project;
+  final int shortlistCount;
+  final int bookingCount;
+  final VoidCallback onTap;
+
+  const _DashboardProjectCard({
+    required this.project,
+    required this.shortlistCount,
+    required this.bookingCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      project.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.cardTitle.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  BrandLiveStatusChip(status: project.status),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${readableBrandStatus(project.projectType)} · ${project.city?.name ?? 'City not set'}',
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Chip(label: Text('${project.requirementCount} needs')),
+                  Chip(label: Text('$shortlistCount shortlisted')),
+                  Chip(label: Text('$bookingCount requests')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              LinearProgressIndicator(
+                value: project.progressPercent.clamp(0, 100) / 100,
+                minHeight: 7,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                '${project.progressPercent}% complete',
+                style: AppTextStyles.caption.copyWith(
+                  color: colors.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
