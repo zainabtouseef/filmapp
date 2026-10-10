@@ -225,15 +225,20 @@ class GeneralPublicHomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DPPageHeader(
-          eyebrow: 'Marketing campaigns · verified talent',
-          title: 'Book talent for your brand',
-          trailing: DPHolographicButton(
-            label: 'Browse talent',
-            icon: Icons.search_rounded,
-            onTap: () =>
-                Navigator.pushNamed(context, GeneralPublicRoutes.browse),
-          ),
+        PortalHeroCard(
+          initials: _publicInitials(user?.displayName ?? 'CineConnect Member'),
+          name: user?.displayName ?? 'Book talent for your brand',
+          badgeLabel: 'Verified customer workspace',
+          stats: const [
+            PortalHeroStat(value: '3', label: 'Talent categories'),
+            PortalHeroStat(value: 'Verified', label: 'Profiles'),
+            PortalHeroStat(value: 'Secured', label: 'Booking flow'),
+          ],
+          ctaLabel: 'Browse talent',
+          onCta: () => Navigator.pushNamed(context, GeneralPublicRoutes.browse),
+          secondaryIcon: Icons.local_movies_outlined,
+          onSecondary: () =>
+              Navigator.pushNamed(context, GeneralPublicRoutes.cinema),
         ),
         const SizedBox(height: 14),
         DPGlassCard(
@@ -314,6 +319,17 @@ class GeneralPublicHomeScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+String _publicInitials(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return 'CC';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return '${parts.first[0]}${parts[1][0]}'.toUpperCase();
 }
 
 class GeneralPublicRequestsScreen extends StatefulWidget {

@@ -17,6 +17,12 @@ class AppDurations {
   /// Card lift / selected-state transition.
   static const cardLift = Duration(milliseconds: 220);
 
+  /// Custom web pointer follow response.
+  static const pointerFollow = Duration(milliseconds: 90);
+
+  /// Touch ripple and cursor trail fade.
+  static const pointerFade = Duration(milliseconds: 260);
+
   /// Page/route entrance.
   static const pageEntrance = Duration(milliseconds: 280);
 
@@ -37,6 +43,12 @@ class AppDurations {
 
   /// Holographic sweep on featured/selected cards — slow and limited.
   static const holographicSweep = Duration(milliseconds: 2600);
+
+  /// Staggered dashboard module entrance.
+  static const dashboardCascade = Duration(milliseconds: 700);
+
+  /// Ambient decorative movement behind portal heroes.
+  static const ambientFloat = Duration(seconds: 20);
 
   /// One full loop of the hero card's rotating gold ring accent.
   static const heroRingRotation = Duration(seconds: 6);

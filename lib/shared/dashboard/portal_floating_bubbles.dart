@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_durations.dart';
 
 /// A handful of soft, translucent bubbles that drift slowly behind hero
 /// and promo sections — purely decorative, no data. Matches the Portal
@@ -25,7 +26,7 @@ class _PortalFloatingBubblesState extends State<PortalFloatingBubbles>
   void initState() {
     super.initState();
     _controller =
-        AnimationController(vsync: this, duration: const Duration(seconds: 20));
+        AnimationController(vsync: this, duration: AppDurations.ambientFloat);
     final reduceMotion = WidgetsBinding
         .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
     if (!reduceMotion) _controller.repeat();

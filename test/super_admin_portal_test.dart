@@ -155,7 +155,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.text('More'));
-    await tester.pumpAndSettle();
+    // Portal heroes use continuous ambient motion, so advance only the menu
+    // transition instead of waiting for every decorative ticker to settle.
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Verifications'), findsWidgets);
     expect(find.text('Payments'), findsWidgets);

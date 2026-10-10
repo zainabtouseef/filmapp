@@ -15,6 +15,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
+import '../../../shared/widgets/provider_workspace_hero.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
@@ -122,6 +123,7 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
   }
 
   Widget _buildLive(BuildContext context, _DashboardData data) {
+    final colors = context.appColors;
     final property = activeLocationProperty(data.properties);
     final openRequests = data.bookings.where((booking) {
       return {'sent', 'viewed', 'under_negotiation'}.contains(booking.status);
@@ -177,9 +179,63 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
         route: LocationOwnerRoutes.earnings,
       ),
     ];
+    final accountName = _auth?.user?.displayName ?? 'Location Partner';
+    final propertyName = property?.name ?? accountName;
+    final heroImageUrl = property != null && property.mediaUrls.isNotEmpty
+        ? property.mediaUrls.first
+        : data.userProfile.coverFile?.publicUrl ?? '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        ProviderWorkspaceHero(
+          imageUrl: heroImageUrl,
+          avatarUrl: data.userProfile.avatarFile?.publicUrl,
+          eyebrow: 'Production location workspace',
+          title: propertyName,
+          summary: property == null
+              ? 'Build a polished property profile, set production rules and start receiving verified shoot requests.'
+              : property.publicAddress.isEmpty
+                  ? 'Manage availability, requests, inspections and earnings for this production-ready location.'
+                  : '${property.publicAddress}. Manage availability, requests, inspections and earnings in one workspace.',
+          badge: property == null
+              ? 'Profile setup'
+              : readableLocationStatus(property.status),
+          fallbackIcon: Icons.location_city_outlined,
+          accentColor: colors.goldMid,
+          facts: [
+            ProviderHeroFact(
+              icon: Icons.location_city_outlined,
+              label: 'Properties',
+              value: '${data.properties.length}',
+            ),
+            ProviderHeroFact(
+              icon: Icons.inbox_outlined,
+              label: 'Open requests',
+              value: '${openRequests.length}',
+            ),
+            ProviderHeroFact(
+              icon: Icons.movie_filter_outlined,
+              label: 'Upcoming shoots',
+              value: '${upcoming.length}',
+            ),
+          ],
+          primaryLabel:
+              property == null ? 'Create property' : 'Manage property',
+          primaryIcon: property == null
+              ? Icons.add_location_alt_outlined
+              : Icons.edit_outlined,
+          onPrimary: () => Navigator.pushNamed(
+            context,
+            LocationOwnerRoutes.listing,
+          ),
+          secondaryLabel: 'Manage calendar',
+          secondaryIcon: Icons.calendar_month_outlined,
+          onSecondary: () => Navigator.pushNamed(
+            context,
+            LocationOwnerRoutes.calendar,
+          ),
+        ),
+        const SizedBox(height: 14),
         TourTarget(
           id: 'location.dashboard.quickStats',
           child: _QuickStatsRow(metrics: metrics),

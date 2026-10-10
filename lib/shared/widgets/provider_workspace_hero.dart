@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
+import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../dashboard/portal_floating_bubbles.dart';
+import 'cine_hover_zoom.dart';
 import 'status_chip.dart';
 
 class ProviderHeroFact {
@@ -84,30 +87,42 @@ class ProviderWorkspaceHero extends StatelessWidget {
           secondaryIcon: secondaryIcon,
           onSecondary: onSecondary,
         );
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.appColors.card,
-              border: Border.all(color: context.appColors.border),
-            ),
-            child: compact
-                ? Column(
-                    children: [
-                      AspectRatio(aspectRatio: 16 / 9, child: image),
-                      details,
-                    ],
-                  )
-                : SizedBox(
-                    height: 342,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 6, child: image),
-                        Expanded(flex: 4, child: details),
-                      ],
-                    ),
+        return CineHoverZoom(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.xxl),
+            child: Stack(
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: context.appColors.card,
+                    border: Border.all(color: context.appColors.border),
                   ),
+                  child: compact
+                      ? Column(
+                          children: [
+                            AspectRatio(aspectRatio: 16 / 9, child: image),
+                            details,
+                          ],
+                        )
+                      : SizedBox(
+                          height: 342,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(flex: 6, child: image),
+                              Expanded(flex: 4, child: details),
+                            ],
+                          ),
+                        ),
+                ),
+                const Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.46,
+                    child: PortalFloatingBubbles(count: 5),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

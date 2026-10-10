@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_durations.dart';
+
 /// Staggers its children's entrance (fade + slide-up), each starting
 /// slightly after the previous — the cinematic "cascade in" motion used
 /// across the dashboard-kit's widget grids.
@@ -30,7 +32,7 @@ class _PortalStaggeredRevealState extends State<PortalStaggeredReveal>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: AppDurations.dashboardCascade,
     )..forward();
   }
 

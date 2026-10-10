@@ -122,13 +122,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _AdminCommandHero(
-              openWork: openWork,
-              onReviewTap: () => Navigator.pushNamed(
+            PortalHeroCard(
+              initials: 'CC',
+              name: 'Platform Command',
+              badgeLabel: 'Super Admin',
+              stats: [
+                PortalHeroStat(value: '$openWork', label: 'Open actions'),
+                PortalHeroStat(
+                    value: '${dashboard.totalUsers}', label: 'Users'),
+                PortalHeroStat(
+                    value: '${dashboard.securedBookings}', label: 'Secured'),
+              ],
+              ctaLabel: 'Open review hub',
+              onCta: () => Navigator.pushNamed(
                 context,
                 SuperAdminRoutes.reviewHub,
               ),
-              onRefreshTap: _refresh,
+              secondaryIcon: Icons.refresh_rounded,
+              onSecondary: _refresh,
             ),
             const SizedBox(height: 14),
             _AdminPulseStrip(dashboard: dashboard),
@@ -185,113 +196,6 @@ class _AdminDashboardData {
     required this.dashboard,
     required this.events,
   });
-}
-
-class _AdminCommandHero extends StatelessWidget {
-  final int openWork;
-  final VoidCallback onReviewTap;
-  final VoidCallback onRefreshTap;
-
-  const _AdminCommandHero({
-    required this.openWork,
-    required this.onReviewTap,
-    required this.onRefreshTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 480;
-    return SizedBox(
-      width: double.infinity,
-      height: compact ? 304 : 238,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              AppAssets.brandCampaignCover,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Color(0xE6111212),
-                    Color(0xA6111212),
-                    Color(0x35111212),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'LIVE PLATFORM COMMAND',
-                        style: AppTextStyles.micro.copyWith(
-                          color: const Color(0xFFFFD98A),
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        openWork == 0
-                            ? 'All governed queues are clear.'
-                            : '$openWork actions need review.',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.heroSerifHeadline.copyWith(
-                          color: Colors.white,
-                          fontSize: constraints.maxWidth < 480 ? 25 : 31,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        'Trust, money, safety and marketplace operations '
-                        'from one verified control surface.',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.body.copyWith(
-                          color: Colors.white.withValues(alpha: 0.86),
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilledButton.icon(
-                            onPressed: onReviewTap,
-                            icon: const Icon(Icons.fact_check_outlined),
-                            label: const Text('Open review hub'),
-                          ),
-                          IconButton.filledTonal(
-                            onPressed: onRefreshTap,
-                            tooltip: 'Refresh dashboard',
-                            icon: const Icon(Icons.refresh_rounded),
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _DashboardQueue {
