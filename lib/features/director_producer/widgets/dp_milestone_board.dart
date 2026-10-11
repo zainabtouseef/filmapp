@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/core_payment/screens/payment_proof_screen.dart';
-import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
@@ -81,30 +80,30 @@ class DPMilestoneBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columnWidth = constraints.maxWidth >= AppBreakpoints.tablet
-            ? (constraints.maxWidth - 36) / 4
-            : 250.0;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var index = 0; index < columns.length; index++) ...[
-                SizedBox(
-                  width: columnWidth,
-                  child: _MilestoneColumn(
-                    title: columns[index],
-                    items: payments
-                        .where((payment) => payment.status == columns[index])
-                        .toList(),
-                    highlightFirstItem:
-                        highlightFirstDue && columns[index] == 'Due',
-                  ),
+        final columnsPerRow = constraints.maxWidth >= 1180
+            ? 4
+            : constraints.maxWidth >= 640
+                ? 2
+                : 1;
+        final columnWidth =
+            (constraints.maxWidth - (12 * (columnsPerRow - 1))) / columnsPerRow;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (var index = 0; index < columns.length; index++)
+              SizedBox(
+                width: columnWidth,
+                child: _MilestoneColumn(
+                  title: columns[index],
+                  items: payments
+                      .where((payment) => payment.status == columns[index])
+                      .toList(),
+                  highlightFirstItem:
+                      highlightFirstDue && columns[index] == 'Due',
                 ),
-                if (index != columns.length - 1) const SizedBox(width: 12),
-              ],
-            ],
-          ),
+              ),
+          ],
         );
       },
     );
