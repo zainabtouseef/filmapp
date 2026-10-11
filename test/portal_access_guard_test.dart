@@ -17,6 +17,18 @@ class _SignedOutAuth extends AuthController {
   bool get ready => true;
 }
 
+class _SignedInAuth extends _SignedOutAuth {
+  final AuthUser signedInUser;
+
+  _SignedInAuth(super.client, this.signedInUser);
+
+  @override
+  AuthUser? get user => signedInUser;
+
+  @override
+  bool get isAuthenticated => true;
+}
+
 void main() {
   for (final route in [
     '/settings',
@@ -52,6 +64,44 @@ void main() {
         )));
     expect(find.text('Private workspace data'), findsNothing);
     expect(find.text('Sign in to access this workspace.'), findsOneWidget);
+  });
+
+  testWidgets('active director role can open the console route',
+      (tester) async {
+    final client = ApiClient();
+    final auth = _SignedInAuth(
+      client,
+      const AuthUser(
+        publicId: 'director-qa',
+        email: 'director@example.com',
+        displayName: 'Director QA',
+        status: 'active',
+        roles: [
+          AuthRole(
+            code: 'director_producer',
+            name: 'Director / Producer',
+            portalRoute: '/director',
+            requiresKyc: true,
+            isPrimary: true,
+            status: 'active',
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(AuthScope(
+      controller: auth,
+      child: const MaterialApp(
+        home: PortalAccessGuard(
+          routeName: '/console',
+          child: Text('Director console'),
+        ),
+      ),
+    ));
+
+    expect(find.text('Director console'), findsOneWidget);
+    expect(find.text('This workspace requires an active authorized role.'),
+        findsNothing);
   });
 
   test('revoked roles cannot grant access or become primary', () {

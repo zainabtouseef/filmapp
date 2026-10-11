@@ -47,12 +47,17 @@ class PortalAccessGuard extends StatelessWidget {
     'portal',
   };
 
+  static String? _portalSegment(String route) {
+    final segment = Uri.tryParse(route)?.pathSegments.firstOrNull;
+    return switch (segment) {
+      'console' || 'project' => 'director',
+      _ => segment,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    final rawSegment = Uri.tryParse(routeName)?.pathSegments.firstOrNull;
-    final segment = rawSegment == 'console' || rawSegment == 'project'
-        ? 'director'
-        : rawSegment;
+    final segment = _portalSegment(routeName);
     final sharedAccountScreen = _accountScreens.contains(segment);
     if (!_portals.contains(segment) && !sharedAccountScreen) return child;
     final auth = AuthScope.maybeOf(context);
@@ -66,10 +71,8 @@ class PortalAccessGuard extends StatelessWidget {
         (sharedAccountScreen ||
             (auth.user?.roles.any((role) =>
                     role.status == 'active' &&
-                    Uri.tryParse(RoleMapper.portalRouteForCode(role.code) ??
-                                role.portalRoute)
-                            ?.pathSegments
-                            .firstOrNull ==
+                    _portalSegment(RoleMapper.portalRouteForCode(role.code) ??
+                            role.portalRoute) ==
                         segment) ??
                 false));
     if (allowed) return child;
