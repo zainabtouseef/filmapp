@@ -179,7 +179,7 @@ class _IN01InsuranceDashboardScreenState
                                 const SizedBox(height: 10),
                                 const InlineNotice(
                                   message:
-                                      'Safety checks and incidents need read/list APIs before dashboards can show live rows.',
+                                      'Safety checks and incident reports are connected to live project records.',
                                   icon: Icons.info_outline_rounded,
                                 ),
                               ],

@@ -233,7 +233,7 @@ class DirectorCallSheet {
           .toList(),
       weatherStatus: weather['status'] as String? ?? 'provider_not_configured',
       weatherSummary: weather['summary'] as String? ??
-          'Weather provider not connected yet.',
+          'Live weather is temporarily unavailable.',
     );
   }
 
