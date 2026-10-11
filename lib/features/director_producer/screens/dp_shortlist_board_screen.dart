@@ -288,33 +288,59 @@ class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
                   DPStatusChip(label: _notice!, tone: DpTone.warning),
                   const SizedBox(height: 10),
                 ],
-                _SavedSearchStrip(
-                  searches: bundle.savedSearches,
-                  mutatingId: _mutatingId,
-                  onDelete: _deleteSavedSearch,
-                ),
-                const SizedBox(height: 12),
-                if (_selectedIds.isNotEmpty) ...[
-                  _ShortlistBulkActions(
-                    count: _selectedIds.length,
-                    busy: _mutatingId == 'bulk',
-                    onInvite: () => _openInviteQueue(bundle),
-                    onRemove: _removeSelected,
-                    onClear: () => setState(_selectedIds.clear),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                TourTarget(
-                  id: 'dp.shortlist.board',
-                  child: _LiveShortlistColumns(
-                    boards: bundle.shortlists,
-                    mutatingId: _mutatingId,
-                    onDelete: _deleteShortlistItem,
-                    onMove: _moveShortlistItem,
-                    onSelect: _selectShortlistItem,
-                    selectedIds: _selectedIds,
-                    onToggleSelection: _toggleBulkSelection,
-                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final shortlist = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_selectedIds.isNotEmpty) ...[
+                          _ShortlistBulkActions(
+                            count: _selectedIds.length,
+                            busy: _mutatingId == 'bulk',
+                            onInvite: () => _openInviteQueue(bundle),
+                            onRemove: _removeSelected,
+                            onClear: () => setState(_selectedIds.clear),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        TourTarget(
+                          id: 'dp.shortlist.board',
+                          child: _LiveShortlistColumns(
+                            boards: bundle.shortlists,
+                            mutatingId: _mutatingId,
+                            onDelete: _deleteShortlistItem,
+                            onMove: _moveShortlistItem,
+                            onSelect: _selectShortlistItem,
+                            selectedIds: _selectedIds,
+                            onToggleSelection: _toggleBulkSelection,
+                          ),
+                        ),
+                      ],
+                    );
+                    final savedSearches = _SavedSearchStrip(
+                      searches: bundle.savedSearches,
+                      mutatingId: _mutatingId,
+                      onDelete: _deleteSavedSearch,
+                    );
+                    if (constraints.maxWidth >= 860) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 7, child: shortlist),
+                          const SizedBox(width: 14),
+                          SizedBox(width: 318, child: savedSearches),
+                        ],
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        savedSearches,
+                        const SizedBox(height: 12),
+                        shortlist,
+                      ],
+                    );
+                  },
                 ),
               ],
             );
@@ -526,9 +552,16 @@ class _LiveShortlistColumns extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = context.isDesktopWidth
-            ? (constraints.maxWidth - 24) / visibleBoards.length.clamp(1, 3)
-            : 300.0;
+        final visibleColumns =
+            context.isDesktopWidth ? visibleBoards.length.clamp(1, 2) : 1;
+        final width = visibleBoards.length == 1
+            ? constraints.maxWidth
+            : context.isDesktopWidth
+                ? ((constraints.maxWidth - (12 * (visibleColumns - 1))) /
+                        visibleColumns)
+                    .clamp(340.0, 540.0)
+                    .toDouble()
+                : 320.0;
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -536,7 +569,7 @@ class _LiveShortlistColumns extends StatelessWidget {
             children: [
               for (final (index, board) in visibleBoards.indexed) ...[
                 SizedBox(
-                  width: width.clamp(280.0, 390.0),
+                  width: width,
                   child: index == 0
                       ? TourTarget(
                           id: 'dp.shortlist.firstGroup',
