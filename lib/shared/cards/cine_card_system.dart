@@ -6,6 +6,8 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../formatters/cine_format.dart';
+import '../layout/portal_reference_design.dart';
+import '../widgets/cine_hover_zoom.dart';
 
 enum CardVariant { standard, compact, hero, section, soft, alert, media }
 
@@ -2201,19 +2203,47 @@ class SectionContainer extends StatelessWidget {
         child,
       ],
     );
-    return switch (treatment) {
-      SectionTreatment.open => content,
+    final referenceRoute = PortalReferenceDesign.usesReference(
+      ModalRoute.of(context)?.settings.name,
+    );
+    final resolvedContent = referenceRoute
+        ? DefaultTextStyle.merge(
+            style: AppTextStyles.body.copyWith(color: colors.textPrimary),
+            child: content,
+          )
+        : content;
+    final section = switch (treatment) {
+      SectionTreatment.open when referenceRoute => CardShell(
+          variant: CardVariant.section,
+          density: density,
+          radius: 22,
+          accentEdge: true,
+          tone: CineTone.premium,
+          child: resolvedContent,
+        ),
+      SectionTreatment.open => resolvedContent,
       SectionTreatment.soft => CardShell(
           variant: CardVariant.soft,
           density: density,
-          child: content,
+          radius: referenceRoute ? 22 : null,
+          child: resolvedContent,
         ),
       SectionTreatment.elevated => CardShell(
           variant: CardVariant.section,
           density: density,
-          child: content,
+          radius: referenceRoute ? 22 : null,
+          accentEdge: referenceRoute,
+          tone: referenceRoute ? CineTone.premium : CineTone.neutral,
+          child: resolvedContent,
         ),
     };
+    return referenceRoute
+        ? CineHoverZoom(
+            scale: 1.006,
+            pressedScale: 1.012,
+            child: section,
+          )
+        : section;
   }
 }
 

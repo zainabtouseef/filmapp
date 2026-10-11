@@ -53,7 +53,6 @@ class DirectorProducerPortalScreen extends StatelessWidget {
     DirectorProducerRoutes.createProject,
     DirectorProducerRoutes.payments,
     DirectorProducerRoutes.schedule,
-    DirectorProducerRoutes.cinePlanner,
   };
 
   @override

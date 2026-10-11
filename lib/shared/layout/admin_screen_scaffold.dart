@@ -6,6 +6,8 @@ import '../../core/tour/tour_controller.dart';
 import '../widgets/cinematic_backdrop.dart';
 import 'admin_section_header.dart';
 import 'kyc_status_banner.dart';
+import 'portal_page_header.dart';
+import 'portal_reference_design.dart';
 
 typedef AdminTopBarBuilder = Widget Function(
   BuildContext context,
@@ -201,7 +203,18 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                             maxWidth:
                                                 AppBreakpoints.maxContentWidth,
                                           ),
-                                          child: widget.child,
+                                          child: PortalReferenceDesign
+                                                  .usesReference(
+                                            widget.currentRoute,
+                                          )
+                                              ? PortalRouteEntrance(
+                                                  key: ValueKey(
+                                                    'reference:${widget.currentRoute}',
+                                                  ),
+                                                  route: widget.currentRoute,
+                                                  child: widget.child,
+                                                )
+                                              : widget.child,
                                         ),
                                       )
                                     : Padding(
@@ -223,7 +236,18 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                               maxWidth: AppBreakpoints
                                                   .maxContentWidth,
                                             ),
-                                            child: widget.child,
+                                            child: PortalReferenceDesign
+                                                    .usesReference(
+                                              widget.currentRoute,
+                                            )
+                                                ? PortalRouteEntrance(
+                                                    key: ValueKey(
+                                                      'reference:${widget.currentRoute}',
+                                                    ),
+                                                    route: widget.currentRoute,
+                                                    child: widget.child,
+                                                  )
+                                                : widget.child,
                                           ),
                                         ),
                                       ),

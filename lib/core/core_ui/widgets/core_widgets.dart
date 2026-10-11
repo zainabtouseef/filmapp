@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/cinematic_backdrop.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/layout/portal_page_header.dart';
+import '../../../shared/layout/portal_reference_design.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/dark_outline_button.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -129,6 +131,35 @@ class CoreAppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final route = ModalRoute.of(context)?.settings.name;
+    if (PortalReferenceDesign.usesOperationalUtilityHero(route)) {
+      return PortalPageHeader(
+        eyebrow: 'CineConnect · secure workspace',
+        title: title,
+        subtitle: subtitle,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: colors.goldGradient,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: colors.goldGlow, blurRadius: 14),
+                ],
+              ),
+              child: Icon(icon, color: colors.onGold, size: 18),
+            ),
+            if (actions.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              ...actions,
+            ],
+          ],
+        ),
+      );
+    }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
