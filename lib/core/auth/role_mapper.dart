@@ -39,7 +39,7 @@ class RoleMapper {
 
   static String? portalRouteForCode(String code) {
     return switch (code) {
-      'director_producer' => DirectorProducerRoutes.home,
+      'director_producer' => DirectorProducerRoutes.console,
       'actor_talent' => ActorTalentRoutes.dashboard,
       'model' => ModelExtensionRoutes.categories,
       'influencer' => InfluencerRoutes.home,

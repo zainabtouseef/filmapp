@@ -42,16 +42,16 @@ typedef MediaEquipmentMenuEntry = ({
 
 const mediaEquipmentMenuEntries = <MediaEquipmentMenuEntry>[
   (
+    route: MediaEquipmentRoutes.home,
+    screenId: 'ME-01',
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
+  ),
+  (
     route: MarketplaceRoutes.browse,
     screenId: 'MP',
     label: 'Marketplace',
     icon: Icons.storefront_outlined,
-  ),
-  (
-    route: MediaEquipmentRoutes.home,
-    screenId: 'ME-01',
-    label: 'Overview',
-    icon: Icons.dashboard_outlined,
   ),
   (
     route: MediaEquipmentRoutes.profile,
@@ -123,8 +123,8 @@ const mediaEquipmentMenuEntries = <MediaEquipmentMenuEntry>[
 
 const _bottomDestinations = [
   CineBottomNavDestination(
-    label: 'Home',
-    icon: Icons.home_outlined,
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
     route: MediaEquipmentRoutes.home,
   ),
   CineBottomNavDestination(

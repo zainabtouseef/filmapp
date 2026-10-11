@@ -25,16 +25,16 @@ typedef InsuranceMenuEntry = ({
 
 const insuranceMenuEntries = <InsuranceMenuEntry>[
   (
-    route: MarketplaceRoutes.browse,
-    screenId: 'MP',
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-  ),
-  (
     route: InsurancePartnerRoutes.home,
     screenId: 'IN-01',
     label: 'Dashboard',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
   ),
   (
     route: InsurancePartnerRoutes.records,
@@ -63,7 +63,7 @@ const insuranceMenuEntries = <InsuranceMenuEntry>[
 ];
 
 const _bottomDestinations = [
-  CineBottomNavDestination(label: 'Dash', icon: Icons.dashboard_outlined),
+  CineBottomNavDestination(label: 'Dashboard', icon: Icons.dashboard_outlined),
   CineBottomNavDestination(label: 'Policies', icon: Icons.policy_outlined),
   CineBottomNavDestination(
       label: 'Claims', icon: Icons.assignment_late_outlined),

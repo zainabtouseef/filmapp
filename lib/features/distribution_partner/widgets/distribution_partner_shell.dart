@@ -25,16 +25,16 @@ typedef DistributionMenuEntry = ({
 
 const distributionMenuEntries = <DistributionMenuEntry>[
   (
-    route: MarketplaceRoutes.browse,
-    screenId: 'MP',
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-  ),
-  (
     route: DistributionPartnerRoutes.home,
     screenId: 'DS-01',
     label: 'Dashboard',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
   ),
   (
     route: DistributionPartnerRoutes.contacts,
@@ -57,7 +57,7 @@ const distributionMenuEntries = <DistributionMenuEntry>[
 ];
 
 const _bottomDestinations = [
-  CineBottomNavDestination(label: 'Dash', icon: Icons.dashboard_outlined),
+  CineBottomNavDestination(label: 'Dashboard', icon: Icons.dashboard_outlined),
   CineBottomNavDestination(label: 'Contacts', icon: Icons.contacts_outlined),
   CineBottomNavDestination(
     label: 'Release',

@@ -30,14 +30,14 @@ import '../routes/super_admin_routes.dart';
 
 const adminNavItems = [
   AdminNavItem(
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-    route: MarketplaceRoutes.browse,
-  ),
-  AdminNavItem(
     label: 'Dashboard',
     icon: Icons.grid_view_rounded,
     route: SuperAdminRoutes.dashboard,
+  ),
+  AdminNavItem(
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
+    route: MarketplaceRoutes.browse,
   ),
   AdminNavItem(
     label: 'Review Hub',

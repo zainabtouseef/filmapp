@@ -80,8 +80,8 @@ typedef ActorShellMenuEntry = ({
 // so the bottom bar never needs a 6th "more" slot.
 const _actorBottomDestinations = [
   CineBottomNavDestination(
-    label: 'Home',
-    icon: Icons.home_outlined,
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
   ),
   CineBottomNavDestination(
     label: 'Opportunities',
@@ -105,6 +105,12 @@ const _actorBottomDestinations = [
 // bottom nav — kept out of the 5 primary taps so the everyday path (home,
 // discover, applications, bookings, profile) never feels crowded.
 const _actorMenuEntries = <ActorShellMenuEntry>[
+  (
+    route: ActorTalentRoutes.dashboard,
+    screenId: 'AT-01',
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
+  ),
   (
     route: MarketplaceRoutes.browse,
     screenId: 'MP',

@@ -124,8 +124,8 @@ class GeneralPublicShell extends StatelessWidget {
 
   static const navItems = [
     GeneralPublicNavItem(
-      label: 'Home',
-      icon: Icons.home_outlined,
+      label: 'Dashboard',
+      icon: Icons.dashboard_outlined,
       route: GeneralPublicRoutes.home,
     ),
     GeneralPublicNavItem(
@@ -819,7 +819,8 @@ class _PublicBottomNav extends StatelessWidget {
   });
 
   static const _destinations = [
-    CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
+    CineBottomNavDestination(
+        label: 'Dashboard', icon: Icons.dashboard_outlined),
     CineBottomNavDestination(label: 'Browse', icon: Icons.search_rounded),
     CineBottomNavDestination(
         label: 'Cinema', icon: Icons.local_movies_outlined),

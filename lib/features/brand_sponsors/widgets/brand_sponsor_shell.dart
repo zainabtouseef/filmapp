@@ -45,7 +45,7 @@ const brandSponsorMenuEntries = <BrandSponsorMenuEntry>[
   (
     route: BrandSponsorRoutes.home,
     screenId: 'BR-01',
-    label: 'Overview',
+    label: 'Dashboard',
     icon: Icons.dashboard_outlined,
   ),
   (
@@ -112,8 +112,8 @@ const brandSponsorMenuEntries = <BrandSponsorMenuEntry>[
 
 const _brandBottomDestinations = [
   CineBottomNavDestination(
-    label: 'Home',
-    icon: Icons.home_outlined,
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
     route: BrandSponsorRoutes.home,
   ),
   CineBottomNavDestination(

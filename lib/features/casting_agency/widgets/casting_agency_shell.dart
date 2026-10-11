@@ -18,16 +18,16 @@ const _agencyBottomDestinations = [
 
 const agencyMenuEntries = <ActorShellMenuEntry>[
   (
-    route: MarketplaceRoutes.browse,
-    screenId: 'MP',
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-  ),
-  (
     route: CastingAgencyRoutes.home,
     screenId: 'CA-01',
     label: 'Agency Dashboard',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
   ),
   (
     route: CastingAgencyRoutes.roster,

@@ -46,8 +46,8 @@ typedef LocationOwnerMenuEntry = ({
 
 const _locationBottomDestinations = [
   CineBottomNavDestination(
-    label: 'Home',
-    icon: Icons.home_outlined,
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
     route: LocationOwnerRoutes.home,
   ),
   CineBottomNavDestination(
@@ -77,16 +77,16 @@ const _locationBottomRoutes = [
 
 const _locationMenuEntries = <LocationOwnerMenuEntry>[
   (
+    route: LocationOwnerRoutes.home,
+    screenId: 'LO-01',
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
+  ),
+  (
     route: MarketplaceRoutes.browse,
     screenId: 'MP',
     label: 'Marketplace',
     icon: Icons.storefront_outlined,
-  ),
-  (
-    route: LocationOwnerRoutes.home,
-    screenId: 'LO-01',
-    label: 'Overview',
-    icon: Icons.dashboard_outlined,
   ),
   (
     route: LocationOwnerRoutes.listing,

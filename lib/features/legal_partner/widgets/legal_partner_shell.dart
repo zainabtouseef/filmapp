@@ -25,16 +25,16 @@ typedef LegalMenuEntry = ({
 
 const legalMenuEntries = <LegalMenuEntry>[
   (
-    route: MarketplaceRoutes.browse,
-    screenId: 'MP',
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-  ),
-  (
     route: LegalPartnerRoutes.home,
     screenId: 'LG-01',
     label: 'Queue Dashboard',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
   ),
   (
     route: LegalPartnerRoutes.contractReview,
@@ -63,7 +63,7 @@ const legalMenuEntries = <LegalMenuEntry>[
 ];
 
 const _bottomDestinations = [
-  CineBottomNavDestination(label: 'Queue', icon: Icons.dashboard_outlined),
+  CineBottomNavDestination(label: 'Dashboard', icon: Icons.dashboard_outlined),
   CineBottomNavDestination(label: 'Review', icon: Icons.article_outlined),
   CineBottomNavDestination(
       label: 'Templates', icon: Icons.library_books_outlined),

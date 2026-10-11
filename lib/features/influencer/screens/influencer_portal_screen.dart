@@ -39,7 +39,7 @@ typedef _InfluencerBundle = ({
 });
 
 const _influencerBottomDestinations = [
-  CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
+  CineBottomNavDestination(label: 'Dashboard', icon: Icons.dashboard_outlined),
   CineBottomNavDestination(label: 'Media Kit', icon: Icons.badge_outlined),
   CineBottomNavDestination(label: 'Packages', icon: Icons.sell_outlined),
   CineBottomNavDestination(label: 'Campaigns', icon: Icons.campaign_outlined),
@@ -48,16 +48,16 @@ const _influencerBottomDestinations = [
 
 const _influencerMenuEntries = <ActorShellMenuEntry>[
   (
-    route: MarketplaceRoutes.browse,
-    screenId: 'MP',
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-  ),
-  (
     route: InfluencerRoutes.home,
     screenId: 'IF-01',
     label: 'Dashboard',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
   ),
   (
     route: InfluencerRoutes.mediaKit,

@@ -15,7 +15,7 @@ import 'md06_model_profile_screen.dart';
 import 'md07_opportunities_screen.dart';
 
 const _modelBottomDestinations = [
-  CineBottomNavDestination(label: 'Categories', icon: Icons.category_outlined),
+  CineBottomNavDestination(label: 'Dashboard', icon: Icons.dashboard_outlined),
   CineBottomNavDestination(label: 'Usage', icon: Icons.policy_outlined),
   CineBottomNavDestination(
       label: 'Portfolio', icon: Icons.photo_library_outlined),
@@ -25,16 +25,16 @@ const _modelBottomDestinations = [
 
 const _modelMenuEntries = <ActorShellMenuEntry>[
   (
+    route: ModelExtensionRoutes.categories,
+    screenId: 'MD-01',
+    label: 'Dashboard',
+    icon: Icons.dashboard_outlined,
+  ),
+  (
     route: MarketplaceRoutes.browse,
     screenId: 'MP',
     label: 'Marketplace',
     icon: Icons.storefront_outlined,
-  ),
-  (
-    route: ModelExtensionRoutes.categories,
-    screenId: 'MD-01',
-    label: 'Campaign Categories',
-    icon: Icons.category_outlined,
   ),
   (
     route: ModelExtensionRoutes.usageRights,

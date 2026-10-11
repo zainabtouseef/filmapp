@@ -64,7 +64,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         expect(find.text('Model Workspace'), findsOneWidget);
-        expect(find.text(ModelExtensionRoutes.titleFor(route)), findsWidgets);
+        if (route == ModelExtensionRoutes.categories) {
+          expect(find.text('Dashboard'), findsWidgets);
+        } else {
+          expect(find.text(ModelExtensionRoutes.titleFor(route)), findsWidgets);
+        }
         final exception = tester.takeException();
         expect(
           exception,
@@ -110,7 +114,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Categories'), findsOneWidget);
+      expect(find.text('Dashboard'), findsWidgets);
       expect(find.text('Usage'), findsOneWidget);
       expect(find.text('Portfolio'), findsOneWidget);
       expect(find.text('Rates'), findsOneWidget);

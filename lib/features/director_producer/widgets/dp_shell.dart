@@ -670,7 +670,7 @@ class _DPBottomNav extends StatelessWidget {
       onTap: (index) {
         switch (index) {
           case 0:
-            onRouteTap(DirectorProducerRoutes.home);
+            onRouteTap(DirectorProducerRoutes.console);
             return;
           case 1:
             onRouteTap(DirectorProducerRoutes.projects);

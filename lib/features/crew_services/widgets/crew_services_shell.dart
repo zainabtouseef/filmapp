@@ -7,7 +7,7 @@ import '../routes/crew_services_routes.dart';
 import 'crew_full_walkthrough_steps.dart';
 
 const _crewBottomDestinations = [
-  CineBottomNavDestination(label: 'Home', icon: Icons.home_outlined),
+  CineBottomNavDestination(label: 'Dashboard', icon: Icons.dashboard_outlined),
   CineBottomNavDestination(label: 'Requests', icon: Icons.inbox_outlined),
   CineBottomNavDestination(
       label: 'Calendar', icon: Icons.calendar_month_outlined),
@@ -18,16 +18,16 @@ const _crewBottomDestinations = [
 
 const crewMenuEntries = <ActorShellMenuEntry>[
   (
-    route: MarketplaceRoutes.browse,
-    screenId: 'MP',
-    label: 'Marketplace',
-    icon: Icons.storefront_outlined,
-  ),
-  (
     route: CrewServicesRoutes.home,
     screenId: 'CR-01',
     label: 'Crew Dashboard',
     icon: Icons.dashboard_outlined,
+  ),
+  (
+    route: MarketplaceRoutes.browse,
+    screenId: 'MP',
+    label: 'Marketplace',
+    icon: Icons.storefront_outlined,
   ),
   (
     route: CrewServicesRoutes.profile,

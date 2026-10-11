@@ -87,7 +87,7 @@ void main() {
       await tester.pumpWidget(influencerApp(route: InfluencerRoutes.home));
       await tester.pumpAndSettle();
 
-      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Dashboard'), findsWidgets);
       expect(find.text('Media Kit'), findsWidgets);
       expect(find.text('Packages'), findsWidgets);
       expect(find.text('Campaigns'), findsWidgets);
