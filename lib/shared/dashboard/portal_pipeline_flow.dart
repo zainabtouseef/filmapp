@@ -60,6 +60,20 @@ class _PortalPipelineFlowState extends State<PortalPipelineFlow>
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        if (width < 520) {
+          final nodeWidth = (width - 12) / 2;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 18,
+            children: [
+              for (final stage in widget.stages)
+                SizedBox(
+                  width: nodeWidth,
+                  child: _PipelineStageNode(stage: stage),
+                ),
+            ],
+          );
+        }
         return SizedBox(
           height: 78,
           width: width,
@@ -102,70 +116,77 @@ class _PortalPipelineFlowState extends State<PortalPipelineFlow>
               Row(
                 children: [
                   for (final stage in widget.stages)
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: colors.card,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: stage.color, width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colors.card,
-                                  blurRadius: 0,
-                                  spreadRadius: 5,
-                                ),
-                                BoxShadow(
-                                  color: stage.color.withValues(alpha: 0.35),
-                                  blurRadius: 12,
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              stage.value,
-                              style: AppTextStyles.micro.copyWith(
-                                color: colors.textPrimary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            stage.label,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.caption.copyWith(
-                              color: colors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 11,
-                            ),
-                          ),
-                          if (stage.sublabel != null)
-                            Text(
-                              stage.sublabel!,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.micro.copyWith(
-                                color: colors.textTertiary,
-                                fontSize: 10,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    Expanded(child: _PipelineStageNode(stage: stage)),
                 ],
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _PipelineStageNode extends StatelessWidget {
+  final PortalPipelineStage stage;
+
+  const _PipelineStageNode({required this.stage});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.card,
+            shape: BoxShape.circle,
+            border: Border.all(color: stage.color, width: 1.5),
+            boxShadow: [
+              BoxShadow(color: colors.card, blurRadius: 0, spreadRadius: 5),
+              BoxShadow(
+                color: stage.color.withValues(alpha: 0.35),
+                blurRadius: 12,
+              ),
+            ],
+          ),
+          child: Text(
+            stage.value,
+            style: AppTextStyles.micro.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          stage.label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.caption.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+          ),
+        ),
+        if (stage.sublabel != null)
+          Text(
+            stage.sublabel!,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.micro.copyWith(
+              color: colors.textTertiary,
+              fontSize: 10,
+            ),
+          ),
+      ],
     );
   }
 }

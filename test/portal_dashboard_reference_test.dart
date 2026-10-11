@@ -132,6 +132,60 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 
+  testWidgets('pipeline uses a readable two by two flow on a phone',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SizedBox(
+            width: 358,
+            child: PortalPipelineFlow(
+              stages: const [
+                PortalPipelineStage(
+                  value: '7',
+                  label: 'Negotiating',
+                  sublabel: 'PKR 1.65M total',
+                  color: Colors.amber,
+                ),
+                PortalPipelineStage(
+                  value: '0',
+                  label: 'Offer accepted',
+                  sublabel: 'PKR 0 total',
+                  color: Colors.blue,
+                ),
+                PortalPipelineStage(
+                  value: '1',
+                  label: 'Contract sent',
+                  sublabel: 'PKR 205K total',
+                  color: Colors.purple,
+                ),
+                PortalPipelineStage(
+                  value: '0',
+                  label: 'Signed',
+                  sublabel: 'PKR 0 total',
+                  color: Colors.green,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Negotiating'), findsOneWidget);
+    expect(find.text('Offer accepted'), findsOneWidget);
+    expect(find.text('Contract sent'), findsOneWidget);
+    expect(find.text('Signed'), findsOneWidget);
+    expect(tester.getSize(find.byType(PortalPipelineFlow)).height,
+        greaterThan(120));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('dashboard hero zooms in while touched', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
