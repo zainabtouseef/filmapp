@@ -972,6 +972,14 @@ class _DeferredRouteScreenState extends State<_DeferredRouteScreen> {
     _loadFuture = widget.library.load();
   }
 
+  @override
+  void didUpdateWidget(covariant _DeferredRouteScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.library, widget.library)) return;
+    _page = null;
+    _loadFuture = widget.library.load();
+  }
+
   void _retry() {
     setState(() {
       _loadFuture = widget.library.load();
