@@ -9,12 +9,9 @@ import '../../../core/operations/operations_controller.dart';
 import '../../../core/operations/operations_models.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
-import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/formatters/cine_format.dart';
-import '../../../shared/widgets/status_chip.dart';
-import '../models/media_equipment_models.dart';
 import '../routes/media_equipment_routes.dart';
 import '../widgets/media_equipment_components.dart';
 
@@ -130,43 +127,6 @@ class _DashboardBody extends StatelessWidget {
         .where((inspection) => inspection.status != 'confirmed')
         .toList();
     final recentBookings = data.bookings.take(3).toList();
-    // "Inventory" is dropped here — it's already shown as a hero fact in
-    // the `ProviderWorkspaceHero` above, so repeating it as a tile too was
-    // redundant.
-    final metrics = [
-      MediaMetric(
-        label: 'Requests',
-        value: '${openRequests.length}',
-        delta: 'open decisions',
-        icon: Icons.inbox_outlined,
-        tone: MediaTone.gold,
-        route: MediaEquipmentRoutes.requests,
-      ),
-      const MediaMetric(
-        label: 'Opportunities',
-        value: 'Live',
-        delta: 'Open production needs',
-        icon: Icons.travel_explore_outlined,
-        tone: MediaTone.blue,
-        route: MediaEquipmentRoutes.opportunities,
-      ),
-      MediaMetric(
-        label: 'Utilization',
-        value: '$utilization%',
-        delta: 'booked or service',
-        icon: Icons.query_stats_outlined,
-        tone: MediaTone.green,
-        route: MediaEquipmentRoutes.availability,
-      ),
-      MediaMetric(
-        label: 'Inspections',
-        value: '${pendingInspections.length}',
-        delta: 'awaiting closure',
-        icon: Icons.fact_check_outlined,
-        tone: MediaTone.purple,
-        route: MediaEquipmentRoutes.handover,
-      ),
-    ];
     return PortalDashboardPage(
       children: [
         PortalHeroCard(
@@ -196,143 +156,96 @@ class _DashboardBody extends StatelessWidget {
           onSecondary: () =>
               Navigator.pushNamed(context, MediaEquipmentRoutes.profile),
         ),
-        _MetricStatsRow(metrics: metrics),
-        MediaTwoColumn(
-          left: MediaSectionCard(
-            title: 'Workspace Readiness',
-            icon: Icons.storefront_outlined,
-            selected: data.profile != null,
-            child: data.profile == null
-                ? CoreEmptyState(
-                    icon: Icons.storefront_outlined,
-                    title: 'Provider profile required',
-                    message:
-                        'Create the business identity before publishing inventory.',
-                    actionLabel: 'Create profile',
-                    onAction: () => Navigator.pushNamed(
-                      context,
-                      MediaEquipmentRoutes.profile,
+        PortalCommandCenter(
+          eyebrow: 'Equipment operations',
+          title: 'Fleet Command Centre',
+          subtitle: 'Provider readiness, bookings and inspections in one view.',
+          icon: Icons.video_camera_back_outlined,
+          primaryTitle:
+              data.profile == null ? 'Workspace setup' : 'Provider profile',
+          actionLabel: data.profile == null ? 'Create profile' : 'Edit profile',
+          onAction: () => Navigator.pushNamed(
+            context,
+            MediaEquipmentRoutes.profile,
+          ),
+          primary: data.profile == null
+              ? const CoreEmptyState(
+                  icon: Icons.storefront_outlined,
+                  title: 'Provider profile required',
+                  message:
+                      'Create the business identity before publishing inventory.',
+                )
+              : Column(
+                  children: [
+                    PortalCommandDataRow(
+                      icon: Icons.storefront_outlined,
+                      label: 'Provider',
+                      value: data.profile!.name,
                     ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 54,
-                            height: 54,
-                            decoration: BoxDecoration(
-                              color: colors.infoBlue.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.video_camera_back_outlined,
-                              color: colors.infoBlue,
-                            ),
-                          ),
-                          const SizedBox(width: 11),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  data.profile!.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.cardLabel.copyWith(
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  data.profile!.coverage.isEmpty
-                                      ? 'Coverage not configured'
-                                      : data.profile!.coverage,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.smallMeta.copyWith(
-                                    color: colors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          StatusChip(
-                            label: _title(data.profile!.verificationStatus),
-                            color:
-                                data.profile!.verificationStatus == 'verified'
-                                    ? colors.success
-                                    : colors.goldMid,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      MediaInfoRow(
-                        icon: Icons.inventory_2_outlined,
-                        label: 'Inventory',
-                        value: '${data.items.length} assets',
-                      ),
-                      MediaInfoRow(
-                        icon: Icons.widgets_outlined,
-                        label: 'Packages',
-                        value:
-                            '${data.packages.where((item) => item.status == 'published').length} published',
-                      ),
-                      MediaInfoRow(
-                        icon: Icons.visibility_outlined,
-                        label: 'Director discovery',
-                        value: _title(data.profile!.visibility),
-                      ),
-                    ],
-                  ),
-          ),
-          right: MediaSectionCard(
-            title: 'Action Required',
-            icon: Icons.priority_high_rounded,
-            child: pendingInspections.isEmpty && openRequests.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.task_alt_outlined,
-                    title: 'No urgent actions',
-                    message:
-                        'Booking decisions and inspection signatures are current.',
-                  )
-                : Column(
-                    children: [
-                      if (openRequests.isNotEmpty)
-                        PortalAttentionRow(
-                          kindLabel: 'Requests',
-                          title: '${openRequests.length} booking request(s)',
-                          meta: 'Review scope, dates, price, and terms',
-                          icon: Icons.move_to_inbox_outlined,
-                          tone: CineTone.warning,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            MediaEquipmentRoutes.requests,
-                          ),
-                        ),
-                      if (openRequests.isNotEmpty &&
-                          pendingInspections.isNotEmpty)
-                        const SizedBox(height: 10),
-                      if (pendingInspections.isNotEmpty)
-                        PortalAttentionRow(
-                          kindLabel: 'Inspections',
-                          title:
-                              '${pendingInspections.length} open inspection(s)',
-                          meta: 'Capture condition and required signatures',
-                          icon: Icons.fact_check_outlined,
-                          tone: CineTone.warning,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            pendingInspections.first.inspectionType == 'return'
-                                ? MediaEquipmentRoutes.returns
-                                : MediaEquipmentRoutes.handover,
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
+                    PortalCommandDataRow(
+                      icon: Icons.place_outlined,
+                      label: 'Coverage',
+                      value: data.profile!.coverage.isEmpty
+                          ? 'Not configured'
+                          : data.profile!.coverage,
+                    ),
+                    PortalCommandDataRow(
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Inventory',
+                      value: '${data.items.length} assets',
+                    ),
+                    PortalCommandDataRow(
+                      icon: Icons.visibility_outlined,
+                      label: 'Discovery',
+                      value: _title(data.profile!.visibility),
+                    ),
+                  ],
+                ),
+          actions: [
+            PortalCommandAction(
+              icon: Icons.move_to_inbox_outlined,
+              title: 'Booking requests',
+              subtitle: 'Review scope, dates, price and terms',
+              value: '${openRequests.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                MediaEquipmentRoutes.requests,
+              ),
+            ),
+            PortalCommandAction(
+              icon: Icons.fact_check_outlined,
+              title: 'Open inspections',
+              subtitle: 'Capture condition and required signatures',
+              value: '${pendingInspections.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                pendingInspections.isNotEmpty &&
+                        pendingInspections.first.inspectionType == 'return'
+                    ? MediaEquipmentRoutes.returns
+                    : MediaEquipmentRoutes.handover,
+              ),
+            ),
+            PortalCommandAction(
+              icon: Icons.widgets_outlined,
+              title: 'Published packages',
+              subtitle: 'Manage bundles and marketplace pricing',
+              value:
+                  '${data.packages.where((item) => item.status == 'published').length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                MediaEquipmentRoutes.packages,
+              ),
+            ),
+            PortalCommandAction(
+              icon: Icons.travel_explore_outlined,
+              title: 'Open opportunities',
+              subtitle: 'Apply equipment to active productions',
+              onTap: () => Navigator.pushNamed(
+                context,
+                MediaEquipmentRoutes.opportunities,
+              ),
+            ),
+          ],
         ),
         MediaResponsiveGrid(
           minWidth: 280,
@@ -451,52 +364,6 @@ class _DashboardBody extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-/// The dashboard's KPI row — five quick-stat tiles (inventory, requests,
-/// opportunities, utilization, inspections), each backed by a real,
-/// already-computed [MediaMetric]. Mirrors the DP portal's pulse strip
-/// (`dp_pulse_strip.dart`).
-class _MetricStatsRow extends StatelessWidget {
-  final List<MediaMetric> metrics;
-
-  const _MetricStatsRow({required this.metrics});
-
-  @override
-  Widget build(BuildContext context) {
-    final tiles = [
-      for (final metric in metrics)
-        PortalQuickStatTile(
-          icon: metric.icon,
-          value: metric.value,
-          label: metric.label,
-          delta: metric.delta,
-          tone:
-              cineToneFromColor(context, mediaToneColor(context, metric.tone)),
-          onTap: () => Navigator.pushNamed(context, metric.route),
-        ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 9.0;
-        final columns = constraints.maxWidth < 360
-            ? 1
-            : constraints.maxWidth < 700
-                ? 2
-                : constraints.maxWidth < 1000
-                    ? 3
-                    : 5;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final tile in tiles) SizedBox(width: width, child: tile),
-          ],
-        );
-      },
     );
   }
 }

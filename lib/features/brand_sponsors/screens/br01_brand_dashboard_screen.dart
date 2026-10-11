@@ -6,16 +6,12 @@ import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/director/director_dashboard_models.dart';
 import '../../../core/marketplace/marketplace_models.dart';
-import '../../../core/payments/payment_models.dart';
-import '../../../core/payments/payments_controller.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
-import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
-import '../models/brand_sponsor_models.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_demo_journey.dart';
@@ -32,14 +28,12 @@ class BR01BrandDashboardScreen extends StatefulWidget {
 
 class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
   SpecialistController? _specialist;
-  PaymentsController? _payments;
   BookingsController? _bookingsController;
   AuthController? _auth;
   BrandProfileDto? _profile;
   List<BrandOpportunityDto> _opportunities = const [];
   List<BrandApplicationDto> _applications = const [];
   List<CampaignDeliverableDto> _deliverables = const [];
-  PaymentDashboardDto? _paymentDashboard;
   DirectorDashboard? _productionDashboard;
   List<Booking> _productionBookings = const [];
   MarketplaceShortlistBundle? _shortlistBundle;
@@ -51,17 +45,14 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final specialist = SpecialistScope.maybeOf(context);
-    final payments = PaymentsScope.maybeOf(context);
     final bookings = BookingsScope.maybeOf(context);
     final auth = AuthScope.maybeOf(context);
     if (identical(specialist, _specialist) &&
-        identical(payments, _payments) &&
         identical(bookings, _bookingsController) &&
         identical(auth, _auth)) {
       return;
     }
     _specialist = specialist;
-    _payments = payments;
     _bookingsController = bookings;
     _auth = auth;
     if (specialist != null) _load(force: true);
@@ -87,10 +78,6 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         applications = values[1] as List<BrandApplicationDto>;
         deliverables = values[2] as List<CampaignDeliverableDto>;
       }
-      PaymentDashboardDto? paymentDashboard;
-      if (_payments != null) {
-        paymentDashboard = await _payments!.dashboard(force: force);
-      }
       DirectorDashboard? productionDashboard;
       List<Booking> productionBookings = const [];
       MarketplaceShortlistBundle? shortlistBundle;
@@ -113,7 +100,6 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         _opportunities = opportunities;
         _applications = applications;
         _deliverables = deliverables;
-        _paymentDashboard = paymentDashboard;
         _productionDashboard = productionDashboard;
         _shortlistBundle = shortlistBundle;
         _productionBookings = productionBookings;
@@ -181,59 +167,11 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         .where((item) =>
             item.status == 'submitted' || item.status == 'revision_requested')
         .length;
-    // "Live opportunities" now lives in the hero's stat strip, so it's
-    // dropped here to avoid duplicating it.
-    final metrics = [
-      BrandMetric(
-        label: 'Applications',
-        value: '${_applications.length}',
-        delta: '$pendingApplications require review',
-        icon: Icons.inbox_outlined,
-        tone: BrandTone.blue,
-        route: BrandSponsorRoutes.applications,
-      ),
-      BrandMetric(
-        label: 'Delivery review',
-        value: '$reviewDeliverables',
-        delta: '${_deliverables.length} deliverables',
-        icon: Icons.fact_check_outlined,
-        tone: BrandTone.purple,
-        route: BrandSponsorRoutes.tracker,
-      ),
-      BrandMetric(
-        label: 'Recorded spend',
-        value: brandMoney(_paymentDashboard?.debitMinor),
-        delta: 'Posted ledger debits',
-        icon: Icons.account_balance_wallet_outlined,
-        tone: BrandTone.green,
-        route: BrandSponsorRoutes.payments,
-      ),
-    ];
     final active = activeBrandOpportunity(_opportunities);
     final production = _productionDashboard?.summary;
     final demoProject = isBrandDemoAccount(_auth)
         ? selectBrandDemoProject(_productionDashboard?.projects ?? const [])
         : null;
-    // "Confirmed bookings" and "Committed budget" now live in the hero's
-    // 3-stat strip, so they're dropped here to avoid duplicating them.
-    final productionMetrics = [
-      BrandMetric(
-        label: 'Active projects',
-        value: '${production?.activeProjects ?? 0}',
-        delta: '${production?.projectCount ?? 0} projects total',
-        icon: Icons.movie_creation_outlined,
-        tone: BrandTone.gold,
-        route: BrandSponsorRoutes.projects,
-      ),
-      BrandMetric(
-        label: 'Production actions',
-        value: '${production?.attentionCount ?? 0}',
-        delta: 'Requests and payments needing attention',
-        icon: Icons.priority_high_rounded,
-        tone: BrandTone.purple,
-        route: BrandSponsorRoutes.bookings,
-      ),
-    ];
     return PortalDashboardPage(
       children: [
         TourTarget(
@@ -287,93 +225,77 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                 .length,
             onPlay: () => startBrandFullWalkthrough(context),
           ),
-        // A single combined row (the earlier two rows duplicated two of
-        // these values in the hero's stat strip above; those two moved
-        // up there and the rest are consolidated here).
-        _BrandQuickStatRow(metrics: [...productionMetrics, ...metrics]),
-        BrandTwoColumn(
-          left: TourTarget(
-            id: 'brand.dashboard.activeBrief',
-            child: BrandSectionCard(
-              title: active == null ? 'Opportunity portfolio' : 'Active brief',
-              icon: Icons.campaign_outlined,
-              selected: true,
-              child: active == null
-                  ? CoreEmptyState(
-                      icon: Icons.campaign_outlined,
-                      title: 'No opportunities yet',
-                      message:
-                          'Create a clear brief with budget, usage, eligibility and deliverables.',
-                      actionLabel: 'Create opportunity',
-                      onAction: () => Navigator.pushNamed(
-                        context,
-                        BrandSponsorRoutes.composer,
-                      ),
-                    )
-                  : _ActiveOpportunity(
-                      opportunity: active,
-                      onApplications: () {
-                        Navigator.pushNamed(
-                          context,
-                          BrandSponsorRoutes.applications,
-                        );
-                      },
-                    ),
+        TourTarget(
+          id: 'brand.dashboard.commandCentre',
+          child: PortalCommandCenter(
+            eyebrow: 'Brand operations',
+            title: 'Campaign Command Centre',
+            subtitle: 'Brief progress, approvals and organization readiness.',
+            icon: Icons.campaign_outlined,
+            primaryTitle:
+                active == null ? 'Opportunity portfolio' : 'Active brief',
+            actionLabel:
+                active == null ? 'Create opportunity' : 'Open applications',
+            onAction: () => Navigator.pushNamed(
+              context,
+              active == null
+                  ? BrandSponsorRoutes.composer
+                  : BrandSponsorRoutes.applications,
             ),
-          ),
-          right: Column(
-            children: [
-              TourTarget(
-                id: 'brand.dashboard.actionQueue',
-                child: BrandSectionCard(
-                  title: 'Action required',
-                  icon: Icons.priority_high_rounded,
-                  tone: BrandTone.purple,
-                  child: _ActionQueue(
-                    applications: pendingApplications,
-                    deliverables: reviewDeliverables,
-                    draftOpportunities: _opportunities
-                        .where((item) => item.status == 'draft')
-                        .length,
+            primary: active == null
+                ? const CoreEmptyState(
+                    icon: Icons.campaign_outlined,
+                    title: 'No opportunities yet',
+                    message:
+                        'Create a clear brief with budget, usage, eligibility and deliverables.',
+                  )
+                : _ActiveOpportunity(
+                    opportunity: active,
+                    onApplications: () => Navigator.pushNamed(
+                      context,
+                      BrandSponsorRoutes.applications,
+                    ),
                   ),
+            actions: [
+              PortalCommandAction(
+                icon: Icons.inbox_outlined,
+                title: 'Applications to review',
+                subtitle: 'Shortlist and respond to creator submissions',
+                value: '$pendingApplications',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  BrandSponsorRoutes.applications,
                 ),
               ),
-              const SizedBox(height: 12),
-              TourTarget(
-                id: 'brand.dashboard.readiness',
-                child: BrandSectionCard(
-                  title: 'Organization readiness',
-                  icon: Icons.verified_user_outlined,
-                  tone: BrandTone.green,
-                  child: Column(
-                    children: [
-                      BrandInfoRow(
-                        icon: Icons.business_outlined,
-                        label: 'Organization',
-                        value: _profile!.name,
-                      ),
-                      BrandInfoRow(
-                        icon: Icons.category_outlined,
-                        label: 'Category',
-                        value: _profile!.category ?? 'Not set',
-                      ),
-                      BrandInfoRow(
-                        icon: Icons.verified_outlined,
-                        label: 'KYB status',
-                        value: readableBrandStatus(_profile!.trustStatus),
-                      ),
-                      const SizedBox(height: 8),
-                      CoreSecondaryButton(
-                        icon: Icons.edit_outlined,
-                        label: 'Review brand profile',
-                        compact: true,
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          BrandSponsorRoutes.profile,
-                        ),
-                      ),
-                    ],
-                  ),
+              PortalCommandAction(
+                icon: Icons.fact_check_outlined,
+                title: 'Deliverable approvals',
+                subtitle: 'Review submitted campaign work',
+                value: '$reviewDeliverables',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  BrandSponsorRoutes.tracker,
+                ),
+              ),
+              PortalCommandAction(
+                icon: Icons.edit_note_outlined,
+                title: 'Draft opportunities',
+                subtitle: 'Complete and publish pending briefs',
+                value:
+                    '${_opportunities.where((item) => item.status == 'draft').length}',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  BrandSponsorRoutes.composer,
+                ),
+              ),
+              PortalCommandAction(
+                icon: Icons.verified_user_outlined,
+                title: 'Organization profile',
+                subtitle:
+                    '${_profile!.category ?? 'Category not set'} · ${readableBrandStatus(_profile!.trustStatus)}',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  BrandSponsorRoutes.profile,
                 ),
               ),
             ],
@@ -487,106 +409,6 @@ class _ActiveOpportunity extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _ActionQueue extends StatelessWidget {
-  final int applications;
-  final int deliverables;
-  final int draftOpportunities;
-
-  const _ActionQueue({
-    required this.applications,
-    required this.deliverables,
-    required this.draftOpportunities,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      (
-        kindLabel: 'Applications',
-        icon: Icons.inbox_outlined,
-        title: '$applications applications',
-        meta: 'Review proposals and selection status',
-        route: BrandSponsorRoutes.applications,
-      ),
-      (
-        kindLabel: 'Deliverables',
-        icon: Icons.fact_check_outlined,
-        title: '$deliverables proof reviews',
-        meta: 'Approve delivery or request a revision',
-        route: BrandSponsorRoutes.tracker,
-      ),
-      (
-        kindLabel: 'Drafts',
-        icon: Icons.drafts_outlined,
-        title: '$draftOpportunities draft briefs',
-        meta: 'Complete or publish opportunity details',
-        route: BrandSponsorRoutes.composer,
-      ),
-    ];
-    return Column(
-      children: [
-        for (var i = 0; i < items.length; i++) ...[
-          PortalAttentionRow(
-            kindLabel: items[i].kindLabel,
-            title: items[i].title,
-            meta: items[i].meta,
-            icon: items[i].icon,
-            tone: CineTone.information,
-            onTap: () => Navigator.pushNamed(context, items[i].route),
-          ),
-          if (i != items.length - 1) const SizedBox(height: 10),
-        ],
-      ],
-    );
-  }
-}
-
-/// A responsive row of dashboard-kit quick-stat tiles built from
-/// [BrandMetric] data — reuses the exact same values/tones already
-/// computed for [BrandKpiRail] elsewhere in this app, just presented
-/// with the shared dashboard-kit tile treatment.
-class _BrandQuickStatRow extends StatelessWidget {
-  final List<BrandMetric> metrics;
-
-  const _BrandQuickStatRow({required this.metrics});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 9.0;
-        final columns = constraints.maxWidth < 360
-            ? 1
-            : constraints.maxWidth < 700
-                ? 2
-                : 4;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final metric in metrics)
-              SizedBox(
-                width: width,
-                child: PortalQuickStatTile(
-                  icon: metric.icon,
-                  value: metric.value,
-                  label: metric.label,
-                  delta: metric.delta,
-                  tone: cineToneFromColor(
-                    context,
-                    brandToneColor(context, metric.tone),
-                  ),
-                  onTap: () => Navigator.pushNamed(context, metric.route),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

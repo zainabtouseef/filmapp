@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/analytics/analytics_controller.dart';
-import '../../../core/analytics/analytics_models.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/booking_models.dart';
 import '../../../core/bookings/bookings_controller.dart';
 import '../../../core/casting/casting_controller.dart';
 import '../../../core/casting/casting_models.dart';
-import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/profile/profile_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
@@ -17,7 +14,6 @@ import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
-import '../../../shared/formatters/cine_format.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -132,23 +128,16 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
             opportunitiesFuture: _opportunitiesFuture,
           ),
         ),
-        const TourTarget(
-          id: 'actor.dashboard.kpis',
-          child: _TalentKpiStrip(),
-        ),
         TourTarget(
           id: 'actor.dashboard.castingOverview',
           child: _CastingDashboardOverview(future: _castingFuture),
         ),
-        ActorTwoColumn(
-          left: TourTarget(
-            id: 'actor.dashboard.priorityActions',
-            child: _PendingWork(
-              future: _opportunitiesFuture,
-              onRefresh: _refreshOpportunities,
-            ),
+        TourTarget(
+          id: 'actor.dashboard.priorityActions',
+          child: _TalentCommandCenter(
+            future: _opportunitiesFuture,
+            onRefresh: _refreshOpportunities,
           ),
-          right: _DashboardSideRail(profileFuture: _profileFuture),
         ),
       ],
     );
@@ -981,131 +970,31 @@ class _ProfileCompletenessRing extends StatelessWidget {
   }
 }
 
-/// Live KPI strip — a dashboard-kit quick-stat-tile row over the same
-/// `PersonalDashboardDto` the previous `PersonalDashboardKpiStrip` rendered.
-/// Fetches independently (mirroring that shared widget's own fetch-once
-/// pattern) so the shared `core/analytics/analytics_widgets.dart` widget
-/// used by other portals' dashboards is left untouched.
-class _TalentKpiStrip extends StatefulWidget {
-  const _TalentKpiStrip();
-
-  @override
-  State<_TalentKpiStrip> createState() => _TalentKpiStripState();
-}
-
-class _TalentKpiStripState extends State<_TalentKpiStrip> {
-  Future<PersonalDashboardDto>? _future;
-  bool _started = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // See `PersonalDashboardKpiStrip`: fetch once per mount, not on every
-    // AnalyticsScope notification, to avoid an unbounded fetch loop.
-    if (_started) return;
-    _started = true;
-    final analytics = AnalyticsScope.maybeOf(context);
-    _future = analytics == null
-        ? Future.error(StateError('AnalyticsScope missing'))
-        : analytics.personalDashboard(force: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<PersonalDashboardDto>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SkeletonCard(height: 150, density: CardDensity.compact);
-        }
-        if (snapshot.hasError || !snapshot.hasData) {
-          return const InlineNotice(
-            message:
-                'Live dashboard metrics are temporarily unavailable — showing preview dashboard metrics below.',
-            tone: CoreStatusTone.warning,
-          );
-        }
-        final data = snapshot.data!;
-        // "Pending offers" is dropped here — it's a subset of the hero's
-        // own "Awaiting your response" figure (auditions + pending offers),
-        // so keeping both would just show overlapping counts.
-        final tiles = [
-          PortalQuickStatTile(
-            icon: Icons.lock_outline,
-            value: CineFormat.currency(
-              data.securedValueMinor ~/ 100,
-              compact: true,
-            ),
-            label: 'Secured value',
-            delta: 'Across bookings',
-            tone: CineTone.positive,
-          ),
-          PortalQuickStatTile(
-            icon: Icons.star_outline_rounded,
-            value: data.ratingAverage.toStringAsFixed(1),
-            label: 'Public rating',
-            delta: data.reviewCount == 0
-                ? 'No reviews yet'
-                : '${data.reviewCount} reviews',
-            tone: CineTone.premium,
-            onTap: () => Navigator.pushNamed(context, CoreRoutes.review),
-          ),
-          PortalQuickStatTile(
-            icon: Icons.notifications_none_rounded,
-            value: '${data.unreadNotifications}',
-            label: 'Unread alerts',
-            delta:
-                '${data.openDisputes} disputes · ${data.openSupportTickets} support',
-            tone: CineTone.warning,
-            onTap: () => Navigator.pushNamed(context, CoreRoutes.notifications),
-          ),
-        ];
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            const gap = 9.0;
-            final columns = constraints.maxWidth < 360
-                ? 1
-                : constraints.maxWidth < 700
-                    ? 2
-                    : 3;
-            final width =
-                (constraints.maxWidth - gap * (columns - 1)) / columns;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final tile in tiles) SizedBox(width: width, child: tile),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _PendingWork extends StatelessWidget {
+class _TalentCommandCenter extends StatelessWidget {
   final Future<List<Booking>>? future;
   final VoidCallback onRefresh;
 
-  const _PendingWork({
+  const _TalentCommandCenter({
     required this.future,
     required this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ActorSectionCard(
-      title: 'Priority Actions',
-      icon: Icons.priority_high_rounded,
-      actionText: future == null ? 'Inbox' : 'Refresh',
-      onActionTap: future == null
+    return PortalCommandCenter(
+      eyebrow: 'Talent operations',
+      title: 'Work Command Centre',
+      subtitle: 'Offers, profile controls and availability in one place.',
+      icon: Icons.theater_comedy_outlined,
+      primaryTitle: 'Priority offers',
+      actionLabel: future == null ? 'Open inbox' : 'Refresh',
+      onAction: future == null
           ? () => Navigator.pushNamed(
                 context,
                 ActorTalentRoutes.opportunities,
               )
           : onRefresh,
-      child: future == null
+      primary: future == null
           ? const CoreEmptyState(
               icon: Icons.lock_outline_rounded,
               title: 'Sign in to load priority actions',
@@ -1140,6 +1029,44 @@ class _PendingWork extends StatelessWidget {
                 );
               },
             ),
+      actions: [
+        PortalCommandAction(
+          icon: Icons.video_library_outlined,
+          title: 'Portfolio and showreel',
+          subtitle: 'Photos, showreel and self-tapes',
+          onTap: () => Navigator.pushNamed(
+            context,
+            ActorTalentRoutes.portfolio,
+          ),
+        ),
+        PortalCommandAction(
+          icon: Icons.calendar_month_outlined,
+          title: 'Availability calendar',
+          subtitle: 'Update dates before new offers arrive',
+          onTap: () => Navigator.pushNamed(
+            context,
+            ActorTalentRoutes.calendar,
+          ),
+        ),
+        PortalCommandAction(
+          icon: Icons.price_change_outlined,
+          title: 'Rates and terms',
+          subtitle: 'Review day rate and working terms',
+          onTap: () => Navigator.pushNamed(
+            context,
+            ActorTalentRoutes.rates,
+          ),
+        ),
+        PortalCommandAction(
+          icon: Icons.stars_outlined,
+          title: 'Reputation and reviews',
+          subtitle: 'Track public trust and feedback',
+          onTap: () => Navigator.pushNamed(
+            context,
+            ActorTalentRoutes.reputation,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1187,118 +1114,6 @@ CineTone _cineToneForBookingStatus(ActorBookingStatus status) =>
       ActorBookingStatus.disputed => CineTone.critical,
       _ => CineTone.information,
     };
-
-class _DashboardSideRail extends StatelessWidget {
-  final Future<_TalentProfileSnapshot>? profileFuture;
-
-  const _DashboardSideRail({required this.profileFuture});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TourTarget(
-          id: 'actor.dashboard.manageProfile',
-          child: ActorSectionCard(
-            title: 'Manage Your Profile',
-            icon: Icons.tune_rounded,
-            tone: ActorTone.purple,
-            child: const ActorTaskRail(
-              tasks: [
-                ActorTask(
-                  id: 'portfolio',
-                  title: 'Portfolio',
-                  subtitle: 'Photos, showreel, self-tapes',
-                  route: ActorTalentRoutes.portfolio,
-                  icon: Icons.video_library_outlined,
-                  tone: ActorTone.blue,
-                ),
-                ActorTask(
-                  id: 'calendar',
-                  title: 'Calendar',
-                  subtitle: 'Availability',
-                  route: ActorTalentRoutes.calendar,
-                  icon: Icons.calendar_month_outlined,
-                  tone: ActorTone.gold,
-                ),
-                ActorTask(
-                  id: 'rates',
-                  title: 'Rates',
-                  subtitle: 'Day rate & terms',
-                  route: ActorTalentRoutes.rates,
-                  icon: Icons.price_change_outlined,
-                  tone: ActorTone.green,
-                ),
-                ActorTask(
-                  id: 'safety',
-                  title: 'Safety',
-                  subtitle: 'Privacy & support',
-                  route: ActorTalentRoutes.safety,
-                  icon: Icons.health_and_safety_outlined,
-                  tone: ActorTone.purple,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TourTarget(
-          id: 'actor.dashboard.reputationSnapshot',
-          child: ActorSectionCard(
-            title: 'Reputation Snapshot',
-            icon: Icons.stars_outlined,
-            actionText: 'Reviews',
-            onActionTap: () =>
-                Navigator.pushNamed(context, ActorTalentRoutes.reputation),
-            child: FutureBuilder<_TalentProfileSnapshot>(
-              future: profileFuture,
-              builder: (context, snapshot) {
-                if (profileFuture != null &&
-                    snapshot.connectionState == ConnectionState.waiting) {
-                  return const SkeletonCard(
-                    height: 112,
-                    density: CardDensity.compact,
-                  );
-                }
-                if (profileFuture != null && snapshot.hasError) {
-                  return const CoreEmptyState(
-                    icon: Icons.cloud_off_outlined,
-                    title: 'Rating unavailable',
-                    message: 'Open Reviews to retry.',
-                  );
-                }
-                final profile = snapshot.data?.userProfile;
-                return Column(
-                  children: [
-                    ActorInfoRow(
-                      icon: Icons.star_outline_rounded,
-                      label: 'Public rating',
-                      value: profile == null
-                          ? 'No live profile'
-                          : profile.reviewCount == 0
-                              ? 'No reviews yet'
-                              : '${profile.ratingAverage.toStringAsFixed(1)} / 5 · ${profile.reviewCount} reviews',
-                    ),
-                    const ActorInfoRow(
-                      icon: Icons.schedule_rounded,
-                      label: 'Response habit',
-                      value: 'Reply before expiry',
-                    ),
-                    const ActorInfoRow(
-                      icon: Icons.workspace_premium_outlined,
-                      label: 'Trust setup',
-                      value: 'KYC and safety',
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _NoActivityCard extends StatelessWidget {
   const _NoActivityCard();

@@ -8,7 +8,6 @@ import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
-import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../routes/model_extension_routes.dart';
 
@@ -123,81 +122,79 @@ class _MD01CampaignCategoriesScreenState
                 );
               },
             ),
-            ActorSectionCard(
-              title: 'Model Profile Extension',
+            PortalCommandCenter(
+              eyebrow: 'Model operations',
+              title: 'Profile Command Centre',
+              subtitle: 'Campaign fit, rights and public visibility.',
               icon: Icons.category_outlined,
-              selected: selectedCount < 6,
-              child: ActorTwoColumn(
-                left: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const StepWizardIndicator(currentStep: 1, totalSteps: 3),
-                    const SizedBox(height: 14),
-                    InlineNotice(
-                      message: profile == null
-                          ? 'No model extension profile exists yet. Saving categories will create live backend rules.'
-                          : 'Live model extension: ${profile.campaignCategories.length} category rule(s), ${profile.usageRights.length} rights.',
-                      icon: profile == null
-                          ? Icons.info_outline_rounded
-                          : Icons.cloud_done_outlined,
-                      tone: profile == null
-                          ? CoreStatusTone.info
-                          : CoreStatusTone.success,
-                    ),
-                    const SizedBox(height: 12),
-                    FutureBuilder<UserProfile>(
-                      future: _userProfileFuture,
-                      builder: (context, userSnapshot) => ActorMediaFrame(
-                        imageUrl: userSnapshot.data?.coverFile?.publicUrl ?? '',
-                        title: 'Campaign fit',
-                        badge: 'Backend profile',
-                        fallbackIcon: Icons.style_outlined,
-                        aspectRatio: 16 / 10,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        StatusChip(
-                          label: '$selectedCount selected',
-                          color: context.appColors.goldMid,
-                        ),
-                        StatusChip(
-                          label: '$publicCount visible',
-                          color: context.appColors.infoBlue,
-                        ),
-                        StatusChip(
-                          label: profile == null ? 'Not saved' : 'Live rules',
-                          color: profile == null
-                              ? context.appColors.goldMid
-                              : context.appColors.success,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                right: const Column(
-                  children: [
-                    ActorInfoRow(
-                      icon: Icons.visibility_outlined,
-                      label: 'Public view',
-                      value: 'Directors see visible categories',
-                    ),
-                    ActorInfoRow(
-                      icon: Icons.verified_user_outlined,
-                      label: 'Review',
-                      value: 'Saved changes update backend rules',
-                    ),
-                    ActorInfoRow(
-                      icon: Icons.link_outlined,
-                      label: 'Connected to',
-                      value: 'Offers, rights and model releases',
-                    ),
-                  ],
-                ),
+              primaryTitle: 'Campaign fit',
+              actionLabel: 'Edit profile',
+              onAction: () => Navigator.pushNamed(
+                context,
+                ModelExtensionRoutes.profile,
               ),
+              primary: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const StepWizardIndicator(currentStep: 1, totalSteps: 3),
+                  const SizedBox(height: 14),
+                  InlineNotice(
+                    message: profile == null
+                        ? 'Saving categories will create your live model rules.'
+                        : 'Live profile with ${profile.campaignCategories.length} category rule(s) and ${profile.usageRights.length} rights.',
+                    icon: profile == null
+                        ? Icons.info_outline_rounded
+                        : Icons.cloud_done_outlined,
+                    tone: profile == null
+                        ? CoreStatusTone.info
+                        : CoreStatusTone.success,
+                  ),
+                  const SizedBox(height: 12),
+                  FutureBuilder<UserProfile>(
+                    future: _userProfileFuture,
+                    builder: (context, userSnapshot) => ActorMediaFrame(
+                      imageUrl: userSnapshot.data?.coverFile?.publicUrl ?? '',
+                      title: 'Campaign fit',
+                      badge: 'Backend profile',
+                      fallbackIcon: Icons.style_outlined,
+                      aspectRatio: 16 / 8.8,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                PortalCommandAction(
+                  icon: Icons.tune_outlined,
+                  title: 'Campaign categories',
+                  subtitle: 'Choose the work shown to directors',
+                  value: '$selectedCount',
+                ),
+                PortalCommandAction(
+                  icon: Icons.visibility_outlined,
+                  title: 'Public visibility',
+                  subtitle: 'Control which categories directors can see',
+                  value: '$publicCount',
+                ),
+                PortalCommandAction(
+                  icon: Icons.gavel_outlined,
+                  title: 'Usage rights',
+                  subtitle: 'Review image, territory and duration rights',
+                  value: '${profile?.usageRights.length ?? 0}',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    ModelExtensionRoutes.usageRights,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.work_outline_rounded,
+                  title: 'Model opportunities',
+                  subtitle: 'Review live offers and application status',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    ModelExtensionRoutes.opportunities,
+                  ),
+                ),
+              ],
             ),
             ActorSectionCard(
               title: 'Campaign Categories',

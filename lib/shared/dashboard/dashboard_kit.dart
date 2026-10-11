@@ -5,6 +5,7 @@ library;
 
 export 'portal_agenda_row.dart';
 export 'portal_attention_row.dart';
+export 'portal_command_center.dart';
 export 'portal_dashboard_page.dart';
 export 'portal_floating_bubbles.dart';
 export 'portal_glass_fire_widget.dart';

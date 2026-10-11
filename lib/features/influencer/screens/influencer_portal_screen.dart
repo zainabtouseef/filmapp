@@ -299,17 +299,87 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
               secured: secured,
               campaignOffers: activeCampaigns.length,
             ),
-            DPTwoColumn(
-              left: const MarketplacePricingPreferencePanel(
-                listingTypes: {'influencer'},
-                title: 'Influencer marketplace pricing',
+            const MarketplacePricingPreferencePanel(
+              listingTypes: {'influencer'},
+              title: 'Influencer marketplace pricing',
+            ),
+            PortalCommandCenter(
+              eyebrow: 'Creator operations',
+              title: 'Campaign Command Centre',
+              subtitle: 'Media-kit readiness, packages and live briefs.',
+              icon: Icons.campaign_outlined,
+              primaryTitle: 'Creator readiness',
+              actionLabel: 'Open campaigns',
+              onAction: () => Navigator.pushNamed(
+                context,
+                InfluencerRoutes.campaigns,
               ),
-              right: _NextBestActions(
-                hasInfluencerCategory:
-                    data.talent.availabilityCategories.contains('influencer'),
-                hasPackages: packages.isNotEmpty,
-                hasAudience: followers > 0,
+              primary: Column(
+                children: [
+                  PortalCommandDataRow(
+                    icon: Icons.toggle_on_outlined,
+                    label: 'Availability',
+                    value: data.talent.availabilityCategories
+                            .contains('influencer')
+                        ? 'Influencer work enabled'
+                        : 'Enable influencer category',
+                  ),
+                  PortalCommandDataRow(
+                    icon: Icons.groups_outlined,
+                    label: 'Audience',
+                    value: followers > 0
+                        ? '${_shortNumber(followers)} followers'
+                        : 'Add audience metrics',
+                  ),
+                  PortalCommandDataRow(
+                    icon: Icons.sell_outlined,
+                    label: 'Packages',
+                    value: packages.isEmpty
+                        ? 'Create a rate package'
+                        : '${packages.length} saved',
+                  ),
+                ],
               ),
+              actions: [
+                PortalCommandAction(
+                  icon: Icons.badge_outlined,
+                  title: 'Media kit',
+                  subtitle: 'Audience identity and public pitch',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InfluencerRoutes.mediaKit,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.sell_outlined,
+                  title: 'Rate packages',
+                  subtitle: 'Set deliverables and commercial terms',
+                  value: '${packages.length}',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InfluencerRoutes.packages,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.campaign_outlined,
+                  title: 'Campaign inbox',
+                  subtitle: 'Review live brand requests',
+                  value: '${activeCampaigns.length}',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InfluencerRoutes.campaigns,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.insights_outlined,
+                  title: 'Performance analytics',
+                  subtitle: 'Campaign health and creator performance',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InfluencerRoutes.analytics,
+                  ),
+                ),
+              ],
             ),
             _CampaignPreviewCard(campaigns: activeCampaigns.take(3).toList()),
           ],
@@ -1103,99 +1173,6 @@ String _heroInitials(String name) {
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first[0].toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-class _NextBestActions extends StatelessWidget {
-  final bool hasInfluencerCategory;
-  final bool hasPackages;
-  final bool hasAudience;
-
-  const _NextBestActions({
-    required this.hasInfluencerCategory,
-    required this.hasPackages,
-    required this.hasAudience,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <PortalAttentionRow>[
-      if (!hasInfluencerCategory)
-        PortalAttentionRow(
-          kindLabel: 'Setup',
-          title: 'Enable influencer availability',
-          meta: 'Turn on the influencer category in your media kit',
-          icon: Icons.toggle_off_outlined,
-          tone: CineTone.warning,
-          onTap: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
-        ),
-      if (!hasAudience)
-        PortalAttentionRow(
-          kindLabel: 'Setup',
-          title: 'Add audience metrics',
-          meta: 'Add follower counts to your media kit',
-          icon: Icons.groups_outlined,
-          tone: CineTone.warning,
-          onTap: () => Navigator.pushNamed(context, InfluencerRoutes.mediaKit),
-        ),
-      if (!hasPackages)
-        PortalAttentionRow(
-          kindLabel: 'Setup',
-          title: 'Save a rate package',
-          meta: 'Add at least one rate package to receive briefs',
-          icon: Icons.sell_outlined,
-          tone: CineTone.warning,
-          onTap: () => Navigator.pushNamed(context, InfluencerRoutes.packages),
-        ),
-    ];
-
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Next best actions',
-              style: AppTextStyles.cardTitle
-                  .copyWith(color: context.appColors.textPrimary)),
-          const SizedBox(height: 10),
-          if (items.isEmpty)
-            Row(
-              children: [
-                Icon(Icons.check_circle_outline_rounded,
-                    color: context.appColors.success, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'All set — your media kit is ready for campaign requests.',
-                    style: AppTextStyles.smallMeta
-                        .copyWith(color: context.appColors.textSecondary),
-                  ),
-                ),
-              ],
-            )
-          else
-            for (var i = 0; i < items.length; i++) ...[
-              items[i],
-              if (i != items.length - 1) const SizedBox(height: 10),
-            ],
-          const SizedBox(height: 14),
-          DPHolographicButton(
-            label: hasPackages && hasAudience
-                ? 'View campaigns'
-                : 'Complete setup',
-            icon: hasPackages && hasAudience
-                ? Icons.campaign_outlined
-                : Icons.tune_outlined,
-            secondary: hasPackages && hasAudience,
-            onTap: () => Navigator.pushNamed(
-              context,
-              hasPackages && hasAudience
-                  ? InfluencerRoutes.campaigns
-                  : InfluencerRoutes.mediaKit,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _CampaignPreviewCard extends StatelessWidget {

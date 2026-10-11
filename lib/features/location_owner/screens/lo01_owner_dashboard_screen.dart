@@ -15,7 +15,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
-import '../../../shared/widgets/status_chip.dart';
 import '../models/location_owner_models.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_components.dart';
@@ -131,52 +130,6 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
           booking.endAt.isAfter(DateTime.now());
     }).toList();
     final latestRequests = openRequests.take(3).toList();
-    final metrics = [
-      LocationMetric(
-        label: 'Properties',
-        value: '${data.properties.length}',
-        delta: data.properties.any((item) => item.status == 'draft')
-            ? 'Drafts need review'
-            : 'Portfolio',
-        icon: Icons.location_city_outlined,
-        tone: LocationTone.blue,
-        route: LocationOwnerRoutes.listing,
-      ),
-      LocationMetric(
-        label: 'Open Requests',
-        value: '${openRequests.length}',
-        delta: openRequests.isEmpty ? 'Inbox clear' : 'Response needed',
-        icon: Icons.inbox_outlined,
-        tone: LocationTone.gold,
-        route: LocationOwnerRoutes.requests,
-      ),
-      const LocationMetric(
-        label: 'Opportunities',
-        value: 'Live',
-        delta: 'Apply to open needs',
-        icon: Icons.travel_explore_outlined,
-        tone: LocationTone.blue,
-        route: LocationOwnerRoutes.opportunities,
-      ),
-      LocationMetric(
-        label: 'Upcoming Shoots',
-        value: '${upcoming.length}',
-        delta: 'Accepted bookings',
-        icon: Icons.movie_filter_outlined,
-        tone: LocationTone.purple,
-        route: LocationOwnerRoutes.calendar,
-      ),
-      LocationMetric(
-        label: 'Earnings',
-        value: 'PKR ${compactLocationMoney(data.payments.creditMinor ~/ 100)}',
-        delta: data.payments.pendingReleaseMinor > 0
-            ? 'Release pending'
-            : 'Verified ledger',
-        icon: Icons.account_balance_wallet_outlined,
-        tone: LocationTone.green,
-        route: LocationOwnerRoutes.earnings,
-      ),
-    ];
     final accountName = _auth?.user?.displayName ?? 'Location Partner';
     final propertyName = property?.name ?? accountName;
     return PortalDashboardPage(
@@ -213,47 +166,96 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
           ),
         ),
         TourTarget(
-          id: 'location.dashboard.quickStats',
-          child: _QuickStatsRow(metrics: metrics),
-        ),
-        LocationTwoColumn(
-          left: TourTarget(
-            id: 'location.dashboard.activeProperty',
-            child: property == null
-                ? LocationSectionCard(
-                    title: 'Property portfolio',
-                    icon: Icons.add_location_alt_outlined,
-                    selected: true,
-                    child: CoreEmptyState(
-                      icon: Icons.location_city_outlined,
-                      title: 'Create your first property',
-                      message:
-                          'Add production areas, capacity, access details and a public listing.',
-                      actionLabel: 'Create property',
-                      onAction: () => Navigator.pushNamed(
-                        context,
-                        LocationOwnerRoutes.listing,
-                      ),
-                    ),
-                  )
-                : _LivePropertyCard(
-                    property: property,
-                    fallbackImageUrl:
-                        data.userProfile.coverFile?.publicUrl ?? '',
-                  ),
-          ),
-          right: TourTarget(
-            id: 'location.dashboard.actionRequired',
-            child: LocationSectionCard(
-              title: 'Action required',
-              icon: Icons.priority_high_rounded,
-              tone: LocationTone.gold,
-              child: _ActionList(
-                property: property,
-                openRequests: openRequests,
-                upcoming: upcoming,
-              ),
+          id: 'location.dashboard.commandCentre',
+          child: PortalCommandCenter(
+            eyebrow: 'Location operations',
+            title: 'Property Command Centre',
+            subtitle:
+                'Portfolio readiness, requests and shoot access in one view.',
+            icon: Icons.location_city_outlined,
+            primaryTitle:
+                property == null ? 'Portfolio setup' : 'Active property',
+            actionLabel:
+                property == null ? 'Create property' : 'Manage property',
+            onAction: () => Navigator.pushNamed(
+              context,
+              LocationOwnerRoutes.listing,
             ),
+            primary: property == null
+                ? const CoreEmptyState(
+                    icon: Icons.add_location_alt_outlined,
+                    title: 'Create your first property',
+                    message:
+                        'Add production areas, capacity, access details and a public listing.',
+                  )
+                : Column(
+                    children: [
+                      PortalCommandDataRow(
+                        icon: Icons.apartment_outlined,
+                        label: 'Property',
+                        value: property.name,
+                      ),
+                      PortalCommandDataRow(
+                        icon: Icons.place_outlined,
+                        label: 'Public area',
+                        value: property.publicAddress.isEmpty
+                            ? property.areaName
+                            : property.publicAddress,
+                      ),
+                      PortalCommandDataRow(
+                        icon: Icons.dashboard_customize_outlined,
+                        label: 'Shoot spaces',
+                        value: '${property.spaces.length}',
+                      ),
+                      PortalCommandDataRow(
+                        icon: Icons.verified_outlined,
+                        label: 'Status',
+                        value: readableLocationStatus(property.status),
+                      ),
+                    ],
+                  ),
+            actions: [
+              PortalCommandAction(
+                icon: Icons.move_to_inbox_outlined,
+                title: 'Booking requests',
+                subtitle: 'Review scope, dates and location terms',
+                value: '${openRequests.length}',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  LocationOwnerRoutes.requests,
+                ),
+              ),
+              PortalCommandAction(
+                icon: Icons.calendar_month_outlined,
+                title: 'Availability calendar',
+                subtitle: upcoming.isEmpty
+                    ? 'No upcoming shoots'
+                    : '${upcoming.length} upcoming shoot(s)',
+                value: '${upcoming.length}',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  LocationOwnerRoutes.calendar,
+                ),
+              ),
+              PortalCommandAction(
+                icon: Icons.rule_folder_outlined,
+                title: 'Rules and restrictions',
+                subtitle: 'Keep access and production limits current',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  LocationOwnerRoutes.rules,
+                ),
+              ),
+              PortalCommandAction(
+                icon: Icons.health_and_safety_outlined,
+                title: 'Safety and inspections',
+                subtitle: 'Open check-in evidence and support',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  LocationOwnerRoutes.checkIn,
+                ),
+              ),
+            ],
           ),
         ),
         LocationResponsiveGrid(
@@ -427,256 +429,12 @@ class _LO01OwnerDashboardScreenState extends State<LO01OwnerDashboardScreen> {
   }
 }
 
-/// The dashboard's top KPI rail — the shared dashboard-kit's quick-stat
-/// tile row, reusing the exact same real metric values (`LocationMetric`)
-/// the previous `LocationKpiRail` rendered.
-class _QuickStatsRow extends StatelessWidget {
-  final List<LocationMetric> metrics;
-
-  const _QuickStatsRow({required this.metrics});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 9.0;
-        final columns = constraints.maxWidth < 360
-            ? 1
-            : constraints.maxWidth < 700
-                ? 2
-                : 3;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final metric in metrics)
-              SizedBox(
-                width: width,
-                child: PortalQuickStatTile(
-                  icon: metric.icon,
-                  value: metric.value,
-                  label: metric.label,
-                  delta: metric.delta,
-                  tone: _cineToneForLocation(metric.tone),
-                  onTap: () => Navigator.pushNamed(context, metric.route),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Maps the location owner feature's own [LocationTone] palette onto the
-/// dashboard-kit's [CineTone], matching the equivalence already used by
-/// `cineToneFromColor` in location_owner_components.dart (both blue and
-/// purple resolve to `information`).
-CineTone _cineToneForLocation(LocationTone tone) => switch (tone) {
-      LocationTone.gold => CineTone.premium,
-      LocationTone.blue => CineTone.information,
-      LocationTone.green => CineTone.positive,
-      LocationTone.purple => CineTone.information,
-      LocationTone.danger => CineTone.critical,
-      LocationTone.neutral => CineTone.neutral,
-    };
-
 String _initialsFor(String name) {
   final parts =
       name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first[0].toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-class _LivePropertyCard extends StatelessWidget {
-  final LocationPropertyDto property;
-  final String fallbackImageUrl;
-
-  const _LivePropertyCard({
-    required this.property,
-    required this.fallbackImageUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return LocationSectionCard(
-      title: 'Active property',
-      icon: Icons.location_city_outlined,
-      selected: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LocationMediaFrame(
-            imageUrl: property.mediaUrls.isEmpty
-                ? fallbackImageUrl
-                : property.mediaUrls.first,
-            title: property.name,
-            badge: readableLocationStatus(property.status),
-            fallbackIcon: Icons.location_city_outlined,
-            aspectRatio: 16 / 8.8,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              StatusChip(
-                label: '${property.capacity ?? 0} crew',
-                icon: Icons.groups_2_outlined,
-                color: colors.infoBlue,
-              ),
-              StatusChip(
-                label: '${property.parkingSpaces ?? 0} parking',
-                icon: Icons.local_parking_outlined,
-                color: colors.goldMid,
-              ),
-              if (property.powerBackup)
-                StatusChip(
-                  label: 'Power backup',
-                  icon: Icons.bolt_outlined,
-                  color: colors.success,
-                ),
-              if (property.accessible)
-                StatusChip(
-                  label: 'Accessible',
-                  icon: Icons.accessible_outlined,
-                  color: colors.infoPurple,
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LocationInfoRow(
-            icon: Icons.place_outlined,
-            label: 'Public area',
-            value: property.publicAddress.isEmpty
-                ? property.areaName
-                : property.publicAddress,
-          ),
-          LocationInfoRow(
-            icon: Icons.dashboard_customize_outlined,
-            label: 'Shoot spaces',
-            value: '${property.spaces.length}',
-          ),
-          LocationInfoRow(
-            icon: Icons.star_outline_rounded,
-            label: 'Rating',
-            value: property.ratingAverage > 0
-                ? property.ratingAverage.toStringAsFixed(1)
-                : 'No reviews yet',
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: CoreSecondaryButton(
-                  icon: Icons.rule_folder_outlined,
-                  label: 'Rules',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    LocationOwnerRoutes.rules,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CorePrimaryButton(
-                  icon: Icons.edit_outlined,
-                  label: 'Edit property',
-                  compact: true,
-                  onTap: () => Navigator.pushNamed(
-                    context,
-                    LocationOwnerRoutes.listing,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionList extends StatelessWidget {
-  final LocationPropertyDto? property;
-  final List<Booking> openRequests;
-  final List<Booking> upcoming;
-
-  const _ActionList({
-    required this.property,
-    required this.openRequests,
-    required this.upcoming,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = <({
-      IconData icon,
-      String kindLabel,
-      String title,
-      String detail,
-      String route,
-    })>[
-      if (property == null)
-        (
-          icon: Icons.add_location_alt_outlined,
-          kindLabel: 'Get started',
-          title: 'Create a property profile',
-          detail: 'Add the property before accepting booking requests.',
-          route: LocationOwnerRoutes.listing,
-        )
-      else if (property!.status == 'draft')
-        (
-          icon: Icons.publish_outlined,
-          kindLabel: 'Publish',
-          title: 'Publish ${property!.name}',
-          detail: 'Review rates and rules before making it discoverable.',
-          route: LocationOwnerRoutes.listing,
-        ),
-      if (openRequests.isNotEmpty)
-        (
-          icon: Icons.inbox_outlined,
-          kindLabel: 'Respond',
-          title: '${openRequests.length} requests need a response',
-          detail: 'Review dates, fee and production conditions.',
-          route: LocationOwnerRoutes.requests,
-        ),
-      if (upcoming.isNotEmpty)
-        (
-          icon: Icons.fact_check_outlined,
-          kindLabel: 'Prepare',
-          title: 'Prepare the next handover',
-          detail:
-              'The next booking starts ${shortLocationDate(upcoming.first.startAt)}.',
-          route: LocationOwnerRoutes.checkIn,
-        ),
-    ];
-    if (actions.isEmpty) {
-      return const _CompactStatus(
-        icon: Icons.check_circle_outline_rounded,
-        title: 'No urgent actions',
-        message: 'New requests and inspection tasks will appear here.',
-      );
-    }
-    return Column(
-      children: [
-        for (var i = 0; i < actions.length; i++) ...[
-          PortalAttentionRow(
-            kindLabel: actions[i].kindLabel,
-            title: actions[i].title,
-            meta: actions[i].detail,
-            icon: actions[i].icon,
-            onTap: () => Navigator.pushNamed(context, actions[i].route),
-          ),
-          if (i != actions.length - 1) const SizedBox(height: 10),
-        ],
-      ],
-    );
-  }
 }
 
 class _RequestPipelineRow extends StatelessWidget {

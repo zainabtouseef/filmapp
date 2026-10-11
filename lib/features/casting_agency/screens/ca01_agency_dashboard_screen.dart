@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../routes/casting_agency_routes.dart';
-import '../widgets/casting_agency_components.dart';
 
 class CA01AgencyDashboardScreen extends StatefulWidget {
   const CA01AgencyDashboardScreen({super.key});
@@ -40,56 +38,58 @@ class _CA01AgencyDashboardScreenState extends State<CA01AgencyDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const PersonalDashboardKpiStrip(),
-        const SizedBox(height: 12),
-        if (_future == null)
-          const AgencySectionCard(
-            title: 'Agency Workspace',
+    final future = _future;
+    if (future == null) {
+      return const PortalDashboardPage(
+        showLiveStrip: false,
+        children: [
+          CoreEmptyState(
             icon: Icons.lock_outline_rounded,
-            child: CoreEmptyState(
-              icon: Icons.lock_outline_rounded,
-              title: 'Sign in to load agency data',
-              message:
-                  'Agency profile, auditions, roster, and commission records are loaded from the server.',
-            ),
-          )
-        else
-          FutureBuilder<_AgencyDashboardData>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SkeletonCard(height: 420);
-              }
-              if (snapshot.hasError || snapshot.data == null) {
-                return AgencySectionCard(
-                  title: 'Agency workspace unavailable',
-                  icon: Icons.cloud_off_outlined,
-                  child: Column(
-                    children: [
-                      const CoreEmptyState(
-                        icon: Icons.sync_problem_outlined,
-                        title: 'Could not load agency workspace',
-                        message: 'Check your connection and try again.',
-                      ),
-                      const SizedBox(height: 10),
-                      CoreSecondaryButton(
-                        icon: Icons.refresh_rounded,
-                        label: 'Try again',
-                        compact: true,
-                        onTap: _refresh,
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return _LiveAgencyDashboard(
-                  data: snapshot.data!, onRefresh: _refresh);
-            },
+            title: 'Sign in to load agency data',
+            message:
+                'Agency profile, auditions, roster and commission records are loaded from the server.',
           ),
-      ],
+        ],
+      );
+    }
+
+    return FutureBuilder<_AgencyDashboardData>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const PortalDashboardPage(
+            showLiveStrip: false,
+            children: [SkeletonCard(height: 420)],
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return PortalDashboardPage(
+            showLiveStrip: false,
+            children: [
+              Column(
+                children: [
+                  const CoreEmptyState(
+                    icon: Icons.sync_problem_outlined,
+                    title: 'Could not load agency workspace',
+                    message: 'Check your connection and try again.',
+                  ),
+                  const SizedBox(height: 10),
+                  CoreSecondaryButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'Try again',
+                    compact: true,
+                    onTap: _refresh,
+                  ),
+                ],
+              ),
+            ],
+          );
+        }
+        return _LiveAgencyDashboard(
+          data: snapshot.data!,
+          onRefresh: _refresh,
+        );
+      },
     );
   }
 }
@@ -212,75 +212,68 @@ class _LiveAgencyDashboard extends StatelessWidget {
             );
           },
         ),
-        AgencyTwoColumn(
-          left: AgencySectionCard(
-            title: 'Audition Pipeline',
-            icon: Icons.auto_awesome_motion_outlined,
-            actionText: 'View all',
-            onActionTap: () =>
-                Navigator.pushNamed(context, CastingAgencyRoutes.auditions),
-            selected: pipelineAuditions.isNotEmpty,
-            child: pipelineAuditions.isEmpty
-                ? const CoreEmptyState(
-                    icon: Icons.inbox_outlined,
-                    title: 'No live audition requests',
-                    message: 'Director audition requests will appear here.',
-                  )
-                : Column(
-                    children: [
-                      for (var i = 0; i < pipelineAuditions.length; i++)
-                        _AuditionPipelineRow(
-                          audition: pipelineAuditions[i],
-                          showDivider: i != 0,
-                        ),
-                    ],
-                  ),
+        PortalCommandCenter(
+          eyebrow: 'Agency operations',
+          title: 'Audition Command Centre',
+          subtitle: 'Candidate movement, self-tapes and commissions.',
+          icon: Icons.auto_awesome_motion_outlined,
+          primaryTitle: 'Audition pipeline',
+          actionLabel: 'View all',
+          onAction: () => Navigator.pushNamed(
+            context,
+            CastingAgencyRoutes.auditions,
           ),
-          right: AgencySectionCard(
-            title: 'Action required',
-            icon: Icons.notifications_active_outlined,
-            child: Column(
-              children: [
-                PortalAttentionRow(
-                  kindLabel: 'Roster',
-                  title: data.roster.isEmpty
-                      ? 'Add represented talent'
-                      : 'Roster ready · ${data.roster.length} talent',
-                  meta: 'Manage represented talent profiles',
-                  icon: Icons.person_add_alt_outlined,
-                  tone: data.roster.isEmpty
-                      ? CineTone.warning
-                      : CineTone.positive,
-                  onTap: () =>
-                      Navigator.pushNamed(context, CastingAgencyRoutes.roster),
+          primary: pipelineAuditions.isEmpty
+              ? const CoreEmptyState(
+                  icon: Icons.inbox_outlined,
+                  title: 'No live audition requests',
+                  message: 'Director audition requests will appear here.',
+                )
+              : Column(
+                  children: [
+                    for (var i = 0; i < pipelineAuditions.length; i++)
+                      _AuditionPipelineRow(
+                        audition: pipelineAuditions[i],
+                        showDivider: i != 0,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                PortalAttentionRow(
-                  kindLabel: 'Self-tapes',
-                  title: '$selfTapeCount received',
-                  meta: 'Review submitted takes',
-                  icon: Icons.video_collection_outlined,
-                  tone: CineTone.information,
-                  onTap: () => Navigator.pushNamed(
-                      context, CastingAgencyRoutes.selfTapes),
-                ),
-                const SizedBox(height: 10),
-                PortalAttentionRow(
-                  kindLabel: 'Commissions',
-                  title: '${data.commissions.length} records',
-                  meta: pendingCommissionMinor > 0
-                      ? '${_money(pendingCommissionMinor)} pending'
-                      : 'All settled',
-                  icon: Icons.receipt_long_outlined,
-                  tone: pendingCommissionMinor > 0
-                      ? CineTone.warning
-                      : CineTone.positive,
-                  onTap: () => Navigator.pushNamed(
-                      context, CastingAgencyRoutes.commission),
-                ),
-              ],
+          actions: [
+            PortalCommandAction(
+              icon: Icons.person_add_alt_outlined,
+              title: data.roster.isEmpty
+                  ? 'Add represented talent'
+                  : 'Roster ready',
+              subtitle: 'Manage represented talent profiles',
+              value: '${data.roster.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                CastingAgencyRoutes.roster,
+              ),
             ),
-          ),
+            PortalCommandAction(
+              icon: Icons.video_collection_outlined,
+              title: 'Self-tapes received',
+              subtitle: 'Review submitted takes',
+              value: '$selfTapeCount',
+              onTap: () => Navigator.pushNamed(
+                context,
+                CastingAgencyRoutes.selfTapes,
+              ),
+            ),
+            PortalCommandAction(
+              icon: Icons.receipt_long_outlined,
+              title: 'Commission records',
+              subtitle: pendingCommissionMinor > 0
+                  ? '${_money(pendingCommissionMinor)} pending'
+                  : 'All settled',
+              value: '${data.commissions.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                CastingAgencyRoutes.commission,
+              ),
+            ),
+          ],
         ),
       ],
     );

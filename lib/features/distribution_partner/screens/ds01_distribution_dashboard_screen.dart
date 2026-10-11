@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/specialist/specialist_controller.dart';
@@ -9,7 +8,6 @@ import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../routes/distribution_partner_routes.dart';
-import '../widgets/distribution_partner_components.dart';
 
 class DS01DistributionDashboardScreen extends StatefulWidget {
   const DS01DistributionDashboardScreen({super.key});
@@ -43,63 +41,58 @@ class _DS01DistributionDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const PersonalDashboardKpiStrip(),
-        const SizedBox(height: 12),
-        const MarketplacePricingPreferencePanel(
-          listingTypes: {'distribution'},
-          title: 'Distribution marketplace pricing',
-        ),
-        const SizedBox(height: 12),
-        if (_future == null)
-          const DistributionSectionCard(
-            title: 'Distribution Workspace',
+    final future = _future;
+    if (future == null) {
+      return const PortalDashboardPage(
+        showLiveStrip: false,
+        children: [
+          CoreEmptyState(
             icon: Icons.lock_outline_rounded,
-            child: CoreEmptyState(
-              icon: Icons.lock_outline_rounded,
-              title: 'Sign in to load distribution data',
-              message:
-                  'Distribution profile, release projects, contacts, and reports are loaded from the server.',
-            ),
-          )
-        else
-          FutureBuilder<_DistributionDashboardData>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SkeletonCard(height: 420);
-              }
-              if (snapshot.hasError || snapshot.data == null) {
-                return DistributionSectionCard(
-                  title: 'Distribution workspace unavailable',
-                  icon: Icons.cloud_off_outlined,
-                  child: Column(
-                    children: [
-                      const CoreEmptyState(
-                        icon: Icons.sync_problem_outlined,
-                        title: 'Could not load distribution workspace',
-                        message: 'Check your connection and try again.',
-                      ),
-                      const SizedBox(height: 10),
-                      CoreSecondaryButton(
-                        icon: Icons.refresh_rounded,
-                        label: 'Try again',
-                        compact: true,
-                        onTap: _refresh,
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return _LiveDistributionDashboard(
-                data: snapshot.data!,
-                onRefresh: _refresh,
-              );
-            },
+            title: 'Sign in to load distribution data',
+            message:
+                'Distribution projects, contacts and reports are loaded from the server.',
           ),
-      ],
+        ],
+      );
+    }
+
+    return FutureBuilder<_DistributionDashboardData>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const PortalDashboardPage(
+            showLiveStrip: false,
+            children: [SkeletonCard(height: 420)],
+          );
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return PortalDashboardPage(
+            showLiveStrip: false,
+            children: [
+              Column(
+                children: [
+                  const CoreEmptyState(
+                    icon: Icons.sync_problem_outlined,
+                    title: 'Could not load distribution workspace',
+                    message: 'Check your connection and try again.',
+                  ),
+                  const SizedBox(height: 10),
+                  CoreSecondaryButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'Try again',
+                    compact: true,
+                    onTap: _refresh,
+                  ),
+                ],
+              ),
+            ],
+          );
+        }
+        return _LiveDistributionDashboard(
+          data: snapshot.data!,
+          onRefresh: _refresh,
+        );
+      },
     );
   }
 }
@@ -135,10 +128,8 @@ class _DistributionDashboardData {
   }
 }
 
-/// Live distribution workspace: dashboard-kit hero (partner identity +
-/// active projects/revenue), a quick-stat tile row for the same live
-/// figures, then the primary-release detail alongside a "Next actions"
-/// module-card grid replacing the old plain button list.
+/// Live distribution workspace with role metrics in the shared hero and
+/// release operations in the shared command-centre surface.
 class _LiveDistributionDashboard extends StatelessWidget {
   final _DistributionDashboardData data;
   final VoidCallback onRefresh;
@@ -181,83 +172,84 @@ class _LiveDistributionDashboard extends StatelessWidget {
         const PortalStaggeredReveal(
           children: [PortalLiveClockWidget()],
         ),
-        DistributionTwoColumn(
-          left: DistributionSectionCard(
-            title: 'Primary release',
-            icon: Icons.rocket_launch_outlined,
-            selected: primary != null,
-            actionText: 'Refresh',
-            onActionTap: onRefresh,
-            child: primary == null
-                ? const CoreEmptyState(
-                    icon: Icons.movie_creation_outlined,
-                    title: 'No live distribution projects',
-                    message: 'Release projects will appear here.',
-                  )
-                : Column(
-                    children: [
-                      DistributionInfoRow(
-                        icon: Icons.movie_filter_outlined,
-                        label: 'Project',
-                        value: primary.projectId,
-                      ),
-                      DistributionInfoRow(
-                        icon: Icons.public_outlined,
-                        label: 'Territories',
-                        value: primary.territories ?? 'Not set',
-                      ),
-                      DistributionInfoRow(
-                        icon: Icons.inventory_2_outlined,
-                        label: 'Handover items',
-                        value: '${primary.handoverCount}',
-                      ),
-                      DistributionInfoRow(
-                        icon: Icons.calendar_month_outlined,
-                        label: 'Release windows',
-                        value: '${primary.releaseWindowCount}',
-                      ),
-                    ],
-                  ),
+        const MarketplacePricingPreferencePanel(
+          listingTypes: {'distribution'},
+          title: 'Distribution marketplace pricing',
+        ),
+        PortalCommandCenter(
+          eyebrow: 'Distribution operations',
+          title: 'Release Command Centre',
+          subtitle: 'Territories, handovers and performance in one live view.',
+          icon: Icons.public_outlined,
+          primaryTitle:
+              primary == null ? 'Release overview' : 'Primary release',
+          actionLabel: 'Open releases',
+          onAction: () => Navigator.pushNamed(
+            context,
+            DistributionPartnerRoutes.release,
           ),
-          right: DistributionSectionCard(
-            title: 'Next actions',
-            icon: Icons.route_outlined,
-            child: DistributionResponsiveGrid(
-              minWidth: 200,
-              children: [
-                PortalModuleCard(
-                  icon: Icons.contacts_outlined,
-                  name: 'Contacts',
-                  count: data.contacts.isEmpty ? null : data.contacts.length,
-                  description: 'Distributor contacts and outreach records.',
-                  actionLabel: 'Open contacts',
-                  tone: CineTone.information,
-                  onTap: () => Navigator.pushNamed(
-                      context, DistributionPartnerRoutes.contacts),
+          primary: primary == null
+              ? const CoreEmptyState(
+                  icon: Icons.movie_creation_outlined,
+                  title: 'No live distribution projects',
+                  message: 'Release projects will appear here.',
+                )
+              : Column(
+                  children: [
+                    PortalCommandDataRow(
+                      icon: Icons.movie_filter_outlined,
+                      label: 'Project',
+                      value: primary.projectId,
+                    ),
+                    PortalCommandDataRow(
+                      icon: Icons.public_outlined,
+                      label: 'Territories',
+                      value: primary.territories ?? 'Not set',
+                    ),
+                    PortalCommandDataRow(
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Handover',
+                      value: '${primary.handoverCount} items',
+                    ),
+                    PortalCommandDataRow(
+                      icon: Icons.calendar_month_outlined,
+                      label: 'Windows',
+                      value: '${primary.releaseWindowCount} scheduled',
+                    ),
+                  ],
                 ),
-                PortalModuleCard(
-                  icon: Icons.handshake_outlined,
-                  name: 'Coordination',
-                  count: data.projects.isEmpty ? null : data.projects.length,
-                  description: 'Release windows and handover checklists.',
-                  actionLabel: 'Open coordination',
-                  tone: CineTone.premium,
-                  onTap: () => Navigator.pushNamed(
-                      context, DistributionPartnerRoutes.release),
-                ),
-                PortalModuleCard(
-                  icon: Icons.analytics_outlined,
-                  name: 'Reports',
-                  count: data.reports.isEmpty ? null : data.reports.length,
-                  description: 'Audience and revenue performance.',
-                  actionLabel: 'Open reports',
-                  tone: CineTone.warning,
-                  onTap: () => Navigator.pushNamed(
-                      context, DistributionPartnerRoutes.reports),
-                ),
-              ],
+          actions: [
+            PortalCommandAction(
+              icon: Icons.contacts_outlined,
+              title: 'Distributor contacts',
+              subtitle: 'Manage outreach and partner records',
+              value: '${data.contacts.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                DistributionPartnerRoutes.contacts,
+              ),
             ),
-          ),
+            PortalCommandAction(
+              icon: Icons.handshake_outlined,
+              title: 'Release coordination',
+              subtitle: 'Review windows and handover checklists',
+              value: '${data.projects.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                DistributionPartnerRoutes.release,
+              ),
+            ),
+            PortalCommandAction(
+              icon: Icons.analytics_outlined,
+              title: 'Performance reports',
+              subtitle: 'Audience and revenue performance',
+              value: '${data.reports.length}',
+              onTap: () => Navigator.pushNamed(
+                context,
+                DistributionPartnerRoutes.reports,
+              ),
+            ),
+          ],
         ),
       ],
     );

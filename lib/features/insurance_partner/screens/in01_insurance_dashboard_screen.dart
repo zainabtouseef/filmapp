@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/analytics/analytics_widgets.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../core/insurance/insurance_controller.dart';
 import '../../../core/insurance/insurance_models.dart';
-import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../routes/insurance_partner_routes.dart';
 import '../widgets/insurance_partner_components.dart';
@@ -50,145 +49,138 @@ class _IN01InsuranceDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const PersonalDashboardKpiStrip(),
-        const SizedBox(height: 12),
-        InsuranceSectionCard(
-          title: 'Insurance dashboard',
-          icon: Icons.health_and_safety_outlined,
-          selected: true,
-          actionText: _future == null ? null : 'Refresh',
-          onActionTap: _refresh,
-          child: _future == null
-              ? const CoreEmptyState(
-                  icon: Icons.lock_outline_rounded,
-                  title: 'Sign in to view insurance operations',
-                  message: 'Policies and claims are loaded from the server.',
-                )
-              : FutureBuilder<_InsuranceDashboardBundle>(
-                  future: _future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SkeletonCard(height: 420);
-                    }
-                    if (snapshot.hasError) {
-                      return _LoadError(
-                        message: 'Could not load insurance dashboard',
-                        onRetry: _refresh,
-                      );
-                    }
-                    final data = snapshot.data!;
-                    final highRisk = data.policies
-                        .where((policy) =>
-                            policy.riskLevel.toLowerCase().contains('high'))
-                        .length;
-                    final latestPolicy =
-                        data.policies.isEmpty ? null : data.policies.first;
+    final future = _future;
+    if (future == null) {
+      return const PortalDashboardPage(
+        children: [
+          CoreEmptyState(
+            icon: Icons.lock_outline_rounded,
+            title: 'Sign in to view insurance operations',
+            message: 'Policies and claims are loaded from the server.',
+          ),
+        ],
+      );
+    }
 
-                    final displayName =
-                        AuthScope.maybeOf(context)?.user?.displayName;
-                    final name =
-                        (displayName == null || displayName.trim().isEmpty)
-                            ? 'Insurance partner'
-                            : displayName.trim();
+    return FutureBuilder<_InsuranceDashboardBundle>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const PortalDashboardPage(
+            showLiveStrip: false,
+            children: [SkeletonCard(height: 420)],
+          );
+        }
+        if (snapshot.hasError) {
+          return PortalDashboardPage(
+            showLiveStrip: false,
+            children: [
+              _LoadError(
+                message: 'Could not load insurance dashboard',
+                onRetry: _refresh,
+              ),
+            ],
+          );
+        }
 
-                    return PortalDashboardPage(
-                      children: [
-                        PortalHeroCard(
-                          initials: _initialsFor(name),
-                          name: name,
-                          badgeLabel: 'Verified insurer',
-                          stats: [
-                            PortalHeroStat(
-                              value: '${data.dashboard.activePolicyCount}',
-                              label: 'Active policies',
-                            ),
-                            PortalHeroStat(
-                              value: '${data.dashboard.openClaims}',
-                              label: 'Open claims',
-                            ),
-                            PortalHeroStat(
-                              value: '$highRisk',
-                              label: 'High risk',
-                            ),
-                          ],
-                          ctaLabel: 'Refresh',
-                          onCta: _refresh,
-                        ),
-                        const PortalStaggeredReveal(
-                          children: [PortalLiveClockWidget()],
-                        ),
-                        InsuranceTwoColumn(
-                          left: InsuranceSectionCard(
-                            title: 'Latest policy',
-                            icon: Icons.policy_outlined,
-                            child: latestPolicy == null
-                                ? const CoreEmptyState(
-                                    icon: Icons.policy_outlined,
-                                    title: 'No live policies',
-                                    message:
-                                        'Seed or create insurance policies in the backend to fill this dashboard.',
-                                  )
-                                : _PolicySummary(policy: latestPolicy),
-                          ),
-                          right: InsuranceSectionCard(
-                            title: 'Operational links',
-                            icon: Icons.route_outlined,
-                            child: Column(
-                              children: [
-                                InsuranceResponsiveGrid(
-                                  minWidth: 200,
-                                  children: [
-                                    PortalModuleCard(
-                                      icon: Icons.policy_outlined,
-                                      name: 'Records',
-                                      count: data.policies.isEmpty
-                                          ? null
-                                          : data.policies.length,
-                                      description:
-                                          'Shoot insurance policies and coverage.',
-                                      actionLabel: 'Open records',
-                                      tone: CineTone.information,
-                                      onTap: () => Navigator.pushNamed(
-                                        context,
-                                        InsurancePartnerRoutes.records,
-                                      ),
-                                    ),
-                                    PortalModuleCard(
-                                      icon: Icons.assignment_late_outlined,
-                                      name: 'Claims',
-                                      count: data.dashboard.openClaims > 0
-                                          ? data.dashboard.openClaims
-                                          : null,
-                                      description:
-                                          'File and track claim decisions.',
-                                      actionLabel: 'Open claims',
-                                      tone: CineTone.premium,
-                                      onTap: () => Navigator.pushNamed(
-                                        context,
-                                        InsurancePartnerRoutes.claims,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                const InlineNotice(
-                                  message:
-                                      'Safety checks and incident reports are connected to live project records.',
-                                  icon: Icons.info_outline_rounded,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+        final data = snapshot.data!;
+        final highRisk = data.policies
+            .where((policy) => policy.riskLevel.toLowerCase().contains('high'))
+            .length;
+        final latestPolicy = data.policies.isEmpty ? null : data.policies.first;
+        final displayName = AuthScope.maybeOf(context)?.user?.displayName;
+        final name = (displayName == null || displayName.trim().isEmpty)
+            ? 'Insurance partner'
+            : displayName.trim();
+
+        return PortalDashboardPage(
+          children: [
+            PortalHeroCard(
+              initials: _initialsFor(name),
+              name: name,
+              badgeLabel: 'Verified insurer',
+              stats: [
+                PortalHeroStat(
+                  value: '${data.dashboard.activePolicyCount}',
+                  label: 'Active policies',
                 ),
-        ),
-      ],
+                PortalHeroStat(
+                  value: '${data.dashboard.openClaims}',
+                  label: 'Open claims',
+                ),
+                PortalHeroStat(value: '$highRisk', label: 'High risk'),
+              ],
+              ctaLabel: 'Refresh',
+              onCta: _refresh,
+            ),
+            const PortalStaggeredReveal(
+              children: [PortalLiveClockWidget()],
+            ),
+            PortalCommandCenter(
+              eyebrow: 'Insurance operations',
+              title: 'Policy Command Centre',
+              subtitle:
+                  'Coverage, claims and safety actions in one live workspace.',
+              icon: Icons.health_and_safety_outlined,
+              primaryTitle:
+                  latestPolicy == null ? 'Coverage overview' : 'Latest policy',
+              primary: latestPolicy == null
+                  ? const CoreEmptyState(
+                      icon: Icons.policy_outlined,
+                      title: 'No live policies',
+                      message:
+                          'Policies appear here as soon as coverage is issued.',
+                    )
+                  : _PolicySummary(policy: latestPolicy),
+              actionLabel: 'View policies',
+              onAction: () => Navigator.pushNamed(
+                context,
+                InsurancePartnerRoutes.records,
+              ),
+              actions: [
+                PortalCommandAction(
+                  icon: Icons.policy_outlined,
+                  title: 'Policy records',
+                  subtitle: 'Coverage, dates and insured productions',
+                  value: '${data.policies.length}',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InsurancePartnerRoutes.records,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.assignment_late_outlined,
+                  title: 'Claims desk',
+                  subtitle: 'Review evidence and claim decisions',
+                  value: '${data.dashboard.openClaims}',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InsurancePartnerRoutes.claims,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.fact_check_outlined,
+                  title: 'Safety checks',
+                  subtitle: 'Permits and production readiness',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InsurancePartnerRoutes.safety,
+                  ),
+                ),
+                PortalCommandAction(
+                  icon: Icons.warning_amber_outlined,
+                  title: 'Incident reports',
+                  subtitle: 'Open the live incident response queue',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    InsurancePartnerRoutes.incidents,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -202,24 +194,24 @@ class _PolicySummary extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        InsuranceInfoRow(
+        PortalCommandDataRow(
           icon: Icons.person_outline,
           label: 'Insured',
           value: policy.insuredUserName,
         ),
-        InsuranceInfoRow(
+        PortalCommandDataRow(
           icon: Icons.shield_outlined,
           label: 'Coverage',
           value: policy.coverageSummary.isEmpty
               ? 'Coverage not set'
               : policy.coverageSummary,
         ),
-        InsuranceInfoRow(
+        PortalCommandDataRow(
           icon: Icons.warning_amber_outlined,
           label: 'Risk',
           value: policy.riskLevel,
         ),
-        InsuranceInfoRow(
+        PortalCommandDataRow(
           icon: Icons.flag_outlined,
           label: 'Status',
           value: insuranceStatusLabel(insuranceStatusFromString(policy.status)),

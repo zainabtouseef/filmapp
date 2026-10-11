@@ -150,9 +150,8 @@ class _CR01CrewDashboardScreenState extends State<CR01CrewDashboardScreen> {
   }
 }
 
-/// Live crew workspace body — dashboard-kit composition: hero → quick stat
-/// tiles → widget grid (clock + earnings ring + availability calendar) →
-/// production pipeline + action-required rail.
+/// Live crew workspace body with metrics in the hero, operational widgets,
+/// and the shared production command centre.
 class _CrewDashboardBody extends StatelessWidget {
   final _CrewDashboardData data;
 
@@ -170,39 +169,6 @@ class _CrewDashboardBody extends StatelessWidget {
         .toList();
     final unsigned =
         data.contracts.where((contract) => !contract.isSigned).toList();
-    final availableDays =
-        data.availability.where((entry) => entry.status == 'available').length;
-    // "Requests" now lives in the hero's own stat strip, and "Confirmed"
-    // is an exact duplicate of the hero's "Active projects" figure — both
-    // dropped here to avoid showing the same counts twice.
-    final metrics = [
-      CrewMetric(
-        label: 'Available',
-        value: '$availableDays',
-        delta: 'Calendar blocks',
-        icon: Icons.event_available_outlined,
-        tone: CrewTone.blue,
-        route: CrewServicesRoutes.availability,
-      ),
-      CrewMetric(
-        label: 'Contracts',
-        value: '${unsigned.length}',
-        delta: 'Awaiting signature',
-        icon: Icons.draw_outlined,
-        tone: CrewTone.purple,
-        route: CrewServicesRoutes.contracts,
-      ),
-      CrewMetric(
-        label: 'Rating',
-        value: data.reviews.reviewCount == 0
-            ? 'New'
-            : data.reviews.ratingAverage.toStringAsFixed(1),
-        delta: '${data.reviews.reviewCount} verified reviews',
-        icon: Icons.star_outline_rounded,
-        tone: CrewTone.gold,
-        route: CrewServicesRoutes.ratings,
-      ),
-    ];
     final pipelineBookings =
         {...openRequests, ...confirmed, ...data.bookings}.take(4).toList();
 
@@ -216,81 +182,67 @@ class _CrewDashboardBody extends StatelessWidget {
             openRequestsCount: openRequests.length,
           ),
         ),
-        TourTarget(
-          id: 'crew.dashboard.quickStats',
-          child: _CrewQuickStats(metrics: metrics),
-        ),
         _CrewWidgetGridSection(data: data),
-        CrewTwoColumn(
-          left: TourTarget(
-            id: 'crew.dashboard.pipeline',
-            child: CrewSectionCard(
-              title: 'Production Pipeline',
-              icon: Icons.movie_creation_outlined,
-              actionText: 'View all',
-              onActionTap: () =>
-                  Navigator.pushNamed(context, CrewServicesRoutes.requests),
-              selected: pipelineBookings.isNotEmpty,
-              child: pipelineBookings.isEmpty
-                  ? const CoreEmptyState(
-                      icon: Icons.movie_filter_outlined,
-                      title: 'Ready for the next production',
-                      message:
-                          'Open projects and direct crew requests will appear here as soon as a director connects.',
-                    )
-                  : Column(
-                      children: [
-                        for (var i = 0; i < pipelineBookings.length; i++)
-                          _BookingPipelineRow(
-                            booking: pipelineBookings[i],
-                            showDivider: i != 0,
-                          ),
-                      ],
-                    ),
+        TourTarget(
+          id: 'crew.dashboard.commandCentre',
+          child: PortalCommandCenter(
+            eyebrow: 'Crew operations',
+            title: 'Production Command Centre',
+            subtitle: 'Confirmed work, incoming requests and contracts.',
+            icon: Icons.movie_creation_outlined,
+            primaryTitle: 'Production pipeline',
+            actionLabel: 'View all',
+            onAction: () => Navigator.pushNamed(
+              context,
+              CrewServicesRoutes.requests,
             ),
-          ),
-          right: TourTarget(
-            id: 'crew.dashboard.actionRequired',
-            child: CrewSectionCard(
-              title: 'Action required',
-              icon: Icons.priority_high_rounded,
-              child: Column(
-                children: [
-                  PortalAttentionRow(
-                    kindLabel: 'Requests',
-                    title: '${openRequests.length} open request(s)',
-                    meta: 'Review project scope, dates and fees',
-                    icon: Icons.move_to_inbox_outlined,
-                    tone: openRequests.isEmpty
-                        ? CineTone.positive
-                        : CineTone.warning,
-                    onTap: () => Navigator.pushNamed(
-                        context, CrewServicesRoutes.requests),
+            primary: pipelineBookings.isEmpty
+                ? const CoreEmptyState(
+                    icon: Icons.movie_filter_outlined,
+                    title: 'Ready for the next production',
+                    message:
+                        'Open projects and direct crew requests will appear here.',
+                  )
+                : Column(
+                    children: [
+                      for (var i = 0; i < pipelineBookings.length; i++)
+                        _BookingPipelineRow(
+                          booking: pipelineBookings[i],
+                          showDivider: i != 0,
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  PortalAttentionRow(
-                    kindLabel: 'Contracts',
-                    title: '${unsigned.length} unsigned contract(s)',
-                    meta: 'Review terms and signature progress',
-                    icon: Icons.draw_outlined,
-                    tone:
-                        unsigned.isEmpty ? CineTone.positive : CineTone.warning,
-                    onTap: () => Navigator.pushNamed(
-                        context, CrewServicesRoutes.contracts),
-                  ),
-                  const SizedBox(height: 10),
-                  PortalAttentionRow(
-                    kindLabel: 'Opportunities',
-                    title: 'Open opportunities',
-                    meta: 'Pitch your services to active productions',
-                    icon: Icons.travel_explore_outlined,
-                    tone: CineTone.information,
-                    onTap: () => Navigator.pushNamed(
-                        context, CrewServicesRoutes.opportunities),
-                  ),
-                ],
+            actions: [
+              PortalCommandAction(
+                icon: Icons.move_to_inbox_outlined,
+                title: 'Open requests',
+                subtitle: 'Review project scope, dates and fees',
+                value: '${openRequests.length}',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  CrewServicesRoutes.requests,
+                ),
               ),
-            ),
+              PortalCommandAction(
+                icon: Icons.draw_outlined,
+                title: 'Unsigned contracts',
+                subtitle: 'Review terms and signature progress',
+                value: '${unsigned.length}',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  CrewServicesRoutes.contracts,
+                ),
+              ),
+              PortalCommandAction(
+                icon: Icons.travel_explore_outlined,
+                title: 'Open opportunities',
+                subtitle: 'Pitch services to active productions',
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  CrewServicesRoutes.opportunities,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -335,45 +287,6 @@ class _CrewHero extends StatelessWidget {
       secondaryIcon: Icons.video_library_outlined,
       onSecondary: () =>
           Navigator.pushNamed(context, CrewServicesRoutes.portfolio),
-    );
-  }
-}
-
-class _CrewQuickStats extends StatelessWidget {
-  final List<CrewMetric> metrics;
-
-  const _CrewQuickStats({required this.metrics});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 9.0;
-        final columns = constraints.maxWidth < 360
-            ? 1
-            : constraints.maxWidth < 700
-                ? 2
-                : 3;
-        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final metric in metrics)
-              SizedBox(
-                width: width,
-                child: PortalQuickStatTile(
-                  icon: metric.icon,
-                  value: metric.value,
-                  label: metric.label,
-                  delta: metric.delta,
-                  tone: _crewCineTone(metric.tone),
-                  onTap: () => Navigator.pushNamed(context, metric.route),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }
@@ -602,15 +515,6 @@ class _BookingPipelineRow extends StatelessWidget {
     );
   }
 }
-
-CineTone _crewCineTone(CrewTone tone) => switch (tone) {
-      CrewTone.gold => CineTone.premium,
-      CrewTone.blue => CineTone.information,
-      CrewTone.green => CineTone.positive,
-      CrewTone.purple => CineTone.information,
-      CrewTone.danger => CineTone.critical,
-      CrewTone.neutral => CineTone.neutral,
-    };
 
 CineTone _bookingStatusTone(CrewBookingStatus status) => switch (status) {
       CrewBookingStatus.secured ||
