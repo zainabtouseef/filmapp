@@ -28,7 +28,7 @@ class DPGlassCard extends StatelessWidget {
     final colors = context.appColors;
     final resolvedAccent = accentColor ?? colors.goldDark;
     final card = CardShell(
-      variant: CardVariant.standard,
+      variant: onTap == null ? CardVariant.section : CardVariant.standard,
       density: CardDensity.standard,
       radius: 26,
       padding: EdgeInsets.zero,

@@ -4,6 +4,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/layout/portal_adaptive_collection.dart';
 import '../../../shared/layout/portal_page_header.dart';
 import 'dp_glass_card.dart';
 import 'dp_holographic_button.dart';
@@ -59,28 +60,10 @@ class DPResponsiveGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final rawWidth = constraints.maxWidth;
-        final count = rawWidth.isFinite
-            ? (rawWidth / minWidth).floor().clamp(1, 4).toInt()
-            : 1;
-        final width = rawWidth.isFinite
-            ? (rawWidth - (count - 1) * gap) / count
-            : minWidth;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: children
-              .map(
-                (child) => SizedBox(
-                  width: width.isFinite ? width : minWidth,
-                  child: child,
-                ),
-              )
-              .toList(),
-        );
-      },
+    return PortalAdaptiveCollection(
+      minWidth: minWidth,
+      gap: gap,
+      children: children,
     );
   }
 }

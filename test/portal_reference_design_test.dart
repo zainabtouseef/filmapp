@@ -1,5 +1,6 @@
 import 'package:cineconnect/shared/cards/cine_card_system.dart';
 import 'package:cineconnect/shared/layout/portal_body_theme.dart';
+import 'package:cineconnect/shared/layout/portal_adaptive_collection.dart';
 import 'package:cineconnect/shared/layout/portal_page_header.dart';
 import 'package:cineconnect/shared/layout/portal_reference_design.dart';
 import 'package:cineconnect/shared/widgets/cine_animated_gold_border.dart';
@@ -82,6 +83,62 @@ void main() {
         isFalse,
       );
     });
+
+    test('maps operational routes to all nine reference layouts', () {
+      const expected = <String, PortalBodyLayout>{
+        '/director/reports': PortalBodyLayout.analytics,
+        '/director/contracts': PortalBodyLayout.timeline,
+        '/talent/availability': PortalBodyLayout.calendar,
+        '/talent/rates': PortalBodyLayout.editorial,
+        '/agency/shortlist': PortalBodyLayout.list,
+        '/brand/campaign-tracker': PortalBodyLayout.kanban,
+        '/crew/portfolio': PortalBodyLayout.gallery,
+        '/director/cineplanner': PortalBodyLayout.splitView,
+        '/crew/opportunities': PortalBodyLayout.horizontalRail,
+      };
+
+      for (final entry in expected.entries) {
+        expect(
+          PortalReferenceDesign.layoutForRoute(entry.key),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+      expect(expected.values.toSet().length, PortalBodyLayout.values.length);
+    });
+  });
+
+  testWidgets('route-aware collections switch between rows and rails',
+      (tester) async {
+    Widget appFor(String route) => MaterialApp(
+          key: ValueKey(route),
+          initialRoute: route,
+          routes: {
+            route: (_) => Scaffold(
+                  body: PortalAdaptiveCollection(
+                    minWidth: 220,
+                    children: const [
+                      SizedBox(key: ValueKey('a'), height: 50),
+                      SizedBox(key: ValueKey('b'), height: 50),
+                    ],
+                  ),
+                ),
+          },
+        );
+
+    await tester.pumpWidget(appFor('/agency/shortlist'));
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.byType(Column), findsWidgets);
+
+    await tester.pumpWidget(appFor('/crew/opportunities'));
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(
+      tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .scrollDirection,
+      Axis.horizontal,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('operational page header renders editorial hero and four stats',

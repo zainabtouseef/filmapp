@@ -99,9 +99,13 @@ class _CardShellState extends State<CardShell> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final referenceRoute = PortalReferenceDesign.usesReference(
-      ModalRoute.of(context)?.settings.name,
-    );
+    final route = ModalRoute.of(context)?.settings.name;
+    final referenceRoute = PortalReferenceDesign.usesReference(route);
+    final bodyLayout = PortalReferenceDesign.layoutForRoute(route);
+    final openSection = referenceRoute && widget.variant == CardVariant.section;
+    final compactStructure = bodyLayout == PortalBodyLayout.list ||
+        bodyLayout == PortalBodyLayout.timeline ||
+        bodyLayout == PortalBodyLayout.splitView;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final tone = cineToneColor(context, widget.tone);
@@ -112,38 +116,76 @@ class _CardShellState extends State<CardShell> {
       CardVariant.media => colors.surface,
       _ => colors.elevatedSurface,
     };
-    final resolvedRadius = widget.radius ??
-        (referenceRoute
-            ? switch (widget.variant) {
-                CardVariant.compact => 18.0,
-                CardVariant.hero => 28.0,
-                CardVariant.section => 26.0,
-                CardVariant.alert => 18.0,
-                CardVariant.media => 22.0,
-                _ => 22.0,
-              }
-            : _radius);
+    final layoutRadius = switch (bodyLayout) {
+      PortalBodyLayout.editorial || PortalBodyLayout.analytics => 16.0,
+      PortalBodyLayout.list || PortalBodyLayout.timeline => 12.0,
+      PortalBodyLayout.calendar => 18.0,
+      PortalBodyLayout.kanban || PortalBodyLayout.splitView => 14.0,
+      PortalBodyLayout.gallery || PortalBodyLayout.horizontalRail => 20.0,
+    };
+    final resolvedRadius = referenceRoute
+        ? switch (widget.variant) {
+            CardVariant.compact => compactStructure ? 10.0 : 14.0,
+            CardVariant.hero => layoutRadius + 4,
+            CardVariant.section => layoutRadius,
+            CardVariant.alert => 12.0,
+            CardVariant.media =>
+              bodyLayout == PortalBodyLayout.gallery ? 18.0 : layoutRadius,
+            _ => widget.radius == null
+                ? layoutRadius
+                : widget.radius!.clamp(10.0, layoutRadius + 2),
+          }
+        : _radius;
     final tintedSurface = Color.lerp(
       surface,
       tone,
       colors.isLight
-          ? (widget.accentEdge ? .045 : .022)
-          : (widget.accentEdge ? .095 : .045),
+          ? (widget.accentEdge ? .032 : .014)
+          : (widget.accentEdge ? .075 : .032),
     )!;
     final borderColor = _focused
         ? colors.focusRing
         : widget.selected
             ? tone.withValues(alpha: 0.72)
             : elevated
-                ? Color.lerp(colors.border, tone, referenceRoute ? .42 : .2)!
+                ? Color.lerp(colors.border, tone, referenceRoute ? .32 : .2)!
                 : referenceRoute && widget.accentEdge
-                    ? Color.lerp(colors.border, tone, .24)!
-                    : colors.border;
+                    ? Color.lerp(colors.border, tone, .18)!
+                    : openSection
+                        ? colors.borderMuted
+                        : colors.border;
+    final accentDecoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(4),
+      gradient: referenceRoute
+          ? LinearGradient(
+              begin: bodyLayout == PortalBodyLayout.kanban
+                  ? Alignment.centerLeft
+                  : Alignment.topCenter,
+              end: bodyLayout == PortalBodyLayout.kanban
+                  ? Alignment.centerRight
+                  : Alignment.bottomCenter,
+              colors: [
+                tone.withValues(alpha: .48),
+                tone,
+                tone.withValues(alpha: .62),
+              ],
+            )
+          : null,
+      color: referenceRoute ? null : tone,
+      boxShadow: referenceRoute
+          ? [
+              BoxShadow(
+                color: tone.withValues(alpha: .18),
+                blurRadius: 7,
+              ),
+            ]
+          : null,
+    );
 
     final content = AnimatedScale(
       scale: _pressed
-          ? (referenceRoute ? 1.014 : 1.018)
-          : (elevated ? (referenceRoute ? 1.007 : 1.01) : 1),
+          ? (referenceRoute ? 1.009 : 1.018)
+          : (elevated ? (referenceRoute ? 1.004 : 1.01) : 1),
       duration: reduceMotion ? Duration.zero : AppDurations.press,
       curve: AppDurations.standardCurve,
       child: AnimatedContainer(
@@ -152,7 +194,7 @@ class _CardShellState extends State<CardShell> {
         constraints: BoxConstraints(minHeight: widget.minHeight ?? 0),
         transform: Matrix4.translationValues(
           0,
-          elevated ? (referenceRoute ? -3 : -2) : 0,
+          elevated ? -2 : 0,
           0,
         ),
         decoration: BoxDecoration(
@@ -165,10 +207,20 @@ class _CardShellState extends State<CardShell> {
                     Color.lerp(
                       surface,
                       colors.surfaceHighlight,
-                      colors.isLight ? .13 : .035,
+                      colors.isLight ? (openSection ? .07 : .1) : .025,
                     )!,
-                    tintedSurface,
-                    surface,
+                    openSection
+                        ? Color.lerp(
+                            surface,
+                            tone,
+                            colors.isLight ? .012 : .025,
+                          )!
+                        : tintedSurface,
+                    Color.lerp(
+                      surface,
+                      colors.softSurface,
+                      openSection ? .28 : .08,
+                    )!,
                   ],
                   stops: const [0, .48, 1],
                 )
@@ -179,25 +231,26 @@ class _CardShellState extends State<CardShell> {
             width: _focused || widget.selected
                 ? 1.5
                 : referenceRoute
-                    ? 1.05
+                    ? (openSection ? .8 : 1)
                     : 1,
           ),
           boxShadow: [
-            BoxShadow(
-              color: Colors.white.withValues(
-                alpha: colors.isLight ? (referenceRoute ? .46 : 0) : .045,
+            if (!openSection)
+              BoxShadow(
+                color: Colors.white.withValues(
+                  alpha: colors.isLight ? (referenceRoute ? .32 : 0) : .035,
+                ),
+                offset: const Offset(0, 1),
               ),
-              offset: const Offset(0, 1),
-            ),
             BoxShadow(
               color: colors.shadow.withValues(
                 alpha: colors.isLight
-                    ? (elevated ? 0.16 : (referenceRoute ? .09 : .055))
-                    : (elevated ? 0.38 : (referenceRoute ? .27 : .22)),
+                    ? (elevated ? .11 : (openSection ? .035 : .065))
+                    : (elevated ? .3 : (openSection ? .14 : .22)),
               ),
-              blurRadius: elevated ? 26 : (referenceRoute ? 20 : 14),
-              spreadRadius: elevated ? -8 : -9,
-              offset: Offset(0, elevated ? 12 : 8),
+              blurRadius: elevated ? 22 : (openSection ? 14 : 18),
+              spreadRadius: elevated ? -9 : -10,
+              offset: Offset(0, elevated ? 9 : 6),
             ),
             if (referenceRoute && (widget.selected || elevated))
               BoxShadow(
@@ -221,7 +274,9 @@ class _CardShellState extends State<CardShell> {
                           radius: 1.1,
                           colors: [
                             tone.withValues(
-                              alpha: colors.isLight ? .07 : .095,
+                              alpha: colors.isLight
+                                  ? (openSection ? .03 : .055)
+                                  : (openSection ? .05 : .08),
                             ),
                             Colors.transparent,
                           ],
@@ -245,41 +300,27 @@ class _CardShellState extends State<CardShell> {
                   child: Padding(padding: _padding, child: widget.child),
                 ),
               ),
-              if (widget.accentEdge)
+              if (widget.accentEdge && bodyLayout != PortalBodyLayout.kanban)
                 Positioned(
                   left: 0,
                   top: referenceRoute ? 8 : 12,
                   bottom: referenceRoute ? 8 : 12,
                   child: Container(
                     width: referenceRoute ? 4 : 3,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.horizontal(
-                        right: Radius.circular(4),
-                      ),
-                      gradient: referenceRoute
-                          ? LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                tone.withValues(alpha: .55),
-                                tone,
-                                tone.withValues(alpha: .68),
-                              ],
-                            )
-                          : null,
-                      color: referenceRoute ? null : tone,
-                      boxShadow: referenceRoute
-                          ? [
-                              BoxShadow(
-                                color: tone.withValues(alpha: .22),
-                                blurRadius: 8,
-                              ),
-                            ]
-                          : null,
-                    ),
+                    decoration: accentDecoration,
                   ),
                 ),
-              if (referenceRoute)
+              if (widget.accentEdge && bodyLayout == PortalBodyLayout.kanban)
+                Positioned(
+                  left: referenceRoute ? 8 : 12,
+                  right: referenceRoute ? 8 : 12,
+                  top: 0,
+                  child: Container(
+                    height: referenceRoute ? 4 : 3,
+                    decoration: accentDecoration,
+                  ),
+                ),
+              if (referenceRoute && !openSection)
                 Positioned(
                   left: 20,
                   right: 20,

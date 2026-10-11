@@ -26,17 +26,36 @@ class PortalBodyTheme extends StatelessWidget {
 
     final base = Theme.of(context);
     final colors = context.appColors;
+    final layout = PortalReferenceDesign.layoutForRoute(route);
+    final compactRows = layout == PortalBodyLayout.list ||
+        layout == PortalBodyLayout.timeline ||
+        layout == PortalBodyLayout.splitView;
+    final controlRadius = switch (layout) {
+      PortalBodyLayout.list || PortalBodyLayout.timeline => 12.0,
+      PortalBodyLayout.splitView || PortalBodyLayout.kanban => 14.0,
+      _ => 16.0,
+    };
+    final surfaceRadius = switch (layout) {
+      PortalBodyLayout.editorial || PortalBodyLayout.analytics => 16.0,
+      PortalBodyLayout.list || PortalBodyLayout.timeline => 12.0,
+      PortalBodyLayout.kanban || PortalBodyLayout.splitView => 14.0,
+      PortalBodyLayout.gallery || PortalBodyLayout.horizontalRail => 20.0,
+      PortalBodyLayout.calendar => 18.0,
+    };
     final controlShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(controlRadius),
     );
     final inputShape = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(17),
+      borderRadius: BorderRadius.circular(controlRadius + 1),
       borderSide: BorderSide(color: colors.border),
     );
 
     return Theme(
       data: base.copyWith(
-        visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
+        visualDensity: VisualDensity(
+          horizontal: -1,
+          vertical: compactRows ? -2 : -1,
+        ),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         cardTheme: CardThemeData(
           margin: EdgeInsets.zero,
@@ -44,14 +63,14 @@ class PortalBodyTheme extends StatelessWidget {
           elevation: 0,
           shadowColor: colors.shadow.withValues(alpha: .16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-            side: BorderSide(color: colors.border),
+            borderRadius: BorderRadius.circular(surfaceRadius),
+            side: BorderSide(color: colors.borderMuted),
           ),
         ),
         dividerTheme: DividerThemeData(
           color: colors.borderMuted,
           thickness: 1,
-          space: 18,
+          space: compactRows ? 14 : 18,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -61,8 +80,10 @@ class PortalBodyTheme extends StatelessWidget {
             colors.isLight ? .025 : .045,
           ),
           isDense: true,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: compactRows ? 10 : 12,
+          ),
           labelStyle: AppTextStyles.caption.copyWith(
             color: colors.textSecondary,
             fontWeight: FontWeight.w700,
@@ -125,9 +146,11 @@ class PortalBodyTheme extends StatelessWidget {
         ),
         listTileTheme: ListTileThemeData(
           dense: true,
-          minVerticalPadding: 8,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          minVerticalPadding: compactRows ? 5 : 8,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: compactRows ? 10 : 14,
+            vertical: compactRows ? 3 : 5,
+          ),
           iconColor: colors.goldDark,
           textColor: colors.textPrimary,
           titleTextStyle: AppTextStyles.cardTitle.copyWith(
@@ -139,7 +162,9 @@ class PortalBodyTheme extends StatelessWidget {
             height: 1.3,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(
+              layout == PortalBodyLayout.list ? 8 : controlRadius,
+            ),
           ),
         ),
         chipTheme: base.chipTheme.copyWith(
@@ -163,11 +188,37 @@ class PortalBodyTheme extends StatelessWidget {
           textColor: colors.textPrimary,
           collapsedTextColor: colors.textPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(controlRadius),
           ),
           collapsedShape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(controlRadius),
           ),
+        ),
+        dataTableTheme: DataTableThemeData(
+          headingRowColor: WidgetStatePropertyAll(
+            Color.lerp(
+              colors.elevatedSurface,
+              colors.goldLight,
+              colors.isLight ? .035 : .07,
+            ),
+          ),
+          dataRowColor: const WidgetStatePropertyAll(Colors.transparent),
+          dividerThickness: 1,
+          horizontalMargin: compactRows ? 12 : 16,
+          columnSpacing: compactRows ? 16 : 22,
+          headingTextStyle: AppTextStyles.smallMeta.copyWith(
+            color: colors.textSecondary,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .3,
+          ),
+          dataTextStyle: AppTextStyles.body.copyWith(
+            color: colors.textPrimary,
+          ),
+        ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: colors.goldMid,
+          linearTrackColor: colors.borderMuted,
+          circularTrackColor: colors.borderMuted,
         ),
         popupMenuTheme: PopupMenuThemeData(
           color: colors.elevatedSurface,

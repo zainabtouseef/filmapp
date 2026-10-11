@@ -25,7 +25,11 @@ class GlassSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = CardShell(
-      variant: CardVariant.standard,
+      // Portal section wrappers pass `accentEdge: false`. Treat those as one
+      // calm workspace section while nested records keep the compact card
+      // treatment. This removes the old card-inside-card appearance without
+      // changing any screen data or interactions.
+      variant: accentEdge ? CardVariant.standard : CardVariant.section,
       density: CardDensity.standard,
       radius: radius,
       padding: padding,

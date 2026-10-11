@@ -5,6 +5,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/cards/metric_action_card.dart';
+import '../../../shared/layout/portal_adaptive_collection.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../models/insurance_partner_models.dart';
 
@@ -193,19 +194,10 @@ class InsuranceResponsiveGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final count =
-            (constraints.maxWidth / minWidth).floor().clamp(1, 4).toInt();
-        final width = (constraints.maxWidth - (count - 1) * gap) / count;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: children
-              .map((child) => SizedBox(width: width, child: child))
-              .toList(),
-        );
-      },
+    return PortalAdaptiveCollection(
+      minWidth: minWidth,
+      gap: gap,
+      children: children,
     );
   }
 }

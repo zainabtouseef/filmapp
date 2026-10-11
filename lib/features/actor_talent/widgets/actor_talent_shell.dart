@@ -16,6 +16,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/layout/portal_body_theme.dart';
 import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
@@ -347,7 +348,14 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1180),
-                        child: widget.child,
+                        child: PortalBodyTheme(
+                          route: widget.routeName,
+                          child: PortalRouteEntrance(
+                            key: ValueKey('reference:${widget.routeName}'),
+                            route: widget.routeName,
+                            child: widget.child,
+                          ),
+                        ),
                       ),
                     ),
                   ),
