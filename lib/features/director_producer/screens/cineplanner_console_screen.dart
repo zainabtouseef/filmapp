@@ -102,7 +102,10 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     Map<String, dynamic> snapshot,
   ) {
-    final wide = MediaQuery.sizeOf(context).width >= 1100;
+    final viewport = MediaQuery.sizeOf(context);
+    final wide = viewport.width >= 1100;
+    final compactPanelHeight =
+        (viewport.height * .72).clamp(560.0, 760.0).toDouble();
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
@@ -152,7 +155,8 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
                         ),
                       ],
                     )
-                  : Column(
+                  : ListView(
+                      padding: const EdgeInsets.only(bottom: 96),
                       children: [
                         DropdownButtonFormField<String>(
                           isExpanded: true,
@@ -177,7 +181,8 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
-                        Expanded(
+                        SizedBox(
+                          height: compactPanelHeight,
                           child: _CinePanel(
                             child: _moduleContent(controller, snapshot),
                           ),
