@@ -2,6 +2,7 @@ import 'package:cineconnect/shared/cards/cine_card_system.dart';
 import 'package:cineconnect/shared/layout/portal_body_theme.dart';
 import 'package:cineconnect/shared/layout/portal_page_header.dart';
 import 'package:cineconnect/shared/layout/portal_reference_design.dart';
+import 'package:cineconnect/shared/widgets/cine_animated_gold_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -98,7 +99,7 @@ void main() {
         },
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('Shortlist'), findsOneWidget);
     expect(find.text('SHORTLISTS · SAVED TALENT'), findsOneWidget);
@@ -106,6 +107,37 @@ void main() {
     expect(find.text('SAVED'), findsOneWidget);
     expect(find.text('RANKED'), findsOneWidget);
     expect(find.text('SYNCED'), findsOneWidget);
+    expect(find.byType(CineAnimatedGoldBorder), findsOneWidget);
+  });
+
+  testWidgets('marketplace uses the same hero, typography and live controls',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        initialRoute: '/director/marketplace',
+        routes: {
+          '/director/marketplace': (_) => const Scaffold(
+                body: PortalPageHeader(
+                  eyebrow: 'CineConnect',
+                  title: 'Marketplace',
+                  trailing: FilledButton(
+                    onPressed: null,
+                    child: Text('Smart filters'),
+                  ),
+                ),
+              ),
+        },
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Marketplace'), findsOneWidget);
+    expect(find.text('LIVE'), findsOneWidget);
+    expect(find.text('VERIFIED'), findsOneWidget);
+    expect(find.text('SMART'), findsOneWidget);
+    expect(find.text('Smart filters'), findsOneWidget);
+    expect(find.byType(CineAnimatedGoldBorder), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   for (final size in const [Size(390, 844), Size(1440, 1000)]) {
@@ -135,7 +167,7 @@ void main() {
           },
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 600));
 
       expect(tester.takeException(), isNull);
       expect(find.text('Pricing & Deposits'), findsOneWidget);

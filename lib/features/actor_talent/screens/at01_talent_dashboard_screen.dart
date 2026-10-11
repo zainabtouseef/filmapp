@@ -14,6 +14,7 @@ import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
+import '../../../shared/widgets/cine_animated_gold_border.dart';
 import '../models/actor_talent_models.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_talent_components.dart';
@@ -310,55 +311,58 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GlassSectionCard(
+    return CineAnimatedGoldBorder(
       radius: 20,
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              gradient: colors.goldGradient,
-              borderRadius: BorderRadius.circular(14),
+      child: GlassSectionCard(
+        radius: 20,
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: colors.goldGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: colors.onGold, size: 24),
             ),
-            child: Icon(icon, color: colors.onGold, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  eyebrow.toUpperCase(),
-                  style: AppTextStyles.micro.copyWith(
-                    color: colors.goldDark,
-                    letterSpacing: 1.1,
-                    fontWeight: FontWeight.w800,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    eyebrow.toUpperCase(),
+                    style: AppTextStyles.micro.copyWith(
+                      color: colors.goldDark,
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  title,
-                  style: AppTextStyles.sectionHeading.copyWith(
-                    color: colors.textPrimary,
-                    fontSize: 19,
-                    letterSpacing: 0,
+                  const SizedBox(height: 5),
+                  Text(
+                    title,
+                    style: AppTextStyles.sectionHeading.copyWith(
+                      color: colors.textPrimary,
+                      fontSize: 19,
+                      letterSpacing: 0,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  message,
-                  style: AppTextStyles.smallMeta.copyWith(
-                    color: colors.textSecondary,
-                    height: 1.32,
+                  const SizedBox(height: 6),
+                  Text(
+                    message,
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.32,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

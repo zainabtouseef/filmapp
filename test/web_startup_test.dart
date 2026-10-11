@@ -15,7 +15,7 @@ void main() {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
     expect(
       index,
-      contains("releaseVersion = '20261011-operational-body-system-v35'"),
+      contains("releaseVersion = '20261011-universal-gold-hero-v36'"),
     );
     expect(
       index,

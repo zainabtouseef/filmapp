@@ -3,11 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
-import '../../core/theme/app_durations.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/app_theme.dart';
+import '../widgets/cine_animated_gold_border.dart';
 import '../widgets/cine_hover_zoom.dart';
 import 'portal_floating_bubbles.dart';
 
@@ -28,7 +28,7 @@ class PortalHeroStat {
 /// This is the one hero-card treatment every portal dashboard should use —
 /// it replaces portal-specific hero widgets like DP's foil-line
 /// `DPCommandHeader` or the generic image-based `_AdminCommandHero`.
-class PortalHeroCard extends StatefulWidget {
+class PortalHeroCard extends StatelessWidget {
   final String initials;
   final String name;
   final String badgeLabel;
@@ -53,49 +53,21 @@ class PortalHeroCard extends StatefulWidget {
   });
 
   @override
-  State<PortalHeroCard> createState() => _PortalHeroCardState();
-}
-
-class _PortalHeroCardState extends State<PortalHeroCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: AppDurations.heroRingRotation,
-    );
-    final reduceMotion = WidgetsBinding
-        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
-    if (!reduceMotion) _controller.repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final compact = MediaQuery.sizeOf(context).width < 480;
     final showDecorativeChips = MediaQuery.sizeOf(context).width >= 900;
 
     return CineHoverZoom(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(widget.radius),
+      child: CineAnimatedGoldBorder(
+        radius: radius,
         child: Stack(
           children: [
             Container(
-              decoration: AppTheme.heroCard(context, radius: widget.radius),
+              decoration: AppTheme.heroCard(context, radius: radius),
               foregroundDecoration: BoxDecoration(
                 gradient: colors.ambientGlow,
-                borderRadius: BorderRadius.circular(widget.radius),
+                borderRadius: BorderRadius.circular(radius),
               ),
               padding: EdgeInsets.symmetric(
                 horizontal: compact ? 16 : 24,
@@ -117,7 +89,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            _InitialsBadge(initials: widget.initials),
+                            _InitialsBadge(initials: initials),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
@@ -125,7 +97,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    widget.name,
+                                    name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTextStyles.sectionSerifHeading
@@ -136,7 +108,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  _VerifiedPill(label: widget.badgeLabel),
+                                  _VerifiedPill(label: badgeLabel),
                                 ],
                               ),
                             ),
@@ -144,7 +116,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                               const SizedBox(width: 18),
                               Flexible(
                                 child: _HeroDecorativeChips(
-                                  stats: widget.stats,
+                                  stats: stats,
                                 ),
                               ),
                             ],
@@ -165,7 +137,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                         ),
                         child: Row(
                           children: [
-                            for (final stat in widget.stats)
+                            for (final stat in stats)
                               Expanded(
                                 child: Container(
                                   constraints: BoxConstraints(
@@ -226,48 +198,26 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                         children: [
                           Expanded(
                             child: FilledButton(
-                              onPressed: widget.onCta,
+                              onPressed: onCta,
                               style: FilledButton.styleFrom(
                                 backgroundColor: colors.card,
                                 foregroundColor: colors.textPrimary,
                                 shape: const StadiumBorder(),
                                 minimumSize: const Size.fromHeight(44),
                               ),
-                              child: Text(widget.ctaLabel),
+                              child: Text(ctaLabel),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           _SecondaryIconButton(
-                            icon: widget.secondaryIcon,
-                            onTap: widget.onSecondary,
+                            icon: secondaryIcon,
+                            onTap: onSecondary,
                           ),
                         ],
                       ),
                     ],
                   ),
                 ],
-              ),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: reduceMotion
-                    ? CustomPaint(
-                        painter: _HeroRingPainter(
-                          angle: 0,
-                          gold: colors.goldMid,
-                          radius: widget.radius,
-                        ),
-                      )
-                    : AnimatedBuilder(
-                        animation: _controller,
-                        builder: (context, _) => CustomPaint(
-                          painter: _HeroRingPainter(
-                            angle: _controller.value * 2 * math.pi,
-                            gold: colors.goldMid,
-                            radius: widget.radius,
-                          ),
-                        ),
-                      ),
               ),
             ),
           ],
@@ -318,13 +268,14 @@ class _HeroDecorativeChipsState extends State<_HeroDecorativeChips>
           AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
-              final phase = _controller.value * 2 * math.pi +
-                  index * (2 * math.pi / 3);
+              final phase =
+                  _controller.value * 2 * math.pi + index * (2 * math.pi / 3);
               final bob = math.sin(phase) * 3.5;
               return Transform.translate(
                 offset: Offset(0, bob),
                 child: Transform.rotate(
-                  angle: (index.isEven ? -0.025 : 0.025) + math.sin(phase) * 0.01,
+                  angle:
+                      (index.isEven ? -0.025 : 0.025) + math.sin(phase) * 0.01,
                   child: child,
                 ),
               );
@@ -396,50 +347,6 @@ class _HeroDecorativeChip extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Strokes the card's rounded-rect outline with a rotating sweep gradient —
-/// only the gradient spins, the geometry stays fixed, so it reads as a
-/// thin light tracing the border rather than the whole card rotating.
-class _HeroRingPainter extends CustomPainter {
-  final double angle;
-  final Color gold;
-  final double radius;
-
-  const _HeroRingPainter({
-    required this.angle,
-    required this.gold,
-    required this.radius,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect =
-        RRect.fromRectAndRadius(rect.deflate(1), Radius.circular(radius));
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..shader = SweepGradient(
-        colors: [
-          gold.withValues(alpha: 0),
-          gold.withValues(alpha: 0),
-          gold.withValues(alpha: 0.9),
-          Colors.white.withValues(alpha: 0.95),
-          gold.withValues(alpha: 0.9),
-          gold.withValues(alpha: 0),
-        ],
-        stops: const [0.0, 0.52, 0.69, 0.78, 0.87, 1.0],
-        transform: GradientRotation(angle),
-      ).createShader(rect);
-    canvas.drawRRect(rrect, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeroRingPainter oldDelegate) =>
-      oldDelegate.angle != angle ||
-      oldDelegate.gold != gold ||
-      oldDelegate.radius != radius;
 }
 
 class _InitialsBadge extends StatelessWidget {

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_durations.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../widgets/cine_animated_gold_border.dart';
 import '../widgets/cine_hover_zoom.dart';
-import 'portal_reference_design.dart';
 
 class PortalHeroStat {
   final String value;
@@ -17,7 +17,8 @@ class PortalHeroStat {
 ///
 /// It follows the Shortlist reference: compact editorial title, soft gold wash,
 /// inline status metrics, restrained bubbles, and a responsive two-by-two stat
-/// layout on phones. Dashboard and marketplace routes retain their own header.
+/// layout on phones. The same treatment is used by marketplace and dashboard
+/// utility routes so portal typography and hero motion remain consistent.
 class PortalPageHeader extends StatelessWidget {
   final String title;
   final String? eyebrow;
@@ -39,16 +40,6 @@ class PortalPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final route = ModalRoute.of(context)?.settings.name;
-    if (!PortalReferenceDesign.usesReference(route)) {
-      return _LegacyPageHeader(
-        title: title,
-        eyebrow: eyebrow,
-        subtitle: subtitle,
-        trailing: trailing,
-        titleMaxLines: titleMaxLines,
-      );
-    }
-
     final colors = context.appColors;
     final resolvedStats = stats ?? _defaultStats(route, title);
     return CineHoverZoom(
@@ -65,92 +56,96 @@ class PortalPageHeader extends StatelessWidget {
             child: child,
           ),
         ),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: colors.isLight
-                  ? [
-                      colors.elevatedSurface,
-                      colors.goldSoft.withValues(alpha: .78),
-                      colors.elevatedSurface,
-                    ]
-                  : [
-                      colors.elevatedSurface,
-                      Color.lerp(colors.elevatedSurface, colors.goldMid, .12)!,
-                      colors.elevatedSurface,
-                    ],
-              stops: const [0, .54, 1],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: colors.border),
-            boxShadow: [
-              BoxShadow(
-                color:
-                    colors.shadow.withValues(alpha: colors.isLight ? .1 : .3),
-                blurRadius: 30,
-                spreadRadius: -18,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              const Positioned(
-                right: 38,
-                top: -18,
-                child: _HeroBubble(size: 72, opacity: .16),
-              ),
-              const Positioned(
-                right: 172,
-                top: 54,
-                child: _HeroBubble(size: 22, opacity: .19),
-              ),
-              const Positioned(
-                left: 46,
-                bottom: 46,
-                child: _HeroBubble(size: 14, opacity: .13),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 620;
-                    final titleBlock = _TitleBlock(
-                      title: title,
-                      eyebrow: eyebrow,
-                      subtitle: subtitle,
-                      titleMaxLines: titleMaxLines,
-                      compact: compact,
-                    );
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (trailing == null || compact)
-                          titleBlock
-                        else
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(child: titleBlock),
-                              const SizedBox(width: 18),
-                              Flexible(child: trailing!),
-                            ],
-                          ),
-                        if (trailing != null && compact) ...[
-                          const SizedBox(height: 12),
-                          trailing!,
-                        ],
-                        const SizedBox(height: 16),
-                        _HeroStatStrip(stats: resolvedStats),
+        child: CineAnimatedGoldBorder(
+          radius: 24,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: colors.isLight
+                    ? [
+                        colors.elevatedSurface,
+                        colors.goldSoft.withValues(alpha: .78),
+                        colors.elevatedSurface,
+                      ]
+                    : [
+                        colors.elevatedSurface,
+                        Color.lerp(
+                            colors.elevatedSurface, colors.goldMid, .12)!,
+                        colors.elevatedSurface,
                       ],
-                    );
-                  },
-                ),
+                stops: const [0, .54, 1],
               ),
-            ],
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.border),
+              boxShadow: [
+                BoxShadow(
+                  color:
+                      colors.shadow.withValues(alpha: colors.isLight ? .1 : .3),
+                  blurRadius: 30,
+                  spreadRadius: -18,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                const Positioned(
+                  right: 38,
+                  top: -18,
+                  child: _HeroBubble(size: 72, opacity: .16),
+                ),
+                const Positioned(
+                  right: 172,
+                  top: 54,
+                  child: _HeroBubble(size: 22, opacity: .19),
+                ),
+                const Positioned(
+                  left: 46,
+                  bottom: 46,
+                  child: _HeroBubble(size: 14, opacity: .13),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 620;
+                      final titleBlock = _TitleBlock(
+                        title: title,
+                        eyebrow: eyebrow,
+                        subtitle: subtitle,
+                        titleMaxLines: titleMaxLines,
+                        compact: compact,
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (trailing == null || compact)
+                            titleBlock
+                          else
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(child: titleBlock),
+                                const SizedBox(width: 18),
+                                Flexible(child: trailing!),
+                              ],
+                            ),
+                          if (trailing != null && compact) ...[
+                            const SizedBox(height: 12),
+                            trailing!,
+                          ],
+                          const SizedBox(height: 16),
+                          _HeroStatStrip(stats: resolvedStats),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -159,6 +154,19 @@ class PortalPageHeader extends StatelessWidget {
 
   static List<PortalHeroStat> _defaultStats(String? route, String title) {
     final key = '${route ?? ''} $title'.toLowerCase();
+    if (_hasAny(key, const [
+      'marketplace',
+      'discover',
+      'browse',
+      'talent and resources',
+    ])) {
+      return const [
+        PortalHeroStat('LIVE', 'listings'),
+        PortalHeroStat('VERIFIED', 'network'),
+        PortalHeroStat('SMART', 'filters'),
+        PortalHeroStat('SYNCED', 'server'),
+      ];
+    }
     if (_hasAny(key, const [
       'payment',
       'earning',
@@ -436,85 +444,6 @@ class _HeroBubble extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LegacyPageHeader extends StatelessWidget {
-  final String title;
-  final String? eyebrow;
-  final String? subtitle;
-  final Widget? trailing;
-  final int titleMaxLines;
-
-  const _LegacyPageHeader({
-    required this.title,
-    required this.eyebrow,
-    required this.subtitle,
-    required this.trailing,
-    required this.titleMaxLines,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
-        final titleBlock = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (eyebrow case final value? when value.trim().isNotEmpty) ...[
-              Text(
-                value.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.micro.copyWith(
-                  color: colors.goldDark,
-                  fontSize: compact ? 10.5 : 11.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: compact ? 1.8 : 2.4,
-                ),
-              ),
-              SizedBox(height: compact ? 5 : 7),
-            ],
-            Semantics(
-              header: true,
-              child: Text(
-                title,
-                maxLines: titleMaxLines,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heading.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: compact ? 32 : 46,
-                  fontWeight: FontWeight.w700,
-                  height: 1.02,
-                  letterSpacing: compact ? -.7 : -1.25,
-                ),
-              ),
-            ),
-            if (subtitle case final value? when value.trim().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(value, style: AppTextStyles.bodyMuted),
-            ],
-          ],
-        );
-        if (trailing == null) return titleBlock;
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [titleBlock, const SizedBox(height: 14), trailing!],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: titleBlock),
-            const SizedBox(width: 24),
-            Flexible(child: trailing!),
-          ],
-        );
-      },
     );
   }
 }

@@ -89,10 +89,10 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.byTooltip('About CineConnect'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Guided tour'), findsOneWidget);
     await tester.tap(find.text('Guided tour'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
     expect(tour.isActive, isTrue);
     expect(tour.activeTourId, brandFullWalkthroughTourId);
   });

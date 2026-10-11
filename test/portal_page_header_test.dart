@@ -8,8 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   for (final entry in const {
-    'mobile': (size: Size(390, 844), titleSize: 32.0),
-    'desktop': (size: Size(1440, 1000), titleSize: 46.0),
+    'mobile': (size: Size(390, 844), titleSize: 30.0),
+    'desktop': (size: Size(1440, 1000), titleSize: 38.0),
   }.entries) {
     testWidgets(
       'Marketplace and Shortlist share the portal title system on ${entry.key}',
@@ -52,11 +52,16 @@ void main() {
         final marketplace = tester.widget<Text>(find.text('Marketplace'));
         final shortlist = tester.widget<Text>(find.text('Shortlist'));
         for (final title in [marketplace, shortlist]) {
-          expect(title.style?.fontFamily, AppTextStyles.heading.fontFamily);
+          expect(
+            title.style?.fontFamily,
+            AppTextStyles.heroSerifHeadline.fontFamily,
+          );
           expect(title.style?.fontSize, entry.value.titleSize);
-          expect(title.style?.fontWeight, FontWeight.w700);
-          expect(title.style?.fontStyle, isNot(FontStyle.italic));
+          expect(title.style?.fontWeight, FontWeight.w600);
         }
+        expect(marketplace.style?.fontFamily, shortlist.style?.fontFamily);
+        expect(marketplace.style?.fontSize, shortlist.style?.fontSize);
+        expect(marketplace.style?.fontWeight, shortlist.style?.fontWeight);
         expect(tester.takeException(), isNull);
       },
     );

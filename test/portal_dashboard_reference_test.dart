@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cineconnect/core/theme/app_theme.dart';
 import 'package:cineconnect/shared/dashboard/dashboard_kit.dart';
+import 'package:cineconnect/shared/widgets/cine_animated_gold_border.dart';
 
 void main() {
   Widget referenceDashboard(double width) {
@@ -68,6 +69,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(PortalHeroCard), findsOneWidget);
+    expect(find.byType(CineAnimatedGoldBorder), findsOneWidget);
     expect(find.byType(PortalDashboardLiveStrip), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
