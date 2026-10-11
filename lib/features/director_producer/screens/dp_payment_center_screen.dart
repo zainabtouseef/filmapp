@@ -143,10 +143,8 @@ class _PaymentCenterContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final due = payments.where((p) => p.status == 'Due').toList();
-    final proof = payments.where((p) => p.status == 'Proof Uploaded').toList();
     final verified = payments.where((p) => p.status == 'Verified').toList();
     final rejected = payments.where((p) => p.status == 'Rejected').toList();
-    final dueTotal = due.fold<int>(0, (sum, payment) => sum + payment.amount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,14 +161,6 @@ class _PaymentCenterContent extends StatelessWidget {
           labelFor: (value) => value,
         ),
         const SizedBox(height: 12),
-        _StatGrid(
-          dueCount: due.length,
-          dueTotal: dueTotal,
-          proofCount: proof.length,
-          verifiedCount: verified.length,
-          rejectedCount: rejected.length,
-        ),
-        const SizedBox(height: 14),
         if (tab == 'Ledger')
           TourTarget(
             id: 'dp.payments.ledger',
@@ -190,117 +180,6 @@ class _PaymentCenterContent extends StatelessWidget {
             id: 'dp.payments.history',
             child: _HistoryList(items: [...verified, ...rejected]),
           ),
-      ],
-    );
-  }
-}
-
-class _StatGrid extends StatelessWidget {
-  final int dueCount;
-  final int dueTotal;
-  final int proofCount;
-  final int verifiedCount;
-  final int rejectedCount;
-
-  const _StatGrid({
-    required this.dueCount,
-    required this.dueTotal,
-    required this.proofCount,
-    required this.verifiedCount,
-    required this.rejectedCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DPGlassCard(
-      accentColor: colors.goldDark,
-      padding: const EdgeInsets.all(16),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 14,
-        childAspectRatio: 2.6,
-        children: [
-          _StatCell(
-            label: 'Due',
-            value: '$dueCount',
-            subtitle: 'PKR $dueTotal',
-            color: colors.goldDark,
-          ),
-          _StatCell(
-            label: 'Proof uploaded',
-            value: '$proofCount',
-            subtitle: 'Awaiting verification',
-            color: colors.infoBlue,
-          ),
-          _StatCell(
-            label: 'Verified',
-            value: '$verifiedCount',
-            subtitle: 'Milestones clear',
-            color: colors.success,
-          ),
-          _StatCell(
-            label: 'Rejected',
-            value: '$rejectedCount',
-            subtitle: 'Needs fresh proof',
-            color: colors.danger,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCell extends StatelessWidget {
-  final String label;
-  final String value;
-  final String subtitle;
-  final Color color;
-
-  const _StatCell({
-    required this.label,
-    required this.value,
-    required this.subtitle,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style:
-                  AppTextStyles.caption.copyWith(color: colors.textSecondary),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.cardTitle
-              .copyWith(color: colors.textPrimary, fontSize: 21),
-        ),
-        Text(
-          subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.caption.copyWith(color: colors.textTertiary),
-        ),
       ],
     );
   }
