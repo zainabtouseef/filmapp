@@ -82,7 +82,7 @@ class PortalMiniCalendar extends StatelessWidget {
             crossAxisCount: 7,
             mainAxisSpacing: 1,
             crossAxisSpacing: 1,
-            childAspectRatio: 1.25,
+            mainAxisExtent: 40,
           ),
           children: [
             for (final name in dayNames)

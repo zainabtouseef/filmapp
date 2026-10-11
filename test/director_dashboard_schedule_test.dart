@@ -114,14 +114,97 @@ void main() {
       expect(auth.dashboardLoads, 1);
       expect(auth.scheduleLoads, 1);
       expect(auth.discoveryLoads, 1);
-      expect(find.text("Today's schedule"), findsOneWidget);
+      expect(find.text('PLANNER'), findsOneWidget);
+      expect(find.text('Today'), findsWidgets);
       expect(find.text('Camera blocking rehearsal'), findsWidgets);
       expect(find.text('Live Project'), findsOneWidget);
       expect(find.text('From screenplay'), findsOneWidget);
       expect(find.text('to call sheet.'), findsOneWidget);
       expect(find.text('Discover'), findsWidgets);
+      expect(
+          find.byKey(const ValueKey('director-live-ticker')), findsOneWidget);
+      expect(
+          find.byKey(const ValueKey('director-planning-grid')), findsOneWidget);
+      expect(find.byKey(const ValueKey('director-attention-section')),
+          findsOneWidget);
+      expect(
+          find.byKey(const ValueKey('director-project-deck')), findsOneWidget);
+      expect(find.byKey(const ValueKey('director-discover-section')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('director-financial-command')),
+          findsOneWidget);
+      expect(
+        tester
+            .getTopLeft(
+                find.byKey(const ValueKey('director-attention-section')))
+            .dy,
+        lessThan(tester
+            .getTopLeft(find.byKey(const ValueKey('director-project-deck')))
+            .dy),
+      );
+      expect(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('director-project-deck')))
+            .dy,
+        lessThan(tester
+            .getTopLeft(find.byKey(const ValueKey('director-discover-section')))
+            .dy),
+      );
+      expect(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('director-discover-section')))
+            .dy,
+        lessThan(tester
+            .getTopLeft(
+                find.byKey(const ValueKey('director-financial-command')))
+            .dy),
+      );
       expect(find.text('Production workflow'), findsNothing);
       expect(find.text("Today's Production Timeline"), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Director full dashboard remains compact at a 390 pixel mobile width',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final auth = _DirectorHomeAuth(
+        dashboard: DirectorDashboard.fromJson(const <String, dynamic>{}),
+        schedule: DirectorSchedule.fromJson(const <String, dynamic>{}),
+      );
+
+      await tester.pumpWidget(
+        AuthScope(
+          controller: auth,
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const Scaffold(
+              body: SingleChildScrollView(child: DPHomeDashboardScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
+
+      expect(
+          find.byKey(const ValueKey('director-live-ticker')), findsOneWidget);
+      expect(
+          find.byKey(const ValueKey('director-planning-grid')), findsOneWidget);
+      expect(find.byKey(const ValueKey('director-attention-section')),
+          findsOneWidget);
+      expect(
+          find.byKey(const ValueKey('director-project-deck')), findsOneWidget);
+      expect(find.text('From screenplay'), findsOneWidget);
+      expect(find.byKey(const ValueKey('director-discover-section')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('director-financial-command')),
+          findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

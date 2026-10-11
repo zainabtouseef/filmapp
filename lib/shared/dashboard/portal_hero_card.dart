@@ -277,22 +277,58 @@ class _PortalHeroCardState extends State<PortalHeroCard>
   }
 }
 
-class _HeroDecorativeChips extends StatelessWidget {
+class _HeroDecorativeChips extends StatefulWidget {
   final List<PortalHeroStat> stats;
 
   const _HeroDecorativeChips({required this.stats});
 
   @override
+  State<_HeroDecorativeChips> createState() => _HeroDecorativeChipsState();
+}
+
+class _HeroDecorativeChipsState extends State<_HeroDecorativeChips>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 8));
+    final reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    if (!reduceMotion) _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final labels = stats.take(3).map((stat) => stat.label).toList();
+    final labels = widget.stats.take(3).map((stat) => stat.label).toList();
     return Wrap(
       alignment: WrapAlignment.end,
       spacing: 10,
       runSpacing: 8,
       children: [
         for (var index = 0; index < labels.length; index++)
-          Transform.rotate(
-            angle: index.isEven ? -0.025 : 0.025,
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              final phase = _controller.value * 2 * math.pi +
+                  index * (2 * math.pi / 3);
+              final bob = math.sin(phase) * 3.5;
+              return Transform.translate(
+                offset: Offset(0, bob),
+                child: Transform.rotate(
+                  angle: (index.isEven ? -0.025 : 0.025) + math.sin(phase) * 0.01,
+                  child: child,
+                ),
+              );
+            },
             child: _HeroDecorativeChip(
               label: labels[index],
               icon: switch (index) {

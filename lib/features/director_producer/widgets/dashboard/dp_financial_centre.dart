@@ -34,7 +34,7 @@ class DPFinancialCentre extends StatelessWidget {
     final progress = total == 0 ? 0.0 : paid / total;
     final attention = [...rejected, ...due].take(3).toList();
 
-    return Column(
+    final ledger = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _LedgerCard(
@@ -59,23 +59,62 @@ class DPFinancialCentre extends StatelessWidget {
             _LegendDot(
                 label: '${verified.length} verified', tone: CineTone.positive),
             _LegendDot(
-                label: '${underReview.length} review',
-                tone: CineTone.information),
+              label: '${underReview.length} review',
+              tone: CineTone.information,
+            ),
             _LegendDot(label: '${due.length} due', tone: CineTone.warning),
             if (rejected.isNotEmpty)
               _LegendDot(
-                  label: '${rejected.length} rejected',
-                  tone: CineTone.critical),
+                label: '${rejected.length} rejected',
+                tone: CineTone.critical,
+              ),
           ],
         ),
-        if (attention.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          for (final payment in attention) ...[
-            _PaymentTile(payment: payment),
-            const SizedBox(height: 8),
-          ],
-        ],
       ],
+    );
+
+    final paymentList = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (attention.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'No payment proofs need attention.',
+              style: AppTextStyles.smallMeta.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
+          )
+        else
+          for (var index = 0; index < attention.length; index++) ...[
+            _PaymentTile(payment: attention[index]),
+            if (index != attention.length - 1) const SizedBox(height: 8),
+          ],
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 760) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ledger,
+              const SizedBox(height: 14),
+              paymentList,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 5, child: ledger),
+            const SizedBox(width: 22),
+            Expanded(flex: 6, child: paymentList),
+          ],
+        );
+      },
     );
   }
 }
