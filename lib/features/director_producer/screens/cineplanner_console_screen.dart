@@ -105,7 +105,38 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     final viewport = MediaQuery.sizeOf(context);
     final wide = viewport.width >= 1100;
     final compactPanelHeight =
-        (viewport.height * .72).clamp(560.0, 760.0).toDouble();
+        (viewport.height * .82).clamp(620.0, 820.0).toDouble();
+    final commandBar = _CineCommandBar(
+      productions: controller.productions,
+      selectedId: controller.selectedProductionId,
+      onSelected: (value) {
+        if (value != null) controller.selectProduction(value);
+      },
+      onUpload: () => _uploadScreenplay(controller),
+      onCreateProject: () => _showNewProjectDialog(controller),
+      onRefresh: () => controller.loadProductions(selectFirst: false),
+      onCommandPalette: () => _showCommandPalette(controller),
+      onModuleSearch: (value) => setState(() => _query = value),
+    );
+    final moduleSelector = DropdownButtonFormField<String>(
+      isExpanded: true,
+      initialValue: _selectedModule,
+      decoration: const InputDecoration(
+        labelText: 'CinePlanner module',
+        prefixIcon: Icon(Icons.dashboard_customize_outlined),
+      ),
+      items: _modules
+          .map(
+            (item) => DropdownMenuItem(
+              value: item.label,
+              child: Text(item.label),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        if (value != null) setState(() => _selectedModule = value);
+      },
+    );
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
@@ -117,25 +148,14 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
       },
       child: Focus(
         autofocus: true,
-        child: Column(
-          key: const ValueKey('cineplanner-premium-shell'),
-          children: [
-            _CineCommandBar(
-              productions: controller.productions,
-              selectedId: controller.selectedProductionId,
-              onSelected: (value) {
-                if (value != null) controller.selectProduction(value);
-              },
-              onUpload: () => _uploadScreenplay(controller),
-              onCreateProject: () => _showNewProjectDialog(controller),
-              onRefresh: () => controller.loadProductions(selectFirst: false),
-              onCommandPalette: () => _showCommandPalette(controller),
-              onModuleSearch: (value) => setState(() => _query = value),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: wide
-                  ? Row(
+        child: wide
+            ? Column(
+                key: const ValueKey('cineplanner-premium-shell'),
+                children: [
+                  commandBar,
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SizedBox(
@@ -154,44 +174,26 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
                           ),
                         ),
                       ],
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.only(bottom: 96),
-                      children: [
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          initialValue: _selectedModule,
-                          decoration: const InputDecoration(
-                            labelText: 'CinePlanner module',
-                            prefixIcon:
-                                Icon(Icons.dashboard_customize_outlined),
-                          ),
-                          items: _modules
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item.label,
-                                  child: Text(item.label),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedModule = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: compactPanelHeight,
-                          child: _CinePanel(
-                            child: _moduleContent(controller, snapshot),
-                          ),
-                        ),
-                      ],
                     ),
-            ),
-          ],
-        ),
+                  ),
+                ],
+              )
+            : ListView(
+                key: const ValueKey('cineplanner-premium-shell'),
+                padding: const EdgeInsets.only(bottom: 104),
+                children: [
+                  commandBar,
+                  const SizedBox(height: 12),
+                  moduleSelector,
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: compactPanelHeight,
+                    child: _CinePanel(
+                      child: _moduleContent(controller, snapshot),
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
