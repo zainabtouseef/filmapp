@@ -12,6 +12,8 @@ import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/formatters/cine_format.dart';
+import '../../../shared/widgets/cine_hover_zoom.dart';
+import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dashboard/dp_command_header.dart';
 import '../widgets/dashboard/dp_activity_feed.dart';
@@ -54,11 +56,23 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
     final results = await Future.wait<Object>([
       auth.directorDashboard(),
       auth.directorSchedule(),
+      _loadDiscovery(auth),
     ]);
     return _DirectorHomeData(
       dashboard: results[0] as DirectorDashboard,
       schedule: results[1] as DirectorSchedule,
+      candidates: results[2] as List<DpCandidate>,
     );
+  }
+
+  Future<List<DpCandidate>> _loadDiscovery(AuthController auth) async {
+    try {
+      final discovery = await auth.directorDiscovery(category: 'All');
+      return discovery.items.map((item) => item.toCandidate()).toList();
+    } on Object {
+      // Discovery must never prevent the production dashboard from opening.
+      return const <DpCandidate>[];
+    }
   }
 
   void _retry() {
@@ -83,6 +97,7 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
         }
         final dashboard = snapshot.data!.dashboard;
         final schedule = snapshot.data!.schedule;
+        final candidates = snapshot.data!.candidates;
         final displayName = AuthScope.maybeOf(context)?.user?.displayName;
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -93,13 +108,16 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
                   summary: dashboard.summary,
                   displayName: displayName,
                 ),
-                _CinePlannerEntry(dashboard: dashboard),
                 _WidgetGridSection(
                   dashboard: dashboard,
                   schedule: schedule,
                 ),
                 _ProjectDeckSection(dashboard: dashboard),
-                _ProductionWorkflowSection(dashboard: dashboard),
+                _CinePlannerFeature(
+                  dashboard: dashboard,
+                  schedule: schedule,
+                ),
+                _DiscoverShowcase(candidates: candidates),
                 if (wide)
                   _WideBody(dashboard: dashboard)
                 else
@@ -116,33 +134,828 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
 class _DirectorHomeData {
   final DirectorDashboard dashboard;
   final DirectorSchedule schedule;
+  final List<DpCandidate> candidates;
 
   const _DirectorHomeData({
     required this.dashboard,
     required this.schedule,
+    required this.candidates,
   });
 }
 
-/// Planner sits directly below the Console header and uses live project counts.
-class _CinePlannerEntry extends StatelessWidget {
+/// CinePlanner feature surface modelled on the reference dashboard while using
+/// live projects, schedule events, and call-sheet state.
+class _CinePlannerFeature extends StatelessWidget {
   final DirectorDashboard dashboard;
+  final DirectorSchedule schedule;
 
-  const _CinePlannerEntry({required this.dashboard});
+  const _CinePlannerFeature({
+    required this.dashboard,
+    required this.schedule,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return DPSectionCard(
-      title: 'CinePlanner',
-      icon: Icons.view_timeline_rounded,
-      actionText: 'Open planner',
-      onActionTap: () =>
-          Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
-      child: Text(
-        '${dashboard.projects.length} ${dashboard.projects.length == 1 ? 'project' : 'projects'} · Screenplays, breakdowns, '
-        'resources, schedules and call sheets in one production workspace.',
-        style: AppTextStyles.body.copyWith(
-          color: context.appColors.textSecondary,
+    final colors = context.appColors;
+    final boardItems = <_PlannerBoardItem>[
+      for (final event in schedule.events.take(4))
+        _PlannerBoardItem(
+          code: 'SC',
+          title: event.title,
+          meta: event.status,
         ),
+      for (final project in dashboard.dpProjects.take(4))
+        _PlannerBoardItem(
+          code: 'PRJ',
+          title: project.title,
+          meta: project.status,
+        ),
+    ];
+    if (schedule.callSheet.status != 'empty') {
+      boardItems.insert(
+        0,
+        _PlannerBoardItem(
+          code: 'CALL',
+          title: schedule.callSheet.label,
+          meta: schedule.callSheet.status,
+        ),
+      );
+    }
+    if (boardItems.isEmpty) {
+      boardItems.add(const _PlannerBoardItem(
+        code: 'READY',
+        title: 'Upload a script to begin',
+        meta: 'CinePlanner workspace',
+      ));
+    }
+
+    return TourTarget(
+      id: 'dp.console.modules',
+      child: CineHoverZoom(
+        scale: 1.004,
+        pressedScale: 1.01,
+        child: Container(
+          width: double.infinity,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.card,
+                colors.goldSoft.withValues(alpha: colors.isLight ? .82 : .13),
+                colors.elevatedSurface,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: colors.goldMid.withValues(alpha: .34)),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    colors.shadow.withValues(alpha: colors.isLight ? .12 : .32),
+                blurRadius: 32,
+                spreadRadius: -20,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: 38,
+                top: -28,
+                child: _PlannerBubble(size: 88, color: colors.infoBlue),
+              ),
+              Positioned(
+                left: 46,
+                bottom: -32,
+                child: _PlannerBubble(size: 72, color: colors.goldMid),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(26),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 800;
+                    final copy = _PlannerFeatureCopy(
+                      projectCount: dashboard.projects.length,
+                      scheduleCount: schedule.events.length,
+                      callSheetReady: schedule.callSheet.status != 'empty',
+                    );
+                    final board =
+                        _PlannerSceneBoard(items: boardItems.take(6).toList());
+                    if (!wide) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          copy,
+                          const SizedBox(height: 24),
+                          board,
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(flex: 5, child: copy),
+                        const SizedBox(width: 30),
+                        Expanded(flex: 6, child: board),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlannerFeatureCopy extends StatelessWidget {
+  final int projectCount;
+  final int scheduleCount;
+  final bool callSheetReady;
+
+  const _PlannerFeatureCopy({
+    required this.projectCount,
+    required this.scheduleCount,
+    required this.callSheetReady,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'CINEPLANNER',
+              style: AppTextStyles.micro.copyWith(
+                color: colors.goldDark,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.2,
+              ),
+            ),
+            const SizedBox(width: 9),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: colors.goldMid,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'AI',
+                style: AppTextStyles.micro.copyWith(
+                  color: colors.onGold,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'From screenplay',
+          style: AppTextStyles.heroSerifHeadline.copyWith(
+            color: colors.textPrimary,
+            fontSize: 34,
+            fontWeight: FontWeight.w600,
+            fontStyle: FontStyle.normal,
+            height: 1.02,
+          ),
+        ),
+        Text(
+          'to call sheet.',
+          style: AppTextStyles.heroSerifHeadline.copyWith(
+            color: colors.goldDark,
+            fontSize: 34,
+            fontWeight: FontWeight.w500,
+            height: 1.04,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Break down scenes, schedule shoot days, and issue call sheets from one connected workspace.',
+          style: AppTextStyles.body.copyWith(
+            color: colors.textSecondary,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 24,
+          runSpacing: 12,
+          children: [
+            _PlannerMetric(value: '$projectCount', label: 'Productions'),
+            _PlannerMetric(value: '$scheduleCount', label: 'Scheduled'),
+            _PlannerMetric(
+              value: callSheetReady ? 'Ready' : 'Open',
+              label: 'Call sheet',
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            FilledButton.icon(
+              onPressed: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.cinePlanner,
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.goldMid,
+                foregroundColor: colors.onGold,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+              ),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+              label: const Text('Plan now'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.cinePlanner,
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.textPrimary,
+                side: BorderSide(color: colors.border),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+              ),
+              icon: const Icon(Icons.upload_file_outlined, size: 17),
+              label: const Text('Upload script'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PlannerMetric extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _PlannerMetric({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: AppTextStyles.metricNumberCompact.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          label,
+          style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlannerBoardItem {
+  final String code;
+  final String title;
+  final String meta;
+
+  const _PlannerBoardItem({
+    required this.code,
+    required this.title,
+    required this.meta,
+  });
+}
+
+class _PlannerSceneBoard extends StatelessWidget {
+  final List<_PlannerBoardItem> items;
+
+  const _PlannerSceneBoard({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.elevatedSurface.withValues(alpha: .72),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.borderMuted),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'LIVE PRODUCTION BOARD',
+            style: AppTextStyles.micro.copyWith(
+              color: colors.textTertiary,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 430 ? 3 : 2;
+              final itemWidth =
+                  (constraints.maxWidth - (columns - 1) * 9) / columns;
+              return Wrap(
+                spacing: 9,
+                runSpacing: 9,
+                children: [
+                  for (final item in items)
+                    SizedBox(
+                      width: itemWidth,
+                      child: _PlannerSceneTile(item: item),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlannerSceneTile extends StatelessWidget {
+  final _PlannerBoardItem item;
+
+  const _PlannerSceneTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 86),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.card.withValues(alpha: .92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                item.code,
+                style: AppTextStyles.micro.copyWith(
+                  color: colors.goldDark,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              Flexible(
+                child: Text(
+                  item.meta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.micro.copyWith(
+                    color: colors.textTertiary,
+                    fontSize: 9.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.cardTitle.copyWith(
+              color: colors.textPrimary,
+              fontSize: 12,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlannerBubble extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const _PlannerBubble({required this.size, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              context.appColors.surfaceHighlight.withValues(alpha: .7),
+              color.withValues(alpha: .13),
+              color.withValues(alpha: .02),
+            ],
+          ),
+          border: Border.all(color: color.withValues(alpha: .15)),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverShowcase extends StatefulWidget {
+  final List<DpCandidate> candidates;
+
+  const _DiscoverShowcase({required this.candidates});
+
+  @override
+  State<_DiscoverShowcase> createState() => _DiscoverShowcaseState();
+}
+
+class _DiscoverShowcaseState extends State<_DiscoverShowcase> {
+  static const _categories = <String>[
+    'All',
+    'Actors',
+    'Models',
+    'Locations',
+    'Crew',
+    'Equipment',
+  ];
+
+  String _category = 'All';
+
+  bool _matches(DpCandidate candidate) {
+    if (_category == 'All') return true;
+    if (_category == 'Equipment') {
+      return candidate.category == 'Media & Equipment' ||
+          candidate.category == 'Equipment';
+    }
+    return candidate.category == _category;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final filtered = widget.candidates.where(_matches).toList();
+    final visible =
+        filtered.isEmpty && _category != 'All' ? widget.candidates : filtered;
+
+    return TourTarget(
+      id: 'dp.findProviders',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 2),
+                child: Text(
+                  'Discover',
+                  style: AppTextStyles.sectionHeaderStyle.copyWith(
+                    color: colors.textPrimary,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              for (final category in _categories)
+                _DiscoveryCategoryPill(
+                  label: category,
+                  selected: _category == category,
+                  onTap: () => setState(() => _category = category),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Talent, locations, crew, and equipment from the live marketplace.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.smallMeta.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  DirectorProducerRoutes.marketplace,
+                ),
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                label: const Text('View marketplace'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (visible.isEmpty)
+            _DiscoverEmptyState(
+              onOpen: () => Navigator.pushNamed(
+                context,
+                DirectorProducerRoutes.marketplace,
+              ),
+            )
+          else
+            SizedBox(
+              height: 310,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 8),
+                itemCount: visible.take(8).length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final candidate = visible[index];
+                  return _DiscoverCandidateCard(
+                    candidate: candidate,
+                    onOpen: () => Navigator.pushNamed(
+                      context,
+                      DirectorProducerRoutes.profile,
+                      arguments: {
+                        'candidateId': candidate.profileId,
+                        'type': candidate.category,
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiscoveryCategoryPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DiscoveryCategoryPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: selected ? colors.goldMid : colors.card,
+      shape: StadiumBorder(side: BorderSide(color: colors.border)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Text(
+            label,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: selected ? colors.onGold : colors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverCandidateCard extends StatelessWidget {
+  final DpCandidate candidate;
+  final VoidCallback onOpen;
+
+  const _DiscoverCandidateCard({
+    required this.candidate,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return SizedBox(
+      width: 226,
+      child: CineHoverZoom(
+        scale: 1.012,
+        pressedScale: 1.022,
+        child: Material(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(24),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onOpen,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(color: colors.border),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _CandidateVisual(candidate: candidate),
+                        Positioned(
+                          left: 12,
+                          top: 12,
+                          child: _CandidateBadge(label: candidate.category),
+                        ),
+                        Positioned(
+                          right: 12,
+                          top: 12,
+                          child: _CandidateBadge(
+                            label: candidate.rating > 0
+                                ? '★ ${candidate.rating.toStringAsFixed(1)}'
+                                : 'New',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 13, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                candidate.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.cardTitle.copyWith(
+                                  color: colors.textPrimary,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            if (candidate.verified) ...[
+                              const SizedBox(width: 5),
+                              Icon(
+                                Icons.verified_rounded,
+                                size: 16,
+                                color: colors.goldMid,
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${candidate.category} · ${candidate.city}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.smallMeta.copyWith(
+                            color: colors.textSecondary,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                        const SizedBox(height: 11),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: onOpen,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: colors.textPrimary,
+                              side: BorderSide(color: colors.border),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                            ),
+                            child: const Text('View profile'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CandidateVisual extends StatelessWidget {
+  final DpCandidate candidate;
+
+  const _CandidateVisual({required this.candidate});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final fallback = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.goldSoft,
+            colors.infoBlue.withValues(alpha: colors.isLight ? .16 : .24),
+            colors.infoPurple.withValues(alpha: colors.isLight ? .12 : .2),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          candidate.avatarLabel,
+          style: AppTextStyles.heroSerifNumber.copyWith(
+            color: colors.textPrimary.withValues(alpha: .16),
+            fontSize: 62,
+          ),
+        ),
+      ),
+    );
+    final imageUrl = candidate.imageUrl;
+    if (imageUrl == null || imageUrl.isEmpty) return fallback;
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
+}
+
+class _CandidateBadge extends StatelessWidget {
+  final String label;
+
+  const _CandidateBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 110),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.card.withValues(alpha: .91),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.border),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyles.micro.copyWith(
+          color: colors.textPrimary,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverEmptyState extends StatelessWidget {
+  final VoidCallback onOpen;
+
+  const _DiscoverEmptyState({required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.travel_explore_rounded, color: colors.goldDark),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Open the live marketplace to discover collaborators.',
+              style: AppTextStyles.body.copyWith(color: colors.textSecondary),
+            ),
+          ),
+          TextButton(onPressed: onOpen, child: const Text('Discover')),
+        ],
       ),
     );
   }
@@ -497,293 +1310,6 @@ class _TodayPipelineRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Goal-oriented production workflows backed by live dashboard counts.
-class _ProductionWorkflowSection extends StatelessWidget {
-  final DirectorDashboard dashboard;
-
-  const _ProductionWorkflowSection({required this.dashboard});
-
-  @override
-  Widget build(BuildContext context) {
-    final negotiating = dashboard.pipeline
-        .where((item) =>
-            item.kind == 'booking' &&
-            ['sent', 'under_negotiation'].contains(item.status.toLowerCase()))
-        .length;
-    final contractsPending = dashboard.pipeline
-        .where((item) =>
-            item.kind == 'contract' &&
-            item.status.toLowerCase().contains('pending'))
-        .length;
-    final paymentsDue =
-        dashboard.dpPayments.where((p) => p.status == 'Due').length;
-
-    final workflows = [
-      _WorkflowAction(
-        icon: Icons.view_timeline_rounded,
-        name: 'Plan production',
-        description: 'Build schedules, scenes, and call sheets.',
-        actionLabel: 'Plan now',
-        tone: CineTone.information,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.cinePlanner),
-      ),
-      _WorkflowAction(
-        tourId: 'dp.reviewApplications',
-        icon: Icons.how_to_reg_outlined,
-        name: 'Build your cast',
-        description: 'Review applications and auditions.',
-        actionLabel: 'Review talent',
-        tone: CineTone.premium,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-      ),
-      _WorkflowAction(
-        tourId: 'dp.findProviders',
-        icon: Icons.travel_explore_outlined,
-        name: 'Find collaborators',
-        description: 'Discover talent, crew, locations, and gear.',
-        actionLabel: 'Open marketplace',
-        tone: CineTone.information,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
-      ),
-      _WorkflowAction(
-        icon: Icons.handshake_outlined,
-        name: 'Close negotiations',
-        count: negotiating > 0 ? negotiating : null,
-        description: 'Counter offers, lock rates.',
-        actionLabel: 'Open deals',
-        tone: CineTone.information,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.bargaining),
-      ),
-      _WorkflowAction(
-        icon: Icons.description_outlined,
-        name: 'Contracts to sign',
-        count: contractsPending > 0 ? contractsPending : null,
-        description: 'Agreements and e-signatures.',
-        actionLabel: 'View',
-        tone: CineTone.warning,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.contracts),
-      ),
-      _WorkflowAction(
-        icon: Icons.shield_outlined,
-        name: 'Payment milestones',
-        count: paymentsDue > 0 ? paymentsDue : null,
-        description: 'Milestones and proof uploads.',
-        actionLabel: 'Release',
-        tone: CineTone.positive,
-        onTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.payments),
-      ),
-    ];
-
-    return TourTarget(
-      id: 'dp.console.modules',
-      child: DPSectionCard(
-        title: 'Production workflow',
-        icon: Icons.account_tree_outlined,
-        actionText: 'Review applications',
-        onActionTap: () =>
-            Navigator.pushNamed(context, DirectorProducerRoutes.projects),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final tileWidth = constraints.maxWidth >= 1120
-                ? constraints.maxWidth / workflows.length
-                : 218.0;
-            return SizedBox(
-              height: 178,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (var i = 0; i < workflows.length; i++)
-                        SizedBox(
-                          width: tileWidth,
-                          child: _WorkflowStepTile(
-                            step: i + 1,
-                            action: workflows[i],
-                            showDivider: i != workflows.length - 1,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _WorkflowAction {
-  final String? tourId;
-  final IconData icon;
-  final String name;
-  final int? count;
-  final String description;
-  final String actionLabel;
-  final CineTone tone;
-  final VoidCallback onTap;
-
-  const _WorkflowAction({
-    this.tourId,
-    required this.icon,
-    required this.name,
-    this.count,
-    required this.description,
-    required this.actionLabel,
-    required this.tone,
-    required this.onTap,
-  });
-}
-
-class _WorkflowStepTile extends StatefulWidget {
-  final int step;
-  final _WorkflowAction action;
-  final bool showDivider;
-
-  const _WorkflowStepTile({
-    required this.step,
-    required this.action,
-    required this.showDivider,
-  });
-
-  @override
-  State<_WorkflowStepTile> createState() => _WorkflowStepTileState();
-}
-
-class _WorkflowStepTileState extends State<_WorkflowStepTile> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final tone = cineToneColor(context, widget.action.tone);
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-
-    Widget tile = MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration:
-            reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        transform: Matrix4.translationValues(0, _hovered ? -3 : 0, 0),
-        constraints: const BoxConstraints(minHeight: 150),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              tone.withValues(alpha: _hovered ? 0.12 : 0.055),
-              colors.elevatedSurface.withValues(alpha: 0.72),
-            ],
-          ),
-          border: widget.showDivider
-              ? Border(right: BorderSide(color: colors.border))
-              : null,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.action.onTap,
-            hoverColor: tone.withValues(alpha: 0.035),
-            splashColor: tone.withValues(alpha: 0.10),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      IconBadge(
-                        icon: widget.action.icon,
-                        tone: widget.action.tone,
-                        compact: true,
-                      ),
-                      const Spacer(),
-                      Text(
-                        widget.step.toString().padLeft(2, '0'),
-                        style: AppTextStyles.micro.copyWith(
-                          color: tone,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.3,
-                        ),
-                      ),
-                      if (widget.action.count != null) ...[
-                        const SizedBox(width: 8),
-                        CountBadge(
-                          count: widget.action.count!,
-                          tone: widget.action.tone,
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.action.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardTitle.copyWith(
-                      color: colors.textPrimary,
-                      fontSize: 13.5,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    widget.action.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.smallMeta.copyWith(
-                      color: colors.textSecondary,
-                      fontSize: 11.5,
-                      height: 1.4,
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.action.actionLabel,
-                        style: AppTextStyles.smallMeta.copyWith(
-                          color: tone,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11.5,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_rounded, size: 13, color: tone),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (widget.action.tourId != null) {
-      tile = TourTarget(id: widget.action.tourId!, child: tile);
-    }
-    return Semantics(
-      button: true,
-      label: '${widget.action.name}. ${widget.action.actionLabel}',
-      child: tile,
     );
   }
 }

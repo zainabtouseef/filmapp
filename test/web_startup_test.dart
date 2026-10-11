@@ -15,7 +15,7 @@ void main() {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
     expect(
       index,
-      contains("releaseVersion = '20261011-dashboard-command-centres-v26'"),
+      contains("releaseVersion = '20261011-director-cineplanner-discover-v27'"),
     );
     expect(
       index,
