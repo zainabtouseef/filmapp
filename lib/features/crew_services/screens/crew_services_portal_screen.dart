@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
+import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/crew_services_routes.dart';
 import '../widgets/crew_services_shell.dart';
 import 'cr01_crew_dashboard_screen.dart';
@@ -24,16 +26,21 @@ class CrewServicesPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return CrewServicesShell(
       routeName: routeName,
-      title: CrewServicesRoutes.titleFor(routeName),
-      screenId: CrewServicesRoutes.screenIdFor(routeName),
+      title:
+          marketplace ? 'Marketplace' : CrewServicesRoutes.titleFor(routeName),
+      screenId: marketplace ? 'MP' : CrewServicesRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       CrewServicesRoutes.profile => const CR02ServiceProfileScreen(),
       CrewServicesRoutes.portfolio => const CR03PortfolioCreditsScreen(),
       CrewServicesRoutes.availability => const CR04AvailabilityCalendarScreen(),

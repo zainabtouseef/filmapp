@@ -77,6 +77,7 @@ class InsurancePartnerShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const InsurancePartnerShell({
     super.key,
@@ -84,6 +85,7 @@ class InsurancePartnerShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -91,6 +93,7 @@ class InsurancePartnerShell extends StatelessWidget {
     return AdminScreenScaffold(
       title: title,
       currentRoute: routeName,
+      showHeading: showPageHeading,
       topBarBuilder: (context, wide, onMenuTap) => _InsuranceTopBar(
         screenId: screenId,
         wide: wide,

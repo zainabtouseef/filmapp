@@ -15,6 +15,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
@@ -178,6 +179,7 @@ class LocationOwnerShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const LocationOwnerShell({
     super.key,
@@ -185,6 +187,7 @@ class LocationOwnerShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -192,6 +195,7 @@ class LocationOwnerShell extends StatelessWidget {
     return _LocationWorkspaceScaffold(
       routeName: routeName,
       title: title,
+      showPageHeading: showPageHeading,
       child: child,
     );
   }
@@ -201,11 +205,13 @@ class _LocationWorkspaceScaffold extends StatefulWidget {
   final String routeName;
   final String title;
   final Widget child;
+  final bool showPageHeading;
 
   const _LocationWorkspaceScaffold({
     required this.routeName,
     required this.title,
     required this.child,
+    required this.showPageHeading,
   });
 
   @override
@@ -289,8 +295,13 @@ class _LocationWorkspaceScaffoldState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _LocationRouteHeading(title: widget.title, route: widget.routeName),
-          const SizedBox(height: 14),
+          if (widget.showPageHeading) ...[
+            _LocationRouteHeading(
+              title: widget.title,
+              route: widget.routeName,
+            ),
+            const SizedBox(height: 14),
+          ],
           widget.child,
         ],
       ),
@@ -307,42 +318,14 @@ class _LocationRouteHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _eyebrow,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.micro.copyWith(
-                  color: colors.goldDark,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heroSerifNumber.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 30,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        StatusChip(
-          label: 'Location Owner',
-          icon: Icons.verified_outlined,
-          color: colors.goldMid,
-        ),
-      ],
+    return PortalPageHeader(
+      eyebrow: _eyebrow,
+      title: title,
+      trailing: StatusChip(
+        label: 'Location Owner',
+        icon: Icons.verified_outlined,
+        color: colors.goldMid,
+      ),
     );
   }
 

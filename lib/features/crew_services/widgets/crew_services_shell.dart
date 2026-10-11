@@ -84,6 +84,7 @@ class CrewServicesShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const CrewServicesShell({
     super.key,
@@ -91,6 +92,7 @@ class CrewServicesShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -118,6 +120,7 @@ class CrewServicesShell extends StatelessWidget {
       workspaceProfileRoute: CrewServicesRoutes.profile,
       workspaceIcon: Icons.groups_2_outlined,
       workspaceEyebrow: _crewEyebrow,
+      showPageHeading: showPageHeading,
       child: child,
     );
   }

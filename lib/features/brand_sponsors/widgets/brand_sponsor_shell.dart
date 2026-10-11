@@ -14,6 +14,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/cine_about_button.dart';
@@ -159,6 +160,7 @@ class BrandSponsorShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const BrandSponsorShell({
     super.key,
@@ -166,6 +168,7 @@ class BrandSponsorShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -216,8 +219,10 @@ class BrandSponsorShell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BrandRouteHeading(title: title, route: routeName),
-          const SizedBox(height: 14),
+          if (showPageHeading) ...[
+            _BrandRouteHeading(title: title, route: routeName),
+            const SizedBox(height: 14),
+          ],
           child,
         ],
       ),
@@ -234,57 +239,14 @@ class _BrandRouteHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 520;
-        final titleBlock = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _eyebrow,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.micro.copyWith(
-                color: colors.goldDark,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.heroSerifNumber.copyWith(
-                color: colors.textPrimary,
-                fontSize: compact ? 27 : 30,
-              ),
-            ),
-          ],
-        );
-        final badge = StatusChip(
-          label: 'Brand Sponsor',
-          icon: Icons.verified_outlined,
-          color: colors.goldMid,
-        );
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              titleBlock,
-              const SizedBox(height: 10),
-              badge,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: titleBlock),
-            const SizedBox(width: 12),
-            badge,
-          ],
-        );
-      },
+    return PortalPageHeader(
+      eyebrow: _eyebrow,
+      title: title,
+      trailing: StatusChip(
+        label: 'Brand Sponsor',
+        icon: Icons.verified_outlined,
+        color: colors.goldMid,
+      ),
     );
   }
 

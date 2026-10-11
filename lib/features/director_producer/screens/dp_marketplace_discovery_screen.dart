@@ -19,6 +19,7 @@ import '../widgets/dp_glass_card.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../../../shared/layout/kyc_status_banner.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/marketplace/marketplace_preferences.dart';
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
@@ -392,9 +393,7 @@ class _DPMarketplaceDiscoveryScreenState
                   : widget.browseOnly
                       ? 'LIVE APPROVED LISTINGS'
                       : 'CINECONNECT',
-              title: widget.publicBuyerMode
-                  ? 'Find your next face'
-                  : 'Marketplace',
+              title: 'Marketplace',
               actions: widget.browseOnly || widget.publicBuyerMode
                   ? null
                   : _MarketplaceHeaderActions(
@@ -1019,53 +1018,10 @@ class _MarketplaceHeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
-        final heading = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              subtitle,
-              style: CineMarketplaceVisuals.of(context).archivo(
-                size: compact ? 10.5 : 12,
-                weight: FontWeight.w700,
-                color: CineMarketplaceVisuals.of(context).gold,
-                letterSpacing: compact ? 3.2 : 4.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: CineMarketplaceVisuals.of(context).archivo(
-                size: compact ? 37 : 54,
-                weight: FontWeight.w700,
-                height: 0.98,
-                letterSpacing: -1.7,
-              ),
-            ),
-          ],
-        );
-        if (actions == null) return heading;
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              heading,
-              const SizedBox(height: 18),
-              SizedBox(width: double.infinity, child: actions),
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: heading),
-            const SizedBox(width: 24),
-            actions!,
-          ],
-        );
-      },
+    return PortalPageHeader(
+      eyebrow: subtitle,
+      title: title,
+      trailing: actions,
     );
   }
 }

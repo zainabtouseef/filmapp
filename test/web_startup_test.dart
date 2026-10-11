@@ -13,7 +13,10 @@ void main() {
 
   test('web startup is cache safe and has a renderer fallback', () {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
-    expect(index, contains("releaseVersion = '20261011-smooth-cursor-v22'"));
+    expect(
+      index,
+      contains("releaseVersion = '20261011-portal-consistency-v23'"),
+    );
     expect(
       index,
       contains(r'mainJsPath = `${build.mainJsPath}?v=${requestVersion}`'),

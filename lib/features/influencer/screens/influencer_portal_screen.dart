@@ -22,6 +22,7 @@ import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/marketplace_pricing_preference_panel.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../../director_producer/widgets/dp_glass_card.dart';
 import '../../director_producer/widgets/dp_holographic_button.dart';
 import '../../director_producer/widgets/dp_layout_helpers.dart';
@@ -141,10 +142,12 @@ class InfluencerPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return ActorTalentShell(
       routeName: routeName,
-      title: InfluencerRoutes.titleFor(routeName),
-      screenId: InfluencerRoutes.screenIdFor(routeName),
+      title: marketplace ? 'Marketplace' : InfluencerRoutes.titleFor(routeName),
+      screenId: marketplace ? 'MP' : InfluencerRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       workspaceLayout: true,
       portalLabel: 'Influencer Portal',
       menuTitle: 'Influencer portal screens',
@@ -180,6 +183,8 @@ class InfluencerPortalScreen extends StatelessWidget {
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       InfluencerRoutes.home => const InfluencerDashboardScreen(),
       InfluencerRoutes.mediaKit => const InfluencerMediaKitScreen(),
       InfluencerRoutes.packages => const InfluencerPackagesScreen(),

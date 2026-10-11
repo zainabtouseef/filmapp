@@ -76,6 +76,7 @@ class LegalPartnerShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const LegalPartnerShell({
     super.key,
@@ -83,6 +84,7 @@ class LegalPartnerShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -90,6 +92,7 @@ class LegalPartnerShell extends StatelessWidget {
     return AdminScreenScaffold(
       title: title,
       currentRoute: routeName,
+      showHeading: showPageHeading,
       topBarBuilder: (context, wide, onMenuTap) => _LegalTopBar(
         screenId: screenId,
         wide: wide,

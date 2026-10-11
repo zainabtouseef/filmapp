@@ -12,6 +12,7 @@ import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/marketplace/marketplace_preferences.dart';
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
@@ -144,11 +145,36 @@ class _BR09BrandMarketplaceScreenState
   @override
   Widget build(BuildContext context) {
     if (_auth == null || _projectsController == null) {
-      return const CoreEmptyState(
-        icon: Icons.cloud_sync_outlined,
-        title: 'Sign in to browse production resources',
-        message:
-            'Verified talent, crew, locations and equipment load from the CineConnect backend.',
+      final compact = MediaQuery.sizeOf(context).width < 600;
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.fromLTRB(
+          compact ? 14 : 28,
+          compact ? 24 : 34,
+          compact ? 14 : 28,
+          30,
+        ),
+        decoration: BoxDecoration(
+          color: CineMarketplaceVisuals.of(context).background,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: CineMarketplaceVisuals.of(context).border),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            PortalPageHeader(
+              eyebrow: 'CINECONNECT',
+              title: 'Marketplace',
+            ),
+            SizedBox(height: 22),
+            CoreEmptyState(
+              icon: Icons.cloud_sync_outlined,
+              title: 'Sign in to browse production resources',
+              message:
+                  'Verified talent, crew, locations and equipment load from the CineConnect backend.',
+            ),
+          ],
+        ),
       );
     }
     final activeProjects = _projects
@@ -172,24 +198,9 @@ class _BR09BrandMarketplaceScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'CINECONNECT',
-            style: CineMarketplaceVisuals.of(context).archivo(
-              size: compact ? 10.5 : 12,
-              weight: FontWeight.w700,
-              color: CineMarketplaceVisuals.of(context).gold,
-              letterSpacing: compact ? 3.2 : 4.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Marketplace',
-            style: CineMarketplaceVisuals.of(context).archivo(
-              size: compact ? 37 : 54,
-              weight: FontWeight.w700,
-              height: 0.98,
-              letterSpacing: -1.7,
-            ),
+          const PortalPageHeader(
+            eyebrow: 'CINECONNECT',
+            title: 'Marketplace',
           ),
           const SizedBox(height: 22),
           Column(

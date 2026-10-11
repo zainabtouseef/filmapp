@@ -84,6 +84,7 @@ class CastingAgencyShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const CastingAgencyShell({
     super.key,
@@ -91,6 +92,7 @@ class CastingAgencyShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -105,6 +107,7 @@ class CastingAgencyShell extends StatelessWidget {
       navDestinations: _agencyBottomDestinations,
       menuEntries: agencyMenuEntries,
       bottomIndexOverrides: _agencyBottomIndexOverrides,
+      showPageHeading: showPageHeading,
       child: child,
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/insurance_partner_routes.dart';
 import '../widgets/insurance_partner_shell.dart';
 import 'in01_insurance_dashboard_screen.dart';
@@ -18,16 +20,23 @@ class InsurancePartnerPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return InsurancePartnerShell(
       routeName: routeName,
-      title: InsurancePartnerRoutes.titleFor(routeName),
-      screenId: InsurancePartnerRoutes.screenIdFor(routeName),
+      title: marketplace
+          ? 'Marketplace'
+          : InsurancePartnerRoutes.titleFor(routeName),
+      screenId:
+          marketplace ? 'MP' : InsurancePartnerRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       InsurancePartnerRoutes.records => const IN02ShootInsuranceRecordsScreen(),
       InsurancePartnerRoutes.claims => const IN03ClaimSupportScreen(),
       InsurancePartnerRoutes.safety => const IN04SafetyChecksPermitsScreen(),

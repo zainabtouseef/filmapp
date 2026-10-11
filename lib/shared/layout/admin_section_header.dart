@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../cards/cine_card_system.dart';
+import 'portal_page_header.dart';
 
 class AdminScreenHeading extends StatelessWidget {
   final String title;
@@ -14,17 +15,7 @@ class AdminScreenHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.left,
-        style: AppTextStyles.screenTitle.copyWith(color: colors.textPrimary),
-      ),
-    );
+    return PortalPageHeader(title: title, titleMaxLines: 1);
   }
 }
 

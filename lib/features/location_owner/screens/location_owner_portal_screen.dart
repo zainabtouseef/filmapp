@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/location_owner_routes.dart';
 import '../widgets/location_owner_shell.dart';
 import 'lo01_owner_dashboard_screen.dart';
@@ -29,16 +31,21 @@ class LocationOwnerPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return LocationOwnerShell(
       routeName: routeName,
-      title: LocationOwnerRoutes.titleFor(routeName),
-      screenId: LocationOwnerRoutes.screenIdFor(routeName),
+      title:
+          marketplace ? 'Marketplace' : LocationOwnerRoutes.titleFor(routeName),
+      screenId: marketplace ? 'MP' : LocationOwnerRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       LocationOwnerRoutes.listing => const LO02LocationListingWizardScreen(),
       LocationOwnerRoutes.calendar => const LO03AvailabilityCalendarScreen(),
       LocationOwnerRoutes.pricing => const LO04PricingDepositScreen(),

@@ -100,14 +100,13 @@ class AppTextStyles {
       ));
 
   // ---- Premium admin dashboard ------------------------------------------
-  /// Full-page title (e.g. [AdminScreenHeading]). Serif, matching the
-  /// dashboard-kit page-title treatment — not for section/eyebrow labels,
-  /// see [sectionHeaderStyle].
-  static TextStyle get dashboardTitleStyle => _editorial(const TextStyle(
-        fontSize: 34,
-        fontWeight: FontWeight.w600,
-        height: 1.1,
-        letterSpacing: 0,
+  /// Full-page title shared by every portal and Marketplace. Editorial serif
+  /// stays inside hero and content cards; navigation titles remain stable.
+  static TextStyle get dashboardTitleStyle => _dashboard(const TextStyle(
+        fontSize: 38,
+        fontWeight: FontWeight.w700,
+        height: 1.08,
+        letterSpacing: -0.7,
         color: AppColors.textPrimary,
       ));
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/media_equipment_routes.dart';
 import '../widgets/media_equipment_shell.dart';
 import 'me01_provider_dashboard_screen.dart';
@@ -28,16 +30,23 @@ class MediaEquipmentPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return MediaEquipmentShell(
       routeName: routeName,
-      title: MediaEquipmentRoutes.titleFor(routeName),
-      screenId: MediaEquipmentRoutes.screenIdFor(routeName),
+      title: marketplace
+          ? 'Marketplace'
+          : MediaEquipmentRoutes.titleFor(routeName),
+      screenId:
+          marketplace ? 'MP' : MediaEquipmentRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       MediaEquipmentRoutes.profile => const ME02ProviderProfileScreen(),
       MediaEquipmentRoutes.inventory => const ME03InventoryManagerScreen(),
       MediaEquipmentRoutes.packages => const ME04PackageBuilderScreen(),

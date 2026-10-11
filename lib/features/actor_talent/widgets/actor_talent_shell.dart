@@ -16,6 +16,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
@@ -180,6 +181,7 @@ class ActorTalentShell extends StatefulWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
   final String portalLabel;
   final String menuTitle;
   final List<String> navRoutes;
@@ -211,6 +213,7 @@ class ActorTalentShell extends StatefulWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
     this.portalLabel = 'Actor / Talent Portal',
     this.menuTitle = 'Actor portal screens',
     this.navRoutes = ActorTalentRoutes.primaryNav,
@@ -305,6 +308,7 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
         workspaceProfileRoute: widget.workspaceProfileRoute,
         workspaceIcon: widget.workspaceIcon,
         workspaceEyebrow: widget.workspaceEyebrow,
+        showPageHeading: widget.showPageHeading,
         child: widget.child,
       );
     }
@@ -409,6 +413,7 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
   final String workspaceProfileRoute;
   final IconData workspaceIcon;
   final String Function(String route)? workspaceEyebrow;
+  final bool showPageHeading;
 
   const _ActorWorkspaceScaffold({
     required this.routeName,
@@ -430,6 +435,7 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
     required this.workspaceProfileRoute,
     required this.workspaceIcon,
     required this.workspaceEyebrow,
+    required this.showPageHeading,
   });
 
   @override
@@ -510,14 +516,16 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ActorRouteHeading(
-            title: title,
-            route: routeName,
-            badgeLabel: workspaceBadgeLabel,
-            icon: workspaceIcon,
-            eyebrowBuilder: workspaceEyebrow,
-          ),
-          const SizedBox(height: 14),
+          if (showPageHeading) ...[
+            _ActorRouteHeading(
+              title: title,
+              route: routeName,
+              badgeLabel: workspaceBadgeLabel,
+              icon: workspaceIcon,
+              eyebrowBuilder: workspaceEyebrow,
+            ),
+            const SizedBox(height: 14),
+          ],
           child,
         ],
       ),
@@ -543,42 +551,14 @@ class _ActorRouteHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                eyebrowBuilder?.call(route) ?? _eyebrow,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.micro.copyWith(
-                  color: colors.goldDark,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heroSerifNumber.copyWith(
-                  color: colors.textPrimary,
-                  fontSize: 30,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        StatusChip(
-          label: badgeLabel,
-          icon: icon,
-          color: colors.goldMid,
-        ),
-      ],
+    return PortalPageHeader(
+      eyebrow: eyebrowBuilder?.call(route) ?? _eyebrow,
+      title: title,
+      trailing: StatusChip(
+        label: badgeLabel,
+        icon: icon,
+        color: colors.goldMid,
+      ),
     );
   }
 

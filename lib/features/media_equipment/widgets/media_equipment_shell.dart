@@ -14,6 +14,7 @@ import '../../../shared/layout/admin_bottom_nav.dart';
 import '../../../shared/layout/admin_screen_scaffold.dart';
 import '../../../shared/layout/admin_top_bar.dart';
 import '../../../shared/layout/floating_portal_menu.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/bottom_nav_bar.dart';
@@ -167,6 +168,7 @@ class MediaEquipmentShell extends StatefulWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const MediaEquipmentShell({
     super.key,
@@ -174,6 +176,7 @@ class MediaEquipmentShell extends StatefulWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -253,11 +256,13 @@ class _MediaEquipmentShellState extends State<MediaEquipmentShell> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _EquipmentRouteHeading(
-            title: widget.title,
-            route: widget.routeName,
-          ),
-          const SizedBox(height: 14),
+          if (widget.showPageHeading) ...[
+            _EquipmentRouteHeading(
+              title: widget.title,
+              route: widget.routeName,
+            ),
+            const SizedBox(height: 14),
+          ],
           widget.child,
         ],
       ),
@@ -277,53 +282,14 @@ class _EquipmentRouteHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 520;
-        final heading = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _eyebrow,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.micro.copyWith(
-                color: colors.goldDark,
-                letterSpacing: 1.1,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.heroSerifNumber.copyWith(
-                color: colors.textPrimary,
-                fontSize: compact ? 27 : 30,
-              ),
-            ),
-          ],
-        );
-        final badge = StatusChip(
-          label: 'Equipment Provider',
-          icon: Icons.verified_outlined,
-          color: colors.goldMid,
-        );
-        if (compact) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [heading, const SizedBox(height: 10), badge],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: heading),
-            const SizedBox(width: 12),
-            badge,
-          ],
-        );
-      },
+    return PortalPageHeader(
+      eyebrow: _eyebrow,
+      title: title,
+      trailing: StatusChip(
+        label: 'Equipment Provider',
+        icon: Icons.verified_outlined,
+        color: colors.goldMid,
+      ),
     );
   }
 

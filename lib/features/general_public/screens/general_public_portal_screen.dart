@@ -515,7 +515,7 @@ class _PublicTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = !wide;
-    final narrow = MediaQuery.sizeOf(context).width < 350;
+    final narrow = MediaQuery.sizeOf(context).width < 480;
     final canGoBack = wide || Navigator.canPop(context);
     return AdminTopBarFrame(
       compact: compact,
@@ -645,23 +645,37 @@ class _PublicSearchPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(compact ? 15 : 18),
           border: Border.all(color: colors.border),
         ),
-        child: Row(
-          children: [
-            Icon(Icons.search_rounded,
-                color: colors.icon, size: compact ? 18 : 21),
-            SizedBox(width: compact ? 7 : 9),
-            Expanded(
-              child: Text(
-                compact ? 'Search...' : 'Search actors, models, influencers...',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.smallMeta.copyWith(
-                  color: colors.textSecondary,
-                  fontSize: compact ? 12 : 13,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final iconOnly = constraints.maxWidth < 54;
+            return Row(
+              mainAxisAlignment:
+                  iconOnly ? MainAxisAlignment.center : MainAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  color: colors.icon,
+                  size: compact ? 18 : 21,
                 ),
-              ),
-            ),
-          ],
+                if (!iconOnly) ...[
+                  SizedBox(width: compact ? 7 : 9),
+                  Expanded(
+                    child: Text(
+                      compact
+                          ? 'Search...'
+                          : 'Search actors, models, influencers...',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.smallMeta.copyWith(
+                        color: colors.textSecondary,
+                        fontSize: compact ? 12 : 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );

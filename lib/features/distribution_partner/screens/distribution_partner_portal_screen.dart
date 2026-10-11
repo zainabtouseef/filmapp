@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/distribution_partner_routes.dart';
 import '../widgets/distribution_partner_shell.dart';
 import 'ds01_distribution_dashboard_screen.dart';
@@ -17,16 +19,23 @@ class DistributionPartnerPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return DistributionPartnerShell(
       routeName: routeName,
-      title: DistributionPartnerRoutes.titleFor(routeName),
-      screenId: DistributionPartnerRoutes.screenIdFor(routeName),
+      title: marketplace
+          ? 'Marketplace'
+          : DistributionPartnerRoutes.titleFor(routeName),
+      screenId:
+          marketplace ? 'MP' : DistributionPartnerRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       DistributionPartnerRoutes.contacts =>
         const DS02DistributorContactsScreen(),
       DistributionPartnerRoutes.release =>

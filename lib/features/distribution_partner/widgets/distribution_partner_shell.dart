@@ -72,6 +72,7 @@ class DistributionPartnerShell extends StatelessWidget {
   final String title;
   final String screenId;
   final Widget child;
+  final bool showPageHeading;
 
   const DistributionPartnerShell({
     super.key,
@@ -79,6 +80,7 @@ class DistributionPartnerShell extends StatelessWidget {
     required this.title,
     required this.screenId,
     required this.child,
+    this.showPageHeading = true,
   });
 
   @override
@@ -86,6 +88,7 @@ class DistributionPartnerShell extends StatelessWidget {
     return AdminScreenScaffold(
       title: title,
       currentRoute: routeName,
+      showHeading: showPageHeading,
       topBarBuilder: (context, wide, onMenuTap) => _DistributionTopBar(
         screenId: screenId,
         wide: wide,

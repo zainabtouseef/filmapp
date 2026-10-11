@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/opportunities/opportunity_application_detail_screen.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../../actor_talent/widgets/actor_talent_shell.dart';
 import '../routes/model_extension_routes.dart';
 import 'md01_campaign_categories_screen.dart';
@@ -85,10 +86,15 @@ class ModelExtensionPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return ActorTalentShell(
       routeName: routeName,
-      title: ModelExtensionRoutes.titleFor(routeName),
-      screenId: ModelExtensionRoutes.screenIdFor(routeName),
+      title: marketplace
+          ? 'Marketplace'
+          : ModelExtensionRoutes.titleFor(routeName),
+      screenId:
+          marketplace ? 'MP' : ModelExtensionRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       portalLabel: 'Model Extension',
       menuTitle: 'Model extension screens',
       navRoutes: ModelExtensionRoutes.primaryNav,
@@ -111,6 +117,8 @@ class ModelExtensionPortalScreen extends StatelessWidget {
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       ModelExtensionRoutes.categories => const MD01CampaignCategoriesScreen(),
       ModelExtensionRoutes.usageRights => const MD02UsageRightsScreen(),
       ModelExtensionRoutes.portfolio => const MD03PortfolioCategoriesScreen(),

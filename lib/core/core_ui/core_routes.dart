@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/auth_controller.dart';
 import '../auth/portal_access_guard.dart';
 
 import '../theme/app_breakpoints.dart';
@@ -135,6 +136,15 @@ class CoreRoutes {
   static final _adminLibrary = _DeferredLibrary(admin_portal.loadLibrary);
 
   static Widget _marketplacePage(String routeName, Object? arguments) =>
+      _MarketplaceRoleRoute(
+        routeName: routeName,
+        arguments: arguments,
+      );
+
+  static Widget _standaloneMarketplacePage(
+    String routeName,
+    Object? arguments,
+  ) =>
       _DeferredRouteScreen(
         library: _marketplaceLibrary,
         builder: () => marketplace_portal.MarketplacePortalScreen(
@@ -868,6 +878,51 @@ class _SuperAdminDeepLink {
   final Map<String, Object?> arguments;
 
   const _SuperAdminDeepLink(this.routeName, {this.arguments = const {}});
+}
+
+/// Opens the shared Marketplace inside the active role's own portal shell.
+///
+/// Keeping the dispatch here preserves the deferred portal bundles while the
+/// marketplace body, typography, cards, filters and motion stay shared.
+class _MarketplaceRoleRoute extends StatelessWidget {
+  const _MarketplaceRoleRoute({
+    required this.routeName,
+    this.arguments,
+  });
+
+  final String routeName;
+  final Object? arguments;
+
+  @override
+  Widget build(BuildContext context) {
+    if (routeName == MarketplaceRoutes.profile) {
+      return CoreRoutes._standaloneMarketplacePage(routeName, arguments);
+    }
+
+    final roleCode = AuthScope.maybeOf(context)?.user?.primaryRole?.code;
+    return switch (roleCode) {
+      'director_producer' => CoreRoutes._directorPage(
+          DirectorProducerRoutes.marketplace,
+          arguments,
+        ),
+      'general_public' => CoreRoutes._publicPage(
+          GeneralPublicRoutes.browse,
+          arguments,
+        ),
+      'actor_talent' => CoreRoutes._actorPage(routeName, arguments),
+      'model' => CoreRoutes._modelPage(routeName, arguments),
+      'influencer' => CoreRoutes._influencerPage(routeName, arguments),
+      'location_owner' => CoreRoutes._locationPage(routeName, arguments),
+      'equipment_provider' => CoreRoutes._equipmentPage(routeName, arguments),
+      'crew_service' => CoreRoutes._crewPage(routeName, arguments),
+      'casting_agency' => CoreRoutes._agencyPage(routeName),
+      'brand_sponsor' => CoreRoutes._brandPage(BrandSponsorRoutes.marketplace),
+      'legal_partner' => CoreRoutes._legalPage(routeName, arguments),
+      'insurance_partner' => CoreRoutes._insurancePage(routeName),
+      'distribution_partner' => CoreRoutes._distributionPage(routeName),
+      _ => CoreRoutes._standaloneMarketplacePage(routeName, arguments),
+    };
+  }
 }
 
 class _DeferredLibrary {

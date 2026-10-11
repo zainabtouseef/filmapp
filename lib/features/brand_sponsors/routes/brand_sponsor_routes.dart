@@ -38,7 +38,7 @@ class BrandSponsorRoutes {
     return switch (route) {
       home => 'Brand Workspace',
       projects => 'Projects & Campaigns',
-      marketplace => 'Production Marketplace',
+      marketplace => 'Marketplace',
       shortlists => 'Project Shortlists',
       bookings => 'Requests & Bookings',
       profile => 'Brand Profile',

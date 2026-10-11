@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/actor_talent_routes.dart';
 import '../widgets/actor_full_walkthrough_steps.dart';
 import '../widgets/actor_talent_shell.dart';
@@ -32,8 +34,11 @@ class ActorTalentPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = ActorTalentRoutes.titleFor(routeName);
-    final screenId = ActorTalentRoutes.screenIdFor(routeName);
+    final marketplace = routeName == MarketplaceRoutes.browse;
+    final title =
+        marketplace ? 'Marketplace' : ActorTalentRoutes.titleFor(routeName);
+    final screenId =
+        marketplace ? 'MP' : ActorTalentRoutes.screenIdFor(routeName);
     return ActorTalentShell(
       routeName: routeName,
       title: title,
@@ -41,6 +46,7 @@ class ActorTalentPortalScreen extends StatelessWidget {
       workspaceLayout: true,
       fullWalkthroughSteps: actorFullWalkthroughSteps,
       fullWalkthroughTourId: actorFullWalkthroughTourId,
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
@@ -54,6 +60,8 @@ class ActorTalentPortalScreen extends StatelessWidget {
                 (arguments! as Map)['applicationId']) as String?
             : null;
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       ActorTalentRoutes.dashboard => const AT01TalentDashboardScreen(),
       ActorTalentRoutes.profile => const AT02ProfileBuilderScreen(),
       ActorTalentRoutes.portfolio => const AT03PortfolioShowreelScreen(),

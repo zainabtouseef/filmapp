@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/marketplace/marketplace_routes.dart';
+import '../../director_producer/screens/dp_marketplace_discovery_screen.dart';
 import '../routes/casting_agency_routes.dart';
 import '../widgets/casting_agency_shell.dart';
 import 'ca01_agency_dashboard_screen.dart';
@@ -21,16 +23,21 @@ class CastingAgencyPortalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final marketplace = routeName == MarketplaceRoutes.browse;
     return CastingAgencyShell(
       routeName: routeName,
-      title: CastingAgencyRoutes.titleFor(routeName),
-      screenId: CastingAgencyRoutes.screenIdFor(routeName),
+      title:
+          marketplace ? 'Marketplace' : CastingAgencyRoutes.titleFor(routeName),
+      screenId: marketplace ? 'MP' : CastingAgencyRoutes.screenIdFor(routeName),
+      showPageHeading: !marketplace,
       child: _screenFor(routeName),
     );
   }
 
   Widget _screenFor(String route) {
     return switch (route) {
+      MarketplaceRoutes.browse =>
+        const DPMarketplaceDiscoveryScreen(browseOnly: true),
       CastingAgencyRoutes.roster => const CA02TalentRosterScreen(),
       CastingAgencyRoutes.auditions => const CA03AuditionRequestInboxScreen(),
       CastingAgencyRoutes.shortlist => const CA04CandidateShortlistScreen(),

@@ -4,6 +4,7 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/layout/portal_page_header.dart';
 import 'dp_glass_card.dart';
 import 'dp_holographic_button.dart';
 
@@ -27,7 +28,6 @@ class DPPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final action = trailing ??
         (actionLabel == null || actionIcon == null
             ? null
@@ -37,81 +37,10 @@ class DPPageHeader extends StatelessWidget {
                 onTap: onActionTap,
               ));
 
-    final heading = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          eyebrow,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.micro.copyWith(
-            color: colors.goldDark,
-            letterSpacing: 1.1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.heroSerifNumber.copyWith(
-            color: colors.textPrimary,
-            fontSize: 28,
-          ),
-        ),
-      ],
-    );
-
-    if (action == null) return heading;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final reservedForAction = trailing == null ? 260.0 : 360.0;
-        final titlePainter = TextPainter(
-          text: TextSpan(
-            text: title,
-            style: AppTextStyles.heroSerifNumber.copyWith(fontSize: 28),
-          ),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        )..layout();
-        final fitsInline =
-            constraints.maxWidth - reservedForAction - 12 >= titlePainter.width;
-        final stackAction = constraints.maxWidth < 620 && !fitsInline;
-        if (stackAction) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              heading,
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: constraints.maxWidth,
-                    minHeight: 44,
-                  ),
-                  child: action,
-                ),
-              ),
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: heading),
-            const SizedBox(width: 12),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: trailing == null ? 260 : 360,
-                minHeight: 44,
-              ),
-              child: action,
-            ),
-          ],
-        );
-      },
+    return PortalPageHeader(
+      eyebrow: eyebrow,
+      title: title,
+      trailing: action,
     );
   }
 }
