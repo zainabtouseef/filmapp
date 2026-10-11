@@ -8,6 +8,8 @@ import '../../../core/projects/projects_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
+import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/cards/glass_section_card.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_booking_dialog.dart';
 import '../widgets/brand_demo_journey.dart';
@@ -388,79 +390,82 @@ class _ShortlistCandidate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final listing = item.listing;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    listing.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.cardLabel.copyWith(
-                      color: context.appColors.textPrimary,
-                      fontWeight: FontWeight.w900,
-                    ),
+    return GlassSectionCard(
+      padding: const EdgeInsets.all(12),
+      selected: item.status == 'selected',
+      tone: item.status == 'rejected'
+          ? CineTone.critical
+          : item.status == 'selected'
+              ? CineTone.positive
+              : CineTone.information,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  listing.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardLabel.copyWith(
+                    color: context.appColors.textPrimary,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                PopupMenuButton<String>(
-                  enabled: !busy,
-                  tooltip: 'Shortlist actions',
-                  onSelected: (value) {
-                    if (value == 'notes') return onNotes();
-                    if (value == 'remove') return onRemove();
-                    onStatus(value);
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                        value: 'selected', child: Text('Mark selected')),
-                    PopupMenuItem(value: 'active', child: Text('Keep active')),
-                    PopupMenuItem(
-                        value: 'rejected', child: Text('Mark rejected')),
-                    PopupMenuDivider(),
-                    PopupMenuItem(value: 'notes', child: Text('Edit notes')),
-                    PopupMenuItem(value: 'remove', child: Text('Remove')),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            BrandLiveStatusChip(status: item.status),
-            const SizedBox(height: 8),
-            Text('${listing.cityName} · ${listing.toCandidate().rateRange}'),
-            const SizedBox(height: 5),
-            Text(
-              listing.summary,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.smallMeta.copyWith(
-                color: context.appColors.textSecondary,
               ),
-            ),
-            if (item.notes?.isNotEmpty == true) ...[
-              const SizedBox(height: 7),
-              Text(
-                'Notes: ${item.notes}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              PopupMenuButton<String>(
+                enabled: !busy,
+                tooltip: 'Shortlist actions',
+                onSelected: (value) {
+                  if (value == 'notes') return onNotes();
+                  if (value == 'remove') return onRemove();
+                  onStatus(value);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                      value: 'selected', child: Text('Mark selected')),
+                  PopupMenuItem(value: 'active', child: Text('Keep active')),
+                  PopupMenuItem(
+                      value: 'rejected', child: Text('Mark rejected')),
+                  PopupMenuDivider(),
+                  PopupMenuItem(value: 'notes', child: Text('Edit notes')),
+                  PopupMenuItem(value: 'remove', child: Text('Remove')),
+                ],
               ),
             ],
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: busy ? null : onRequest,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text('Request booking'),
-              ),
+          ),
+          const SizedBox(height: 6),
+          BrandLiveStatusChip(status: item.status),
+          const SizedBox(height: 8),
+          Text('${listing.cityName} · ${listing.toCandidate().rateRange}'),
+          const SizedBox(height: 5),
+          Text(
+            listing.summary,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: context.appColors.textSecondary,
+            ),
+          ),
+          if (item.notes?.isNotEmpty == true) ...[
+            const SizedBox(height: 7),
+            Text(
+              'Notes: ${item.notes}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: busy ? null : onRequest,
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Request booking'),
+            ),
+          ),
+        ],
       ),
     );
   }

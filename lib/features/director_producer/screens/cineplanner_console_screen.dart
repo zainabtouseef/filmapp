@@ -1447,26 +1447,16 @@ class _CinePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: colors.elevatedSurface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: colors.border),
-        boxShadow: AppShadows.card,
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 3, color: colors.goldMid),
-          ),
-          Padding(padding: padding, child: child),
-        ],
+    return CardShell(
+      variant: CardVariant.section,
+      density: CardDensity.compact,
+      radius: 26,
+      padding: EdgeInsets.zero,
+      tone: CineTone.premium,
+      accentEdge: true,
+      child: SizedBox(
+        width: double.infinity,
+        child: Padding(padding: padding, child: child),
       ),
     );
   }
@@ -1488,31 +1478,22 @@ class _CineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      margin: margin,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: color ?? colors.elevatedSurface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: colors.borderMuted),
-        boxShadow: AppShadows.control,
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(
-              width: 3,
-              color: accentColor ?? colors.goldMid,
-            ),
+    final accent = accentColor ?? colors.goldMid;
+    return Padding(
+      padding: margin,
+      child: CardShell(
+        variant: CardVariant.compact,
+        density: CardDensity.compact,
+        radius: 18,
+        padding: EdgeInsets.zero,
+        tone: cineToneFromColor(context, accent),
+        accentEdge: true,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: color?.withValues(alpha: colors.isLight ? .42 : .18),
           ),
-          // ListTile paints its background and ink on the nearest Material
-          // ancestor; interpose a transparent Material so those effects are
-          // not swallowed by this card's decorated Container.
-          Material(type: MaterialType.transparency, child: child),
-        ],
+          child: Material(type: MaterialType.transparency, child: child),
+        ),
       ),
     );
   }
@@ -3370,8 +3351,16 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final accents = [
+      colors.goldMid,
+      colors.infoBlue,
+      colors.success,
+      colors.infoPurple,
+    ];
+    final seed = label.codeUnits.fold<int>(0, (total, unit) => total + unit);
     return _CineCard(
       margin: EdgeInsets.zero,
+      accentColor: accents[seed % accents.length],
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         child: Row(

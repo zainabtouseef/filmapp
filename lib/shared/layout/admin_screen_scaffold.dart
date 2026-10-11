@@ -7,6 +7,7 @@ import '../widgets/cinematic_backdrop.dart';
 import 'admin_section_header.dart';
 import 'kyc_status_banner.dart';
 import 'portal_page_header.dart';
+import 'portal_body_theme.dart';
 import 'portal_reference_design.dart';
 
 typedef AdminTopBarBuilder = Widget Function(
@@ -152,6 +153,10 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                 // denser portal screens beneath them.
                 final contentTopGap =
                     widget.currentRoute.endsWith('/dashboard') ? 20.0 : 18.0;
+                final themedChild = PortalBodyTheme(
+                  route: widget.currentRoute,
+                  child: widget.child,
+                );
 
                 return Stack(
                   children: [
@@ -212,9 +217,9 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                                     'reference:${widget.currentRoute}',
                                                   ),
                                                   route: widget.currentRoute,
-                                                  child: widget.child,
+                                                  child: themedChild,
                                                 )
-                                              : widget.child,
+                                              : themedChild,
                                         ),
                                       )
                                     : Padding(
@@ -245,9 +250,9 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                                       'reference:${widget.currentRoute}',
                                                     ),
                                                     route: widget.currentRoute,
-                                                    child: widget.child,
+                                                    child: themedChild,
                                                   )
-                                                : widget.child,
+                                                : themedChild,
                                           ),
                                         ),
                                       ),

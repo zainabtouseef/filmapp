@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/cinematic_backdrop.dart';
 import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/layout/portal_page_header.dart';
+import '../../../shared/layout/portal_body_theme.dart';
 import '../../../shared/layout/portal_reference_design.dart';
 import '../../../shared/widgets/app_header.dart' show ThemeToggleButton;
 import '../../../shared/widgets/dark_outline_button.dart';
@@ -51,43 +52,47 @@ class CoreScreenScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final body = LayoutBuilder(
-      builder: (context, outer) {
-        // Cap content width on tablet/desktop so text/cards don't
-        // stretch edge-to-edge — no-op below AppBreakpoints.maxContentWidth.
-        Widget capWidth(Widget content) {
-          final width = outer.maxWidth > AppBreakpoints.maxContentWidth
-              ? AppBreakpoints.maxContentWidth
-              : outer.maxWidth;
-          return Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(width: width, child: content),
-          );
-        }
+    final route = ModalRoute.of(context)?.settings.name;
+    final body = PortalBodyTheme(
+      route: route,
+      child: LayoutBuilder(
+        builder: (context, outer) {
+          // Cap content width on tablet/desktop so text/cards don't
+          // stretch edge-to-edge — no-op below AppBreakpoints.maxContentWidth.
+          Widget capWidth(Widget content) {
+            final width = outer.maxWidth > AppBreakpoints.maxContentWidth
+                ? AppBreakpoints.maxContentWidth
+                : outer.maxWidth;
+            return Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(width: width, child: content),
+            );
+          }
 
-        if (!scrollable) {
-          return Padding(padding: padding, child: capWidth(child));
-        }
+          if (!scrollable) {
+            return Padding(padding: padding, child: capWidth(child));
+          }
 
-        if (!centerContent) {
+          if (!centerContent) {
+            return SingleChildScrollView(
+              padding: padding,
+              child: capWidth(child),
+            );
+          }
+
+          // Centers content when it fits the viewport; still scrolls
+          // (instead of overflowing) if it doesn't.
           return SingleChildScrollView(
             padding: padding,
-            child: capWidth(child),
-          );
-        }
-
-        // Centers content when it fits the viewport; still scrolls
-        // (instead of overflowing) if it doesn't.
-        return SingleChildScrollView(
-          padding: padding,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: outer.maxHeight - padding.vertical,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: outer.maxHeight - padding.vertical,
+              ),
+              child: Center(child: capWidth(child)),
             ),
-            child: Center(child: capWidth(child)),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
 
     return Scaffold(

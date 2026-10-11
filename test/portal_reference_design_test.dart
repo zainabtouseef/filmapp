@@ -1,3 +1,5 @@
+import 'package:cineconnect/shared/cards/cine_card_system.dart';
+import 'package:cineconnect/shared/layout/portal_body_theme.dart';
 import 'package:cineconnect/shared/layout/portal_page_header.dart';
 import 'package:cineconnect/shared/layout/portal_reference_design.dart';
 import 'package:flutter/material.dart';
@@ -140,4 +142,68 @@ void main() {
       expect(find.text('PKR'), findsOneWidget);
     });
   }
+
+  testWidgets('operational body applies premium sections, icons and touch zoom',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        initialRoute: '/crew/contracts-payments',
+        routes: {
+          '/crew/contracts-payments': (_) => Scaffold(
+                body: PortalBodyTheme(
+                  route: '/crew/contracts-payments',
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        const SectionContainer(
+                          title: 'Contracts and payments',
+                          description: 'Live agreements and payout actions.',
+                          child: QuickActionCard(
+                            item: QuickActionItem(
+                              icon: Icons.draw_outlined,
+                              title: 'Review agreement',
+                              description: 'Signature requested',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        CardShell(
+                          key: const ValueKey('touch-card'),
+                          accentEdge: true,
+                          tone: CineTone.information,
+                          child: const Text('Touch preview'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Contracts and payments'), findsOneWidget);
+    expect(find.byIcon(Icons.draw_outlined), findsWidgets);
+    expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
+
+    final scaleFinder = find.descendant(
+      of: find.byKey(const ValueKey('touch-card')),
+      matching: find.byType(AnimatedScale),
+    );
+    expect(scaleFinder, findsOneWidget);
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('touch-card'))),
+    );
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(tester.widget<AnimatedScale>(scaleFinder).scale, greaterThan(1));
+    await gesture.up();
+  });
 }

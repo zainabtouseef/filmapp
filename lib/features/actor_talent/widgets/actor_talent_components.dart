@@ -153,6 +153,8 @@ class ActorSectionCard extends StatelessWidget {
     return GlassSectionCard(
       radius: 18,
       padding: EdgeInsets.zero,
+      tone: cineToneFromColor(context, accent),
+      accentEdge: false,
       child: Stack(
         children: [
           Positioned(
@@ -198,9 +200,10 @@ class ActorSectionCard extends StatelessWidget {
                         title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.cardTitle.copyWith(
+                        style: AppTextStyles.heroSerifHeadline.copyWith(
                           color: colors.textPrimary,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -217,7 +220,9 @@ class ActorSectionCard extends StatelessWidget {
                     ],
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
+                Divider(color: colors.borderMuted, height: 1),
+                const SizedBox(height: 12),
                 child,
               ],
             ),
