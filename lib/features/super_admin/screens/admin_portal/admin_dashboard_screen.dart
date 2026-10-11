@@ -119,8 +119,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             actionLabel: 'Respond',
           ),
         ];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return PortalDashboardPage(
           children: [
             PortalHeroCard(
               initials: 'CC',
@@ -141,9 +140,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               secondaryIcon: Icons.refresh_rounded,
               onSecondary: _refresh,
             ),
-            const SizedBox(height: 14),
             _AdminPulseStrip(dashboard: dashboard),
-            const SizedBox(height: 14),
             _AdminQueueGrid(
               queues: queues,
               onReviewHubTap: () => Navigator.pushNamed(
@@ -151,7 +148,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 SuperAdminRoutes.reviewHub,
               ),
             ),
-            const SizedBox(height: 14),
             AdminSurface(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

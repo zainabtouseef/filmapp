@@ -27,7 +27,8 @@ class DistributionPartnerPortalScreen extends StatelessWidget {
           : DistributionPartnerRoutes.titleFor(routeName),
       screenId:
           marketplace ? 'MP' : DistributionPartnerRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading:
+          !marketplace && routeName != DistributionPartnerRoutes.home,
       child: _screenFor(routeName),
     );
   }

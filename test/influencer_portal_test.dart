@@ -64,7 +64,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         expect(find.text('Influencer Workspace'), findsOneWidget);
-        expect(find.text(InfluencerRoutes.titleFor(route)), findsWidgets);
+        if (route == InfluencerRoutes.home) {
+          expect(find.text(InfluencerRoutes.titleFor(route)), findsNothing);
+        } else {
+          expect(find.text(InfluencerRoutes.titleFor(route)), findsWidgets);
+        }
         final exception = tester.takeException();
         expect(
           exception,

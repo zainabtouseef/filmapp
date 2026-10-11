@@ -102,8 +102,7 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalDashboardPage(
       children: [
         TourTarget(
           id: 'actor.dashboard.hero',
@@ -113,9 +112,7 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
             castingFuture: _castingFuture,
           ),
         ),
-        const SizedBox(height: 12),
         _OpportunityShortcutStrip(castingFuture: _castingFuture),
-        const SizedBox(height: 12),
         TourTarget(
           id: 'actor.dashboard.snapshot',
           child: ActorSectionCard(
@@ -128,7 +125,6 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
             child: _TalentSnapshotContent(future: _profileFuture),
           ),
         ),
-        const SizedBox(height: 12),
         TourTarget(
           id: 'actor.dashboard.widgets',
           child: _TalentWidgetGridSection(
@@ -136,17 +132,14 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
             opportunitiesFuture: _opportunitiesFuture,
           ),
         ),
-        const SizedBox(height: 12),
         const TourTarget(
           id: 'actor.dashboard.kpis',
           child: _TalentKpiStrip(),
         ),
-        const SizedBox(height: 12),
         TourTarget(
           id: 'actor.dashboard.castingOverview',
           child: _CastingDashboardOverview(future: _castingFuture),
         ),
-        const SizedBox(height: 12),
         ActorTwoColumn(
           left: TourTarget(
             id: 'actor.dashboard.priorityActions',

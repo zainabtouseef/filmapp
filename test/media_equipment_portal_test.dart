@@ -64,7 +64,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         expect(find.text('Equipment Workspace'), findsWidgets);
-        expect(find.text(MediaEquipmentRoutes.titleFor(route)), findsWidgets);
+        if (route == MediaEquipmentRoutes.home) {
+          expect(find.text(MediaEquipmentRoutes.titleFor(route)), findsNothing);
+        } else {
+          expect(find.text(MediaEquipmentRoutes.titleFor(route)), findsWidgets);
+        }
         final exception = tester.takeException();
         expect(
           exception,

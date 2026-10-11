@@ -89,7 +89,7 @@ void main() {
     }
   });
 
-  testWidgets('reduced motion keeps the native cursor without a trail',
+  testWidgets('reduced motion keeps static lightning without a trail',
       (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -105,7 +105,11 @@ void main() {
     await mouse.moveTo(const Offset(180, 130));
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsNothing);
+    expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('cinematic-cursor-trail-1')),
+      findsNothing,
+    );
     await mouse.removePointer();
   });
 }

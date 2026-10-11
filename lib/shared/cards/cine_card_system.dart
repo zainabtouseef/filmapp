@@ -119,7 +119,7 @@ class _CardShellState extends State<CardShell> {
     final content = AnimatedScale(
       // A restrained desktop lift keeps dense operational cards feeling
       // cinematic without making touch layouts jump or changing geometry.
-      scale: _pressed ? 0.994 : (elevated ? 1.006 : 1),
+      scale: _pressed ? 1.018 : (elevated ? 1.01 : 1),
       duration: reduceMotion ? Duration.zero : AppDurations.press,
       curve: AppDurations.standardCurve,
       child: AnimatedContainer(

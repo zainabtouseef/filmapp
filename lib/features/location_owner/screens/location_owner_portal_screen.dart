@@ -37,7 +37,7 @@ class LocationOwnerPortalScreen extends StatelessWidget {
       title:
           marketplace ? 'Marketplace' : LocationOwnerRoutes.titleFor(routeName),
       screenId: marketplace ? 'MP' : LocationOwnerRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != LocationOwnerRoutes.home,
       child: _screenFor(routeName),
     );
   }

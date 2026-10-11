@@ -97,7 +97,7 @@ class _LG01LegalDashboardScreenState extends State<LG01LegalDashboardScreen> {
                             ? 'Legal counsel'
                             : displayName.trim();
 
-                    return Column(
+                    return PortalDashboardPage(
                       children: [
                         PortalHeroCard(
                           initials: _initialsFor(name),
@@ -120,11 +120,9 @@ class _LG01LegalDashboardScreenState extends State<LG01LegalDashboardScreen> {
                           ctaLabel: 'Refresh',
                           onCta: _refresh,
                         ),
-                        const SizedBox(height: 12),
                         const PortalStaggeredReveal(
                           children: [PortalLiveClockWidget()],
                         ),
-                        const SizedBox(height: 12),
                         LegalTwoColumn(
                           left: LegalSectionCard(
                             title: 'Latest review',

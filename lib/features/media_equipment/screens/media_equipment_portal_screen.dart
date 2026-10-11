@@ -38,7 +38,7 @@ class MediaEquipmentPortalScreen extends StatelessWidget {
           : MediaEquipmentRoutes.titleFor(routeName),
       screenId:
           marketplace ? 'MP' : MediaEquipmentRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != MediaEquipmentRoutes.home,
       child: _screenFor(routeName),
     );
   }

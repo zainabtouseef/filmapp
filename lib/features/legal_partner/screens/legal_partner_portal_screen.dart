@@ -28,7 +28,7 @@ class LegalPartnerPortalScreen extends StatelessWidget {
       title:
           marketplace ? 'Marketplace' : LegalPartnerRoutes.titleFor(routeName),
       screenId: marketplace ? 'MP' : LegalPartnerRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != LegalPartnerRoutes.home,
       child: _screenFor(routeName),
     );
   }

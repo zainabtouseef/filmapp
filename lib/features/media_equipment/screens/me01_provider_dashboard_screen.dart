@@ -14,7 +14,6 @@ import '../../../shared/cards/metric_action_card.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/status_chip.dart';
-import '../../../shared/widgets/provider_workspace_hero.dart';
 import '../models/media_equipment_models.dart';
 import '../routes/media_equipment_routes.dart';
 import '../widgets/media_equipment_components.dart';
@@ -168,53 +167,36 @@ class _DashboardBody extends StatelessWidget {
         route: MediaEquipmentRoutes.handover,
       ),
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalDashboardPage(
       children: [
-        ProviderWorkspaceHero(
-          imageUrl: data.userProfile.coverFile?.publicUrl ?? '',
-          avatarUrl: data.userProfile.avatarFile?.publicUrl,
-          eyebrow: 'Camera, grip and equipment services',
-          title: data.profile?.name ?? data.displayName,
-          summary: data.profile?.bio.trim().isNotEmpty == true
-              ? data.profile!.bio
-              : 'Show directors the equipment, operator support and production coverage available for their next shoot.',
-          badge: data.profile?.visibility == 'public'
+        PortalHeroCard(
+          initials: _providerInitials(data.profile?.name ?? data.displayName),
+          name: data.profile?.name ?? data.displayName,
+          badgeLabel: data.profile?.visibility == 'public'
               ? 'Director visible'
               : 'Profile setup',
-          fallbackIcon: Icons.video_camera_back_outlined,
-          accentColor: colors.infoBlue,
-          facts: [
-            ProviderHeroFact(
-              icon: Icons.inventory_2_outlined,
+          stats: [
+            PortalHeroStat(
+              value: '${data.items.length}',
               label: 'Inventory',
-              value: '${data.items.length} tracked asset(s)',
             ),
-            ProviderHeroFact(
-              icon: Icons.widgets_outlined,
+            PortalHeroStat(
+              value: '${data.packages.length}',
               label: 'Packages',
-              value: '${data.packages.length} production kit(s)',
             ),
-            ProviderHeroFact(
-              icon: Icons.location_on_outlined,
-              label: 'Coverage',
-              value: data.profile?.coverage.isNotEmpty == true
-                  ? data.profile!.coverage
-                  : data.userProfile.city?.name ?? 'Add coverage',
+            PortalHeroStat(
+              value: '$utilization%',
+              label: 'Utilization',
             ),
           ],
-          primaryLabel: 'Manage inventory',
-          primaryIcon: Icons.inventory_2_outlined,
-          onPrimary: () =>
+          ctaLabel: 'Manage inventory',
+          onCta: () =>
               Navigator.pushNamed(context, MediaEquipmentRoutes.inventory),
-          secondaryLabel: 'Edit provider profile',
           secondaryIcon: Icons.edit_outlined,
           onSecondary: () =>
               Navigator.pushNamed(context, MediaEquipmentRoutes.profile),
         ),
-        const SizedBox(height: 14),
         _MetricStatsRow(metrics: metrics),
-        const SizedBox(height: 12),
         MediaTwoColumn(
           left: MediaSectionCard(
             title: 'Workspace Readiness',
@@ -352,7 +334,6 @@ class _DashboardBody extends StatelessWidget {
                   ),
           ),
         ),
-        const SizedBox(height: 12),
         MediaResponsiveGrid(
           minWidth: 280,
           children: [
@@ -564,4 +545,15 @@ String _title(String value) {
       .where((part) => part.isNotEmpty)
       .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
+}
+
+String _providerInitials(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
 }

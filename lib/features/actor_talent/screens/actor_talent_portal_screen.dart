@@ -46,7 +46,7 @@ class ActorTalentPortalScreen extends StatelessWidget {
       workspaceLayout: true,
       fullWalkthroughSteps: actorFullWalkthroughSteps,
       fullWalkthroughTourId: actorFullWalkthroughTourId,
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != ActorTalentRoutes.dashboard,
       child: _screenFor(routeName),
     );
   }

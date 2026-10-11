@@ -94,8 +94,7 @@ class _IN01InsuranceDashboardScreenState
                             ? 'Insurance partner'
                             : displayName.trim();
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    return PortalDashboardPage(
                       children: [
                         PortalHeroCard(
                           initials: _initialsFor(name),
@@ -118,11 +117,9 @@ class _IN01InsuranceDashboardScreenState
                           ctaLabel: 'Refresh',
                           onCta: _refresh,
                         ),
-                        const SizedBox(height: 12),
                         const PortalStaggeredReveal(
                           children: [PortalLiveClockWidget()],
                         ),
-                        const SizedBox(height: 12),
                         InsuranceTwoColumn(
                           left: InsuranceSectionCard(
                             title: 'Latest policy',

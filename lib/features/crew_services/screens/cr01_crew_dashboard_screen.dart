@@ -206,8 +206,7 @@ class _CrewDashboardBody extends StatelessWidget {
     final pipelineBookings =
         {...openRequests, ...confirmed, ...data.bookings}.take(4).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalDashboardPage(
       children: [
         TourTarget(
           id: 'crew.dashboard.hero',
@@ -217,14 +216,11 @@ class _CrewDashboardBody extends StatelessWidget {
             openRequestsCount: openRequests.length,
           ),
         ),
-        const SizedBox(height: 14),
         TourTarget(
           id: 'crew.dashboard.quickStats',
           child: _CrewQuickStats(metrics: metrics),
         ),
-        const SizedBox(height: 14),
         _CrewWidgetGridSection(data: data),
-        const SizedBox(height: 14),
         CrewTwoColumn(
           left: TourTarget(
             id: 'crew.dashboard.pipeline',

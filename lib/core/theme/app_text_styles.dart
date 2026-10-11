@@ -4,7 +4,7 @@ import 'app_colors.dart';
 
 /// CineConnect typography.
 ///
-/// Editorial serif for hero/heading moments (Fraunces), premium sans-serif
+/// Editorial serif for hero/heading moments (Newsreader), premium sans-serif
 /// for UI text (Archivo — shared with the marketplace), loaded via
 /// google_fonts.
 ///
@@ -13,7 +13,7 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  static const String serif = 'Fraunces';
+  static const String serif = 'Newsreader';
   static const String sans = 'Archivo';
   static const String dashboard = 'Archivo';
 
@@ -22,7 +22,7 @@ class AppTextStyles {
   static TextStyle _dashboard(TextStyle style) =>
       GoogleFonts.archivo(textStyle: style);
   static TextStyle _editorial(TextStyle style) =>
-      GoogleFonts.fraunces(textStyle: style);
+      GoogleFonts.newsreader(textStyle: style);
 
   // ---- Display headings --------------------------------------------------
   static TextStyle get displayLarge => _dashboard(const TextStyle(

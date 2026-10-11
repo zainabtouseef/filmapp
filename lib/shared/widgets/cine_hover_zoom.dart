@@ -9,11 +9,13 @@ import '../../core/theme/app_durations.dart';
 class CineHoverZoom extends StatefulWidget {
   final Widget child;
   final double scale;
+  final double pressedScale;
 
   const CineHoverZoom({
     super.key,
     required this.child,
-    this.scale = 1.004,
+    this.scale = 1.008,
+    this.pressedScale = 1.018,
   });
 
   @override
@@ -22,24 +24,48 @@ class CineHoverZoom extends StatefulWidget {
 
 class _CineHoverZoomState extends State<CineHoverZoom> {
   bool _hovered = false;
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    return MouseRegion(
-      onEnter: (_) {
-        if (!_hovered) setState(() => _hovered = true);
+    final scale = reduceMotion
+        ? 1.0
+        : _pressed
+            ? widget.pressedScale
+            : _hovered
+                ? widget.scale
+                : 1.0;
+    return Listener(
+      onPointerDown: (_) {
+        if (!_pressed) setState(() => _pressed = true);
       },
-      onExit: (_) {
-        if (_hovered) setState(() => _hovered = false);
+      onPointerUp: (_) {
+        if (_pressed) setState(() => _pressed = false);
       },
-      child: AnimatedScale(
-        scale: _hovered && !reduceMotion ? widget.scale : 1,
-        duration: reduceMotion ? Duration.zero : AppDurations.cardLift,
-        curve: AppDurations.standardCurve,
-        alignment: Alignment.center,
-        child: widget.child,
+      onPointerCancel: (_) {
+        if (_pressed) setState(() => _pressed = false);
+      },
+      child: MouseRegion(
+        onEnter: (_) {
+          if (!_hovered) setState(() => _hovered = true);
+        },
+        onExit: (_) {
+          if (_hovered || _pressed) {
+            setState(() {
+              _hovered = false;
+              _pressed = false;
+            });
+          }
+        },
+        child: AnimatedScale(
+          scale: scale,
+          duration: reduceMotion ? Duration.zero : AppDurations.cardLift,
+          curve: AppDurations.standardCurve,
+          alignment: Alignment.center,
+          child: widget.child,
+        ),
       ),
     );
   }

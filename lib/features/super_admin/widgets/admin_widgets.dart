@@ -137,18 +137,21 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   @override
   Widget build(BuildContext context) {
-    final routedChild = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _AdminRouteHeading(
-          title: widget.title,
-          subtitle: widget.subtitle,
-          route: widget.currentRoute,
-        ),
-        const SizedBox(height: 16),
-        widget.child,
-      ],
-    );
+    final isDashboard = widget.currentRoute == SuperAdminRoutes.dashboard;
+    final routedChild = isDashboard
+        ? widget.child
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AdminRouteHeading(
+                title: widget.title,
+                subtitle: widget.subtitle,
+                route: widget.currentRoute,
+              ),
+              const SizedBox(height: 16),
+              widget.child,
+            ],
+          );
     return AdminScreenScaffold(
       title: widget.title,
       currentRoute: widget.currentRoute,

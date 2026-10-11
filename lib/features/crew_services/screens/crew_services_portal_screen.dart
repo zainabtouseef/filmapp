@@ -32,7 +32,7 @@ class CrewServicesPortalScreen extends StatelessWidget {
       title:
           marketplace ? 'Marketplace' : CrewServicesRoutes.titleFor(routeName),
       screenId: marketplace ? 'MP' : CrewServicesRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != CrewServicesRoutes.home,
       child: _screenFor(routeName),
     );
   }

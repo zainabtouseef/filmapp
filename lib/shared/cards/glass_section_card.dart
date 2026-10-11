@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'cine_card_system.dart';
+import '../widgets/cine_hover_zoom.dart';
 
 class GlassSectionCard extends StatelessWidget {
   final Widget child;
@@ -15,22 +16,24 @@ class GlassSectionCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.selected = false,
-    this.radius = 22,
+    this.radius = 26,
     this.tone = CineTone.premium,
     this.accentEdge = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return CardShell(
-      variant: CardVariant.standard,
-      density: CardDensity.standard,
-      radius: radius,
-      padding: padding,
-      selected: selected,
-      tone: tone,
-      accentEdge: accentEdge,
-      child: child,
+    return CineHoverZoom(
+      child: CardShell(
+        variant: CardVariant.standard,
+        density: CardDensity.standard,
+        radius: radius,
+        padding: padding,
+        selected: selected,
+        tone: tone,
+        accentEdge: accentEdge,
+        child: child,
+      ),
     );
   }
 }

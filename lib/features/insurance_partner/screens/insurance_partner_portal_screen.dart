@@ -28,7 +28,7 @@ class InsurancePartnerPortalScreen extends StatelessWidget {
           : InsurancePartnerRoutes.titleFor(routeName),
       screenId:
           marketplace ? 'MP' : InsurancePartnerRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != InsurancePartnerRoutes.home,
       child: _screenFor(routeName),
     );
   }

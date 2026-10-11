@@ -222,8 +222,7 @@ class GeneralPublicHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = AuthScope.maybeOf(context)?.user;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalDashboardPage(
       children: [
         PortalHeroCard(
           initials: _publicInitials(user?.displayName ?? 'CineConnect Member'),
@@ -240,7 +239,6 @@ class GeneralPublicHomeScreen extends StatelessWidget {
           onSecondary: () =>
               Navigator.pushNamed(context, GeneralPublicRoutes.cinema),
         ),
-        const SizedBox(height: 14),
         DPGlassCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +258,6 @@ class GeneralPublicHomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
         DPResponsiveGrid(
           minWidth: 240,
           children: [

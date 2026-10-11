@@ -29,7 +29,7 @@ class CastingAgencyPortalScreen extends StatelessWidget {
       title:
           marketplace ? 'Marketplace' : CastingAgencyRoutes.titleFor(routeName),
       screenId: marketplace ? 'MP' : CastingAgencyRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != CastingAgencyRoutes.home,
       child: _screenFor(routeName),
     );
   }

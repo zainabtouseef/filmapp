@@ -147,7 +147,7 @@ class InfluencerPortalScreen extends StatelessWidget {
       routeName: routeName,
       title: marketplace ? 'Marketplace' : InfluencerRoutes.titleFor(routeName),
       screenId: marketplace ? 'MP' : InfluencerRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading: !marketplace && routeName != InfluencerRoutes.home,
       workspaceLayout: true,
       portalLabel: 'Influencer Portal',
       menuTitle: 'Influencer portal screens',
@@ -291,20 +291,18 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
             data.bookings.where((item) => item.status == 'secured').length;
         final packages = influencerPackages(data.talent);
         final followers = audienceFollowers(data.talent);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return PortalDashboardPage(
           children: [
-            const MarketplacePricingPreferencePanel(
-              listingTypes: {'influencer'},
-              title: 'Influencer marketplace pricing',
+            _HeroMediaKitCard(
+              profile: data.profile,
+              talent: data.talent,
+              secured: secured,
+              campaignOffers: activeCampaigns.length,
             ),
-            const SizedBox(height: 12),
             DPTwoColumn(
-              left: _HeroMediaKitCard(
-                profile: data.profile,
-                talent: data.talent,
-                secured: secured,
-                campaignOffers: activeCampaigns.length,
+              left: const MarketplacePricingPreferencePanel(
+                listingTypes: {'influencer'},
+                title: 'Influencer marketplace pricing',
               ),
               right: _NextBestActions(
                 hasInfluencerCategory:
@@ -313,7 +311,6 @@ class _InfluencerDashboardScreenState extends State<InfluencerDashboardScreen> {
                 hasAudience: followers > 0,
               ),
             ),
-            const SizedBox(height: 14),
             _CampaignPreviewCard(campaigns: activeCampaigns.take(3).toList()),
           ],
         );

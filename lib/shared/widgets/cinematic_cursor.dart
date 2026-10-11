@@ -137,11 +137,6 @@ class _CinematicCursorState extends State<CinematicCursor>
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (reduceMotion) {
-      _stopTicker();
-      _fade.stop();
-      return widget.child;
-    }
     final colors = context.appColors;
     return MouseRegion(
       cursor: SystemMouseCursors.none,
@@ -192,17 +187,19 @@ class _CinematicCursorState extends State<CinematicCursor>
                           opacity: opacity,
                           child: Stack(
                             children: [
-                              for (var i = 1; i <= 4; i++)
-                                _TrailBubble(
-                                  index: i,
-                                  position: _trail[i - 1],
-                                  color: colors.goldMid,
-                                ),
+                              if (!reduceMotion)
+                                for (var i = 1; i <= 4; i++)
+                                  _TrailBubble(
+                                    index: i,
+                                    position: _trail[i - 1],
+                                    color: colors.goldMid,
+                                  ),
                               _LightningPointer(
                                 position: _position,
                                 color: colors.goldMid,
                                 pressed: _pressed,
                                 touch: _kind != PointerDeviceKind.mouse,
+                                reduceMotion: reduceMotion,
                               ),
                             ],
                           ),
@@ -224,12 +221,14 @@ class _LightningPointer extends StatelessWidget {
   final Color color;
   final bool pressed;
   final bool touch;
+  final bool reduceMotion;
 
   const _LightningPointer({
     required this.position,
     required this.color,
     required this.pressed,
     required this.touch,
+    required this.reduceMotion,
   });
 
   @override
@@ -240,7 +239,7 @@ class _LightningPointer extends StatelessWidget {
       top: position.dy - diameter / 2,
       child: AnimatedContainer(
         key: const ValueKey('cinematic-cursor-ring'),
-        duration: AppDurations.press,
+        duration: reduceMotion ? Duration.zero : AppDurations.press,
         width: diameter,
         height: diameter,
         decoration: BoxDecoration(

@@ -94,7 +94,8 @@ class ModelExtensionPortalScreen extends StatelessWidget {
           : ModelExtensionRoutes.titleFor(routeName),
       screenId:
           marketplace ? 'MP' : ModelExtensionRoutes.screenIdFor(routeName),
-      showPageHeading: !marketplace,
+      showPageHeading:
+          !marketplace && routeName != ModelExtensionRoutes.categories,
       portalLabel: 'Model Extension',
       menuTitle: 'Model extension screens',
       navRoutes: ModelExtensionRoutes.primaryNav,

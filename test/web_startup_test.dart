@@ -15,7 +15,7 @@ void main() {
     expect(index, isNot(contains('{{flutter_service_worker_version}}')));
     expect(
       index,
-      contains("releaseVersion = '20261011-portal-consistency-v24'"),
+      contains("releaseVersion = '20261011-dashboard-unification-v25'"),
     );
     expect(
       index,

@@ -84,6 +84,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final compact = MediaQuery.sizeOf(context).width < 480;
+    final showDecorativeChips = MediaQuery.sizeOf(context).width >= 900;
 
     return CineHoverZoom(
       child: ClipRRect(
@@ -96,48 +97,65 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                 gradient: colors.ambientGlow,
                 borderRadius: BorderRadius.circular(widget.radius),
               ),
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 16 : 24,
+                vertical: compact ? 18 : 22,
+              ),
               child: Stack(
                 children: [
                   const Positioned.fill(
-                    child: PortalFloatingBubbles(count: 5),
+                    child: PortalFloatingBubbles(count: 7),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          _InitialsBadge(initials: widget.initials),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  widget.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.sectionSerifHeading
-                                      .copyWith(
-                                    fontSize: 20,
-                                    color: colors.textPrimary,
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: compact ? 50 : 84,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _InitialsBadge(initials: widget.initials),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    widget.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.sectionSerifHeading
+                                        .copyWith(
+                                      fontSize: compact ? 21 : 25,
+                                      color: colors.textPrimary,
+                                      height: 1.05,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 5),
-                                _VerifiedPill(label: widget.badgeLabel),
-                              ],
+                                  const SizedBox(height: 6),
+                                  _VerifiedPill(label: widget.badgeLabel),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                            if (showDecorativeChips) ...[
+                              const SizedBox(width: 18),
+                              Flexible(
+                                child: _HeroDecorativeChips(
+                                  stats: widget.stats,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.md,
-                          vertical: 11,
+                          vertical: 12,
                         ),
                         decoration: BoxDecoration(
                           color: colors.isLight
@@ -203,7 +221,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                           ],
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
                           Expanded(
@@ -213,7 +231,7 @@ class _PortalHeroCardState extends State<PortalHeroCard>
                                 backgroundColor: colors.card,
                                 foregroundColor: colors.textPrimary,
                                 shape: const StadiumBorder(),
-                                minimumSize: const Size.fromHeight(42),
+                                minimumSize: const Size.fromHeight(44),
                               ),
                               child: Text(widget.ctaLabel),
                             ),
@@ -254,6 +272,91 @@ class _PortalHeroCardState extends State<PortalHeroCard>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HeroDecorativeChips extends StatelessWidget {
+  final List<PortalHeroStat> stats;
+
+  const _HeroDecorativeChips({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = stats.take(3).map((stat) => stat.label).toList();
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 10,
+      runSpacing: 8,
+      children: [
+        for (var index = 0; index < labels.length; index++)
+          Transform.rotate(
+            angle: index.isEven ? -0.025 : 0.025,
+            child: _HeroDecorativeChip(
+              label: labels[index],
+              icon: switch (index) {
+                0 => Icons.auto_awesome_outlined,
+                1 => Icons.movie_filter_outlined,
+                _ => Icons.bolt_rounded,
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _HeroDecorativeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _HeroDecorativeChip({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colors.card.withValues(alpha: 0.84),
+            colors.infoBlue.withValues(alpha: colors.isLight ? 0.10 : 0.13),
+            colors.infoPurple.withValues(alpha: colors.isLight ? 0.08 : 0.12),
+            colors.goldLight.withValues(alpha: colors.isLight ? 0.17 : 0.13),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: colors.isLight ? 0.9 : 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: colors.isLight ? 0.11 : 0.3),
+            blurRadius: 20,
+            spreadRadius: -12,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: colors.goldDark),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.smallMeta.copyWith(
+              color: colors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -312,12 +415,12 @@ class _InitialsBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      width: 46,
-      height: 46,
+      width: 50,
+      height: 50,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: colors.card,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: colors.shadow.withValues(alpha: colors.isLight ? 0.1 : 0.3),
@@ -329,7 +432,7 @@ class _InitialsBadge extends StatelessWidget {
       child: Text(
         initials,
         style: AppTextStyles.cardTitle.copyWith(
-          fontSize: 15,
+          fontSize: 16,
           color: colors.goldDark,
         ),
       ),
@@ -380,8 +483,8 @@ class _SecondaryIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return SizedBox(
-      width: 42,
-      height: 42,
+      width: 44,
+      height: 44,
       child: IconButton(
         onPressed: onTap,
         icon: Icon(icon, size: 17, color: colors.textPrimary),

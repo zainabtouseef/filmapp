@@ -234,17 +234,8 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         route: BrandSponsorRoutes.bookings,
       ),
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return PortalDashboardPage(
       children: [
-        if (_error != null) ...[
-          InlineNotice(
-            message: _error!,
-            icon: Icons.warning_amber_rounded,
-            tone: CoreStatusTone.warning,
-          ),
-          const SizedBox(height: 12),
-        ],
         TourTarget(
           id: 'brand.dashboard.hero',
           child: PortalHeroCard(
@@ -273,8 +264,13 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                 Navigator.pushNamed(context, BrandSponsorRoutes.composer),
           ),
         ),
-        const SizedBox(height: 14),
-        if (demoProject != null) ...[
+        if (_error != null)
+          InlineNotice(
+            message: _error!,
+            icon: Icons.warning_amber_rounded,
+            tone: CoreStatusTone.warning,
+          ),
+        if (demoProject != null)
           BrandDemoJourneyCard(
             project: demoProject,
             shortlistCount: (_shortlistBundle?.shortlists ?? const [])
@@ -291,13 +287,10 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
                 .length,
             onPlay: () => startBrandFullWalkthrough(context),
           ),
-          const SizedBox(height: 14),
-        ],
         // A single combined row (the earlier two rows duplicated two of
         // these values in the hero's stat strip above; those two moved
         // up there and the rest are consolidated here).
         _BrandQuickStatRow(metrics: [...productionMetrics, ...metrics]),
-        const SizedBox(height: 14),
         BrandTwoColumn(
           left: TourTarget(
             id: 'brand.dashboard.activeBrief',

@@ -28,7 +28,8 @@ class BrandSponsorPortalScreen extends StatelessWidget {
       routeName: routeName,
       title: BrandSponsorRoutes.titleFor(routeName),
       screenId: BrandSponsorRoutes.screenIdFor(routeName),
-      showPageHeading: routeName != BrandSponsorRoutes.marketplace,
+      showPageHeading: routeName != BrandSponsorRoutes.marketplace &&
+          routeName != BrandSponsorRoutes.home,
       child: _screenFor(routeName),
     );
   }

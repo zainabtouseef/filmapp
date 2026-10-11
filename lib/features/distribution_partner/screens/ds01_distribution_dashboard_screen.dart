@@ -164,7 +164,7 @@ class _LiveDistributionDashboard extends StatelessWidget {
         ? 'Distribution partner'
         : displayName.trim();
 
-    return Column(
+    return PortalDashboardPage(
       children: [
         PortalHeroCard(
           initials: _initialsFor(name),
@@ -178,11 +178,9 @@ class _LiveDistributionDashboard extends StatelessWidget {
           ctaLabel: 'Refresh',
           onCta: onRefresh,
         ),
-        const SizedBox(height: 12),
         const PortalStaggeredReveal(
           children: [PortalLiveClockWidget()],
         ),
-        const SizedBox(height: 12),
         DistributionTwoColumn(
           left: DistributionSectionCard(
             title: 'Primary release',

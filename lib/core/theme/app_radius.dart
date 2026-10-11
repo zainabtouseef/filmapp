@@ -14,17 +14,17 @@ class AppRadius {
   /// Compact cards.
   static const double md = 14;
 
-  /// Dashboard-kit cards (hero stat strip, modules grid, pipeline rows).
-  static const double panel = 16;
+  /// Dashboard-kit cards and planning widgets from the portal reference.
+  static const double panel = 26;
 
   /// Standard cards.
   static const double lg = 18;
 
   /// Feature cards.
-  static const double xl = 22;
+  static const double xl = 28;
 
   /// Large section containers.
-  static const double xxl = 24;
+  static const double xxl = 26;
 
   /// Fully-rounded pills.
   static const double pill = 999;

@@ -87,25 +87,19 @@ class _DPHomeDashboardScreenState extends State<DPHomeDashboardScreen> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= AppBreakpoints.tablet;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            return PortalDashboardPage(
               children: [
                 DPCommandHeader(
                   summary: dashboard.summary,
                   displayName: displayName,
                 ),
-                const SizedBox(height: 14),
                 _CinePlannerEntry(dashboard: dashboard),
-                const SizedBox(height: 14),
                 _WidgetGridSection(
                   dashboard: dashboard,
                   schedule: schedule,
                 ),
-                const SizedBox(height: 14),
                 _ProjectDeckSection(dashboard: dashboard),
-                const SizedBox(height: 14),
                 _ProductionWorkflowSection(dashboard: dashboard),
-                const SizedBox(height: 14),
                 if (wide)
                   _WideBody(dashboard: dashboard)
                 else

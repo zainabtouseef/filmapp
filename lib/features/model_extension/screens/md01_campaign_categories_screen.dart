@@ -7,7 +7,7 @@ import '../../../core/specialist/specialist_controller.dart';
 import '../../../core/specialist/specialist_models.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/widgets/provider_workspace_hero.dart';
+import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../../actor_talent/widgets/actor_talent_components.dart';
 import '../routes/model_extension_routes.dart';
@@ -83,50 +83,38 @@ class _MD01CampaignCategoriesScreenState
         final publicCount = _categories
             .where((item) => item.selected && item.publicVisible)
             .length;
-        return Column(
+        return PortalDashboardPage(
           children: [
             FutureBuilder<UserProfile>(
               future: _userProfileFuture,
               builder: (context, userSnapshot) {
                 final userProfile = userSnapshot.data;
-                final colors = context.appColors;
-                return ProviderWorkspaceHero(
-                  imageUrl: userProfile?.coverFile?.publicUrl ?? '',
-                  avatarUrl: userProfile?.avatarFile?.publicUrl,
-                  eyebrow: 'Commercial model profile',
-                  title: _auth?.user?.displayName ?? 'Model Workspace',
-                  summary: userProfile?.bio?.trim().isNotEmpty == true
-                      ? userProfile!.bio!
-                      : 'Present your campaign fit, commercial boundaries and usage rates in one director-ready profile.',
-                  badge: userProfile?.visibility == 'public'
+                final name = _auth?.user?.displayName ?? 'Model Workspace';
+                return PortalHeroCard(
+                  initials: _modelInitials(name),
+                  name: name,
+                  badgeLabel: userProfile?.visibility == 'public'
                       ? 'Director visible'
                       : 'Profile setup',
-                  fallbackIcon: Icons.style_outlined,
-                  accentColor: colors.goldDark,
-                  facts: [
-                    ProviderHeroFact(
-                      icon: Icons.category_outlined,
+                  stats: [
+                    PortalHeroStat(
+                      value: '$selectedCount',
                       label: 'Campaign categories',
-                      value: '$selectedCount selected',
                     ),
-                    ProviderHeroFact(
-                      icon: Icons.policy_outlined,
+                    PortalHeroStat(
+                      value: '${profile?.usageRights.length ?? 0}',
                       label: 'Usage rights',
-                      value: '${profile?.usageRights.length ?? 0} configured',
                     ),
-                    ProviderHeroFact(
-                      icon: Icons.location_on_outlined,
-                      label: 'Base',
-                      value: userProfile?.city?.name ?? 'Add city',
+                    PortalHeroStat(
+                      value: '$publicCount',
+                      label: 'Public categories',
                     ),
                   ],
-                  primaryLabel: 'Open opportunities',
-                  primaryIcon: Icons.travel_explore_outlined,
-                  onPrimary: () => Navigator.pushNamed(
+                  ctaLabel: 'Open opportunities',
+                  onCta: () => Navigator.pushNamed(
                     context,
                     ModelExtensionRoutes.opportunities,
                   ),
-                  secondaryLabel: 'Edit model profile',
                   secondaryIcon: Icons.edit_outlined,
                   onSecondary: () => Navigator.pushNamed(
                     context,
@@ -135,7 +123,6 @@ class _MD01CampaignCategoriesScreenState
                 );
               },
             ),
-            const SizedBox(height: 12),
             ActorSectionCard(
               title: 'Model Profile Extension',
               icon: Icons.category_outlined,
@@ -212,7 +199,6 @@ class _MD01CampaignCategoriesScreenState
                 ),
               ),
             ),
-            const SizedBox(height: 12),
             ActorSectionCard(
               title: 'Campaign Categories',
               icon: Icons.tune_outlined,
@@ -323,6 +309,17 @@ class _MD01CampaignCategoriesScreenState
       _userProfileFuture = _auth?.myProfile();
     });
   }
+}
+
+String _modelInitials(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return 'MW';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
 }
 
 class _CategoryCard extends StatelessWidget {

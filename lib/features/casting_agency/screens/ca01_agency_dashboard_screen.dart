@@ -157,7 +157,7 @@ class _LiveAgencyDashboard extends StatelessWidget {
                 .fold<int>(0, (inner, c) => inner + c.selfTapeCount));
     final pipelineAuditions = data.auditions.take(4).toList();
 
-    return Column(
+    return PortalDashboardPage(
       children: [
         _AgencyHero(
           profile: data.profile,
@@ -166,7 +166,6 @@ class _LiveAgencyDashboard extends StatelessWidget {
           pendingCommissionMinor: pendingCommissionMinor,
           onRefresh: onRefresh,
         ),
-        const SizedBox(height: 12),
         // Live clock + commission ring, cascading in as frosted-glass
         // widgets — replaces the old standalone ring card. No calendar
         // widget here: this dashboard has no real event/date data to back
@@ -213,7 +212,6 @@ class _LiveAgencyDashboard extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 12),
         AgencyTwoColumn(
           left: AgencySectionCard(
             title: 'Audition Pipeline',
