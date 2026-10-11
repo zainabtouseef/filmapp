@@ -413,25 +413,67 @@ class EquipmentInspectionDto {
   }
 }
 
+class SafetyCheckItemDto {
+  final String id;
+  final String label;
+  final String detail;
+  final bool mandatory;
+  final DateTime? completedAt;
+
+  const SafetyCheckItemDto({
+    required this.id,
+    required this.label,
+    required this.detail,
+    required this.mandatory,
+    required this.completedAt,
+  });
+
+  bool get completed => completedAt != null;
+
+  factory SafetyCheckItemDto.fromJson(Map<String, dynamic> json) {
+    return SafetyCheckItemDto(
+      id: json['id'] as String? ?? '',
+      label: json['label'] as String? ?? 'Checklist item',
+      detail: json['detail'] as String? ?? '',
+      mandatory: json['mandatory'] as bool? ?? true,
+      completedAt: DateTime.tryParse(json['completed_at'] as String? ?? ''),
+    );
+  }
+}
+
 class SafetyCheckDto {
   final String publicId;
   final String projectId;
+  final String responsibleUserName;
+  final DateTime? dueAt;
   final String riskLevel;
   final String status;
+  final List<SafetyCheckItemDto> items;
 
   const SafetyCheckDto({
     required this.publicId,
     required this.projectId,
+    required this.responsibleUserName,
+    required this.dueAt,
     required this.riskLevel,
     required this.status,
+    required this.items,
   });
 
   factory SafetyCheckDto.fromJson(Map<String, dynamic> json) {
+    final responsible = json['responsible_user'] as Map<String, dynamic>?;
     return SafetyCheckDto(
       publicId: json['public_id'] as String? ?? '',
       projectId: json['project_id'] as String? ?? '',
+      responsibleUserName:
+          responsible?['display_name'] as String? ?? 'Project team',
+      dueAt: DateTime.tryParse(json['due_at'] as String? ?? ''),
       riskLevel: json['risk_level'] as String? ?? 'medium',
       status: json['status'] as String? ?? 'in_review',
+      items: (json['items'] as List<dynamic>? ?? const [])
+          .map((item) =>
+              SafetyCheckItemDto.fromJson(item as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -442,6 +484,11 @@ class IncidentDto {
   final String title;
   final String severity;
   final String status;
+  final String reportedByName;
+  final DateTime? occurredAt;
+  final String parties;
+  final String description;
+  final String correctiveAction;
 
   const IncidentDto({
     required this.publicId,
@@ -449,15 +496,26 @@ class IncidentDto {
     required this.title,
     required this.severity,
     required this.status,
+    required this.reportedByName,
+    required this.occurredAt,
+    required this.parties,
+    required this.description,
+    required this.correctiveAction,
   });
 
   factory IncidentDto.fromJson(Map<String, dynamic> json) {
+    final reporter = json['reported_by'] as Map<String, dynamic>?;
     return IncidentDto(
       publicId: json['public_id'] as String? ?? '',
       projectId: json['project_id'] as String? ?? '',
       title: json['title'] as String? ?? 'Incident',
       severity: json['severity'] as String? ?? 'low',
       status: json['status'] as String? ?? 'open',
+      reportedByName: reporter?['display_name'] as String? ?? 'Project team',
+      occurredAt: DateTime.tryParse(json['occurred_at'] as String? ?? ''),
+      parties: json['parties'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      correctiveAction: json['corrective_action'] as String? ?? '',
     );
   }
 }

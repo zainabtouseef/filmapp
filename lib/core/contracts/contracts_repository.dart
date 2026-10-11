@@ -14,6 +14,36 @@ class ContractsRepository {
         .toList();
   }
 
+  Future<List<ContractTemplate>> legalTemplates() async {
+    final response = await _client.get('/legal/templates');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['templates'] as List<dynamic>? ?? const [])
+        .map((item) => ContractTemplate.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<LegalReviewDto> reviewTemplate({
+    required String templateId,
+    required String status,
+    String? decisionNotes,
+    String risk = 'medium',
+    int minutes = 30,
+    int amountMinor = 500000,
+  }) async {
+    final response = await _client.post(
+      '/legal/templates/$templateId/reviews',
+      body: {
+        'status': status,
+        if (decisionNotes != null) 'decision_notes': decisionNotes,
+        'risk': risk,
+        'minutes': minutes,
+        'amount_minor': amountMinor,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return LegalReviewDto.fromJson(data['review'] as Map<String, dynamic>);
+  }
+
   Future<List<CineContract>> contracts() async {
     final response = await _client.get('/contracts');
     final data = response['data'] as Map<String, dynamic>;
@@ -119,5 +149,32 @@ class ContractsRepository {
     );
     final data = response['data'] as Map<String, dynamic>;
     return LegalReviewDto.fromJson(data['review'] as Map<String, dynamic>);
+  }
+
+  Future<List<LegalBillingRecordDto>> legalBillingRecords() async {
+    final response = await _client.get('/legal/billing-records');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['billing_records'] as List<dynamic>? ?? const [])
+        .map((item) =>
+            LegalBillingRecordDto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<LegalBillingRecordDto> updateLegalBillingRecord({
+    required String publicId,
+    required String status,
+    String? invoiceNumber,
+  }) async {
+    final response = await _client.patch(
+      '/legal/billing-records/$publicId',
+      body: {
+        'status': status,
+        if (invoiceNumber != null) 'invoice_number': invoiceNumber,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return LegalBillingRecordDto.fromJson(
+      data['billing_record'] as Map<String, dynamic>,
+    );
   }
 }

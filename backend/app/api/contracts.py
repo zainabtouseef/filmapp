@@ -233,6 +233,29 @@ def _review_payload(item: LegalReviewRequest) -> dict[str, Any]:
     }
 
 
+def _billing_payload(item: LegalBillingRecord) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "legal_user": _user_payload(item.legal_user),
+        "client_user": _user_payload(item.client_user) if item.client_user else None,
+        "matter_type": item.matter_type,
+        "matter_id": item.matter_id,
+        "minutes": item.minutes,
+        "amount_minor": item.amount_minor,
+        "currency": item.currency,
+        "invoice_number": item.invoice_number,
+        "status": item.status,
+        "notes": item.notes,
+        "created_at": item.created_at.isoformat(),
+        "updated_at": item.updated_at.isoformat(),
+    }
+
+
+def _require_legal(user: User) -> None:
+    if not _has_role(user, "legal_partner", "super_admin", "reviewer"):
+        raise APIError("legal.permission_denied", "Legal role is required.", status=403)
+
+
 def _contract_for_user(public_id: str, user: User) -> Contract:
     contract = db.session.execute(
         select(Contract)
@@ -278,6 +301,76 @@ def contract_templates() -> Response:
         )
     ).scalars()
     return jsonify(success({"templates": [_template_payload(row) for row in rows]}))
+
+
+@contracts_blueprint.get("/legal/templates")
+def legal_templates() -> Response:
+    user = _current_user()
+    _require_legal(user)
+    rows = db.session.execute(
+        select(ContractTemplate).order_by(
+            ContractTemplate.updated_at.desc(), ContractTemplate.name.asc()
+        )
+    ).scalars()
+    return jsonify(success({"templates": [_template_payload(row) for row in rows]}))
+
+
+@contracts_blueprint.post("/legal/templates/<public_id>/reviews")
+def review_contract_template(public_id: str) -> ResponseReturnValue:
+    user = _current_user()
+    _require_legal(user)
+    template = db.session.execute(
+        select(ContractTemplate).where(ContractTemplate.public_id == public_id)
+    ).scalar_one_or_none()
+    if template is None:
+        raise APIError(
+            "contract.template_not_found",
+            "Contract template was not found.",
+            status=404,
+        )
+    payload = _json_body()
+    status = str(payload.get("status", "approved")).strip().lower()
+    if status not in {"approved", "changes_requested", "rejected"}:
+        raise _field_error("status", "Unsupported legal review decision.")
+    notes = str(payload.get("decision_notes", "")).strip()[:4000] or None
+    if status != "approved" and (notes is None or len(notes) < 3):
+        raise _field_error(
+            "decision_notes", "Decision notes are required for this outcome."
+        )
+    risk = str(payload.get("risk", "medium")).strip().lower()
+    if risk not in {"low", "medium", "high", "critical"}:
+        raise _field_error("risk", "Unsupported template risk level.")
+    minutes = max(0, int(payload.get("minutes") or 0))
+    amount_minor = max(0, int(payload.get("amount_minor") or 0))
+    review = LegalReviewRequest(
+        template_id=template.id,
+        requested_by=template.created_by or user.id,
+        assigned_legal_user_id=user.id,
+        contract_type=f"{template.category}_template",
+        risk=risk,
+        status=status,
+        decision_notes=notes,
+        sla_due_at=utc_now(),
+    )
+    db.session.add(review)
+    db.session.flush()
+    if status == "approved":
+        template.approved_by = user.id
+    db.session.add(
+        LegalBillingRecord(
+            legal_user_id=user.id,
+            matter_type="template_review",
+            matter_id=review.public_id,
+            client_user_id=template.created_by,
+            minutes=minutes,
+            amount_minor=amount_minor,
+            currency="PKR",
+            status="draft",
+            notes=notes,
+        )
+    )
+    db.session.commit()
+    return jsonify(success({"review": _review_payload(review)})), 201
 
 
 @contracts_blueprint.get("/contracts")
@@ -519,8 +612,7 @@ def request_legal_review() -> ResponseReturnValue:
 @contracts_blueprint.get("/legal/reviews")
 def legal_reviews() -> Response:
     user = _current_user()
-    if not _has_role(user, "legal_partner", "super_admin", "reviewer"):
-        raise APIError("legal.permission_denied", "Legal role is required.", status=403)
+    _require_legal(user)
     rows = db.session.execute(
         select(LegalReviewRequest)
         .order_by(LegalReviewRequest.created_at.desc())
@@ -551,8 +643,7 @@ def legal_review_detail(public_id: str) -> Response:
 @contracts_blueprint.post("/legal-reviews/<public_id>/decision")
 def legal_review_decision(public_id: str) -> Response:
     user = _current_user()
-    if not _has_role(user, "legal_partner", "super_admin", "reviewer"):
-        raise APIError("legal.permission_denied", "Legal role is required.", status=403)
+    _require_legal(user)
     item = db.session.execute(
         select(LegalReviewRequest).where(LegalReviewRequest.public_id == public_id)
     ).scalar_one_or_none()
@@ -573,18 +664,76 @@ def legal_review_decision(public_id: str) -> Response:
         and item.contract.status == "pending_legal_review"
     ):
         item.contract.status = "pending_signature"
-    db.session.add(
-        LegalBillingRecord(
+    billing = db.session.execute(
+        select(LegalBillingRecord).where(
+            LegalBillingRecord.legal_user_id == user.id,
+            LegalBillingRecord.matter_type == "contract_review",
+            LegalBillingRecord.matter_id == item.public_id,
+        )
+    ).scalar_one_or_none()
+    if billing is None:
+        billing = LegalBillingRecord(
             legal_user_id=user.id,
             matter_type="contract_review",
             matter_id=item.public_id,
             client_user_id=item.requested_by,
-            minutes=int(payload.get("minutes") or 0),
-            amount_minor=int(payload.get("amount_minor") or 0),
             currency="PKR",
             status="draft",
-            notes=item.decision_notes,
         )
-    )
+        db.session.add(billing)
+    billing.minutes = max(0, int(payload.get("minutes") or 0))
+    billing.amount_minor = max(0, int(payload.get("amount_minor") or 0))
+    billing.notes = item.decision_notes
     db.session.commit()
     return jsonify(success({"review": _review_payload(item)}))
+
+
+@contracts_blueprint.get("/legal/billing-records")
+def legal_billing_records() -> Response:
+    user = _current_user()
+    _require_legal(user)
+    query = select(LegalBillingRecord)
+    if not _has_role(user, "super_admin", "reviewer"):
+        query = query.where(LegalBillingRecord.legal_user_id == user.id)
+    status = request.args.get("status", "").strip().lower()
+    if status:
+        if status not in {"draft", "issued", "paid", "void"}:
+            raise _field_error("status", "Unsupported billing status.")
+        query = query.where(LegalBillingRecord.status == status)
+    rows = db.session.execute(
+        query.order_by(LegalBillingRecord.created_at.desc()).limit(200)
+    ).scalars()
+    return jsonify(
+        success({"billing_records": [_billing_payload(row) for row in rows]})
+    )
+
+
+@contracts_blueprint.patch("/legal/billing-records/<public_id>")
+def update_legal_billing_record(public_id: str) -> Response:
+    user = _current_user()
+    _require_legal(user)
+    item = db.session.execute(
+        select(LegalBillingRecord).where(LegalBillingRecord.public_id == public_id)
+    ).scalar_one_or_none()
+    if item is None:
+        raise APIError(
+            "legal_billing.not_found", "Billing record was not found.", status=404
+        )
+    if item.legal_user_id != user.id and not _has_role(user, "super_admin", "reviewer"):
+        raise APIError(
+            "legal.permission_denied", "Billing record is not visible.", status=403
+        )
+    payload = _json_body()
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip().lower()
+        if status not in {"draft", "issued", "paid", "void"}:
+            raise _field_error("status", "Unsupported billing status.")
+        item.status = status
+    if "invoice_number" in payload:
+        item.invoice_number = (
+            str(payload.get("invoice_number", "")).strip()[:64] or None
+        )
+    if "notes" in payload:
+        item.notes = str(payload.get("notes", "")).strip()[:4000] or None
+    db.session.commit()
+    return jsonify(success({"billing_record": _billing_payload(item)}))

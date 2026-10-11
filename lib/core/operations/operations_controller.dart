@@ -15,6 +15,8 @@ class OperationsController extends ChangeNotifier {
   List<EquipmentPackageDto>? _equipmentPackages;
   List<EquipmentTermDto>? _equipmentTerms;
   List<EquipmentInspectionDto>? _equipmentInspections;
+  List<SafetyCheckDto>? _safetyChecks;
+  List<IncidentDto>? _incidents;
 
   OperationsController({required OperationsRepository repository})
       : _repository = repository;
@@ -25,6 +27,8 @@ class OperationsController extends ChangeNotifier {
   List<EquipmentTermDto>? get cachedEquipmentTerms => _equipmentTerms;
   List<EquipmentInspectionDto>? get cachedEquipmentInspections =>
       _equipmentInspections;
+  List<SafetyCheckDto>? get cachedSafetyChecks => _safetyChecks;
+  List<IncidentDto>? get cachedIncidents => _incidents;
 
   factory OperationsController.fromClient(ApiClient client) {
     return OperationsController(repository: OperationsRepository(client));
@@ -436,6 +440,36 @@ class OperationsController extends ChangeNotifier {
     return _repository.createSafetyCheck(body);
   }
 
+  Future<List<SafetyCheckDto>> safetyChecks({bool force = false}) async {
+    if (!force && _safetyChecks != null) return _safetyChecks!;
+    _safetyChecks = await _repository.safetyChecks();
+    notifyListeners();
+    return _safetyChecks!;
+  }
+
+  Future<SafetyCheckDto> updateSafetyCheck(
+    String checkId,
+    Map<String, dynamic> body,
+  ) async {
+    final item = await _repository.updateSafetyCheck(checkId, body);
+    await safetyChecks(force: true);
+    return item;
+  }
+
+  Future<SafetyCheckDto> updateSafetyCheckItem({
+    required String checkId,
+    required String itemId,
+    required bool completed,
+  }) async {
+    final item = await _repository.updateSafetyCheckItem(
+      checkId: checkId,
+      itemId: itemId,
+      completed: completed,
+    );
+    await safetyChecks(force: true);
+    return item;
+  }
+
   Future<SafetyCheckDto> createSafetyCheckItem(
     String checkId,
     Map<String, dynamic> body,
@@ -445,6 +479,22 @@ class OperationsController extends ChangeNotifier {
 
   Future<IncidentDto> createIncident(Map<String, dynamic> body) {
     return _repository.createIncident(body);
+  }
+
+  Future<List<IncidentDto>> incidents({bool force = false}) async {
+    if (!force && _incidents != null) return _incidents!;
+    _incidents = await _repository.incidents();
+    notifyListeners();
+    return _incidents!;
+  }
+
+  Future<IncidentDto> updateIncident(
+    String incidentId,
+    Map<String, dynamic> body,
+  ) async {
+    final item = await _repository.updateIncident(incidentId, body);
+    await incidents(force: true);
+    return item;
   }
 
   Future<Map<String, dynamic>> createSafetyCheckIn(Map<String, dynamic> body) {

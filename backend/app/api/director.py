@@ -58,6 +58,7 @@ from app.models.trust_safety import Dispute
 from app.responses import success
 from app.security import as_utc
 from app.services.cineplanner_productions import ensure_cineplanner_production
+from app.services.weather import weather_for_location
 
 director_blueprint = Blueprint("director", __name__)
 
@@ -2083,15 +2084,15 @@ def _director_schedule_payload(
     call_sheet_event = (
         future_events[0] if future_events else (events[0] if events else None)
     )
+    call_sheet_weather = weather_for_location(
+        call_sheet_event["location"] if call_sheet_event else None
+    )
     call_sheet = {
         "status": "ready" if call_sheet_event else "empty",
         "label": "Next live call sheet" if call_sheet_event else "No live events",
         "event": call_sheet_event,
         "crew": call_sheet_event["stakeholders"] if call_sheet_event else [],
-        "weather": {
-            "status": "provider_not_configured",
-            "summary": "Weather provider not connected yet.",
-        },
+        "weather": call_sheet_weather,
     }
     return {
         "events": events[:120],

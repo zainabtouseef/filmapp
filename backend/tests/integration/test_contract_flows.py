@@ -281,6 +281,49 @@ def test_contract_signature_legal_review_and_addendum_flow(
     assert decision.status_code == 200, decision.text
     assert decision.json["data"]["review"]["status"] == "approved"
 
+    legal_templates = client.get("/api/v1/legal/templates", headers=legal_headers)
+    assert legal_templates.status_code == 200, legal_templates.text
+    assert any(
+        row["public_id"] == "TPL-TALENT-001"
+        for row in legal_templates.json["data"]["templates"]
+    )
+    template_review = client.post(
+        "/api/v1/legal/templates/TPL-TALENT-001/reviews",
+        headers=legal_headers,
+        json={
+            "status": "changes_requested",
+            "decision_notes": "Clarify the cancellation notice window.",
+            "risk": "medium",
+            "minutes": 20,
+            "amount_minor": 500000,
+        },
+    )
+    assert template_review.status_code == 201, template_review.text
+    template_review_id = template_review.json["data"]["review"]["public_id"]
+    assert template_review.json["data"]["review"]["template_id"] == "TPL-TALENT-001"
+
+    non_legal_billing = client.get(
+        "/api/v1/legal/billing-records", headers=producer_headers
+    )
+    assert non_legal_billing.status_code == 403, non_legal_billing.text
+    billing = client.get("/api/v1/legal/billing-records", headers=legal_headers)
+    assert billing.status_code == 200, billing.text
+    template_bill = next(
+        row
+        for row in billing.json["data"]["billing_records"]
+        if row["matter_id"] == template_review_id
+    )
+    assert template_bill["matter_type"] == "template_review"
+    assert template_bill["amount_minor"] == 500000
+    issued = client.patch(
+        f"/api/v1/legal/billing-records/{template_bill['public_id']}",
+        headers=legal_headers,
+        json={"status": "issued", "invoice_number": "CC-TEST-001"},
+    )
+    assert issued.status_code == 200, issued.text
+    assert issued.json["data"]["billing_record"]["status"] == "issued"
+    assert issued.json["data"]["billing_record"]["invoice_number"] == "CC-TEST-001"
+
     addendum = client.post(
         f"/api/v1/contracts/{contract_id}/addendums",
         headers=actor_headers,

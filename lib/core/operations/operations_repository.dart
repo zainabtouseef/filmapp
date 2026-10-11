@@ -470,6 +470,50 @@ class OperationsRepository {
     );
   }
 
+  Future<List<SafetyCheckDto>> safetyChecks({
+    String? projectId,
+    String? status,
+  }) async {
+    final query = <String>[
+      if (projectId != null && projectId.isNotEmpty)
+        'project_id=${Uri.encodeQueryComponent(projectId)}',
+      if (status != null && status.isNotEmpty)
+        'status=${Uri.encodeQueryComponent(status)}',
+    ];
+    final suffix = query.isEmpty ? '' : '?${query.join('&')}';
+    final response = await _client.get('/safety-checks$suffix');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['safety_checks'] as List<dynamic>? ?? const [])
+        .map((item) => SafetyCheckDto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<SafetyCheckDto> updateSafetyCheck(
+    String checkId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.patch('/safety-checks/$checkId', body: body);
+    return SafetyCheckDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['safety_check']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<SafetyCheckDto> updateSafetyCheckItem({
+    required String checkId,
+    required String itemId,
+    required bool completed,
+  }) async {
+    final response = await _client.patch(
+      '/safety-checks/$checkId/items/$itemId',
+      body: {'completed': completed},
+    );
+    return SafetyCheckDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['safety_check']
+          as Map<String, dynamic>,
+    );
+  }
+
   Future<SafetyCheckDto> createSafetyCheckItem(
     String checkId,
     Map<String, dynamic> body,
@@ -484,6 +528,35 @@ class OperationsRepository {
 
   Future<IncidentDto> createIncident(Map<String, dynamic> body) async {
     final response = await _client.post('/incidents', body: body);
+    return IncidentDto.fromJson(
+      (response['data'] as Map<String, dynamic>)['incident']
+          as Map<String, dynamic>,
+    );
+  }
+
+  Future<List<IncidentDto>> incidents({
+    String? projectId,
+    String? status,
+  }) async {
+    final query = <String>[
+      if (projectId != null && projectId.isNotEmpty)
+        'project_id=${Uri.encodeQueryComponent(projectId)}',
+      if (status != null && status.isNotEmpty)
+        'status=${Uri.encodeQueryComponent(status)}',
+    ];
+    final suffix = query.isEmpty ? '' : '?${query.join('&')}';
+    final response = await _client.get('/incidents$suffix');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['incidents'] as List<dynamic>? ?? const [])
+        .map((item) => IncidentDto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<IncidentDto> updateIncident(
+    String incidentId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.patch('/incidents/$incidentId', body: body);
     return IncidentDto.fromJson(
       (response['data'] as Map<String, dynamic>)['incident']
           as Map<String, dynamic>,

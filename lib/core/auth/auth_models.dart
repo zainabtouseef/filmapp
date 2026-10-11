@@ -134,3 +134,60 @@ class AuthSettings {
     );
   }
 }
+
+class AuthDeviceSession {
+  final String id;
+  final bool isCurrent;
+  final String ipAddress;
+  final String userAgent;
+  final DateTime? createdAt;
+  final DateTime? lastUsedAt;
+  final DateTime? expiresAt;
+
+  const AuthDeviceSession({
+    required this.id,
+    required this.isCurrent,
+    required this.ipAddress,
+    required this.userAgent,
+    required this.createdAt,
+    required this.lastUsedAt,
+    required this.expiresAt,
+  });
+
+  factory AuthDeviceSession.fromJson(Map<String, dynamic> json) {
+    return AuthDeviceSession(
+      id: json['id'] as String? ?? '',
+      isCurrent: json['is_current'] as bool? ?? false,
+      ipAddress: json['ip_address'] as String? ?? 'Unknown network',
+      userAgent: json['user_agent'] as String? ?? 'Unknown device',
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+      lastUsedAt: DateTime.tryParse(json['last_used_at'] as String? ?? ''),
+      expiresAt: DateTime.tryParse(json['expires_at'] as String? ?? ''),
+    );
+  }
+
+  String get deviceLabel {
+    final value = userAgent.toLowerCase();
+    final browser = value.contains('edg/')
+        ? 'Edge'
+        : value.contains('chrome/')
+            ? 'Chrome'
+            : value.contains('firefox/')
+                ? 'Firefox'
+                : value.contains('safari/')
+                    ? 'Safari'
+                    : 'CineConnect app';
+    final platform = value.contains('android')
+        ? 'Android'
+        : value.contains('iphone') || value.contains('ipad')
+            ? 'iOS'
+            : value.contains('mac os') || value.contains('macintosh')
+                ? 'macOS'
+                : value.contains('windows')
+                    ? 'Windows'
+                    : value.contains('linux')
+                        ? 'Linux'
+                        : '';
+    return platform.isEmpty ? browser : '$browser on $platform';
+  }
+}

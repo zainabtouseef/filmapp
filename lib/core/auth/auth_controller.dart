@@ -195,6 +195,26 @@ class AuthController extends ChangeNotifier {
     return _repository.settings();
   }
 
+  Future<AuthUser> updateMe({required String displayName}) async {
+    _user = await _repository.updateMe(displayName: displayName);
+    notifyListeners();
+    return _user!;
+  }
+
+  Future<List<AuthDeviceSession>> sessions() {
+    return _repository.sessions();
+  }
+
+  Future<bool> revokeSession(String sessionId) async {
+    final current = await _repository.revokeSession(sessionId);
+    if (current) await clearSession();
+    return current;
+  }
+
+  Future<int> revokeOtherSessions() {
+    return _repository.revokeOtherSessions();
+  }
+
   Future<AuthSettings> updateSettings({
     String? locale,
     String? timezone,

@@ -9,6 +9,8 @@ class ContractsController extends ChangeNotifier {
 
   List<CineContract>? _cachedContracts;
   List<LegalReviewDto>? _cachedReviews;
+  List<ContractTemplate>? _cachedLegalTemplates;
+  List<LegalBillingRecordDto>? _cachedBillingRecords;
 
   ContractsController({required ContractsRepository repository})
       : _repository = repository;
@@ -76,6 +78,31 @@ class ContractsController extends ChangeNotifier {
     return _repository.templates();
   }
 
+  Future<List<ContractTemplate>> legalTemplates({bool force = false}) async {
+    if (!force && _cachedLegalTemplates != null) {
+      return _cachedLegalTemplates!;
+    }
+    _cachedLegalTemplates = await _repository.legalTemplates();
+    notifyListeners();
+    return _cachedLegalTemplates!;
+  }
+
+  Future<LegalReviewDto> reviewTemplate({
+    required String templateId,
+    required String status,
+    String? decisionNotes,
+  }) async {
+    final review = await _repository.reviewTemplate(
+      templateId: templateId,
+      status: status,
+      decisionNotes: decisionNotes,
+    );
+    await legalReviews(force: true);
+    await legalBillingRecords(force: true);
+    await legalTemplates(force: true);
+    return review;
+  }
+
   Future<List<LegalReviewDto>> legalReviews({bool force = false}) async {
     if (!force && _cachedReviews != null) return _cachedReviews!;
     final rows = await _repository.legalReviews();
@@ -101,6 +128,31 @@ class ContractsController extends ChangeNotifier {
     );
     await legalReviews(force: true);
     return review;
+  }
+
+  Future<List<LegalBillingRecordDto>> legalBillingRecords({
+    bool force = false,
+  }) async {
+    if (!force && _cachedBillingRecords != null) {
+      return _cachedBillingRecords!;
+    }
+    _cachedBillingRecords = await _repository.legalBillingRecords();
+    notifyListeners();
+    return _cachedBillingRecords!;
+  }
+
+  Future<LegalBillingRecordDto> updateLegalBillingRecord({
+    required String publicId,
+    required String status,
+    String? invoiceNumber,
+  }) async {
+    final item = await _repository.updateLegalBillingRecord(
+      publicId: publicId,
+      status: status,
+      invoiceNumber: invoiceNumber,
+    );
+    await legalBillingRecords(force: true);
+    return item;
   }
 }
 

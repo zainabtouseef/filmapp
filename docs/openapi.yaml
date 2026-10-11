@@ -365,6 +365,72 @@ paths:
                 $ref: "#/components/schemas/UserEnvelope"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [Authentication]
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                display_name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+      responses:
+        "200":
+          description: Updated authenticated user summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /me/sessions:
+    get:
+      tags: [Authentication]
+      operationId: listMySessions
+      responses:
+        "200":
+          description: Active refresh sessions for the authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSessionListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/sessions/{session_id}:
+    delete:
+      tags: [Authentication]
+      operationId: revokeMySession
+      parameters:
+        - in: path
+          name: session_id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Session revoked.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /me/sessions/revoke-others:
+    post:
+      tags: [Authentication]
+      operationId: revokeOtherSessions
+      responses:
+        "200":
+          description: Every active session except the current device was revoked.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /me/settings:
     get:
       tags: [Authentication]
@@ -2138,6 +2204,111 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /legal/templates:
+    get:
+      tags: [Legal]
+      operationId: listLegalTemplates
+      responses:
+        "200":
+          description: All contract templates visible to legal reviewers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractTemplateListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /legal/templates/{template_id}/reviews:
+    post:
+      tags: [Legal]
+      operationId: reviewContractTemplate
+      parameters:
+        - in: path
+          name: template_id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalReviewDecisionRequest"
+      responses:
+        "201":
+          description: Template review decision and billing draft created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalReviewEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /legal/billing-records:
+    get:
+      tags: [Legal]
+      operationId: listLegalBillingRecords
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, issued, paid, void]
+      responses:
+        "200":
+          description: Legal billing records visible to the authenticated reviewer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalBillingListEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /legal/billing-records/{record_id}:
+    patch:
+      tags: [Legal]
+      operationId: updateLegalBillingRecord
+      parameters:
+        - in: path
+          name: record_id
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                status:
+                  type: string
+                  enum: [draft, issued, paid, void]
+                invoice_number:
+                  type: [string, "null"]
+                notes:
+                  type: [string, "null"]
+      responses:
+        "200":
+          description: Legal billing record updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalBillingEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /legal-reviews/{review_id}:
     get:
       tags: [Legal]
@@ -2697,12 +2868,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/EquipmentInspectionEnvelope"
   /safety-checks:
+    get:
+      tags: [Safety]
+      operationId: listSafetyChecks
+      parameters:
+        - in: query
+          name: project_id
+          schema: {type: string}
+        - in: query
+          name: status
+          schema: {type: string}
+      responses:
+        "200":
+          description: Safety checks for projects visible to the user or linked insurer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyCheckListEnvelope"
     post:
       tags: [Safety]
       operationId: createSafetyCheck
       responses:
         "201":
           description: Safety checklist created for a project.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyCheckEnvelope"
+  /safety-checks/{check_id}:
+    get:
+      tags: [Safety]
+      operationId: getSafetyCheck
+      parameters:
+        - in: path
+          name: check_id
+          required: true
+          schema: {type: string}
+      responses:
+        "200":
+          description: Visible safety check detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyCheckEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Safety]
+      operationId: updateSafetyCheck
+      parameters:
+        - in: path
+          name: check_id
+          required: true
+          schema: {type: string}
+      responses:
+        "200":
+          description: Safety check status, risk, or due date updated.
           content:
             application/json:
               schema:
@@ -2723,13 +2944,83 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SafetyCheckEnvelope"
+  /safety-checks/{check_id}/items/{item_id}:
+    patch:
+      tags: [Safety]
+      operationId: updateSafetyCheckItem
+      parameters:
+        - in: path
+          name: check_id
+          required: true
+          schema: {type: string}
+        - in: path
+          name: item_id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Checklist item completion or content updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyCheckEnvelope"
   /incidents:
+    get:
+      tags: [Safety]
+      operationId: listIncidents
+      parameters:
+        - in: query
+          name: project_id
+          schema: {type: string}
+        - in: query
+          name: status
+          schema: {type: string}
+      responses:
+        "200":
+          description: Incident reports for visible or insured projects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentListEnvelope"
     post:
       tags: [Safety]
       operationId: createIncident
       responses:
         "201":
           description: Incident report created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentEnvelope"
+  /incidents/{incident_id}:
+    get:
+      tags: [Safety]
+      operationId: getIncident
+      parameters:
+        - in: path
+          name: incident_id
+          required: true
+          schema: {type: string}
+      responses:
+        "200":
+          description: Visible incident report detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Safety]
+      operationId: updateIncident
+      parameters:
+        - in: path
+          name: incident_id
+          required: true
+          schema: {type: string}
+      responses:
+        "200":
+          description: Incident severity, status, or corrective action updated.
           content:
             application/json:
               schema:
@@ -5406,6 +5697,45 @@ components:
           $ref: "#/components/schemas/UserSummary"
         meta:
           $ref: "#/components/schemas/Meta"
+    UserSession:
+      type: object
+      additionalProperties: false
+      required: [id, is_current, ip_address, user_agent, created_at, expires_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        is_current:
+          type: boolean
+        ip_address:
+          type: [string, "null"]
+        user_agent:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    UserSessionListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [sessions]
+          properties:
+            sessions:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserSession"
+        meta:
+          $ref: "#/components/schemas/Meta"
     UserSettings:
       type: object
       additionalProperties: false
@@ -5677,7 +6007,7 @@ components:
           enum: [draft, pending, approved, rejected, needs_resubmission]
         risk_level:
           type: string
-          enum: [low, medium, high]
+          enum: [low, medium, high, critical]
         submitted_at:
           type: [string, "null"]
           format: date-time
@@ -7170,6 +7500,73 @@ components:
                 $ref: "#/components/schemas/LegalReview"
         meta:
           $ref: "#/components/schemas/Meta"
+    LegalBillingRecord:
+      type: object
+      additionalProperties: false
+      required:
+        [public_id, legal_user, client_user, matter_type, matter_id, minutes, amount_minor, currency, invoice_number, status, notes, created_at, updated_at]
+      properties:
+        public_id:
+          type: string
+        legal_user:
+          type: object
+        client_user:
+          type: [object, "null"]
+        matter_type:
+          type: string
+        matter_id:
+          type: string
+        minutes:
+          type: integer
+          minimum: 0
+        amount_minor:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+        invoice_number:
+          type: [string, "null"]
+        status:
+          type: string
+          enum: [draft, issued, paid, void]
+        notes:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    LegalBillingEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [billing_record]
+          properties:
+            billing_record:
+              $ref: "#/components/schemas/LegalBillingRecord"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    LegalBillingListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [billing_records]
+          properties:
+            billing_records:
+              type: array
+              items:
+                $ref: "#/components/schemas/LegalBillingRecord"
+        meta:
+          $ref: "#/components/schemas/Meta"
     PaymentSchedule:
       type: object
       additionalProperties: true
@@ -7833,6 +8230,22 @@ components:
               $ref: "#/components/schemas/SafetyCheck"
         meta:
           $ref: "#/components/schemas/Meta"
+    SafetyCheckListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [safety_checks]
+          properties:
+            safety_checks:
+              type: array
+              items:
+                $ref: "#/components/schemas/SafetyCheck"
+        meta:
+          $ref: "#/components/schemas/Meta"
     IncidentEnvelope:
       type: object
       additionalProperties: false
@@ -7845,6 +8258,22 @@ components:
           properties:
             incident:
               $ref: "#/components/schemas/Incident"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    IncidentListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [incidents]
+          properties:
+            incidents:
+              type: array
+              items:
+                $ref: "#/components/schemas/Incident"
         meta:
           $ref: "#/components/schemas/Meta"
     SafetyCheckInEnvelope:

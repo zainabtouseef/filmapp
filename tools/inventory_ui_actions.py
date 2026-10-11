@@ -80,6 +80,7 @@ def main() -> None:
         writer = csv.DictWriter(
             output,
             fieldnames=("file", "line", "handler", "classification", "source"),
+            lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(rows)
@@ -107,10 +108,7 @@ def main() -> None:
         "",
         "| Classification | Count |",
         "|---|---:|",
-        *(
-            f"| {name} | {count} |"
-            for name, count in sorted(classifications.items())
-        ),
+        *(f"| {name} | {count} |" for name, count in sorted(classifications.items())),
         "",
         "## Handler types",
         "",

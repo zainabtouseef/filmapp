@@ -58,11 +58,51 @@ def test_insurance_policy_and_claim_flow(client: FlaskClient) -> None:
     assert profile.status_code == 200, profile.text
     assert profile.json["data"]["profile"]["name"] == "CineSecure Safety Desk"
 
+    project = client.post(
+        "/api/v1/projects",
+        headers=producer_headers,
+        json={"title": "Insured Safety Production", "project_type": "film"},
+    )
+    assert project.status_code == 201, project.text
+    project_id = project.json["data"]["project"]["public_id"]
+    safety = client.post(
+        "/api/v1/safety-checks",
+        headers=producer_headers,
+        json={"project_id": project_id, "risk_level": "high"},
+    )
+    assert safety.status_code == 201, safety.text
+    safety_id = safety.json["data"]["safety_check"]["public_id"]
+    safety_item = client.post(
+        f"/api/v1/safety-checks/{safety_id}/items",
+        headers=producer_headers,
+        json={"label": "Emergency exits clear", "mandatory": True},
+    )
+    assert safety_item.status_code == 201, safety_item.text
+    safety_item_id = safety_item.json["data"]["safety_check"]["items"][0]["id"]
+    incident = client.post(
+        "/api/v1/incidents",
+        headers=producer_headers,
+        json={
+            "project_id": project_id,
+            "title": "Lighting stand obstruction",
+            "severity": "medium",
+            "occurred_at": "2026-07-20T10:00:00Z",
+            "description": "A stand blocked a marked route.",
+        },
+    )
+    assert incident.status_code == 201, incident.text
+    incident_id = incident.json["data"]["incident"]["public_id"]
+
+    no_policy_checks = client.get("/api/v1/safety-checks", headers=provider_headers)
+    assert no_policy_checks.status_code == 200, no_policy_checks.text
+    assert no_policy_checks.json["data"]["safety_checks"] == []
+
     policy = client.post(
         "/api/v1/insurance/policies",
         headers=provider_headers,
         json={
             "insured_user_id": producer_id,
+            "project_id": project_id,
             "coverage_summary": "Cast and equipment cover",
             "valid_from": "2026-07-18",
             "valid_to": "2026-07-25",
@@ -72,6 +112,39 @@ def test_insurance_policy_and_claim_flow(client: FlaskClient) -> None:
     assert policy.status_code == 201, policy.text
     policy_id = policy.json["data"]["policy"]["public_id"]
     assert policy.json["data"]["policy"]["status"] == "active"
+
+    provider_checks = client.get("/api/v1/safety-checks", headers=provider_headers)
+    assert provider_checks.status_code == 200, provider_checks.text
+    assert provider_checks.json["data"]["safety_checks"][0]["public_id"] == safety_id
+    completed_item = client.patch(
+        f"/api/v1/safety-checks/{safety_id}/items/{safety_item_id}",
+        headers=provider_headers,
+        json={"completed": True},
+    )
+    assert completed_item.status_code == 200, completed_item.text
+    assert completed_item.json["data"]["safety_check"]["status"] == "completed"
+    assert completed_item.json["data"]["safety_check"]["items"][0]["completed_at"]
+
+    provider_incidents = client.get("/api/v1/incidents", headers=provider_headers)
+    assert provider_incidents.status_code == 200, provider_incidents.text
+    assert provider_incidents.json["data"]["incidents"][0]["public_id"] == incident_id
+    resolved = client.patch(
+        f"/api/v1/incidents/{incident_id}",
+        headers=provider_headers,
+        json={"status": "resolved", "corrective_action": "Route cleared."},
+    )
+    assert resolved.status_code == 200, resolved.text
+    assert resolved.json["data"]["incident"]["status"] == "resolved"
+    assert resolved.json["data"]["incident"]["corrective_action"] == "Route cleared."
+
+    outsider_safety = client.get(
+        f"/api/v1/safety-checks/{safety_id}", headers=outsider_headers
+    )
+    assert outsider_safety.status_code == 404, outsider_safety.text
+    outsider_incident = client.get(
+        f"/api/v1/incidents/{incident_id}", headers=outsider_headers
+    )
+    assert outsider_incident.status_code == 404, outsider_incident.text
 
     provider_list = client.get("/api/v1/insurance/policies", headers=provider_headers)
     assert provider_list.status_code == 200, provider_list.text

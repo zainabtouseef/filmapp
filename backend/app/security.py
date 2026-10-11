@@ -77,7 +77,11 @@ def access_token_matches_credentials(user: User, payload: dict[str, Any]) -> boo
     )
 
 
-def _jwt_payload(user: User, expires_at: datetime) -> dict[str, Any]:
+def _jwt_payload(
+    user: User,
+    expires_at: datetime,
+    session_family: str | None = None,
+) -> dict[str, Any]:
     active_role = next(
         (
             role.role.code
@@ -86,7 +90,7 @@ def _jwt_payload(user: User, expires_at: datetime) -> dict[str, Any]:
         ),
         None,
     )
-    return {
+    payload = {
         "iss": "cineconnect-api",
         "sub": user.public_id,
         "uid": str(user.id),
@@ -102,6 +106,9 @@ def _jwt_payload(user: User, expires_at: datetime) -> dict[str, Any]:
         "exp": int(expires_at.timestamp()),
         "jti": uuid.uuid4().hex,
     }
+    if session_family:
+        payload["session_family"] = session_family
+    return payload
 
 
 def issue_token_pair(user: User) -> TokenPair:
@@ -109,8 +116,9 @@ def issue_token_pair(user: User) -> TokenPair:
     refresh_days = int(current_app.config.get("REFRESH_TOKEN_DAYS", 30))
     access_expires = utc_now() + timedelta(minutes=access_minutes)
     refresh_expires = utc_now() + timedelta(days=refresh_days)
+    session_family = uuid.uuid4().hex
     access_token = jwt.encode(
-        _jwt_payload(user, access_expires),
+        _jwt_payload(user, access_expires, session_family),
         current_app.config["JWT_SECRET_KEY"],
         algorithm="HS256",
     )
@@ -119,7 +127,7 @@ def issue_token_pair(user: User) -> TokenPair:
         UserSession(
             user_id=user.id,
             refresh_token_hash=hash_token(refresh_token),
-            refresh_token_family=uuid.uuid4().hex,
+            refresh_token_family=session_family,
             expires_at=refresh_expires,
             ip_address=request.headers.get("X-Forwarded-For", request.remote_addr),
             user_agent=request.headers.get("User-Agent", "")[:512],
@@ -155,7 +163,7 @@ def rotate_refresh_token(refresh_token: str) -> tuple[User, TokenPair]:
     access_minutes = int(current_app.config.get("ACCESS_TOKEN_MINUTES", 15))
     access_expires = now + timedelta(minutes=access_minutes)
     access_token = jwt.encode(
-        _jwt_payload(session.user, access_expires),
+        _jwt_payload(session.user, access_expires, session.refresh_token_family),
         current_app.config["JWT_SECRET_KEY"],
         algorithm="HS256",
     )

@@ -357,6 +357,57 @@ class LegalReviewDto {
   String get slaLabel => slaDueAt == null ? 'No SLA' : _shortDate(slaDueAt!);
 }
 
+class LegalBillingRecordDto {
+  final String publicId;
+  final ContractUser legalUser;
+  final ContractUser? clientUser;
+  final String matterType;
+  final String matterId;
+  final int minutes;
+  final int amountMinor;
+  final String currency;
+  final String? invoiceNumber;
+  final String status;
+  final String? notes;
+  final DateTime? createdAt;
+
+  const LegalBillingRecordDto({
+    required this.publicId,
+    required this.legalUser,
+    required this.clientUser,
+    required this.matterType,
+    required this.matterId,
+    required this.minutes,
+    required this.amountMinor,
+    required this.currency,
+    required this.invoiceNumber,
+    required this.status,
+    required this.notes,
+    required this.createdAt,
+  });
+
+  factory LegalBillingRecordDto.fromJson(Map<String, dynamic> json) {
+    final client = json['client_user'] as Map<String, dynamic>?;
+    return LegalBillingRecordDto(
+      publicId: json['public_id'] as String? ?? '',
+      legalUser:
+          ContractUser.fromJson(json['legal_user'] as Map<String, dynamic>?),
+      clientUser: client == null ? null : ContractUser.fromJson(client),
+      matterType: json['matter_type'] as String? ?? 'contract_review',
+      matterId: json['matter_id'] as String? ?? '',
+      minutes: (json['minutes'] as num?)?.toInt() ?? 0,
+      amountMinor: (json['amount_minor'] as num?)?.toInt() ?? 0,
+      currency: json['currency'] as String? ?? 'PKR',
+      invoiceNumber: json['invoice_number'] as String?,
+      status: json['status'] as String? ?? 'draft',
+      notes: json['notes'] as String?,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+    );
+  }
+
+  String get displayAmount => '${_money(amountMinor)} $currency';
+}
+
 String _money(int minor) {
   final amount = minor / 100;
   if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';

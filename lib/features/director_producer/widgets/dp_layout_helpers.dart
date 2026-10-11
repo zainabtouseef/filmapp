@@ -292,7 +292,7 @@ Widget dpHeaderAction(
   BuildContext context, {
   required IconData icon,
   required String label,
-  required VoidCallback onTap,
+  required VoidCallback? onTap,
 }) {
   return Align(
     alignment: Alignment.centerRight,

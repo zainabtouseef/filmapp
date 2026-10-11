@@ -17,6 +17,7 @@ from app.models.base import utc_now
 from app.models.bookings import Booking
 from app.models.files import FileAsset
 from app.models.identity import User
+from app.models.insurance import InsurancePartnerProfile, InsurancePolicy
 from app.models.marketplace import City, MarketplaceListing
 from app.models.operations import (
     DamageClaim,
@@ -43,6 +44,23 @@ from app.models.projects import Project, ProjectMember
 from app.responses import success
 
 operations_blueprint = Blueprint("operations", __name__)
+
+SAFETY_RISK_LEVELS = {"low", "medium", "high", "critical"}
+SAFETY_STATUSES = {
+    "draft",
+    "in_review",
+    "requires_action",
+    "approved",
+    "completed",
+}
+INCIDENT_SEVERITIES = {"low", "medium", "high", "critical"}
+INCIDENT_STATUSES = {
+    "open",
+    "investigating",
+    "action_required",
+    "resolved",
+    "closed",
+}
 
 
 def _parse_datetime(value: Any, field: str) -> datetime:
@@ -108,6 +126,88 @@ def _project_for_member(public_id: str, user: User) -> Any:
     if project is None:
         raise APIError("project.not_found", "Project was not found.", status=404)
     return project
+
+
+def _has_role(user: User, *role_codes: str) -> bool:
+    return any(
+        role.status == "active" and role.role.code in role_codes for role in user.roles
+    )
+
+
+def _can_view_safety_project(project: Project, user: User) -> bool:
+    if project.owner_user_id == user.id or _has_role(user, "super_admin", "reviewer"):
+        return True
+    member = db.session.execute(
+        select(ProjectMember.id).where(
+            ProjectMember.project_id == project.id,
+            ProjectMember.user_id == user.id,
+            ProjectMember.status == "active",
+        )
+    ).scalar_one_or_none()
+    if member is not None:
+        return True
+    policy = db.session.execute(
+        select(InsurancePolicy.id)
+        .outerjoin(
+            InsurancePartnerProfile,
+            InsurancePartnerProfile.id == InsurancePolicy.provider_profile_id,
+        )
+        .where(
+            InsurancePolicy.project_id == project.id,
+            or_(
+                InsurancePolicy.insured_user_id == user.id,
+                InsurancePartnerProfile.user_id == user.id,
+            ),
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+    return policy is not None
+
+
+def _visible_safety_project_ids(user: User) -> Any:
+    member_projects = select(ProjectMember.project_id).where(
+        ProjectMember.user_id == user.id,
+        ProjectMember.status == "active",
+    )
+    insured_projects = (
+        select(InsurancePolicy.project_id)
+        .outerjoin(
+            InsurancePartnerProfile,
+            InsurancePartnerProfile.id == InsurancePolicy.provider_profile_id,
+        )
+        .where(
+            InsurancePolicy.project_id.is_not(None),
+            or_(
+                InsurancePolicy.insured_user_id == user.id,
+                InsurancePartnerProfile.user_id == user.id,
+            ),
+        )
+    )
+    return or_(
+        Project.owner_user_id == user.id,
+        Project.id.in_(member_projects),
+        Project.id.in_(insured_projects),
+    )
+
+
+def _safety_check_for_view(public_id: str, user: User) -> SafetyCheck:
+    item = db.session.execute(
+        select(SafetyCheck).where(SafetyCheck.public_id == public_id)
+    ).scalar_one_or_none()
+    if item is None or not _can_view_safety_project(item.project, user):
+        raise APIError(
+            "safety_check.not_found", "Safety check was not found.", status=404
+        )
+    return item
+
+
+def _incident_for_view(public_id: str, user: User) -> Incident:
+    item = db.session.execute(
+        select(Incident).where(Incident.public_id == public_id)
+    ).scalar_one_or_none()
+    if item is None or not _can_view_safety_project(item.project, user):
+        raise APIError("incident.not_found", "Incident was not found.", status=404)
+    return item
 
 
 def _location_payload(item: LocationProperty) -> dict[str, Any]:
@@ -447,6 +547,9 @@ def _safety_check_payload(item: SafetyCheck) -> dict[str, Any]:
                 "mandatory": row.mandatory,
                 "completed_at": row.completed_at.isoformat()
                 if row.completed_at
+                else None,
+                "completed_by": _user_payload(row.completed_user)
+                if row.completed_user
                 else None,
             }
             for row in item.items
@@ -1397,14 +1500,20 @@ def create_safety_check() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     project = _project_for_member(str(payload.get("project_id", "")).strip(), user)
+    risk_level = str(payload.get("risk_level", "medium")).strip().lower()
+    if risk_level not in SAFETY_RISK_LEVELS:
+        raise _field_error("risk_level", "Unsupported safety risk level.")
+    status = str(payload.get("status", "in_review")).strip().lower()
+    if status not in SAFETY_STATUSES:
+        raise _field_error("status", "Unsupported safety check status.")
     item = SafetyCheck(
         project_id=project.id,
         responsible_user_id=user.id,
         due_at=_parse_datetime(payload["due_at"], "due_at")
         if payload.get("due_at")
         else None,
-        risk_level=str(payload.get("risk_level", "medium")).strip()[:32],
-        status=str(payload.get("status", "in_review")).strip()[:32],
+        risk_level=risk_level,
+        status=status,
     )
     db.session.add(item)
     db.session.commit()
@@ -1422,9 +1531,12 @@ def create_safety_check_item(public_id: str) -> ResponseReturnValue:
             "safety_check.not_found", "Safety check was not found.", status=404
         )
     payload = _json_body()
+    label = str(payload.get("label", "")).strip()
+    if len(label) < 2:
+        raise _field_error("label", "Checklist item label is required.")
     row = SafetyCheckItem(
         safety_check_id=check.id,
-        label=str(payload.get("label", "")).strip()[:180],
+        label=label[:180],
         detail=str(payload.get("detail", "")).strip()[:2000] or None,
         mandatory=bool(payload.get("mandatory", True)),
     )
@@ -1433,26 +1545,167 @@ def create_safety_check_item(public_id: str) -> ResponseReturnValue:
     return jsonify(success({"safety_check": _safety_check_payload(check)})), 201
 
 
+@operations_blueprint.get("/safety-checks")
+def list_safety_checks() -> Response:
+    user = _current_user()
+    query = select(SafetyCheck).join(Project, Project.id == SafetyCheck.project_id)
+    if not _has_role(user, "super_admin", "reviewer"):
+        query = query.where(_visible_safety_project_ids(user))
+    project_id = request.args.get("project_id", "").strip()
+    if project_id:
+        query = query.where(Project.public_id == project_id)
+    status = request.args.get("status", "").strip().lower()
+    if status:
+        if status not in SAFETY_STATUSES:
+            raise _field_error("status", "Unsupported safety check status.")
+        query = query.where(SafetyCheck.status == status)
+    rows = db.session.execute(query.order_by(SafetyCheck.updated_at.desc())).scalars()
+    return jsonify(
+        success({"safety_checks": [_safety_check_payload(row) for row in rows]})
+    )
+
+
+@operations_blueprint.get("/safety-checks/<public_id>")
+def safety_check_detail(public_id: str) -> Response:
+    user = _current_user()
+    item = _safety_check_for_view(public_id, user)
+    return jsonify(success({"safety_check": _safety_check_payload(item)}))
+
+
+@operations_blueprint.patch("/safety-checks/<public_id>")
+def update_safety_check(public_id: str) -> Response:
+    user = _current_user()
+    item = _safety_check_for_view(public_id, user)
+    payload = _json_body()
+    if "risk_level" in payload:
+        risk_level = str(payload.get("risk_level", "")).strip().lower()
+        if risk_level not in SAFETY_RISK_LEVELS:
+            raise _field_error("risk_level", "Unsupported safety risk level.")
+        item.risk_level = risk_level
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip().lower()
+        if status not in SAFETY_STATUSES:
+            raise _field_error("status", "Unsupported safety check status.")
+        item.status = status
+    if "due_at" in payload:
+        item.due_at = (
+            _parse_datetime(payload.get("due_at"), "due_at")
+            if payload.get("due_at")
+            else None
+        )
+    db.session.commit()
+    return jsonify(success({"safety_check": _safety_check_payload(item)}))
+
+
+@operations_blueprint.patch("/safety-checks/<public_id>/items/<item_id>")
+def update_safety_check_item(public_id: str, item_id: str) -> Response:
+    user = _current_user()
+    check = _safety_check_for_view(public_id, user)
+    row = next((entry for entry in check.items if str(entry.id) == item_id), None)
+    if row is None:
+        raise APIError(
+            "safety_check_item.not_found", "Checklist item was not found.", status=404
+        )
+    payload = _json_body()
+    if "completed" in payload:
+        completed = bool(payload.get("completed"))
+        row.completed_at = utc_now() if completed else None
+        row.completed_by = user.id if completed else None
+    if "label" in payload:
+        label = str(payload.get("label", "")).strip()
+        if len(label) < 2:
+            raise _field_error("label", "Checklist item label is required.")
+        row.label = label[:180]
+    if "detail" in payload:
+        row.detail = str(payload.get("detail", "")).strip()[:2000] or None
+    if "mandatory" in payload:
+        row.mandatory = bool(payload.get("mandatory"))
+    mandatory = [entry for entry in check.items if entry.mandatory]
+    if mandatory and all(entry.completed_at is not None for entry in mandatory):
+        check.status = "completed"
+    elif check.status == "completed":
+        check.status = "in_review"
+    db.session.commit()
+    return jsonify(success({"safety_check": _safety_check_payload(check)}))
+
+
 @operations_blueprint.post("/incidents")
 def create_incident() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
     project = _project_for_member(str(payload.get("project_id", "")).strip(), user)
+    title = str(payload.get("title", "")).strip()
+    if len(title) < 2:
+        raise _field_error("title", "Incident title is required.")
+    severity = str(payload.get("severity", "low")).strip().lower()
+    if severity not in INCIDENT_SEVERITIES:
+        raise _field_error("severity", "Unsupported incident severity.")
+    status = str(payload.get("status", "open")).strip().lower()
+    if status not in INCIDENT_STATUSES:
+        raise _field_error("status", "Unsupported incident status.")
     item = Incident(
         project_id=project.id,
         reported_by=user.id,
-        title=str(payload.get("title", "")).strip()[:180],
-        severity=str(payload.get("severity", "low")).strip()[:32],
+        title=title[:180],
+        severity=severity,
         occurred_at=_parse_datetime(payload.get("occurred_at"), "occurred_at"),
         parties=str(payload.get("parties", "")).strip()[:255] or None,
         description=str(payload.get("description", "")).strip()[:4000],
         corrective_action=str(payload.get("corrective_action", "")).strip()[:4000]
         or None,
-        status=str(payload.get("status", "open")).strip()[:32],
+        status=status,
     )
     db.session.add(item)
     db.session.commit()
     return jsonify(success({"incident": _incident_payload(item)})), 201
+
+
+@operations_blueprint.get("/incidents")
+def list_incidents() -> Response:
+    user = _current_user()
+    query = select(Incident).join(Project, Project.id == Incident.project_id)
+    if not _has_role(user, "super_admin", "reviewer"):
+        query = query.where(_visible_safety_project_ids(user))
+    project_id = request.args.get("project_id", "").strip()
+    if project_id:
+        query = query.where(Project.public_id == project_id)
+    status = request.args.get("status", "").strip().lower()
+    if status:
+        if status not in INCIDENT_STATUSES:
+            raise _field_error("status", "Unsupported incident status.")
+        query = query.where(Incident.status == status)
+    rows = db.session.execute(query.order_by(Incident.occurred_at.desc())).scalars()
+    return jsonify(success({"incidents": [_incident_payload(row) for row in rows]}))
+
+
+@operations_blueprint.get("/incidents/<public_id>")
+def incident_detail(public_id: str) -> Response:
+    user = _current_user()
+    item = _incident_for_view(public_id, user)
+    return jsonify(success({"incident": _incident_payload(item)}))
+
+
+@operations_blueprint.patch("/incidents/<public_id>")
+def update_incident(public_id: str) -> Response:
+    user = _current_user()
+    item = _incident_for_view(public_id, user)
+    payload = _json_body()
+    if "severity" in payload:
+        severity = str(payload.get("severity", "")).strip().lower()
+        if severity not in INCIDENT_SEVERITIES:
+            raise _field_error("severity", "Unsupported incident severity.")
+        item.severity = severity
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip().lower()
+        if status not in INCIDENT_STATUSES:
+            raise _field_error("status", "Unsupported incident status.")
+        item.status = status
+    if "corrective_action" in payload:
+        item.corrective_action = (
+            str(payload.get("corrective_action", "")).strip()[:4000] or None
+        )
+    db.session.commit()
+    return jsonify(success({"incident": _incident_payload(item)}))
 
 
 @operations_blueprint.post("/safety-check-ins")

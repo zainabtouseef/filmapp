@@ -87,3 +87,65 @@ def test_user_settings_are_persisted_and_validated(client: FlaskClient) -> None:
     )
     assert invalid.status_code == 422
     assert "notifications.push_enabled" in invalid.json["error"]["fields"]
+
+
+def test_profile_and_active_session_management(client: FlaskClient) -> None:
+    registered = _register(client)
+    first_headers = {
+        "Authorization": f"Bearer {registered['tokens']['access_token']}",
+        "User-Agent": "CineConnect Test Chrome",
+    }
+
+    updated = client.patch(
+        "/api/v1/me",
+        headers=first_headers,
+        json={"display_name": "Updated Settings User"},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json["data"]["display_name"] == "Updated Settings User"
+    invalid = client.patch(
+        "/api/v1/me", headers=first_headers, json={"display_name": "x"}
+    )
+    assert invalid.status_code == 422, invalid.text
+
+    second = client.post(
+        "/api/v1/auth/login",
+        headers={"User-Agent": "CineConnect Test Safari"},
+        json={
+            "email": registered["user"]["email"],
+            "password": "StrongPass123!",
+        },
+    )
+    assert second.status_code == 200, second.text
+    sessions = client.get("/api/v1/me/sessions", headers=first_headers)
+    assert sessions.status_code == 200, sessions.text
+    assert len(sessions.json["data"]["sessions"]) == 2
+    assert sum(row["is_current"] for row in sessions.json["data"]["sessions"]) == 1
+
+    remote = next(
+        row for row in sessions.json["data"]["sessions"] if not row["is_current"]
+    )
+    revoked = client.delete(
+        f"/api/v1/me/sessions/{remote['id']}", headers=first_headers
+    )
+    assert revoked.status_code == 200, revoked.text
+    assert revoked.json["data"] == {"revoked": True, "current": False}
+
+    third = client.post(
+        "/api/v1/auth/login",
+        headers={"User-Agent": "CineConnect Test Mobile"},
+        json={
+            "email": registered["user"]["email"],
+            "password": "StrongPass123!",
+        },
+    )
+    assert third.status_code == 200, third.text
+    revoke_others = client.post(
+        "/api/v1/me/sessions/revoke-others", headers=first_headers
+    )
+    assert revoke_others.status_code == 200, revoke_others.text
+    assert revoke_others.json["data"]["revoked_count"] == 1
+    remaining = client.get("/api/v1/me/sessions", headers=first_headers)
+    assert remaining.status_code == 200, remaining.text
+    assert len(remaining.json["data"]["sessions"]) == 1
+    assert remaining.json["data"]["sessions"][0]["is_current"] is True

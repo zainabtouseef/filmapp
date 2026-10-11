@@ -520,16 +520,11 @@ class _DPMarketplaceDiscoveryScreenState
                   return a.name.compareTo(b.name);
                 });
               if (candidates.isEmpty) {
-                return _MarketplaceEmptyState(
-                  icon: _categoryHasLiveFeed(_category)
-                      ? Icons.manage_search_outlined
-                      : Icons.construction_outlined,
-                  title: _categoryHasLiveFeed(_category)
-                      ? 'No live listings match'
-                      : 'Live $_category feed is not connected yet',
-                  message: _categoryHasLiveFeed(_category)
-                      ? 'Try clearing filters or searching another city, name, or category.'
-                      : 'Connect the Director discovery endpoint to populate live $_category records.',
+                return const _MarketplaceEmptyState(
+                  icon: Icons.manage_search_outlined,
+                  title: 'No live listings match',
+                  message:
+                      'Try clearing filters or searching another city, name, or category.',
                 );
               }
               return Column(

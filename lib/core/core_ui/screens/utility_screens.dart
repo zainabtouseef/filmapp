@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../auth/auth_controller.dart';
+import '../../network/open_url.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_back_navigation.dart';
@@ -28,7 +30,14 @@ class CoreErrorScreen extends StatelessWidget {
             title: title,
             message: message,
             actionLabel: 'Retry',
-            onAction: () => showCoreSnack(context, 'Retrying static state'),
+            onAction: () {
+              final route = ModalRoute.of(context)?.settings.name;
+              if (route != null) {
+                Navigator.pushReplacementNamed(context, route);
+              } else {
+                navigateCoreBack(context);
+              }
+            },
           ),
           const SizedBox(height: 12),
           CoreSecondaryButton(
@@ -66,8 +75,40 @@ class CoreEmptyTemplateScreen extends StatelessWidget {
   }
 }
 
-class NoInternetScreen extends StatelessWidget {
+class NoInternetScreen extends StatefulWidget {
   const NoInternetScreen({super.key});
+
+  @override
+  State<NoInternetScreen> createState() => _NoInternetScreenState();
+}
+
+class _NoInternetScreenState extends State<NoInternetScreen> {
+  bool _checking = false;
+
+  Future<void> _retry() async {
+    if (_checking) return;
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null) return;
+    setState(() => _checking = true);
+    try {
+      await auth.apiClient.get('/health/live');
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        auth.isAuthenticated
+            ? auth.initialAuthenticatedRoute
+            : CoreRoutes.login,
+        (route) => false,
+      );
+    } catch (_) {
+      if (mounted) {
+        showCoreSnack(
+            context, 'CineConnect is still unreachable. Try again shortly.');
+      }
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,8 +126,8 @@ class NoInternetScreen extends StatelessWidget {
           const SizedBox(height: 12),
           CorePrimaryButton(
             icon: Icons.refresh_rounded,
-            label: 'Retry',
-            onTap: () => showCoreSnack(context, 'Connection check simulated'),
+            label: _checking ? 'Checking...' : 'Retry',
+            onTap: _checking ? null : _retry,
           ),
         ],
       ),
@@ -131,7 +172,15 @@ class ForceUpdateScreen extends StatelessWidget {
           CorePrimaryButton(
             icon: Icons.open_in_new_rounded,
             label: 'Update App',
-            onTap: () => showCoreSnack(context, 'App store redirect simulated'),
+            onTap: () async {
+              final opened = await openUrlInNewTab(
+                'https://cine.nalexustechnologies.com',
+              );
+              if (!opened && context.mounted) {
+                showCoreSnack(
+                    context, 'Could not open the CineConnect download page.');
+              }
+            },
           ),
         ],
       ),
@@ -177,8 +226,15 @@ class MaintenanceModeScreen extends StatelessWidget {
           CoreSecondaryButton(
             icon: Icons.support_agent_outlined,
             label: 'Contact support',
-            onTap: () =>
-                showCoreSnack(context, 'Support contact panel simulated'),
+            onTap: () {
+              final auth = AuthScope.maybeOf(context);
+              Navigator.pushNamed(
+                context,
+                auth?.isAuthenticated == true
+                    ? CoreRoutes.settings
+                    : CoreRoutes.login,
+              );
+            },
           ),
         ],
       ),

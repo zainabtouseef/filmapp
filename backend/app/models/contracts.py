@@ -332,3 +332,8 @@ class LegalBillingRecord(EntityMixin, Base):
     invoice_number: Mapped[str | None] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
     notes: Mapped[str | None] = mapped_column(Text)
+
+    legal_user: Mapped[User] = relationship(foreign_keys=[legal_user_id], lazy="joined")
+    client_user: Mapped[User | None] = relationship(
+        foreign_keys=[client_user_id], lazy="joined"
+    )

@@ -90,7 +90,7 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     });
   }
 
-  Future<void> _pickAttachment() async {
+  Future<void> _pickAttachment({bool audioOnly = false}) async {
     if (!_live) {
       showCoreSnack(
           context, 'Attachments require a live booking conversation.');
@@ -105,17 +105,19 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
     try {
       final picked = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: const [
-          'jpg',
-          'jpeg',
-          'png',
-          'webp',
-          'pdf',
-          'mp3',
-          'm4a',
-          'aac',
-          'wav',
-        ],
+        allowedExtensions: audioOnly
+            ? const ['mp3', 'm4a', 'aac', 'wav']
+            : const [
+                'jpg',
+                'jpeg',
+                'png',
+                'webp',
+                'pdf',
+                'mp3',
+                'm4a',
+                'aac',
+                'wav',
+              ],
         withData: true,
       );
       final file = picked?.files.single;
@@ -494,11 +496,8 @@ class _BookingChatScreenState extends State<BookingChatScreen> {
           ),
           CoreIconButton(
             icon: Icons.mic_none_rounded,
-            tooltip: 'Voice note',
-            onTap: () => showCoreSnack(
-              context,
-              'Microphone recording is not available yet. Attach an audio file instead.',
-            ),
+            tooltip: 'Attach voice note',
+            onTap: _attaching ? null : () => _pickAttachment(audioOnly: true),
           ),
           const SizedBox(width: 8),
           CoreIconButton(

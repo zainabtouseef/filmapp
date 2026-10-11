@@ -106,7 +106,7 @@ class _DPRequirementBuilderScreenState
           context,
           icon: Icons.add_circle_outline_rounded,
           label: _saving ? 'Saving...' : 'Add',
-          onTap: _saving || _uploadingSides ? () {} : _saveRequirement,
+          onTap: _saving || _uploadingSides ? null : _saveRequirement,
         ),
         const SizedBox(height: 6),
         Wrap(

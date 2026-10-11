@@ -171,7 +171,47 @@ def _current_user() -> User:
             "auth.account_restricted", "Account access is restricted.", status=403
         )
     g.current_user = user
+    g.current_session_family = payload.get("session_family")
     return user
+
+
+def _current_session(user: User) -> UserSession | None:
+    family = getattr(g, "current_session_family", None)
+    query = select(UserSession).where(
+        UserSession.user_id == user.id,
+        UserSession.revoked_at.is_(None),
+        UserSession.expires_at > utc_now(),
+    )
+    if isinstance(family, str) and family:
+        return db.session.execute(
+            query.where(UserSession.refresh_token_family == family)
+        ).scalar_one_or_none()
+    user_agent = request.headers.get("User-Agent", "")[:512]
+    ip_address = request.headers.get("X-Forwarded-For", request.remote_addr)
+    return (
+        db.session.execute(
+            query.where(
+                UserSession.user_agent == user_agent,
+                UserSession.ip_address == ip_address,
+            ).order_by(UserSession.created_at.desc())
+        )
+        .scalars()
+        .first()
+    )
+
+
+def _serialize_session(
+    item: UserSession, current: UserSession | None
+) -> dict[str, Any]:
+    return {
+        "id": str(item.id),
+        "is_current": current is not None and item.id == current.id,
+        "ip_address": item.ip_address,
+        "user_agent": item.user_agent,
+        "created_at": item.created_at.isoformat(),
+        "last_used_at": item.last_used_at.isoformat() if item.last_used_at else None,
+        "expires_at": item.expires_at.isoformat(),
+    }
 
 
 @auth_blueprint.post("/auth/register")
@@ -389,6 +429,110 @@ def reset_password() -> Response:
 def me() -> Response:
     user = _current_user()
     return jsonify(success(_serialize_user(user)))
+
+
+@auth_blueprint.patch("/me")
+def update_me() -> Response:
+    user = _current_user()
+    payload = _json_body()
+    if "display_name" in payload:
+        display_name = str(payload.get("display_name", "")).strip()
+        if len(display_name) < 2 or len(display_name) > 120:
+            raise APIError(
+                "validation.invalid",
+                "Request validation failed.",
+                status=422,
+                fields={"display_name": ["Enter a name between 2 and 120 characters."]},
+            )
+        user.display_name = display_name
+    record_auth_event("profile_updated", success=True, user=user)
+    db.session.commit()
+    return jsonify(success(_serialize_user(user)))
+
+
+@auth_blueprint.get("/me/sessions")
+def my_sessions() -> Response:
+    user = _current_user()
+    current = _current_session(user)
+    rows = list(
+        db.session.execute(
+            select(UserSession)
+            .where(
+                UserSession.user_id == user.id,
+                UserSession.revoked_at.is_(None),
+                UserSession.expires_at > utc_now(),
+            )
+            .order_by(UserSession.last_used_at.desc(), UserSession.created_at.desc())
+        ).scalars()
+    )
+    rows.sort(key=lambda item: item.id != (current.id if current else None))
+    return jsonify(
+        success({"sessions": [_serialize_session(row, current) for row in rows]})
+    )
+
+
+@auth_blueprint.delete("/me/sessions/<session_id>")
+def revoke_my_session(session_id: str) -> Response:
+    user = _current_user()
+    current = _current_session(user)
+    item = next(
+        (
+            row
+            for row in db.session.execute(
+                select(UserSession).where(UserSession.user_id == user.id)
+            ).scalars()
+            if str(row.id) == session_id
+        ),
+        None,
+    )
+    if item is None:
+        raise APIError("auth.session_not_found", "Session was not found.", status=404)
+    item.revoked_at = utc_now()
+    record_auth_event(
+        "session_revoked",
+        success=True,
+        user=user,
+        metadata={"current": current is not None and current.id == item.id},
+    )
+    db.session.commit()
+    return jsonify(
+        success(
+            {
+                "revoked": True,
+                "current": current is not None and current.id == item.id,
+            }
+        )
+    )
+
+
+@auth_blueprint.post("/me/sessions/revoke-others")
+def revoke_other_sessions() -> Response:
+    user = _current_user()
+    current = _current_session(user)
+    if current is None:
+        raise APIError(
+            "auth.current_session_unknown",
+            "Refresh this session before revoking other devices.",
+            status=409,
+        )
+    revoked = 0
+    for item in db.session.execute(
+        select(UserSession).where(
+            UserSession.user_id == user.id,
+            UserSession.id != current.id,
+            UserSession.revoked_at.is_(None),
+        )
+    ).scalars():
+        item.revoked_at = utc_now()
+        revoked += 1
+    record_auth_event(
+        "other_sessions_revoked",
+        success=True,
+        user=user,
+        metadata={"count": revoked},
+    )
+    db.session.commit()
+    return jsonify(success({"revoked_count": revoked}))
 
 
 @auth_blueprint.get("/me/roles")

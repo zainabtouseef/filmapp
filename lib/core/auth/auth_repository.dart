@@ -72,6 +72,34 @@ class AuthRepository {
     return AuthUser.fromJson(response['data'] as Map<String, dynamic>);
   }
 
+  Future<AuthUser> updateMe({required String displayName}) async {
+    final response = await _client.patch(
+      '/me',
+      body: {'display_name': displayName},
+    );
+    return AuthUser.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<List<AuthDeviceSession>> sessions() async {
+    final response = await _client.get('/me/sessions');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['sessions'] as List<dynamic>? ?? const [])
+        .map((item) => AuthDeviceSession.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<bool> revokeSession(String sessionId) async {
+    final response = await _client.delete('/me/sessions/$sessionId');
+    final data = response['data'] as Map<String, dynamic>;
+    return data['current'] as bool? ?? false;
+  }
+
+  Future<int> revokeOtherSessions() async {
+    final response = await _client.post('/me/sessions/revoke-others');
+    final data = response['data'] as Map<String, dynamic>;
+    return (data['revoked_count'] as num?)?.toInt() ?? 0;
+  }
+
   Future<AuthSettings> settings() async {
     final response = await _client.get('/me/settings');
     return AuthSettings.fromJson(response['data'] as Map<String, dynamic>);

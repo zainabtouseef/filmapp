@@ -80,6 +80,20 @@ class Config:
         "true",
         "yes",
     }
+    WEATHER_ENABLED = os.getenv("WEATHER_ENABLED", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    WEATHER_GEOCODING_URL = os.getenv(
+        "WEATHER_GEOCODING_URL",
+        "https://geocoding-api.open-meteo.com/v1/search",
+    )
+    WEATHER_FORECAST_URL = os.getenv(
+        "WEATHER_FORECAST_URL",
+        "https://api.open-meteo.com/v1/forecast",
+    )
+    WEATHER_TIMEOUT_SECONDS = float(os.getenv("WEATHER_TIMEOUT_SECONDS", "3"))
 
     @classmethod
     def validate(cls, values: Mapping[str, Any]) -> None:
@@ -134,3 +148,4 @@ class TestConfig(Config):
         )
     )
     PUBLIC_MEDIA_BASE_URL = "https://media.test"
+    WEATHER_ENABLED = False

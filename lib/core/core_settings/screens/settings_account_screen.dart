@@ -156,8 +156,89 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
     }
   }
 
-  void _notAvailable(String feature) {
-    showCoreSnack(context, '$feature is not available in this build yet');
+  Future<void> _editBasicInfo() async {
+    final auth = AuthScope.of(context);
+    final controller =
+        TextEditingController(text: auth.user?.displayName ?? '');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit basic info'),
+        content: CoreTextField(
+          controller: controller,
+          label: 'Display name',
+          icon: Icons.person_outline_rounded,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.length >= 2) Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || !mounted) return;
+    try {
+      await auth.updateMe(displayName: name);
+      if (mounted) showCoreSnack(context, 'Basic info updated');
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    }
+  }
+
+  Future<void> _activeSessions() async {
+    final auth = AuthScope.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _ActiveSessionsDialog(auth: auth),
+    );
+  }
+
+  Future<void> _requestAccountAction(String action) async {
+    final trustSafety = TrustSafetyScope.maybeOf(context);
+    if (trustSafety == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Request account $action'),
+        content: Text(
+          action == 'deletion'
+              ? 'Support will verify your identity, review retained booking and payment records, and contact you before deletion.'
+              : 'Support will verify the request and contact you before deactivating access.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Create request'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await trustSafety.createSupportTicket({
+        'category': 'account_$action',
+        'priority': 'high',
+        'subject': 'Account $action request',
+        'message':
+            'Please verify my identity and begin the account $action process. I understand support will contact me before any account state changes.',
+      });
+      if (mounted) showCoreSnack(context, 'Account $action request created');
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    }
   }
 
   void _faqSheet() {
@@ -205,9 +286,9 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             _navRow(
               Icons.person_outline,
               'Edit basic info',
-              () => _notAvailable('Basic profile editing'),
+              _editBasicInfo,
               subtitle:
-                  'Profile-specific editors remain available in each role portal.',
+                  'Update the display name used across every CineConnect portal.',
             ),
             _navRow(
               Icons.lock_reset_rounded,
@@ -333,8 +414,8 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
             _navRow(
               Icons.devices_other_outlined,
               'Active sessions',
-              () => _notAvailable('Session management'),
-              subtitle: 'Remote session revocation is not available yet.',
+              _activeSessions,
+              subtitle: 'Review devices and revoke remote access.',
             ),
           ]),
           _section('Support', [
@@ -353,15 +434,15 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
           _section('Danger Zone', [
             _navRow(
               Icons.pause_circle_outline_rounded,
-              'Deactivate account',
-              () => _notAvailable('Account deactivation'),
-              subtitle: 'Contact support for an assisted deactivation.',
+              'Request account deactivation',
+              () => _requestAccountAction('deactivation'),
+              subtitle: 'Creates a verified high-priority support request.',
             ),
             _navRow(
               Icons.delete_outline_rounded,
-              'Delete account',
-              () => _notAvailable('Account deletion'),
-              subtitle: 'Contact support for a verified deletion request.',
+              'Request account deletion',
+              () => _requestAccountAction('deletion'),
+              subtitle: 'Creates a verified deletion and retention review.',
             ),
           ]),
         ],
@@ -568,6 +649,149 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
       },
     );
   }
+}
+
+class _ActiveSessionsDialog extends StatefulWidget {
+  final AuthController auth;
+
+  const _ActiveSessionsDialog({required this.auth});
+
+  @override
+  State<_ActiveSessionsDialog> createState() => _ActiveSessionsDialogState();
+}
+
+class _ActiveSessionsDialogState extends State<_ActiveSessionsDialog> {
+  late Future<List<AuthDeviceSession>> _future;
+  String? _busyId;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.auth.sessions();
+  }
+
+  void _refresh() => setState(() => _future = widget.auth.sessions());
+
+  Future<void> _revoke(AuthDeviceSession session) async {
+    setState(() => _busyId = session.id);
+    try {
+      await widget.auth.revokeSession(session.id);
+      if (!mounted) return;
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  Future<void> _revokeOthers() async {
+    setState(() => _busyId = 'others');
+    try {
+      final count = await widget.auth.revokeOtherSessions();
+      if (!mounted) return;
+      showCoreSnack(context, '$count other session(s) signed out');
+      _refresh();
+    } on ApiException catch (error) {
+      if (mounted) showCoreSnack(context, error.message);
+    } finally {
+      if (mounted) setState(() => _busyId = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Active sessions'),
+      content: SizedBox(
+        width: 560,
+        child: FutureBuilder<List<AuthDeviceSession>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              return CoreEmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Could not load sessions',
+                message: 'Check your connection and retry.',
+                actionLabel: 'Retry',
+                onAction: _refresh,
+              );
+            }
+            final sessions = snapshot.data ?? const [];
+            if (sessions.isEmpty) {
+              return const CoreEmptyState(
+                icon: Icons.devices_other_outlined,
+                title: 'No active sessions',
+                message: 'Sign in again to create a new device session.',
+              );
+            }
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 430),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: sessions.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final session = sessions[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      session.isCurrent
+                          ? Icons.devices_rounded
+                          : Icons.devices_other_outlined,
+                      color: context.appColors.goldDark,
+                    ),
+                    title: Text(
+                      session.isCurrent
+                          ? '${session.deviceLabel} · This device'
+                          : session.deviceLabel,
+                    ),
+                    subtitle: Text(
+                      '${session.ipAddress} · ${_sessionDate(session.lastUsedAt ?? session.createdAt)}',
+                    ),
+                    trailing: session.isCurrent
+                        ? Icon(Icons.verified_user_outlined,
+                            color: context.appColors.success)
+                        : TextButton(
+                            onPressed:
+                                _busyId == null ? () => _revoke(session) : null,
+                            child: Text(
+                              _busyId == session.id ? 'Revoking...' : 'Revoke',
+                            ),
+                          ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busyId == null ? _revokeOthers : null,
+          child: Text(
+            _busyId == 'others' ? 'Signing out...' : 'Sign out other devices',
+          ),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Done'),
+        ),
+      ],
+    );
+  }
+}
+
+String _sessionDate(DateTime? value) {
+  if (value == null) return 'Activity time unknown';
+  return '${value.day.toString().padLeft(2, '0')}/'
+      '${value.month.toString().padLeft(2, '0')}/${value.year}';
 }
 
 class _PayoutAccountDraft {
