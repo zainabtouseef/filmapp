@@ -27,6 +27,31 @@ void main() {
     expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsNothing);
   });
 
+  testWidgets('rapid pointer updates reach the latest position next frame',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: CinematicCursor(child: SizedBox.expand()),
+      ),
+    );
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(20, 20));
+    for (var step = 1; step <= 20; step++) {
+      await mouse.moveTo(Offset(20 + step * 11, 20 + step * 8));
+    }
+    await tester.pump(const Duration(milliseconds: 16));
+
+    final ring = find.byKey(const ValueKey('cinematic-cursor-ring'));
+    final positioned = tester.widget<Positioned>(
+      find.ancestor(of: ring, matching: find.byType(Positioned)).first,
+    );
+    expect(positioned.left, 225);
+    expect(positioned.top, 165);
+
+    await mouse.removePointer();
+  });
+
   testWidgets('touch shows lightning and a fading bubble trail',
       (tester) async {
     await tester.pumpWidget(

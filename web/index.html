@@ -76,6 +76,14 @@
       cursor: pointer;
     }
     @keyframes cc-boot-spin { to { transform: rotate(360deg); } }
+    @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+      flutter-view,
+      flutter-view *,
+      flt-glass-pane,
+      flt-glass-pane * {
+        cursor: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -103,7 +111,7 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20261010-unified-portals-v19';
+    const releaseVersion = '20261011-smooth-cursor-v22';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;

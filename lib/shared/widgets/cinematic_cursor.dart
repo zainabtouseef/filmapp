@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_durations.dart';
@@ -20,9 +22,13 @@ class CinematicCursor extends StatefulWidget {
 
 class _CinematicCursorState extends State<CinematicCursor>
     with TickerProviderStateMixin {
-  late final AnimationController _motion;
+  static const _trailCount = 4;
+
+  late final Ticker _ticker;
   late final AnimationController _fade;
-  Offset _from = Offset.zero;
+  final List<Offset> _trail = List.filled(_trailCount, Offset.zero);
+  Duration? _lastTick;
+  Offset _position = Offset.zero;
   Offset _target = Offset.zero;
   PointerDeviceKind _kind = PointerDeviceKind.mouse;
   bool _visible = false;
@@ -31,38 +37,84 @@ class _CinematicCursorState extends State<CinematicCursor>
   @override
   void initState() {
     super.initState();
-    _motion = AnimationController(
-      vsync: this,
-      duration: AppDurations.pointerFollow,
-    );
+    _ticker = createTicker(_tick);
     _fade = AnimationController(
       vsync: this,
       duration: AppDurations.pointerFade,
       value: 1,
     )..addStatusListener((status) {
         if (status == AnimationStatus.dismissed && mounted) {
+          _stopTicker();
           setState(() => _visible = false);
         }
       });
   }
 
-  Offset get _position => Offset.lerp(
-      _from, _target, Curves.easeOutCubic.transform(_motion.value))!;
-
   @override
   void dispose() {
-    _motion.dispose();
+    _ticker.dispose();
     _fade.dispose();
     super.dispose();
   }
 
+  void _startTicker() {
+    if (_ticker.isActive) return;
+    _lastTick = null;
+    _ticker.start();
+  }
+
+  void _stopTicker() {
+    if (_ticker.isActive) _ticker.stop();
+    _lastTick = null;
+  }
+
+  void _tick(Duration elapsed) {
+    if (!_visible) {
+      _stopTicker();
+      return;
+    }
+    final previous = _lastTick;
+    _lastTick = elapsed;
+    final seconds = previous == null
+        ? 1 / 60
+        : ((elapsed - previous).inMicroseconds / Duration.microsecondsPerSecond)
+            .clamp(1 / 240, 1 / 20)
+            .toDouble();
+
+    // The lightning head tracks the latest browser position once per frame.
+    // Pointer events only update [_target], so event bursts never restart an
+    // animation or trigger more rebuilds than the display refresh rate.
+    _position = _target;
+    var leader = _position;
+    var settled = true;
+    for (var i = 0; i < _trail.length; i++) {
+      final response = 30.0 - i * 3.5;
+      final amount = 1 - math.exp(-response * seconds);
+      final next = Offset.lerp(_trail[i], leader, amount)!;
+      if ((next - leader).distance > 0.18) settled = false;
+      _trail[i] = next;
+      leader = next;
+    }
+
+    if (mounted) setState(() {});
+    if (settled && (_position - _target).distance <= 0.01) _stopTicker();
+  }
+
   void _moveTo(Offset position, PointerDeviceKind kind) {
+    final kindChanged = _kind != kind;
     _kind = kind;
-    _from = _visible ? _position : position;
     _target = position;
     _fade.value = 1;
-    if (!_visible) setState(() => _visible = true);
-    _motion.forward(from: 0);
+    if (!_visible) {
+      _position = position;
+      for (var i = 0; i < _trail.length; i++) {
+        _trail[i] = position;
+      }
+      setState(() => _visible = true);
+    } else if (kindChanged) {
+      setState(() {});
+    }
+    _startTicker();
   }
 
   void _press(PointerEvent event) {
@@ -86,22 +138,30 @@ class _CinematicCursorState extends State<CinematicCursor>
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     if (reduceMotion) {
-      _motion.stop();
+      _stopTicker();
       _fade.stop();
       return widget.child;
     }
     final colors = context.appColors;
     return MouseRegion(
       cursor: SystemMouseCursors.none,
+      onEnter: (event) {
+        if (event.kind == PointerDeviceKind.mouse) {
+          _moveTo(event.localPosition, event.kind);
+        }
+      },
       onHover: (event) {
         if (event.kind == PointerDeviceKind.mouse) {
           _moveTo(event.localPosition, event.kind);
         }
       },
       onExit: (_) {
-        _motion.stop();
+        _stopTicker();
         if (_visible && _kind == PointerDeviceKind.mouse) {
-          setState(() => _visible = false);
+          setState(() {
+            _visible = false;
+            _pressed = false;
+          });
         }
       },
       child: Listener(
@@ -123,9 +183,8 @@ class _CinematicCursorState extends State<CinematicCursor>
                 child: ExcludeSemantics(
                   child: RepaintBoundary(
                     child: AnimatedBuilder(
-                      animation: Listenable.merge([_motion, _fade]),
+                      animation: _fade,
                       builder: (context, _) {
-                        final position = _position;
                         final opacity = _kind == PointerDeviceKind.mouse
                             ? 1.0
                             : _fade.value;
@@ -136,15 +195,11 @@ class _CinematicCursorState extends State<CinematicCursor>
                               for (var i = 1; i <= 4; i++)
                                 _TrailBubble(
                                   index: i,
-                                  position: Offset.lerp(
-                                    position,
-                                    _from,
-                                    i * 0.16,
-                                  )!,
+                                  position: _trail[i - 1],
                                   color: colors.goldMid,
                                 ),
                               _LightningPointer(
-                                position: position,
+                                position: _position,
                                 color: colors.goldMid,
                                 pressed: _pressed,
                                 touch: _kind != PointerDeviceKind.mouse,
