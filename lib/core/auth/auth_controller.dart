@@ -415,12 +415,14 @@ class AuthController extends ChangeNotifier {
     required String listingId,
     required String pricingMode,
     int? priceFromMinor,
+    bool? publicPriceVisible,
     String currency = 'PKR',
   }) {
     return _repository.updateMarketplaceListingPricing(
       listingId: listingId,
       pricingMode: pricingMode,
       priceFromMinor: priceFromMinor,
+      publicPriceVisible: publicPriceVisible,
       currency: currency,
     );
   }

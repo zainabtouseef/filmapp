@@ -164,6 +164,7 @@ class _DPCreateProjectWizardScreenState
   }
 
   final _draftStore = const ProjectDraftStore();
+  final _wizardTopKey = GlobalKey();
   final _title = TextEditingController();
   final _customType = TextEditingController();
   final _description = TextEditingController();
@@ -190,17 +191,14 @@ class _DPCreateProjectWizardScreenState
 
   Project? _createdProject;
   bool _justCreated = false;
+  String? _creationWarning;
+  final List<_WizardRequirement> _pendingRequirements = [];
+  final List<_WizardFile> _pendingFiles = [];
 
   @override
   void initState() {
     super.initState();
     _restoreDraft();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _citiesFuture ??= AuthScope.maybeOf(context)?.cities();
   }
 
   @override
@@ -301,6 +299,7 @@ class _DPCreateProjectWizardScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DPPageHeader(
+          key: _wizardTopKey,
           eyebrow: _justCreated
               ? 'Project setup · ready'
               : 'Project setup · step ${_step + 1} of ${_wizardSteps.length}',
@@ -310,12 +309,13 @@ class _DPCreateProjectWizardScreenState
             runSpacing: 8,
             alignment: WrapAlignment.end,
             children: [
-              DPHolographicButton(
-                label: 'Save Draft',
-                icon: Icons.save_outlined,
-                onTap: _saving ? null : () => _saveDraftNow(),
-                secondary: true,
-              ),
+              if (!_justCreated)
+                DPHolographicButton(
+                  label: 'Save Draft',
+                  icon: Icons.save_outlined,
+                  onTap: _saving ? null : () => _saveDraftNow(),
+                  secondary: true,
+                ),
               DPHolographicButton(
                 label: 'Cancel',
                 icon: Icons.close_rounded,
@@ -336,7 +336,7 @@ class _DPCreateProjectWizardScreenState
                   child: DpDotChip(
                     label: '${i + 1}. ${_wizardSteps[i]}',
                     active: _step == i,
-                    onTap: () => setState(() => _step = i),
+                    onTap: () => _goToStep(i),
                   ),
                 ),
             ],
@@ -354,7 +354,7 @@ class _DPCreateProjectWizardScreenState
               if (_step > 0)
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _saving ? null : () => setState(() => _step--),
+                    onPressed: _saving ? null : () => _goToStep(_step - 1),
                     child: const Text('Back'),
                   ),
                 ),
@@ -367,7 +367,7 @@ class _DPCreateProjectWizardScreenState
                     label: _saving
                         ? 'Working…'
                         : _step == _wizardSteps.length - 1
-                            ? 'Create Project'
+                            ? 'Create with available details'
                             : 'Next',
                     icon: _step == _wizardSteps.length - 1
                         ? Icons.check_circle_outline
@@ -397,7 +397,9 @@ class _DPCreateProjectWizardScreenState
         ),
         const SizedBox(height: 12),
         Text(
-          'Project created',
+          _createdProject?.status == 'draft'
+              ? 'Project draft created'
+              : 'Project created',
           style: AppTextStyles.cardTitle.copyWith(color: colors.textPrimary),
         ),
         const SizedBox(height: 6),
@@ -405,12 +407,26 @@ class _DPCreateProjectWizardScreenState
           _createdProject?.title ?? '',
           style: AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
         ),
+        if (_creationWarning != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _creationWarning!,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.smallMeta.copyWith(color: colors.danger),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _attachPendingDetails,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Retry unfinished details'),
+          ),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: _resetForm,
+                onPressed: _saving ? null : _resetForm,
                 child: const Text('Create Another'),
               ),
             ),
@@ -419,7 +435,7 @@ class _DPCreateProjectWizardScreenState
               child: DPHolographicButton(
                 label: 'Open Project',
                 icon: Icons.open_in_new_rounded,
-                onTap: _openCreatedProject,
+                onTap: _saving ? null : _openCreatedProject,
               ),
             ),
           ],
@@ -600,14 +616,17 @@ class _DPCreateProjectWizardScreenState
   }
 
   Future<void> _pickCity() async {
-    final citiesFuture = _citiesFuture;
+    final citiesFuture = _citiesFuture ??= AuthScope.maybeOf(context)?.cities();
     if (citiesFuture == null) return;
     List<ProfileCity> cities;
     try {
       cities = await citiesFuture;
     } catch (_) {
       if (mounted) {
-        setState(() => _errors['cities'] = 'Could not load the city list.');
+        setState(() {
+          _citiesFuture = null;
+          _errors['cities'] = 'Could not load the city list.';
+        });
       }
       return;
     }
@@ -1222,6 +1241,7 @@ class _DPCreateProjectWizardScreenState
 
   Widget _reviewStep() {
     final colors = context.appColors;
+    final missing = _reviewMissing;
     return TourTarget(
       id: 'dp.wizard.review',
       child: Column(
@@ -1263,6 +1283,32 @@ class _DPCreateProjectWizardScreenState
             label: 'Requirements',
             value: _requirements.isEmpty ? '' : '${_requirements.length} added',
           ),
+          const SizedBox(height: 18),
+          Text('Details to add later',
+              style:
+                  AppTextStyles.cardTitle.copyWith(color: colors.textPrimary)),
+          const SizedBox(height: 6),
+          Text(
+              'You can complete these now or create a draft with the details already entered.',
+              style: AppTextStyles.smallMeta
+                  .copyWith(color: colors.textSecondary)),
+          const SizedBox(height: 10),
+          if (missing.isEmpty)
+            Text('Everything is ready.',
+                style: AppTextStyles.smallMeta.copyWith(color: colors.success))
+          else
+            for (final item in missing)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading:
+                    Icon(Icons.info_outline_rounded, color: colors.goldMid),
+                title: Text(item.$1),
+                trailing: TextButton(
+                  onPressed: () => _goToStep(item.$2),
+                  child: const Text('Add now'),
+                ),
+              ),
           if (_errors['submit'] != null) ...[
             const SizedBox(height: 10),
             Text(_errors['submit']!,
@@ -1278,52 +1324,44 @@ class _DPCreateProjectWizardScreenState
       _createProject();
       return;
     }
-    if (!_validateStep(_step)) return;
-    setState(() => _step++);
+    _goToStep(_step + 1);
   }
 
-  bool _validateStep(int step) {
-    setState(() => _errors.clear());
-    if (step == 0) {
-      final errors = <String, String>{};
-      if (_type.isEmpty) errors['type'] = 'Choose a project type.';
-      if (_title.text.trim().length < 2) {
-        errors['title'] = 'Project title is required.';
+  void _goToStep(int step) {
+    setState(() => _step = step);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _wizardTopKey.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(target,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic);
       }
-      if (_coverPhoto?.uploadedFileId == null) {
-        errors['cover'] = _coverPhoto == null
-            ? 'Add a project cover image before continuing.'
-            : 'Wait for the cover image to finish uploading.';
-      }
-      if (errors.isNotEmpty) {
-        setState(() => _errors.addAll(errors));
-        return false;
-      }
-    }
-    if (step == 1) {
-      if (_startDate != null &&
-          _endDate != null &&
-          _endDate!.isBefore(_startDate!)) {
-        setState(() => _errors['dates'] = 'End date must be after start date.');
-        return false;
-      }
-    }
-    return true;
+    });
   }
+
+  List<(String, int)> get _reviewMissing => [
+        if (_title.text.trim().length < 2)
+          ('Project title (an Untitled draft will be created)', 0),
+        if (_type.isEmpty)
+          ('Project type (Film will be used for the draft)', 0),
+        if (_coverPhoto?.uploadedFileId == null) ('Cover image', 0),
+        if (_selectedCities.isEmpty) ('Production city', 1),
+        if (_startDate == null || _endDate == null) ('Shoot dates', 1),
+        if (_startDate != null &&
+            _endDate != null &&
+            _endDate!.isBefore(_startDate!))
+          ('Shoot dates need correcting; they will be omitted', 1),
+        if (_budgetMax.text.trim().isEmpty) ('Budget', 2),
+        if (_team.isEmpty) ('Team', 3),
+        if (_files.isEmpty) ('Script or files', 4),
+        if (_requirements.isEmpty) ('Requirements', 5),
+        for (final requirement in _requirements)
+          if (requirement.deadline.trim().isNotEmpty &&
+              _parseDateOnly(requirement.deadline) == null)
+            ('${requirement.name}: invalid deadline will be omitted', 5),
+      ];
 
   Future<void> _createProject() async {
-    if (!_validateStep(0)) {
-      setState(() => _step = 0);
-      return;
-    }
-    if (!_validateStep(1)) {
-      setState(() => _step = 1);
-      return;
-    }
-    if (!_validateRequirementDates()) {
-      setState(() => _step = 5);
-      return;
-    }
     final controller = ProjectsScope.maybeOf(context);
     if (controller == null) {
       setState(() => _errors['submit'] = 'Sign in to create projects.');
@@ -1346,52 +1384,40 @@ class _DPCreateProjectWizardScreenState
         if (extraCities != null) 'Additional cities: $extraCities',
       ].where((part) => part.isNotEmpty);
       final description = descriptionParts.join('\n\n');
+      final validDates = _startDate == null ||
+          _endDate == null ||
+          !_endDate!.isBefore(_startDate!);
       final project = await controller.createProject(
-        title: _title.text.trim(),
-        projectType: _type,
+        title: _title.text.trim().length < 2
+            ? 'Untitled project'
+            : _title.text.trim(),
+        projectType: _type.isEmpty ? 'film' : _type,
+        status: _reviewMissing.isEmpty ? 'active' : 'draft',
         description: description,
         cityId: _selectedCities.isEmpty ? null : _selectedCities.first.publicId,
-        startDate: _apiDate(_startDate),
-        endDate: _apiDate(_endDate),
+        startDate: validDates ? _apiDate(_startDate) : null,
+        endDate: validDates ? _apiDate(_endDate) : null,
         estimatedBudgetMinor: _parseMinor(_budgetMax.text),
         coverFileId: _coverPhoto?.uploadedFileId,
       );
-
-      for (final requirement in _requirements) {
-        await controller.createRequirement(
-          projectId: project.publicId,
-          category: _backendCategory(requirement.category),
-          title: requirement.name,
-          summary: [requirement.description, requirement.notes]
-              .where((s) => s.trim().isNotEmpty)
-              .join(' — '),
-          budgetMinMinor: _parseMinor(requirement.budget),
-          budgetMaxMinor: _parseMinor(requirement.budget),
-          startDate: _apiDate(_startDate),
-          endDate: requirement.deadline.isEmpty
-              ? _apiDate(_endDate)
-              : _apiDate(_parseDateOnly(requirement.deadline)),
-          quantity: requirement.quantity,
-        );
-      }
-
-      for (final file in _files) {
-        final fileId = file.uploadedFileId;
-        if (fileId == null) continue;
-        await controller.linkProjectFile(
-          projectId: project.publicId,
-          fileId: fileId,
-          label: file.name,
-          folder: 'scripts',
-        );
-      }
-
       if (!mounted) return;
-      await _draftStore.clear();
+      _pendingRequirements
+        ..clear()
+        ..addAll(_requirements);
+      _pendingFiles
+        ..clear()
+        ..addAll(_files.where((file) => file.uploadedFileId != null));
       setState(() {
         _createdProject = project;
         _justCreated = true;
       });
+      try {
+        await _draftStore.clear();
+      } catch (_) {
+        // The server project is already saved; a local draft cleanup failure
+        // must not invite the user to create a duplicate project.
+      }
+      await _attachPendingDetails();
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _errors['submit'] = _friendlyApiError(error));
@@ -1402,6 +1428,57 @@ class _DPCreateProjectWizardScreenState
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _attachPendingDetails() async {
+    final controller = ProjectsScope.maybeOf(context);
+    final project = _createdProject;
+    if (controller == null || project == null) return;
+    if (mounted) setState(() => _saving = true);
+    final validDates = _startDate == null ||
+        _endDate == null ||
+        !_endDate!.isBefore(_startDate!);
+    for (final requirement
+        in List<_WizardRequirement>.of(_pendingRequirements)) {
+      try {
+        await controller.createRequirement(
+          projectId: project.publicId,
+          category: _backendCategory(requirement.category),
+          title: requirement.name,
+          summary: [requirement.description, requirement.notes]
+              .where((s) => s.trim().isNotEmpty)
+              .join(' — '),
+          budgetMinMinor: _parseMinor(requirement.budget),
+          budgetMaxMinor: _parseMinor(requirement.budget),
+          startDate: validDates ? _apiDate(_startDate) : null,
+          endDate: _apiDate(_safeRequirementDeadline(requirement, validDates)),
+          quantity: requirement.quantity,
+        );
+        _pendingRequirements.remove(requirement);
+      } catch (_) {
+        // Keep only failed records for an explicit retry on the success screen.
+      }
+    }
+    for (final file in List<_WizardFile>.of(_pendingFiles)) {
+      try {
+        await controller.linkProjectFile(
+          projectId: project.publicId,
+          fileId: file.uploadedFileId!,
+          label: file.name,
+          folder: 'scripts',
+        );
+        _pendingFiles.remove(file);
+      } catch (_) {
+        // A successful project creation must never be reported as a failure.
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      _creationWarning = _pendingRequirements.isEmpty && _pendingFiles.isEmpty
+          ? null
+          : 'The project was created, but ${_pendingRequirements.length} requirement(s) and ${_pendingFiles.length} file(s) did not save. Retry here before leaving this page.';
+    });
   }
 
   void _resetForm() {
@@ -1425,6 +1502,9 @@ class _DPCreateProjectWizardScreenState
       _step = 0;
       _justCreated = false;
       _createdProject = null;
+      _creationWarning = null;
+      _pendingRequirements.clear();
+      _pendingFiles.clear();
     });
   }
 
@@ -1463,44 +1543,17 @@ class _DPCreateProjectWizardScreenState
     return DateTime(parsed.year, parsed.month, parsed.day);
   }
 
-  DateTime _dateOnly(DateTime value) =>
-      DateTime(value.year, value.month, value.day);
-
-  bool _validateRequirementDates() {
-    final projectStart = _startDate == null ? null : _dateOnly(_startDate!);
-    final projectEnd = _endDate == null ? null : _dateOnly(_endDate!);
-
-    for (final requirement in _requirements) {
-      final deadlineText = requirement.deadline.trim();
-      if (deadlineText.isEmpty) continue;
-
-      final deadline = _parseDateOnly(deadlineText);
-      if (deadline == null) {
-        setState(() {
-          _errors['requirements'] =
-              'Requirement "${requirement.name}" has an invalid deadline. Open Requirements and choose the date again.';
-        });
-        return false;
-      }
-
-      if (projectStart != null && deadline.isBefore(projectStart)) {
-        setState(() {
-          _errors['requirements'] =
-              'Requirement "${requirement.name}" deadline must be on or after project start date ${_formatDate(projectStart)}.';
-        });
-        return false;
-      }
-
-      if (projectEnd != null && deadline.isAfter(projectEnd)) {
-        setState(() {
-          _errors['requirements'] =
-              'Requirement "${requirement.name}" deadline must be on or before project end date ${_formatDate(projectEnd)}.';
-        });
-        return false;
-      }
+  DateTime? _safeRequirementDeadline(
+      _WizardRequirement requirement, bool validDates) {
+    final deadline = _parseDateOnly(requirement.deadline);
+    if (deadline == null) return validDates ? _endDate : null;
+    if (validDates && _startDate != null && deadline.isBefore(_startDate!)) {
+      return _endDate;
     }
-
-    return true;
+    if (validDates && _endDate != null && deadline.isAfter(_endDate!)) {
+      return _endDate;
+    }
+    return deadline;
   }
 
   String _friendlyApiError(ApiException error) {

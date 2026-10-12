@@ -129,7 +129,7 @@ class GeneralPublicShell extends StatelessWidget {
       route: GeneralPublicRoutes.home,
     ),
     GeneralPublicNavItem(
-      label: 'Browse',
+      label: 'Discover',
       icon: Icons.manage_search_rounded,
       route: GeneralPublicRoutes.browse,
     ),

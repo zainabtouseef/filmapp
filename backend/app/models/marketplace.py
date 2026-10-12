@@ -181,6 +181,9 @@ class MarketplaceListing(EntityMixin, Base):
     pricing_mode: Mapped[str] = mapped_column(
         String(32), nullable=False, default="negotiable"
     )
+    public_price_visible: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     verification_status: Mapped[str] = mapped_column(String(32), nullable=False)
     moderation_status: Mapped[str] = mapped_column(String(32), nullable=False)
     visibility: Mapped[str] = mapped_column(String(32), nullable=False)

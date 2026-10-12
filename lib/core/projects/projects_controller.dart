@@ -50,7 +50,7 @@ class ProjectsController extends ChangeNotifier {
       status: status,
       coverFileId: coverFileId,
     );
-    await projects(force: true);
+    await _refreshAfterMutation();
     return project;
   }
 
@@ -84,14 +84,25 @@ class ProjectsController extends ChangeNotifier {
       progressPercent: progressPercent,
       coverFileId: coverFileId,
     );
-    await projects(force: true);
+    await _refreshAfterMutation();
     return project;
   }
 
   Future<Project> duplicateProject(String projectId, {String? title}) async {
     final project = await _repository.duplicateProject(projectId, title: title);
-    await projects(force: true);
+    await _refreshAfterMutation();
     return project;
+  }
+
+  Future<void> _refreshAfterMutation() async {
+    try {
+      await projects(force: true);
+    } catch (_) {
+      // The mutation already succeeded on the server. An optional list refresh
+      // must not turn that success into an error and cause a duplicate retry.
+      _cachedProjects = null;
+      notifyListeners();
+    }
   }
 
   Future<Project> project(String publicId) {

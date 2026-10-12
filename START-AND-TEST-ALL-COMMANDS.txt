@@ -1,0 +1,166 @@
+DEP-HALLUCINATOR — START AND TEST EVERYTHING
+============================================
+
+Run one command at a time, in this exact order.
+Lines beginning with # explain the next command and are not commands.
+
+
+# 1. Open Docker Desktop. Wait until Docker says the engine is running.
+open -a Docker
+
+
+# 2. Enter the modified project folder.
+cd ~/Desktop/dep-hallucinator
+
+
+# 3. Confirm Docker is ready.
+docker info --format 'Docker {{.ServerVersion}} | {{.OperatingSystem}} | {{.Architecture}}'
+
+
+# 4. Start a clean Python 3.11 container.
+# The project is mounted read-only at /source.
+# The sample repositories from Downloads are mounted read-only at /samples.
+docker run -dit --name dep-hallucinator-evidence-20261008 --mount type=bind,source="$PWD",target=/source,readonly --mount type=bind,source="$HOME/Downloads/Dep-Hallucinator-Test-Repositories",target=/samples,readonly -w /work python:3.11-slim tail -f /dev/null
+
+
+# 5. Confirm that the container is running.
+docker ps --filter name=dep-hallucinator-evidence-20261008 --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+
+
+# 6. Copy the project inside Docker and install the program and test tools.
+docker exec dep-hallucinator-evidence-20261008 sh -lc 'cp -a /source/. /work/ && python -m pip install --disable-pip-version-check -e ".[dev,test]"'
+
+
+# 7. Check Python and the installed package.
+docker exec dep-hallucinator-evidence-20261008 python --version
+docker exec dep-hallucinator-evidence-20261008 python -m pip show dep-hallucinator
+
+
+# 8. Confirm that the Dep-Hallucinator command starts.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator --version
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator --help
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator info
+
+
+# 9. Test Modification 1: persistent allowlist and denylist.
+# Expected: 2 passed.
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_package_lists.py
+
+
+# 10. Demonstrate Modification 1 manually.
+# Add an allowlist entry, show that another process reloads it, then remove it.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist add student-safe-package --reason "Approved classroom package"
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist list
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json,pathlib; p=pathlib.Path.home()/".config/dep-hallucinator/allowlist.json"; print("Saved file:",p); print(p.read_text())'
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist remove student-safe-package
+
+
+# 11. Demonstrate denylist wildcard persistence.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist add 'student-risk-*' --pattern-type pattern --reason "Blocked classroom pattern"
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist list
+docker exec dep-hallucinator-evidence-20261008 python -c 'from src.dep_hallucinator.package_lists import PackageListManager; print("Pattern matches:",PackageListManager().is_denylisted("student-risk-library","npm")[0])'
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist remove 'student-risk-*'
+
+
+# 12. Prove that Modification 1 survives a container restart.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist add restart-safe-package --reason "Restart proof"
+docker stop dep-hallucinator-evidence-20261008
+docker start dep-hallucinator-evidence-20261008
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist list
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist remove restart-safe-package
+
+
+# 13. Test Modification 2: dangerous Maven XML is rejected.
+# Expected: 1 passed.
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_parser_security.py
+
+
+# 14. Confirm normal Maven pom.xml files still work.
+# Expected: 2 passed.
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_core.py::TestDependencyParsing::test_parse_additional_file_formats tests/test_core.py::TestDependencyParsing::test_multi_language_file_support
+
+
+# 15. Test both modifications together.
+# Expected: 3 passed.
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_package_lists.py tests/test_parser_security.py
+
+
+# 16. Run the complete project test suite.
+# Verified result: 63 passed, 37 warnings.
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider
+
+
+# 17. Run code-quality and security checks.
+docker exec dep-hallucinator-evidence-20261008 ruff check --no-cache src/dep_hallucinator/package_lists.py tests/test_package_lists.py
+docker exec dep-hallucinator-evidence-20261008 ruff check --no-cache src/dep_hallucinator/parsers.py tests/test_parser_security.py --select I
+docker exec dep-hallucinator-evidence-20261008 black --check src/dep_hallucinator/package_lists.py src/dep_hallucinator/parsers.py tests/test_package_lists.py tests/test_parser_security.py
+docker exec dep-hallucinator-evidence-20261008 bandit -q src/dep_hallucinator/parsers.py
+docker exec -e PYTHONPYCACHEPREFIX=/tmp/dep-pycache dep-hallucinator-evidence-20261008 python -m compileall -q src/dep_hallucinator/package_lists.py src/dep_hallucinator/parsers.py tests/test_package_lists.py tests/test_parser_security.py
+
+
+# 18. Scan Sample Repository 1: three legitimate packages.
+# Verified: 3 LOW out of 3 = 100.00% classroom safe percentage.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/01-safe-python-repo/requirements.txt
+
+
+# 19. Scan Sample Repository 2: one legitimate and two suspicious names.
+# Verified: 1 LOW and 2 CRITICAL = 33.33% classroom safe percentage.
+# Exit code 1 is expected because the sample deliberately contains CRITICAL names.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/02-mixed-risk-python-repo/requirements.txt
+
+
+# 20. Scan Sample Repository 3 using live PyPI.
+# Verified on 8 October 2026: 1 LOW and 1 CRITICAL = 50.00%.
+# Internet access is required. Exit code 1 is expected for the fake package.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/03-live-registry-repo/requirements.txt --rate-limit 2 --max-concurrent 2
+
+
+# 21. Save the mixed scan as JSON.
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/02-mixed-risk-python-repo/requirements.txt --output-format json -o /tmp/dep-scan-result.json
+
+
+# 22. Calculate the classroom safe percentage from the real JSON findings.
+# Formula: LOW findings divided by all findings, multiplied by 100.
+# Expected: Safe percentage: 33.33% (1/3 LOW)
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json; d=json.load(open("/tmp/dep-scan-result.json")); f=d["findings"]; low=sum(x["risk_level"]=="LOW" for x in f); print(f"Safe percentage: {100*low/len(f):.2f}% ({low}/{len(f)} LOW)")'
+
+
+# 23. Stop and delete only the temporary Docker container.
+# This does not delete the Desktop project or Downloads files.
+docker stop dep-hallucinator-evidence-20261008
+docker rm dep-hallucinator-evidence-20261008
+
+
+# 24. Confirm cleanup. Only the empty table header should appear.
+docker ps -a --filter name=dep-hallucinator-evidence-20261008 --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+
+
+EXPECTED FINAL RESULTS
+----------------------
+
+Modification 1: 2 passed
+Modification 2: 1 passed
+Normal Maven regression tests: 2 passed
+Both modifications together: 3 passed
+Complete test suite: 63 passed, 37 warnings
+Safe sample repository: 100.00%
+Mixed sample repository: 33.33%
+Live real/fake sample repository: 50.00% when verified
+
+The percentage is a classroom summary only:
+
+    safe percentage = LOW findings / total findings × 100
+
+It is not a guarantee that a repository contains no vulnerabilities.
+
+
+IF DOCKER SAYS THE CONTAINER NAME ALREADY EXISTS
+------------------------------------------------
+
+Inspect the old container:
+
+docker ps -a --filter name=dep-hallucinator-evidence-20261008
+
+If it is an old disposable test container, remove it and repeat Step 4:
+
+docker rm -f dep-hallucinator-evidence-20261008

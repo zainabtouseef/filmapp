@@ -134,6 +134,9 @@ class _MarketplacePricingPreferencePanelState
 
   Future<void> _edit(MarketplaceListing listing) async {
     var mode = listing.pricingMode;
+    var publicPriceVisible = listing.publicPriceVisible;
+    final talent = const {'talent', 'actor', 'model', 'influencer'}
+        .contains(listing.listingType);
     final amount = TextEditingController(
       text: listing.configuredPriceFromMinor == null
           ? ''
@@ -180,6 +183,20 @@ class _MarketplacePricingPreferencePanelState
                               error = null;
                             }),
                   ),
+                  if (talent) ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Display my price publicly'),
+                      subtitle: const Text(
+                          'Off by default. Buyers can still send private offers.'),
+                      value: publicPriceVisible,
+                      onChanged: _saving
+                          ? null
+                          : (value) =>
+                              setDialogState(() => publicPriceVisible = value),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   CoreTextField(
                     controller: amount,
@@ -236,6 +253,8 @@ class _MarketplacePricingPreferencePanelState
                           pricingMode: mode,
                           priceFromMinor:
                               whole == null || whole <= 0 ? null : whole * 100,
+                          publicPriceVisible:
+                              talent ? publicPriceVisible : null,
                           currency: listing.currency,
                         );
                         if (dialogContext.mounted) {
@@ -305,7 +324,12 @@ class _PricingListingRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${listing.pricingChoiceLabel} · ${listing.showsPrice ? listing.toCandidate().rateRange : 'amount hidden'}',
+                  '${listing.pricingChoiceLabel} · ${listing.publicPriceVisible || !const {
+                        'talent',
+                        'actor',
+                        'model',
+                        'influencer'
+                      }.contains(listing.listingType) ? listing.toCandidate().rateRange : 'amount hidden publicly'}',
                   style: AppTextStyles.caption.copyWith(
                     color: colors.textSecondary,
                   ),

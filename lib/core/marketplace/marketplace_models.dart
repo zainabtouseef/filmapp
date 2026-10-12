@@ -12,6 +12,7 @@ class MarketplaceListing {
   final String currency;
   final String pricingMode;
   final bool showsPrice;
+  final bool publicPriceVisible;
   final bool allowsBargaining;
   final String verificationStatus;
   final String ownerName;
@@ -31,6 +32,7 @@ class MarketplaceListing {
     required this.currency,
     this.pricingMode = 'negotiable',
     this.showsPrice = true,
+    this.publicPriceVisible = false,
     this.allowsBargaining = true,
     required this.verificationStatus,
     required this.ownerName,
@@ -58,6 +60,7 @@ class MarketplaceListing {
       currency: json['currency'] as String? ?? 'PKR',
       pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
       showsPrice: json['shows_price'] as bool? ?? true,
+      publicPriceVisible: json['public_price_visible'] as bool? ?? false,
       allowsBargaining: json['allows_bargaining'] as bool? ?? true,
       verificationStatus: json['verification_status'] as String? ?? 'pending',
       ownerName: owner['display_name'] as String? ?? 'CineConnect member',

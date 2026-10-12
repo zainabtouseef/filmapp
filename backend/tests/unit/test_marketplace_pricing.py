@@ -9,9 +9,17 @@ from sqlalchemy import select
 
 from app.api.app import ROLES
 from app.extensions import db
+from app.models.files import FileAsset
 from app.models.identity import Role, User
 from app.models.kyc import KycSubmission
-from app.models.marketplace import City, Country
+from app.models.marketplace import (
+    City,
+    Country,
+    ListingMedia,
+    MarketplaceListing,
+    PortfolioItem,
+)
+from app.models.operations import EquipmentProviderProfile
 
 
 @pytest.fixture(autouse=True)
@@ -178,6 +186,116 @@ def test_marketplace_actor_search_includes_talent_alias_and_city(
     assert [item["public_id"] for item in response.json["data"]["listings"]] == [
         listing_id
     ]
+
+
+def test_actor_controls_public_price_with_explicit_switch(client: FlaskClient) -> None:
+    actor_headers, _, listing_id = _publish_actor_listing(client)
+    url = f"/api/v1/marketplace/listings/{listing_id}"
+    initial = client.get(url).json["data"]["listing"]
+    assert initial["shows_price"] is False
+    assert initial["price_from_minor"] is None
+
+    enabled = client.patch(
+        f"{url}/pricing",
+        headers=actor_headers,
+        json={"public_price_visible": True},
+    )
+    assert enabled.status_code == 200, enabled.text
+    public = client.get(url).json["data"]["listing"]
+    assert public["shows_price"] is True
+    assert public["price_from_minor"] == 18000000
+
+    disabled = client.patch(
+        f"{url}/pricing",
+        headers=actor_headers,
+        json={"public_price_visible": False},
+    )
+    assert disabled.status_code == 200, disabled.text
+    private = client.get(url).json["data"]["listing"]
+    assert private["shows_price"] is False
+    assert private["price_from_minor"] is None
+
+
+def test_equipment_cover_selection_preserves_existing_listing_media(
+    client: FlaskClient,
+) -> None:
+    headers, user_public_id = _register_role(
+        client, "equipment_provider", name="Camera Rental"
+    )
+    with client.application.app_context():
+        user = db.session.execute(
+            select(User).where(User.public_id == user_public_id)
+        ).scalar_one()
+        profile = EquipmentProviderProfile(user_id=user.id, name="Camera Rental")
+        db.session.add(profile)
+        db.session.flush()
+        files = [
+            FileAsset(
+                owner_user_id=user.id,
+                storage_key=f"cover-test/{uuid.uuid4().hex}.jpg",
+                bucket="local-private",
+                mime_type="image/jpeg",
+                size_bytes=1234,
+                visibility="public",
+                scan_status="clean",
+                processing_status="ready",
+                original_name=f"camera-{index}.jpg",
+            )
+            for index in range(3)
+        ]
+        db.session.add_all(files)
+        db.session.flush()
+        chosen = PortfolioItem(
+            owner_user_id=user.id,
+            profile_type="equipment",
+            profile_id=profile.public_id,
+            title="ARRI camera portrait",
+            category="camera",
+            file_id=files[1].id,
+            status="published",
+            moderation_status="approved",
+        )
+        listing = MarketplaceListing(
+            owner_user_id=user.id,
+            listing_type="equipment",
+            profile_entity_id=profile.public_id,
+            title="Camera Rental",
+            summary="Camera packages for productions.",
+            verification_status="approved",
+            moderation_status="approved",
+            visibility="public",
+        )
+        listing.media.extend(
+            [
+                ListingMedia(file_id=files[0].id, sort_order=1, is_cover=True),
+                ListingMedia(file_id=files[2].id, sort_order=2),
+            ]
+        )
+        db.session.add_all([chosen, listing])
+        db.session.commit()
+        chosen_id = chosen.public_id
+        expected_file_ids = {file.public_id for file in files}
+        chosen_file_id = files[1].public_id
+
+    updated = client.patch(
+        f"/api/v1/portfolio/{chosen_id}",
+        headers=headers,
+        json={"is_cover": True},
+    )
+    assert updated.status_code == 200, updated.text
+    with client.application.app_context():
+        media = (
+            db.session.execute(
+                select(ListingMedia)
+                .join(MarketplaceListing)
+                .where(MarketplaceListing.title == "Camera Rental")
+            )
+            .scalars()
+            .all()
+        )
+        assert {row.file.public_id for row in media} == expected_file_ids
+        assert [row.file.public_id for row in media if row.is_cover] == [chosen_file_id]
+        assert sorted(row.sort_order for row in media) == [1, 2, 3]
 
 
 def test_fixed_pricing_hides_bargaining_and_enforces_listed_amount(

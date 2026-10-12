@@ -49,16 +49,16 @@ const brandSponsorMenuEntries = <BrandSponsorMenuEntry>[
     icon: Icons.dashboard_outlined,
   ),
   (
-    route: BrandSponsorRoutes.projects,
-    screenId: 'BR-08',
-    label: 'Projects',
-    icon: Icons.movie_creation_outlined,
-  ),
-  (
     route: BrandSponsorRoutes.marketplace,
     screenId: 'BR-09',
     label: 'Discover',
     icon: Icons.manage_search_outlined,
+  ),
+  (
+    route: BrandSponsorRoutes.projects,
+    screenId: 'BR-08',
+    label: 'Projects',
+    icon: Icons.movie_creation_outlined,
   ),
   (
     route: BrandSponsorRoutes.shortlists,

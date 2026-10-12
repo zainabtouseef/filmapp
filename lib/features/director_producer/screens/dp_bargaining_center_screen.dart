@@ -124,7 +124,10 @@ class _DPBargainingCenterScreenState extends State<DPBargainingCenterScreen> {
     _future ??= BookingsScope.maybeOf(context)?.negotiations();
     // Populates the projects cache (if not already loaded) so negotiation
     // cards can resolve a real project title instead of a raw project ID.
-    ProjectsScope.maybeOf(context)?.projects();
+    ProjectsScope.maybeOf(context)?.projects().then(
+          (_) {},
+          onError: (Object _) {},
+        );
   }
 
   @override

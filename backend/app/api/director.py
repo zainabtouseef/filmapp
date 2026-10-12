@@ -452,8 +452,9 @@ def _with_listing(
         mode = (listing.pricing_mode or "negotiable").strip().lower()
         if mode not in {"fixed", "negotiable", "on_request"}:
             mode = "negotiable"
-        shows_price = (
-            mode != "on_request" and listing.listing_type not in TALENT_LISTING_TYPES
+        shows_price = mode != "on_request" and (
+            listing.listing_type not in TALENT_LISTING_TYPES
+            or bool(listing.public_price_visible)
         )
         allows_bargaining = mode != "fixed"
         item["pricing_mode"] = mode

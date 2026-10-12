@@ -33,7 +33,7 @@ const insuranceMenuEntries = <InsuranceMenuEntry>[
   (
     route: MarketplaceRoutes.browse,
     screenId: 'MP',
-    label: 'Marketplace',
+    label: 'Discover',
     icon: Icons.storefront_outlined,
   ),
   (

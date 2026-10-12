@@ -311,12 +311,15 @@ def _pricing_payload(
     # Only owner-management responses may include configured commercial terms;
     # booking validation still uses the unchanged stored rate and pricing mode.
     shows_price = mode != "on_request" and (
-        reveal_private_price or listing.listing_type not in TALENT_LISTING_TYPES
+        reveal_private_price
+        or listing.listing_type not in TALENT_LISTING_TYPES
+        or bool(listing.public_price_visible)
     )
     payload: dict[str, Any] = {
         "pricing_mode": mode,
         "shows_price": shows_price,
         "allows_bargaining": mode != "fixed",
+        "public_price_visible": bool(listing.public_price_visible),
         "price_from_minor": listing.price_from_minor if shows_price else None,
         "price_label": (
             _money_label(listing.price_from_minor, listing.currency)
@@ -1185,13 +1188,74 @@ def update_portfolio_item(public_id: str) -> Response:
             raise _field_error("status", "Status must be draft or published.")
         item.status = status
     if "is_cover" in payload:
-        item.is_cover = bool(payload.get("is_cover"))
+        if not isinstance(payload["is_cover"], bool):
+            raise _field_error("is_cover", "Choose on or off.")
+        item.is_cover = payload["is_cover"]
     if "sort_order" in payload:
         item.sort_order = _optional_int(payload.get("sort_order"), "sort_order") or 100
     if "file_id" in payload:
         item.file_id = _owned_ready_file(
             str(payload.get("file_id", "")).strip(), user.id, "file_id"
         ).id
+    if item.profile_type == "equipment" and payload.get("is_cover") is True:
+        selected_file = db.session.get(FileAsset, item.file_id)
+        if selected_file is None or not selected_file.mime_type.startswith("image/"):
+            raise _field_error("is_cover", "Choose a photo for the marketplace cover.")
+        if item.status != "published" or item.moderation_status != "approved":
+            raise _field_error("is_cover", "Publish an approved photo first.")
+        photos = (
+            db.session.execute(
+                select(PortfolioItem)
+                .where(
+                    PortfolioItem.owner_user_id == user.id,
+                    PortfolioItem.profile_type == "equipment",
+                    PortfolioItem.profile_id == item.profile_id,
+                    PortfolioItem.status == "published",
+                    PortfolioItem.moderation_status == "approved",
+                )
+                .order_by(PortfolioItem.sort_order.asc())
+            )
+            .scalars()
+            .all()
+        )
+        photos = [
+            photo
+            for photo in photos
+            if photo.file is not None and photo.file.mime_type.startswith("image/")
+        ]
+        for photo in photos:
+            photo.is_cover = photo.id == item.id
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "equipment",
+                MarketplaceListing.profile_entity_id == item.profile_id,
+            )
+        ).scalar_one_or_none()
+        if listing is not None:
+            existing = sorted(listing.media, key=lambda media: media.sort_order)
+            selected = next(
+                (media for media in existing if media.file_id == item.file_id), None
+            )
+            if selected is None:
+                if len(existing) >= 12:
+                    raise _field_error(
+                        "is_cover",
+                        "Remove a listing photo before choosing a new cover.",
+                    )
+                selected = ListingMedia(
+                    file_id=item.file_id,
+                    caption=item.title,
+                    sort_order=0,
+                    is_cover=True,
+                )
+                listing.media.append(selected)
+            for index, media in enumerate(
+                [selected, *[media for media in existing if media is not selected]],
+                start=1,
+            ):
+                media.sort_order = index
+                media.is_cover = media is selected
     db.session.commit()
     return jsonify(success({"item": _portfolio_payload(item)}))
 
@@ -1634,6 +1698,21 @@ def publish_listing() -> ResponseReturnValue:
         listing.published_at = listing.published_at or utc_now()
         db.session.flush()
         _sync_listing_media(listing, user.id, payload)
+        if not listing.media:
+            cover = db.session.execute(
+                select(PortfolioItem).where(
+                    PortfolioItem.owner_user_id == user.id,
+                    PortfolioItem.profile_type == "equipment",
+                    PortfolioItem.profile_id == profile.public_id,
+                    PortfolioItem.is_cover.is_(True),
+                    PortfolioItem.status == "published",
+                    PortfolioItem.moderation_status == "approved",
+                )
+            ).scalar_one_or_none()
+            if cover is not None:
+                _sync_listing_media(
+                    listing, user.id, {"portfolio_item_ids": [cover.public_id]}
+                )
         db.session.commit()
         return jsonify(success({"listing": _listing_payload(listing)})), 201
     if listing_type == "crew":
@@ -1867,6 +1946,11 @@ def update_marketplace_listing_pricing(public_id: str) -> Response:
         )
     payload = _json_body()
     _apply_pricing_mode(listing, payload)
+    if "public_price_visible" in payload:
+        visible = payload["public_price_visible"]
+        if not isinstance(visible, bool):
+            raise _field_error("public_price_visible", "Choose on or off.")
+        listing.public_price_visible = visible
     if "price_from_minor" in payload:
         amount = _optional_int(payload.get("price_from_minor"), "price_from_minor")
         if amount is not None and amount <= 0:

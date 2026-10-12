@@ -12,6 +12,7 @@ class DPCandidateCard extends StatelessWidget {
   final VoidCallback? onRequest;
   final Future<bool> Function()? onShortlist;
   final bool featured;
+  final bool grid;
 
   /// Must match the id passed as the profile route's `candidateId` argument
   /// so the thumbnail morphs into that screen's hero image.
@@ -24,6 +25,7 @@ class DPCandidateCard extends StatelessWidget {
     this.onRequest,
     this.onShortlist,
     this.featured = false,
+    this.grid = false,
     this.heroTag,
   });
 
@@ -50,6 +52,7 @@ class DPCandidateCard extends StatelessWidget {
       trustScore: candidate.trustMetrics?.score,
       busy: false,
       featured: featured,
+      grid: grid,
       onProfile: onProfile,
       onRequest: onRequest,
       onShortlist: onShortlist,

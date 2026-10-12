@@ -5,6 +5,95 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('grid carousel keeps actions visible with large mobile text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.light,
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: CineMarketplaceResults(
+              grid: true,
+              cards: [
+                CineMarketplaceCard(
+                  grid: true,
+                  title: 'ARRI Camera Rentals',
+                  kind: 'equipment',
+                  category: 'Media & Equipment',
+                  subtitle: 'Cinema cameras',
+                  summary: 'Camera and lighting equipment',
+                  city: 'Lahore',
+                  rateLabel: 'Open to offers',
+                  verificationStatus: 'approved',
+                  imageUrl: null,
+                  tags: const [],
+                  available: true,
+                  rating: 4.8,
+                  trustScore: 90,
+                  busy: false,
+                  featured: true,
+                  onProfile: () {},
+                  onRequest: () {},
+                  onShortlist: () async => true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('View profile'), findsOneWidget);
+    expect(find.text('Make offer'), findsOneWidget);
+  });
+
+  testWidgets('image-led grid card keeps booking actions reachable',
+      (tester) async {
+    var profileCalls = 0;
+    var offerCalls = 0;
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.light.copyWith(splashFactory: NoSplash.splashFactory),
+      home: Scaffold(
+        body: SizedBox(
+          width: 306,
+          child: CineMarketplaceCard(
+            grid: true,
+            title: 'ARRI Camera Rentals',
+            kind: 'equipment',
+            category: 'Media & Equipment',
+            subtitle: 'Cinema cameras',
+            summary: 'Camera and lighting equipment',
+            city: 'Lahore',
+            rateLabel: 'Open to offers',
+            verificationStatus: 'approved',
+            imageUrl: null,
+            tags: const [],
+            available: true,
+            rating: 4.8,
+            trustScore: 90,
+            busy: false,
+            featured: true,
+            onProfile: () => profileCalls++,
+            onRequest: () => offerCalls++,
+          ),
+        ),
+      ),
+    ));
+    expect(tester.takeException(), isNull);
+    expect(find.text('Camera & Lighting'), findsOneWidget);
+    await tester.tap(find.text('View profile'));
+    await tester.tap(find.text('Make offer'));
+    expect(profileCalls, 1);
+    expect(offerCalls, 1);
+  });
+
   testWidgets('card surface follows the active application theme',
       (tester) async {
     Widget build(ThemeData theme) => MaterialApp(

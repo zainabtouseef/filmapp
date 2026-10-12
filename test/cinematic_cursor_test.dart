@@ -7,7 +7,7 @@ import 'package:cineconnect/core/theme/app_durations.dart';
 import 'package:cineconnect/shared/widgets/cinematic_cursor.dart';
 
 void main() {
-  testWidgets('mouse movement shows the cinematic trailing ring',
+  testWidgets('mouse movement leaves the native pointer visible',
       (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -20,14 +20,16 @@ void main() {
     await mouse.moveTo(const Offset(180, 130));
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsOneWidget);
+    expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsNothing);
+    expect(tester.widget<MouseRegion>(find.byType(MouseRegion).first).cursor,
+        SystemMouseCursors.basic);
 
     await mouse.removePointer();
     await tester.pump();
     expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsNothing);
   });
 
-  testWidgets('rapid pointer updates reach the latest position next frame',
+  testWidgets('rapid mouse updates do not start a painted cursor animation',
       (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -42,12 +44,7 @@ void main() {
     }
     await tester.pump(const Duration(milliseconds: 16));
 
-    final ring = find.byKey(const ValueKey('cinematic-cursor-ring'));
-    final positioned = tester.widget<Positioned>(
-      find.ancestor(of: ring, matching: find.byType(Positioned)).first,
-    );
-    expect(positioned.left, 225);
-    expect(positioned.top, 165);
+    expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsNothing);
 
     await mouse.removePointer();
   });
@@ -100,9 +97,9 @@ void main() {
       ),
     );
 
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: const Offset(120, 90));
-    await mouse.moveTo(const Offset(180, 130));
+    final touch = await tester.createGesture(kind: PointerDeviceKind.touch);
+    await touch.down(const Offset(120, 90));
+    await touch.moveTo(const Offset(180, 130));
     await tester.pump();
 
     expect(find.byKey(const ValueKey('cinematic-cursor-ring')), findsOneWidget);
@@ -110,6 +107,6 @@ void main() {
       find.byKey(const ValueKey('cinematic-cursor-trail-1')),
       findsNothing,
     );
-    await mouse.removePointer();
+    await touch.up();
   });
 }

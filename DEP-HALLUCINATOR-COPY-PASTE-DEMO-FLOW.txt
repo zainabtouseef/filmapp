@@ -1,0 +1,786 @@
+DEP-HALLUCINATOR — COMPLETE COPY-PASTE DEMONSTRATION FLOW
+=========================================================
+
+Prepared: 8 October 2026
+
+PURPOSE
+-------
+
+This is a complete presentation flow from starting Docker to final cleanup.
+Copy and run ONE command at a time. Read the explanation under each command while
+presenting. Wait for the command to finish before continuing.
+
+The exact folders used are:
+
+Project:
+~/Desktop/dep-hallucinator
+
+Sample repositories:
+~/Downloads/Dep-Hallucinator-Test-Repositories
+
+Sample repository names:
+1. 01-safe-python-repo
+2. 02-mixed-risk-python-repo
+3. 03-live-registry-repo
+
+Docker container name:
+dep-hallucinator-evidence-20261008
+
+IMPORTANT RESULT RULE:
+Exit code 0 means normal success. A repository scan returns exit code 1 when it finds a
+CRITICAL dependency. That is expected for the mixed and deliberately fake-name samples.
+
+
+============================================================
+PHASE 1 — CHECK FILES, START DOCKER, AND INSTALL THE PROJECT
+============================================================
+
+
+STEP 1 — Check the modified project
+-----------------------------------
+
+COPY AND RUN:
+ls -la ~/Desktop/dep-hallucinator
+
+EXPLAIN:
+This confirms that the modified project is on the Desktop. I expect to see pyproject.toml,
+src, tests, README.md, and the other project files. This is a read-only check and changes
+nothing.
+
+EXPECTED:
+A directory listing containing src and tests.
+
+
+STEP 2 — Check the exact sample repositories
+--------------------------------------------
+
+COPY AND RUN:
+find ~/Downloads/Dep-Hallucinator-Test-Repositories -maxdepth 2 -type f -print
+
+EXPLAIN:
+These are the three small repositories supplied for demonstrating different scanner
+results. They contain dependency files only. The scanner reads the names; it does not
+install these packages.
+
+EXPECTED:
+01-safe-python-repo/requirements.txt
+02-mixed-risk-python-repo/requirements.txt
+03-live-registry-repo/requirements.txt
+README.txt
+
+
+STEP 3 — Start Docker Desktop
+-----------------------------
+
+COPY AND RUN:
+open -a Docker
+
+EXPLAIN:
+Docker gives us a clean Python 3.11 environment. This avoids depending on packages
+installed directly on the Mac and makes the demonstration repeatable.
+
+EXPECTED:
+Docker Desktop opens. Wait until its engine is running.
+
+
+STEP 4 — Enter the project directory
+------------------------------------
+
+COPY AND RUN:
+cd ~/Desktop/dep-hallucinator
+
+EXPLAIN:
+All later Docker and project commands are run from the modified repository.
+
+EXPECTED:
+No output. The Terminal prompt should end with dep-hallucinator.
+
+
+STEP 5 — Confirm the current location
+-------------------------------------
+
+COPY AND RUN:
+pwd
+
+EXPLAIN:
+This prevents accidentally mounting the wrong directory into Docker.
+
+EXPECTED:
+/Users/zainabtouseef/Desktop/dep-hallucinator
+
+
+STEP 6 — Confirm Docker is ready
+--------------------------------
+
+COPY AND RUN:
+docker info --format 'Docker {{.ServerVersion}} | {{.OperatingSystem}} | {{.Architecture}}'
+
+EXPLAIN:
+This contacts the Docker engine and displays its version and architecture. The version
+number can be different, but Docker Desktop and an architecture should be displayed.
+
+EXPECTED EXAMPLE:
+Docker 29.x.x | Docker Desktop | aarch64
+
+
+STEP 7 — Start the isolated Python container
+--------------------------------------------
+
+COPY AND RUN:
+docker run -dit --name dep-hallucinator-evidence-20261008 --mount type=bind,source="$PWD",target=/source,readonly --mount type=bind,source="$HOME/Downloads/Dep-Hallucinator-Test-Repositories",target=/samples,readonly -w /work python:3.11-slim tail -f /dev/null
+
+EXPLAIN:
+This creates a temporary Python 3.11 container. The project is mounted read-only at
+/source and the three sample repositories are mounted read-only at /samples. The writable
+/work directory is used for installation and testing. Therefore the demonstration cannot
+overwrite the original Desktop project or the Downloads samples.
+
+EXPECTED:
+A long Docker container ID.
+
+
+STEP 8 — Show the running container
+-----------------------------------
+
+COPY AND RUN:
+docker ps --filter name=dep-hallucinator-evidence-20261008 --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+
+EXPLAIN:
+This proves the isolated test environment is active.
+
+EXPECTED:
+dep-hallucinator-evidence-20261008 | python:3.11-slim | Up ...
+
+
+STEP 9 — Install the project and all testing tools
+--------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 sh -lc 'cp -a /source/. /work/ && python -m pip install --disable-pip-version-check -e ".[dev,test]"'
+
+EXPLAIN:
+The command copies the read-only source into /work and installs it in editable mode.
+It installs production dependencies, including defusedxml for Modification 2, plus
+pytest, Ruff, Black, Bandit, and the other development tools.
+
+EXPECTED NEAR THE END:
+Successfully built dep-hallucinator
+Successfully installed ... defusedxml-0.7.1 ... dep-hallucinator-1.0.2 ...
+
+
+STEP 10 — Check the installed environment
+-----------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python --version
+
+EXPLAIN:
+The project is being demonstrated with the expected Python major and minor version.
+
+EXPECTED:
+Python 3.11.x
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -m pip show dep-hallucinator
+
+EXPLAIN:
+This displays installed metadata and confirms the editable source is /work.
+
+EXPECTED IMPORTANT VALUES:
+Name: dep-hallucinator
+Version: 1.0.2
+Editable project location: /work
+
+
+STEP 11 — Start the command-line application
+--------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator --help
+
+EXPLAIN:
+This proves the installed application starts. It displays commands for scanning,
+allowlists, denylists, caching, configuration, forensic history, and other features.
+
+EXPECTED:
+Usage: dep-hallucinator [OPTIONS] COMMAND [ARGS]...
+
+
+=================================================
+PHASE 2 — DEMONSTRATE MODIFICATION 1 IN REAL USE
+=================================================
+
+MODIFICATION 1 SUMMARY TO EXPLAIN:
+Previously, an allowlist or denylist entry existed only in the current Python process.
+When the command ended, the next process rebuilt the defaults and lost the user's entry.
+Modification 1 writes entries to JSON using a temporary file and atomic replace, then
+reloads the JSON whenever PackageListManager starts.
+
+
+STEP 12 — Show the Modification 1 marker
+----------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 grep -n '^# modification1$' src/dep_hallucinator/package_lists.py
+
+EXPLAIN:
+This is the single required source marker showing where the first student's modification
+begins.
+
+EXPECTED:
+5:# modification1
+
+
+STEP 13 — Run Modification 1 automated tests
+---------------------------------------------
+
+COPY AND RUN:
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -v -p no:cacheprovider tests/test_package_lists.py
+
+EXPLAIN:
+The first test adds, reloads, and removes an allowlist entry using separate manager
+instances. The second does the same for a wildcard denylist entry and also proves that
+the wildcard still matches after reloading from disk.
+
+EXPECTED:
+test_allowlist_persists_across_manager_instances PASSED
+test_denylist_persists_across_manager_instances PASSED
+2 passed
+
+
+STEP 14 — Add a trusted package manually
+----------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist add student-safe-package --reason "Approved classroom package"
+
+EXPLAIN:
+The command adds a package to the trusted allowlist and immediately saves the entry to
+/root/.config/dep-hallucinator/allowlist.json inside the container.
+
+EXPECTED:
+A success message showing student-safe-package was added.
+
+
+STEP 15 — Start another process and reload the saved entry
+----------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist list
+
+EXPLAIN:
+This is a new CLI process. The old process has ended, but student-safe-package is still
+shown because it was loaded from JSON. This demonstrates the central power of
+Modification 1.
+
+EXPECTED:
+student-safe-package and the reason Approved classroom package.
+
+
+STEP 16 — Display the real JSON written by Modification 1
+---------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json,pathlib; p=pathlib.Path.home()/".config/dep-hallucinator/allowlist.json"; print("SAVED FILE:",p); print(json.dumps(json.loads(p.read_text()),indent=2))'
+
+EXPLAIN:
+The saved data contains the name, exact match type, supported ecosystems, reason, and
+timestamp. This is real disk persistence, not only an on-screen message.
+
+EXPECTED IMPORTANT TEXT:
+student-safe-package
+exact
+Approved classroom package
+
+
+STEP 17 — Demonstrate wildcard denylist persistence
+----------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist add 'student-risk-*' --pattern-type pattern --reason "Blocked classroom family"
+
+EXPLAIN:
+This creates a wildcard rule. Any matching package family can be blocked with one saved
+entry. Quotes prevent the shell from expanding the asterisk.
+
+EXPECTED:
+A success message for student-risk-*.
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'from src.dep_hallucinator.package_lists import PackageListManager; found,entry=PackageListManager().is_denylisted("student-risk-library","npm"); print("PATTERN MATCHES:",found); print("SAVED RULE:",entry.name if entry else None)'
+
+EXPLAIN:
+A brand-new PackageListManager reloads the saved wildcard and checks a different package
+name against it.
+
+EXPECTED:
+PATTERN MATCHES: True
+SAVED RULE: student-risk-*
+
+
+STEP 18 — Prove persistence across a Docker restart
+----------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist add restart-safe-package --reason "Container restart proof"
+
+COPY AND RUN:
+docker stop dep-hallucinator-evidence-20261008
+
+EXPLAIN:
+Stopping pauses the container but keeps its filesystem.
+
+COPY AND RUN:
+docker start dep-hallucinator-evidence-20261008
+
+EXPLAIN:
+The same container is started again.
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist list
+
+EXPLAIN:
+The entry remains after a real container stop/start cycle. This proves Modification 1
+works beyond a single command and beyond a continuously running container process.
+
+EXPECTED:
+restart-safe-package is displayed.
+
+
+STEP 19 — Clean the Modification 1 demonstration entries
+---------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist remove student-safe-package
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist remove restart-safe-package
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist remove 'student-risk-*'
+
+EXPLAIN:
+These commands remove only the three entries added during the demonstration and save the
+clean lists back to JSON.
+
+EXPECTED:
+A success message after each removal.
+
+
+=================================================
+PHASE 3 — DEMONSTRATE MODIFICATION 2 IN REAL USE
+=================================================
+
+MODIFICATION 2 SUMMARY TO EXPLAIN:
+The scanner accepts Maven pom.xml files from users, so XML must be treated as untrusted.
+A malicious XML external entity can try to expand local file contents. This is called an
+XXE attack. Modification 2 uses defusedxml to reject dangerous XML features while keeping
+normal Maven dependency parsing unchanged.
+
+
+STEP 20 — Show the Modification 2 marker and dependency
+-------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 grep -n '^# modification2$' src/dep_hallucinator/parsers.py
+
+EXPECTED:
+8:# modification2
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 grep -n 'defusedxml' src/dep_hallucinator/parsers.py pyproject.toml
+
+EXPLAIN:
+The output shows the security-focused ElementTree replacement, its exception type, and
+the production dependency in pyproject.toml.
+
+EXPECTED IMPORTANT TEXT:
+from defusedxml import ElementTree as ET
+from defusedxml.common import DefusedXmlException
+defusedxml>=0.7.1
+
+
+STEP 21 — Run the focused XXE security test
+-------------------------------------------
+
+COPY AND RUN:
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -v -p no:cacheprovider tests/test_parser_security.py
+
+EXPLAIN:
+The test creates a temporary pom.xml containing a deliberately dangerous external entity
+that points to file:///etc/passwd. It expects the parser to raise a controlled ValueError
+containing Unsafe XML content. The test never installs anything and does not print the
+file; it only proves that expansion is blocked.
+
+EXPECTED:
+test_pom_xml_rejects_external_entity PASSED
+1 passed
+
+
+STEP 22 — Create a malicious XML demonstration file
+----------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'from pathlib import Path; p=Path("/work/security-demo/pom.xml"); p.parent.mkdir(exist_ok=True); p.write_text("<?xml version=\"1.0\"?>\n<!DOCTYPE project [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>\n<project><dependencies><dependency><groupId>demo</groupId><artifactId>&xxe;</artifactId><version>1.0</version></dependency></dependencies></project>\n",encoding="utf-8"); print("CREATED:",p)'
+
+EXPLAIN:
+This writes a harmless test file inside the disposable container. The suspicious entity
+is placed where a Maven artifactId would normally appear.
+
+EXPECTED:
+CREATED: /work/security-demo/pom.xml
+
+
+STEP 23 — Parse the malicious XML and show that it is blocked
+-------------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'from src.dep_hallucinator.parsers import parse_pom_xml; exec("try:\n    parse_pom_xml(\"/work/security-demo/pom.xml\")\nexcept ValueError as error:\n    print(\"SECURITY BLOCKED:\",error)")'
+
+EXPLAIN:
+The real project parser receives the malicious pom.xml. defusedxml detects the forbidden
+entity before dependency extraction and the project converts it into a clear ValueError.
+
+EXPECTED IMPORTANT RESULT:
+SECURITY BLOCKED: Unsafe XML content: EntitiesForbidden(...)
+
+RESULT MEANING:
+The entity was rejected. Local file contents were not expanded into the dependency name.
+
+
+STEP 24 — Create a normal Maven pom.xml
+---------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'from pathlib import Path; p=Path("/work/normal-maven/pom.xml"); p.parent.mkdir(exist_ok=True); p.write_text("<?xml version=\"1.0\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\"><dependencies><dependency><groupId>org.springframework</groupId><artifactId>spring-core</artifactId><version>5.3.21</version></dependency></dependencies></project>\n",encoding="utf-8"); print("CREATED:",p)'
+
+EXPLAIN:
+Security improvements must reject dangerous XML without breaking legitimate Maven files.
+This creates a small valid pom.xml inside the container.
+
+EXPECTED:
+CREATED: /work/normal-maven/pom.xml
+
+
+STEP 25 — Parse the normal Maven file successfully
+--------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'from src.dep_hallucinator.parsers import parse_pom_xml; print("NORMAL DEPENDENCIES:",parse_pom_xml("/work/normal-maven/pom.xml"))'
+
+EXPLAIN:
+The same secured parser extracts normal Maven groupId, artifactId, and version fields.
+
+EXPECTED IMPORTANT RESULT:
+NORMAL DEPENDENCIES: [{'name': 'org.springframework:spring-core', 'version': '5.3.21', ...}]
+
+
+STEP 26 — Run existing normal Maven regression tests
+----------------------------------------------------
+
+COPY AND RUN:
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -v -p no:cacheprovider tests/test_core.py::TestDependencyParsing::test_parse_additional_file_formats tests/test_core.py::TestDependencyParsing::test_multi_language_file_support
+
+EXPLAIN:
+These are existing project tests containing ordinary Maven files. Passing proves that
+Modification 2 preserves valid behavior as well as blocking malicious XML.
+
+EXPECTED:
+Both test names show PASSED.
+2 passed
+
+
+==============================================
+PHASE 4 — TEST BOTH MODIFICATIONS AND ALL CODE
+==============================================
+
+
+STEP 27 — Run both new modification test files together
+-------------------------------------------------------
+
+COPY AND RUN:
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -v -p no:cacheprovider tests/test_package_lists.py tests/test_parser_security.py
+
+EXPLAIN:
+This runs the two persistence tests and the XML security test in one command.
+
+EXPECTED:
+3 passed
+
+
+STEP 28 — Run the complete project suite
+----------------------------------------
+
+COPY AND RUN:
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider
+
+EXPLAIN:
+This tests the entire original project plus both modifications. It is the main regression
+proof that the contribution did not break other functionality.
+
+VERIFIED RESULT:
+63 passed, 37 warnings
+
+The warnings are pre-existing asynchronous mock warnings, not failed tests.
+
+
+STEP 29 — Run formatting, lint, security, and syntax checks
+-----------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 ruff check --no-cache src/dep_hallucinator/package_lists.py tests/test_package_lists.py
+
+EXPECTED:
+All checks passed!
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 ruff check --no-cache src/dep_hallucinator/parsers.py tests/test_parser_security.py --select I
+
+EXPECTED:
+All checks passed!
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 black --check src/dep_hallucinator/package_lists.py src/dep_hallucinator/parsers.py tests/test_package_lists.py tests/test_parser_security.py
+
+EXPECTED:
+4 files would be left unchanged.
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 bandit -q src/dep_hallucinator/parsers.py
+
+EXPECTED:
+No output. With -q, silence and exit code 0 mean the check passed.
+
+COPY AND RUN:
+docker exec -e PYTHONPYCACHEPREFIX=/tmp/dep-pycache dep-hallucinator-evidence-20261008 python -m compileall -q src/dep_hallucinator/package_lists.py src/dep_hallucinator/parsers.py tests/test_package_lists.py tests/test_parser_security.py
+
+EXPECTED:
+No output. This means all four changed Python files compile successfully.
+
+
+===================================================
+PHASE 5 — SHOW THE SCANNER'S POWER ON THREE REPOS
+===================================================
+
+PERCENTAGE EXPLANATION TO PRESENT:
+Dep-Hallucinator provides a risk level for each dependency, not one official repository
+safety percentage. For an easy classroom comparison, this demonstration uses:
+
+safe percentage = LOW findings / total findings x 100
+
+Only LOW is counted as safe. MEDIUM, HIGH, CRITICAL, and ERROR all require review.
+This percentage is a summary, not a guarantee that a project has no security problems.
+
+
+STEP 30 — Show and scan 01-safe-python-repo
+-------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 cat /samples/01-safe-python-repo/requirements.txt
+
+EXPLAIN:
+This repository contains requests, numpy, and pandas: three real, well-known packages.
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/01-safe-python-repo/requirements.txt
+
+EXPLAIN:
+The scanner checks the three names against PyPI and applies its heuristics.
+
+VERIFIED RESULT ON 8 OCTOBER 2026:
+requests = LOW
+numpy = LOW
+pandas = LOW
+3 LOW / 3 total = 100.00% classroom safe percentage
+
+COPY AND RUN IMMEDIATELY AFTER THE SCAN:
+echo $?
+
+EXPECTED:
+0, because the scan found no CRITICAL dependency.
+
+
+STEP 31 — Show and scan 02-mixed-risk-python-repo
+-------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 cat /samples/02-mixed-risk-python-repo/requirements.txt
+
+EXPLAIN:
+This repository contains requests plus two deliberately suspicious classroom names:
+ai-student-helper and gpt-dependency-tool. The suspicious names match the project's
+built-in ai-* and gpt-* denylist patterns.
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/02-mixed-risk-python-repo/requirements.txt
+
+VERIFIED RESULT:
+requests = LOW
+ai-student-helper = CRITICAL
+gpt-dependency-tool = CRITICAL
+1 LOW / 3 total = 33.33% classroom safe percentage
+
+COPY AND RUN IMMEDIATELY AFTER THE SCAN:
+echo $?
+
+EXPECTED:
+1. This is intentional. The scanner correctly detected CRITICAL demonstration names.
+
+
+STEP 32 — Show and scan 03-live-registry-repo
+---------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 cat /samples/03-live-registry-repo/requirements.txt
+
+EXPLAIN:
+This repository contains requests and a deliberately nonexistent package name:
+student-demo-package-that-does-not-exist-20261008. Unlike simple pattern blocking, this
+demonstrates a live PyPI existence check.
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/03-live-registry-repo/requirements.txt --rate-limit 2 --max-concurrent 2
+
+EXPLAIN:
+The rate is limited to two requests per second and two concurrent checks. Internet access
+is required because the scanner contacts PyPI.
+
+VERIFIED RESULT ON 8 OCTOBER 2026:
+requests = LOW
+student-demo-package-that-does-not-exist-20261008 = CRITICAL
+1 LOW / 2 total = 50.00% classroom safe percentage
+
+COPY AND RUN IMMEDIATELY AFTER THE SCAN:
+echo $?
+
+EXPECTED:
+1, because the fake package is a deliberate CRITICAL finding.
+
+
+STEP 33 — Save structured JSON for the mixed repository
+-------------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/02-mixed-risk-python-repo/requirements.txt --output-format json -o /tmp/dep-scan-result.json
+
+EXPLAIN:
+The scanner saves the package names, risk levels, reasons, recommendations, and summary
+counts in a machine-readable JSON report.
+
+EXPECTED:
+Results saved to /tmp/dep-scan-result.json
+
+
+STEP 34 — Display the JSON report
+---------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -m json.tool /tmp/dep-scan-result.json
+
+EXPLAIN:
+The structured summary should contain critical: 2 and low: 1. Each finding below the
+summary explains why it received that risk level.
+
+
+STEP 35 — Calculate the classroom safe percentage
+--------------------------------------------------
+
+COPY AND RUN:
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json; d=json.load(open("/tmp/dep-scan-result.json")); f=d["findings"]; low=sum(x["risk_level"]=="LOW" for x in f); print(f"SAFE PERCENTAGE: {100*low/len(f):.2f}% ({low}/{len(f)} LOW)")'
+
+EXPLAIN:
+This loads the real JSON result, counts LOW findings, divides by the total, multiplies by
+100, and prints two decimal places.
+
+EXPECTED:
+SAFE PERCENTAGE: 33.33% (1/3 LOW)
+
+
+===================================
+PHASE 6 — FINAL RESULTS AND CLEANUP
+===================================
+
+
+STEP 36 — State the verified results
+------------------------------------
+
+EXPLAIN:
+Modification 1 persistence tests: 2 passed.
+Modification 2 malicious XML rejection: 1 passed.
+Normal Maven regression tests: 2 passed.
+Both modification files together: 3 passed.
+Complete project: 63 passed, 37 pre-existing warnings.
+Safe sample: 100.00% by the classroom formula.
+Mixed sample: 33.33%.
+Real and nonexistent-name sample: 50.00% when verified.
+
+
+STEP 37 — Stop the disposable container
+---------------------------------------
+
+COPY AND RUN:
+docker stop dep-hallucinator-evidence-20261008
+
+EXPLAIN:
+This stops only the temporary evidence container.
+
+EXPECTED:
+dep-hallucinator-evidence-20261008
+
+
+STEP 38 — Remove the disposable container
+-----------------------------------------
+
+COPY AND RUN:
+docker rm dep-hallucinator-evidence-20261008
+
+EXPLAIN:
+This removes the container and its temporary /work files. It does not remove the Desktop
+project, Downloads samples, ZIP files, PDF, or TXT guides.
+
+EXPECTED:
+dep-hallucinator-evidence-20261008
+
+
+STEP 39 — Confirm cleanup
+-------------------------
+
+COPY AND RUN:
+docker ps -a --filter name=dep-hallucinator-evidence-20261008 --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+
+EXPLAIN:
+The disposable environment is gone and the computer is clean after the demonstration.
+
+EXPECTED:
+Only the empty table header; no matching container remains.
+
+
+TROUBLESHOOTING BEFORE STARTING
+===============================
+
+If Step 7 says the container name already exists, inspect it:
+
+docker ps -a --filter name=dep-hallucinator-evidence-20261008
+
+If it is the old disposable demonstration container, remove it:
+
+docker rm -f dep-hallucinator-evidence-20261008
+
+Then repeat Step 7.
+
+If Docker is not responding:
+
+open -a Docker
+
+Wait until Docker Desktop is ready, then repeat Step 6.
+
+If /samples does not exist inside Docker, check the host folder:
+
+ls -la ~/Downloads/Dep-Hallucinator-Test-Repositories
+
+If it is missing, extract:
+
+~/Downloads/Dep-Hallucinator-Test-Repositories.zip
+
+If a registry scan reports ERROR, check internet access and retry. ERROR means the
+registry could not be checked; it must not be counted as safe.

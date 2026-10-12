@@ -384,6 +384,7 @@ class AuthRepository {
     required String listingId,
     required String pricingMode,
     int? priceFromMinor,
+    bool? publicPriceVisible,
     String currency = 'PKR',
   }) async {
     final response = await _client.patch(
@@ -391,6 +392,8 @@ class AuthRepository {
       body: {
         'pricing_mode': pricingMode,
         'price_from_minor': priceFromMinor,
+        if (publicPriceVisible != null)
+          'public_price_visible': publicPriceVisible,
         'currency': currency,
       },
     );

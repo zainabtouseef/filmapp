@@ -118,8 +118,7 @@ class _CinematicCursorState extends State<CinematicCursor>
   }
 
   void _press(PointerEvent event) {
-    if (event.kind != PointerDeviceKind.mouse &&
-        event.kind != PointerDeviceKind.touch &&
+    if (event.kind != PointerDeviceKind.touch &&
         event.kind != PointerDeviceKind.stylus) {
       return;
     }
@@ -139,17 +138,7 @@ class _CinematicCursorState extends State<CinematicCursor>
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final colors = context.appColors;
     return MouseRegion(
-      cursor: SystemMouseCursors.none,
-      onEnter: (event) {
-        if (event.kind == PointerDeviceKind.mouse) {
-          _moveTo(event.localPosition, event.kind);
-        }
-      },
-      onHover: (event) {
-        if (event.kind == PointerDeviceKind.mouse) {
-          _moveTo(event.localPosition, event.kind);
-        }
-      },
+      cursor: SystemMouseCursors.basic,
       onExit: (_) {
         _stopTicker();
         if (_visible && _kind == PointerDeviceKind.mouse) {
@@ -163,7 +152,8 @@ class _CinematicCursorState extends State<CinematicCursor>
         behavior: HitTestBehavior.translucent,
         onPointerDown: _press,
         onPointerMove: (event) {
-          if (event.kind != PointerDeviceKind.mouse) {
+          if (event.kind == PointerDeviceKind.touch ||
+              event.kind == PointerDeviceKind.stylus) {
             _moveTo(event.localPosition, event.kind);
           }
         },

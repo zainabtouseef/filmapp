@@ -402,12 +402,16 @@ class _VerifiedPill extends StatelessWidget {
         children: [
           Icon(Icons.check_rounded, size: 11, color: colors.goldDark),
           const SizedBox(width: 4),
-          Text(
-            label.toUpperCase(),
-            style: AppTextStyles.micro.copyWith(
-              color: colors.goldDark,
-              fontSize: 9.5,
-              letterSpacing: 0.6,
+          Flexible(
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.micro.copyWith(
+                color: colors.goldDark,
+                fontSize: 9.5,
+                letterSpacing: 0.6,
+              ),
             ),
           ),
         ],

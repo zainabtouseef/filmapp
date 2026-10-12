@@ -126,6 +126,27 @@ class _ME11ProviderPortfolioScreenState
               onRemove: (item, index) =>
                   _removeSlot(_SlotKind.image, item, index),
             ),
+            if (images.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Marketplace cover photo',
+                  style: AppTextStyles.cardLabel
+                      .copyWith(color: context.appColors.textPrimary)),
+              const SizedBox(height: 4),
+              Text(
+                  'Choose the picture buyers see first for your camera rental listing.',
+                  style: AppTextStyles.smallMeta
+                      .copyWith(color: context.appColors.textSecondary)),
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final item in images)
+                  ChoiceChip(
+                    label: Text(item.title),
+                    selected: item.isCover,
+                    onSelected:
+                        _busySlotKey != null ? null : (_) => _chooseCover(item),
+                  ),
+              ]),
+            ],
             const SizedBox(height: 18),
             _SlotSectionLabel(label: 'Videos', count: videos.length),
             const SizedBox(height: 8),
@@ -143,6 +164,23 @@ class _ME11ProviderPortfolioScreenState
         );
       },
     );
+  }
+
+  Future<void> _chooseCover(MarketplacePortfolioItem item) async {
+    final controller = AuthScope.maybeOf(context);
+    if (controller == null) return;
+    setState(() => _busySlotKey = 'cover');
+    try {
+      await controller.updatePortfolioItem(
+          publicId: item.publicId, isCover: true);
+      if (!mounted) return;
+      actorSnack(context, 'Marketplace cover photo updated');
+      _reload();
+    } on ApiException catch (error) {
+      if (mounted) actorSnack(context, _friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _busySlotKey = null);
+    }
   }
 
   Future<void> _addSlot(_SlotKind kind, int index) async {

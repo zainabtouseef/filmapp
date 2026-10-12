@@ -41,6 +41,20 @@ def test_equipment_public_prices_are_preserved() -> None:
     assert public["price_from_minor"] == 2000000
 
 
+@pytest.mark.parametrize("listing_type", ["actor", "model", "influencer"])
+def test_talent_can_opt_in_to_public_price(listing_type: str) -> None:
+    listing = MarketplaceListing(
+        listing_type=listing_type,
+        pricing_mode="negotiable",
+        public_price_visible=True,
+        price_from_minor=18000000,
+        currency="PKR",
+    )
+    public = _pricing_payload(listing)
+    assert public["shows_price"] is True
+    assert public["price_from_minor"] == 18000000
+
+
 def test_discovery_does_not_leak_rates_through_media_kit() -> None:
     listing = MarketplaceListing(
         public_id="LST-PRIVATE",
@@ -70,4 +84,4 @@ def test_equipment_groups_map_real_inventory_and_retain_other_services() -> None
 def test_dop_and_existing_crew_roles_are_discoverable() -> None:
     assert crew_categories("DOP services", "Director of Photography") == ["DOP"]
     assert crew_categories("Sound recordist", "Boom operator") == ["Sound"]
-    assert crew_categories("Production crew", "") == []
+    assert crew_categories("Production crew", "") == ["General Crew"]

@@ -55,6 +55,11 @@ class DPShell extends StatelessWidget {
       route: DirectorProducerRoutes.console,
     ),
     DpNavItem(
+      label: 'Discover',
+      icon: Icons.manage_search_rounded,
+      route: DirectorProducerRoutes.marketplace,
+    ),
+    DpNavItem(
       label: 'CinePlanner',
       icon: Icons.view_timeline_rounded,
       route: DirectorProducerRoutes.cinePlanner,
@@ -63,11 +68,6 @@ class DPShell extends StatelessWidget {
       label: 'Projects',
       icon: Icons.movie_creation_outlined,
       route: DirectorProducerRoutes.projects,
-    ),
-    DpNavItem(
-      label: 'Discover',
-      icon: Icons.manage_search_rounded,
-      route: DirectorProducerRoutes.marketplace,
     ),
     DpNavItem(
       label: 'Shortlist',

@@ -76,7 +76,9 @@ class _MarketplaceCategoryWrap extends StatelessWidget {
                     border: Border.all(color: palette.border),
                   ),
                   child: Text(
-                    category,
+                    category == 'Media & Equipment'
+                        ? 'Camera & Lighting'
+                        : category,
                     style: AppTextStyles.caption.copyWith(
                       color: selected == category
                           ? palette.onGold
@@ -260,7 +262,9 @@ class _DPMarketplaceDiscoveryScreenState
   }
 
   String _normalizeCategory(String? category) {
-    return category == 'Talent' ? 'Actors' : (category ?? 'All');
+    if (category == 'Talent') return 'Actors';
+    if (category == 'Camera & Lighting') return 'Media & Equipment';
+    return category ?? 'All';
   }
 
   Future<void> _openMarketplaceFilters() async {
@@ -416,7 +420,7 @@ class _DPMarketplaceDiscoveryScreenState
   @override
   Widget build(BuildContext context) {
     final categories = widget.publicBuyerMode
-        ? const ['All', 'Actors', 'Models', 'Influencers']
+        ? _categoryKeys
         : widget.browseOnly
             ? const [
                 'All',
@@ -527,6 +531,7 @@ class _DPMarketplaceDiscoveryScreenState
                   ? const [
                       'All',
                       'DOP',
+                      'General Crew',
                       'Assistant Direction',
                       'Camera Crew',
                       'Lighting & Grip',
@@ -539,7 +544,11 @@ class _DPMarketplaceDiscoveryScreenState
                   : const ['All', 'Cameras', 'Lighting Equipment'],
               selected: _subcategory,
               onSelected: (value) => setState(() => _subcategory = value),
-              labelFor: (value) => value == 'All' ? 'All services' : value,
+              labelFor: (value) => value == 'All'
+                  ? 'All services'
+                  : value == 'DOP'
+                      ? 'Director of Photography'
+                      : value,
             ),
           ],
           if (_verifiedOnly || _newOnly) ...[
@@ -662,6 +671,7 @@ class _DPMarketplaceDiscoveryScreenState
   Widget _buildCandidateCard(DpCandidate candidate, int index) {
     final card = DPCandidateCard(
       featured: index == 0,
+      grid: _viewMode == _MarketplaceViewMode.grid,
       candidate: candidate,
       heroTag: 'marketplace-profile-'
           '${widget.publicBuyerMode ? (candidate.marketplaceListingId ?? candidate.profileId) : candidate.profileId}',
@@ -1680,7 +1690,7 @@ class _MarketplaceCategoryHeading extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '$category · $count',
+            '${category == 'Media & Equipment' ? 'Camera & Lighting' : category} · $count',
             style: visuals.archivo(
               size: 15,
               weight: FontWeight.w700,
@@ -1722,7 +1732,8 @@ class _MarketplaceResultsToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qualifiers = <String>[
-      if (category != 'All') category,
+      if (category != 'All')
+        category == 'Media & Equipment' ? 'Camera & Lighting' : category,
       if (verifiedOnly) 'verified',
       if (newOnly) 'new this week',
     ];

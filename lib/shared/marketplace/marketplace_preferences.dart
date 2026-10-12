@@ -9,7 +9,7 @@ class MarketplacePreferences {
   }) : _storage = storage;
 
   Future<bool> usesGrid(String scope) async {
-    return await _storage.read(key: '$_prefix$scope') == 'grid';
+    return await _storage.read(key: '$_prefix$scope') != 'list';
   }
 
   Future<void> setGrid(String scope, bool value) {

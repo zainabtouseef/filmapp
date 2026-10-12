@@ -34,4 +34,5 @@ def crew_categories(title: str, summary: str) -> list[str]:
         "Editing & Post": r"\beditor\b|editing|post.production|\bvfx\b",
         "Production Support": r"transport|catering|production assistant",
     }
-    return [label for label, pattern in labels.items() if re.search(pattern, text)]
+    matches = [label for label, pattern in labels.items() if re.search(pattern, text)]
+    return matches or ["General Crew"]

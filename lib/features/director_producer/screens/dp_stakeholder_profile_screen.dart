@@ -48,6 +48,19 @@ class _DPStakeholderProfileScreenState
     extends State<DPStakeholderProfileScreen> {
   Future<Object>? _future;
   int _tabIndex = 0;
+  final _profileTabsKey = GlobalKey();
+
+  void _selectTab(int index) {
+    setState(() => _tabIndex = index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _profileTabsKey.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(target,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic);
+      }
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -148,9 +161,10 @@ class _DPStakeholderProfileScreenState
               EntityReveal(
                 step: 0,
                 child: EntityProfileTabs(
+                  key: _profileTabsKey,
                   tabs: _kProfileTabs,
                   currentIndex: _tabIndex,
-                  onChanged: (index) => setState(() => _tabIndex = index),
+                  onChanged: _selectTab,
                 ),
               ),
               const SizedBox(height: 14),
@@ -218,9 +232,10 @@ class _DPStakeholderProfileScreenState
             EntityReveal(
               step: 0,
               child: EntityProfileTabs(
+                key: _profileTabsKey,
                 tabs: _kProfileTabs,
                 currentIndex: _tabIndex,
-                onChanged: (index) => setState(() => _tabIndex = index),
+                onChanged: _selectTab,
               ),
             ),
             const SizedBox(height: 14),

@@ -53,67 +53,78 @@ class CoreScreenScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final route = ModalRoute.of(context)?.settings.name;
-    final body = PortalBodyTheme(
-      route: route,
-      child: LayoutBuilder(
-        builder: (context, outer) {
-          // Cap content width on tablet/desktop so text/cards don't
-          // stretch edge-to-edge — no-op below AppBreakpoints.maxContentWidth.
-          Widget capWidth(Widget content) {
-            final width = outer.maxWidth > AppBreakpoints.maxContentWidth
-                ? AppBreakpoints.maxContentWidth
-                : outer.maxWidth;
-            return Align(
-              alignment: Alignment.topCenter,
-              child: SizedBox(width: width, child: content),
-            );
-          }
+    // Shared contract and ledger screens are also embedded in role portals.
+    // Those portals own the viewport and scrolling; nesting another Scaffold
+    // in their unbounded content column produces an infinite-height layout.
+    return LayoutBuilder(builder: (context, host) {
+      if (!host.hasBoundedHeight) {
+        return PortalBodyTheme(
+          route: route,
+          child: Padding(padding: padding, child: child),
+        );
+      }
+      final body = PortalBodyTheme(
+        route: route,
+        child: LayoutBuilder(
+          builder: (context, outer) {
+            // Cap content width on tablet/desktop so text/cards don't
+            // stretch edge-to-edge — no-op below AppBreakpoints.maxContentWidth.
+            Widget capWidth(Widget content) {
+              final width = outer.maxWidth > AppBreakpoints.maxContentWidth
+                  ? AppBreakpoints.maxContentWidth
+                  : outer.maxWidth;
+              return Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(width: width, child: content),
+              );
+            }
 
-          if (!scrollable) {
-            return Padding(padding: padding, child: capWidth(child));
-          }
+            if (!scrollable) {
+              return Padding(padding: padding, child: capWidth(child));
+            }
 
-          if (!centerContent) {
+            if (!centerContent) {
+              return SingleChildScrollView(
+                padding: padding,
+                child: capWidth(child),
+              );
+            }
+
+            // Centers content when it fits the viewport; still scrolls
+            // (instead of overflowing) if it doesn't.
             return SingleChildScrollView(
               padding: padding,
-              child: capWidth(child),
-            );
-          }
-
-          // Centers content when it fits the viewport; still scrolls
-          // (instead of overflowing) if it doesn't.
-          return SingleChildScrollView(
-            padding: padding,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: outer.maxHeight - padding.vertical,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: outer.maxHeight - padding.vertical,
+                ),
+                child: Center(child: capWidth(child)),
               ),
-              child: Center(child: capWidth(child)),
-            ),
-          );
-        },
-      ),
-    );
+            );
+          },
+        ),
+      );
 
-    return Scaffold(
-      backgroundColor: showBackdrop
-          ? null
-          : (backgroundColor ?? context.appColors.background),
-      body: Stack(
-        children: [
-          if (showBackdrop) const Positioned.fill(child: CinematicBackdrop()),
-          SafeArea(
-            child: Column(
-              children: [
-                if (showGlobalControls) const _GlobalScreenControls(),
-                Expanded(child: body),
-                if (bottomBar != null) bottomBar!,
-              ],
+      return Scaffold(
+        backgroundColor: showBackdrop
+            ? null
+            : (backgroundColor ?? context.appColors.background),
+        body: Stack(
+          children: [
+            if (showBackdrop) const Positioned.fill(child: CinematicBackdrop()),
+            SafeArea(
+              child: Column(
+                children: [
+                  if (showGlobalControls) const _GlobalScreenControls(),
+                  Expanded(child: body),
+                  if (bottomBar != null) bottomBar!,
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -533,7 +544,7 @@ class CoreTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      minLines: maxLines > 1 ? 3 : 1,
+      minLines: maxLines > 1 ? (maxLines < 3 ? maxLines : 3) : 1,
       enabled: enabled,
       onChanged: onChanged,
       style: AppTextStyles.body.copyWith(color: colors.textPrimary),

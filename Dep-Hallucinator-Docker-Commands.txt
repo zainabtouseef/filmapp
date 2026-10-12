@@ -1,0 +1,535 @@
+DEP-HALLUCINATOR DOCKER COMMANDS — RUN IN THIS ORDER
+===================================================
+
+Prepared: 8 October 2026
+
+IMPORTANT
+---------
+Run one command at a time. Wait for each command to finish before running the next.
+Commands beginning with # are headings/explanations and do not need to be run.
+The project remains unchanged because Docker mounts it read-only and copies it into the container.
+The container name used below is: dep-hallucinator-evidence-20261008
+
+
+WHAT THIS PROJECT DOES
+----------------------
+
+Dep-Hallucinator reads dependency files such as requirements.txt, package.json,
+and Maven pom.xml. It checks whether package names exist in their official registry
+and applies name-based heuristics. Each package receives one result:
+
+- LOW: no important warning was found by this scan
+- MEDIUM: suspicious enough to review
+- HIGH: strong warning; do not install without investigation
+- CRITICAL: package is missing, explicitly blocked, or otherwise highly dangerous
+- ERROR: the scanner could not complete the check; this is unknown, not safe
+
+The scanner helps with dependency-confusion and hallucinated-package detection.
+It is not a complete malware scanner and a LOW result is not a security guarantee.
+
+
+MODIFICATION 1 — PERSISTENT ALLOWLIST AND DENYLIST
+--------------------------------------------------
+
+Easy explanation:
+The old add/remove commands changed a list only in the current Python process. As soon
+as that command ended, a new process rebuilt the default lists and the user's entry was
+gone. The modification saves the lists to JSON and reloads them next time.
+
+Detailed flow:
+1. PackageListManager selects ~/.config/dep-hallucinator as its configuration folder.
+2. _read_entries reads allowlist.json or denylist.json and recreates typed entries.
+3. If a saved file exists and is valid, it replaces the corresponding default list.
+4. Add/remove changes the in-memory list and immediately calls _write_entries.
+5. _write_entries writes a .tmp file first and then replaces the real file. This reduces
+   the chance of leaving a half-written JSON file if writing is interrupted.
+6. Invalid or missing saved JSON falls back safely instead of crashing startup.
+
+Exact files and places:
+- src/dep_hallucinator/package_lists.py:5 — # modification1 marker
+- package_lists.py:96–150 — JSON read, atomic write, and startup reload
+- package_lists.py:274–339 — save after allowlist/denylist add or remove
+- tests/test_package_lists.py:4–39 — two persistence tests
+
+
+MODIFICATION 2 — SECURE MAVEN XML PARSING
+-----------------------------------------
+
+Easy explanation:
+A pom.xml is input supplied to the scanner, so it must not be trusted. A specially made
+XML file can define an external entity that points to a local file. An unsafe parser may
+expand that entity and expose the local contents. This is called XML External Entity,
+or XXE, injection. The modification uses defusedxml, which rejects dangerous XML
+features before dependency extraction begins.
+
+Detailed flow:
+1. pyproject.toml installs defusedxml as a production dependency.
+2. parsers.py imports defusedxml.ElementTree under the existing ET name, so the normal
+   Maven parsing code remains small and readable.
+3. ET.fromstring reads normal Maven XML exactly where the old parser was used.
+4. A DOCTYPE/external-entity attempt raises DefusedXmlException.
+5. The scanner logs the parsing event and raises a clear ValueError containing
+   “Unsafe XML content”; it never expands the external entity.
+6. The security test creates a harmless demonstration reference to file:///etc/passwd.
+   It checks only that parsing is blocked; it does not read or print that file.
+
+Exact files and places:
+- src/dep_hallucinator/parsers.py:8–10 — # modification2 and safe imports
+- parsers.py:780–833 — parse with defusedxml and handle blocked input
+- pyproject.toml:35 — defusedxml>=0.7.1 dependency
+- tests/test_parser_security.py:6–25 — malicious external-entity rejection test
+
+Why this is a meaningful student-level contribution:
+It closes a real input-parsing risk with a standard security library, changes only a
+small part of the parser, preserves valid Maven behavior, and has a focused regression
+test that explains the security property.
+
+
+STEP 1 — START DOCKER DESKTOP
+-----------------------------
+
+open -a Docker
+
+What it does:
+Opens Docker Desktop. Wait until Docker reports that the engine is running.
+
+
+STEP 2 — ENTER THE PROJECT DIRECTORY
+------------------------------------
+
+cd ~/Desktop/dep-hallucinator
+
+What it does:
+Makes the modified Dep-Hallucinator repository the current terminal directory.
+
+
+STEP 3 — CONFIRM DOCKER IS READY
+--------------------------------
+
+docker info --format 'Docker {{.ServerVersion}} | {{.OperatingSystem}} | {{.Architecture}}'
+
+Expected result on the tested Mac:
+Docker 29.7.2 | Docker Desktop | aarch64
+
+
+STEP 4 — CREATE A CLEAN PYTHON 3.11 CONTAINER
+---------------------------------------------
+
+docker run -dit --name dep-hallucinator-evidence-20261008 --mount type=bind,source="$PWD",target=/source,readonly --mount type=bind,source="$HOME/Downloads/Dep-Hallucinator-Test-Repositories",target=/samples,readonly -w /work python:3.11-slim tail -f /dev/null
+
+What it does:
+Downloads python:3.11-slim if necessary and starts a temporary container.
+The project is visible at /source in read-only mode.
+The ready-made sample repositories are visible at /samples in read-only mode.
+The container stays running because of tail -f /dev/null.
+
+Expected result:
+A long container ID is printed.
+
+
+STEP 5 — CONFIRM THE CONTAINER IS RUNNING
+-----------------------------------------
+
+docker ps --filter name=dep-hallucinator-evidence-20261008 --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+
+Expected result:
+The container appears with image python:3.11-slim and status Up.
+
+
+STEP 6 — COPY AND INSTALL THE PROJECT INSIDE THE CONTAINER
+----------------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 sh -lc 'cp -a /source/. /work/ && python -m pip install --disable-pip-version-check -e ".[dev,test]"'
+
+What it does:
+Copies the read-only project into the writable /work directory inside Docker.
+Installs Dep-Hallucinator in editable mode.
+Installs pytest, Ruff, Black, coverage, and other development/test dependencies.
+
+Expected final messages:
+Successfully built dep-hallucinator
+Successfully installed ... dep-hallucinator-1.0.2 ...
+
+
+STEP 7 — CHECK PYTHON AND INSTALLED PACKAGE INFORMATION
+-------------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 python --version
+
+Expected result:
+Python 3.11.17 (the patch version may be newer in a future image)
+
+docker exec dep-hallucinator-evidence-20261008 sh -lc 'python -m pip show dep-hallucinator | grep -E "^(Name|Version|Location|Editable project location):"'
+
+Expected important values:
+Name: dep-hallucinator
+Version: 1.0.2
+Editable project location: /work
+
+
+STEP 8 — TEST THE MAIN CLI
+--------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator --version
+
+What it does:
+Checks that the installed command-line program starts and can display its version.
+
+Expected result:
+Dep-Hallucinator version 1.0.0
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator --help
+
+What it does:
+Shows every top-level command and proves that the CLI starts correctly.
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator info
+
+What it does:
+Shows supported file types, detection methods, risk levels, configuration locations, and examples.
+
+
+STEP 9 — RUN MODIFICATION 1 AUTOMATED TESTS
+-------------------------------------------
+
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_package_lists.py
+
+What it tests:
+- Allowlist add and disk persistence
+- Reloading with a new PackageListManager
+- Allowlist removal persistence
+- Denylist wildcard persistence
+- Wildcard matching after reload
+- Denylist removal persistence
+
+Expected result:
+2 passed
+Exit code 0
+
+
+STEP 10 — DEMONSTRATE ALLOWLIST PERSISTENCE MANUALLY
+----------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist add docker-safe-package --reason "Approved Docker demo package"
+
+What it does:
+Adds a trusted package and writes the updated allowlist to JSON.
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist list
+
+What it proves:
+A separate CLI process can reload and display docker-safe-package.
+
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json,pathlib; p=pathlib.Path.home()/".config/dep-hallucinator/allowlist.json"; d=json.loads(p.read_text()); print("saved_file:",p); print("saved_entry:",next(x for x in d if x["name"]=="docker-safe-package"))'
+
+What it proves:
+The package name, exact match type, ecosystems, reason, and date were stored in JSON.
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist remove docker-safe-package
+
+What it does:
+Removes the stored entry and rewrites the JSON file.
+
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json,pathlib; p=pathlib.Path.home()/".config/dep-hallucinator/allowlist.json"; d=json.loads(p.read_text()); print("entry_exists_after_remove:",any(x["name"]=="docker-safe-package" for x in d))'
+
+Expected result:
+entry_exists_after_remove: False
+
+
+STEP 11 — DEMONSTRATE DENYLIST WILDCARD PERSISTENCE
+---------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist add 'docker-risk-*' --pattern-type pattern --reason "Blocked Docker demo family"
+
+What it does:
+Adds and saves a wildcard denylist rule.
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist list
+
+What it proves:
+A new CLI process reloads docker-risk-* with pattern match type and its reason.
+
+docker exec dep-hallucinator-evidence-20261008 python -c 'from src.dep_hallucinator.package_lists import PackageListManager; m=PackageListManager(); found,e=m.is_denylisted("docker-risk-library","npm"); print("pattern_matches_package:",found); print("stored_rule:",e.name if e else None); print("match_type:",e.match_type.value if e else None)'
+
+Expected result:
+pattern_matches_package: True
+stored_rule: docker-risk-*
+match_type: pattern
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator denylist remove 'docker-risk-*'
+
+What it does:
+Removes the stored wildcard rule by its exact rule name.
+
+docker exec dep-hallucinator-evidence-20261008 python -c 'from src.dep_hallucinator.package_lists import PackageListManager; print("pattern_matches_after_remove:",PackageListManager().is_denylisted("docker-risk-library","npm")[0])'
+
+Expected result:
+pattern_matches_after_remove: False
+
+
+STEP 12 — PROVE PERSISTENCE ACROSS A CONTAINER RESTART
+------------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist add restart-safe-package --reason "Container restart proof"
+
+docker stop dep-hallucinator-evidence-20261008
+
+What it does:
+Stops the running container without deleting its filesystem.
+
+docker start dep-hallucinator-evidence-20261008
+
+What it does:
+Starts the same container again.
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist list
+
+Expected result:
+restart-safe-package is still displayed after the restart.
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator allowlist remove restart-safe-package
+
+What it does:
+Cleans up the demonstration entry.
+
+
+STEP 13 — RUN MODIFICATION 2 AUTOMATED TEST
+-------------------------------------------
+
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_parser_security.py
+
+What it tests:
+Creates a deliberately dangerous Maven pom.xml containing an external entity.
+Confirms that the secure XML parser rejects it before it can read a local file.
+
+Why this improves security:
+Ordinary XML parsers may process a malicious external entity reference. That can let an
+untrusted pom.xml try to read local files or consume excessive resources. Modification 2
+uses defusedxml, a security-focused drop-in XML parser, and returns a clear ValueError for
+unsafe XML. Normal Maven pom.xml parsing continues to work.
+
+Expected result:
+1 passed
+Exit code 0
+
+Now confirm that ordinary Maven pom.xml files still parse correctly:
+
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider tests/test_core.py::TestDependencyParsing::test_parse_additional_file_formats tests/test_core.py::TestDependencyParsing::test_multi_language_file_support
+
+What it tests:
+Runs the two existing multi-language parser tests that include normal Maven pom.xml files.
+This proves that the secure parser blocks dangerous XML without breaking valid Maven input.
+
+Expected result:
+2 passed
+Exit code 0
+
+
+STEP 14 — RUN THE COMPLETE TEST SUITE
+-------------------------------------
+
+docker exec -e PYTHONDONTWRITEBYTECODE=1 dep-hallucinator-evidence-20261008 pytest -p no:cacheprovider
+
+Expected verified result:
+63 passed, 37 warnings
+Exit code 0
+
+The warnings are pre-existing asynchronous mock warnings. They do not mean the tests failed.
+
+
+STEP 15 — RUN RUFF LINT CHECKS
+-------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 ruff check --no-cache src/dep_hallucinator/package_lists.py tests/test_package_lists.py
+
+Expected result:
+All checks passed!
+
+docker exec dep-hallucinator-evidence-20261008 ruff check --no-cache src/dep_hallucinator/parsers.py tests/test_parser_security.py --select I
+
+Expected result:
+All checks passed!
+
+Note:
+Ruff may display a project-level warning about deprecated pyproject lint-setting locations.
+That warning is not an error in the modified files.
+
+
+STEP 16 — RUN BLACK FORMATTING CHECK
+------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 black --check src/dep_hallucinator/package_lists.py src/dep_hallucinator/parsers.py tests/test_package_lists.py tests/test_parser_security.py
+
+Expected result:
+4 files would be left unchanged.
+
+
+STEP 17 — COMPILE EVERY CHANGED PYTHON FILE
+-------------------------------------------
+
+docker exec -e PYTHONPYCACHEPREFIX=/tmp/dep-pycache dep-hallucinator-evidence-20261008 python -m compileall -q src/dep_hallucinator/package_lists.py src/dep_hallucinator/parsers.py tests/test_package_lists.py tests/test_parser_security.py
+
+What it does:
+Checks that every changed Python file is syntactically valid.
+
+Expected result:
+No output and exit code 0.
+
+
+STEP 18 — CREATE A SAFE SAMPLE DEPENDENCY FILE INSIDE DOCKER
+------------------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 python -c 'from pathlib import Path; Path("/work/sample-requirements.txt").write_text("requests==2.32.3\nstudent-demo-package-that-does-not-exist-20261008==1.0.0\n", encoding="utf-8")'
+
+What it does:
+Creates a temporary two-package requirements file inside the disposable container.
+requests is legitimate. The long student-demo package name is deliberately nonexistent.
+
+
+STEP 19 — RUN A REAL REGISTRY SCAN
+----------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan sample-requirements.txt --rate-limit 2 --max-concurrent 2
+
+Expected result:
+- requests is LOW / legitimate
+- student-demo-package-that-does-not-exist-20261008 is CRITICAL
+- The scanner explains the dependency-confusion risk
+- Exit code 1 is EXPECTED because a critical vulnerability was deliberately included
+
+To display the exit code immediately after the scan:
+
+echo $?
+
+Expected value:
+1
+
+
+STEP 20 — UNDERSTAND THE CLASSROOM SAFE PERCENTAGE
+--------------------------------------------------
+
+Dep-Hallucinator gives every package a risk level. It does not define one official
+whole-project safety percentage. For a simple classroom comparison, use:
+
+safe percentage = number of LOW findings / total findings × 100
+
+Only LOW is counted as safe. MEDIUM, HIGH, CRITICAL, and ERROR all need review.
+An ERROR often means the registry could not be reached, so never count ERROR as safe.
+This percentage summarizes the scan; it does not guarantee that code is secure.
+
+
+STEP 21 — SCAN THE 100% LOW SAMPLE REPOSITORY
+---------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/01-safe-python-repo/requirements.txt
+
+Contents:
+requests, numpy, and pandas
+
+Verified result with PyPI access on 8 October 2026:
+3 LOW, 0 MEDIUM, 0 HIGH, 0 CRITICAL, 0 ERROR
+Classroom safe percentage: 3 / 3 × 100 = 100.00%
+
+
+STEP 22 — SCAN THE MIXED-RISK SAMPLE REPOSITORY
+-----------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/02-mixed-risk-python-repo/requirements.txt
+
+Contents:
+requests is a real package. ai-student-helper and gpt-dependency-tool are deliberately
+suspicious demonstration names that match built-in denylist patterns. The scan does not
+install them.
+
+Verified result:
+requests = LOW
+ai-student-helper = CRITICAL
+gpt-dependency-tool = CRITICAL
+Classroom safe percentage: 1 / 3 × 100 = 33.33%
+
+
+STEP 23 — SCAN A REAL NAME AND A NONEXISTENT NAME
+-------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/03-live-registry-repo/requirements.txt --rate-limit 2 --max-concurrent 2
+
+Contents:
+requests plus student-demo-package-that-does-not-exist-20261008.
+
+Verified result with PyPI access on 8 October 2026:
+requests = LOW
+student-demo-package-that-does-not-exist-20261008 = CRITICAL
+Classroom safe percentage: 1 / 2 × 100 = 50.00%
+
+This result needs internet access and could change if registry state changes.
+
+
+STEP 24 — SAVE JSON AND CALCULATE THE PERCENTAGE
+------------------------------------------------
+
+docker exec dep-hallucinator-evidence-20261008 dep-hallucinator scan /samples/02-mixed-risk-python-repo/requirements.txt --output-format json -o /tmp/dep-scan-result.json
+
+What it does:
+Saves every package, risk level, reason, and recommendation to JSON in the container.
+
+docker exec dep-hallucinator-evidence-20261008 python -c 'import json; d=json.load(open("/tmp/dep-scan-result.json")); f=d["findings"]; low=sum(x["risk_level"]=="LOW" for x in f); print(f"Safe percentage: {100*low/len(f):.2f}% ({low}/{len(f)} LOW)")'
+
+Expected result:
+Safe percentage: 33.33% (1/3 LOW)
+
+
+STEP 25 — STOP AND REMOVE THE TEMPORARY CONTAINER
+-------------------------------------------------
+
+docker stop dep-hallucinator-evidence-20261008
+
+docker rm dep-hallucinator-evidence-20261008
+
+What these commands do:
+Stop and delete only the temporary evidence container.
+They do not delete the project from the Desktop.
+
+
+STEP 26 — VERIFY CLEANUP
+------------------------
+
+docker ps -a --filter name=dep-hallucinator-evidence-20261008 --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+
+Expected result:
+Only the empty table header is displayed. No matching container remains.
+
+
+FINAL VERIFIED RESULTS
+----------------------
+
+Modification 1 focused tests: 2 passed
+Modification 1 live add/reload/remove: passed
+Modification 1 restart persistence: passed
+Modification 2 malicious XML rejection test: 1 passed
+Normal Maven pom.xml parser tests: 2 passed
+Complete suite: 63 passed, 37 warnings
+Ruff checks: passed
+Black check: passed
+Python compilation: passed
+Live registry scan: correctly detected the fake package as CRITICAL
+Safe sample: 3 LOW / 3 = 100.00% classroom safe percentage
+Mixed sample: 1 LOW / 3 = 33.33% classroom safe percentage
+Live real/fake sample: 1 LOW / 2 = 50.00% classroom safe percentage
+
+
+TROUBLESHOOTING
+---------------
+
+If Docker says the container name already exists, inspect it first:
+
+docker ps -a --filter name=dep-hallucinator-evidence-20261008
+
+If it is merely stopped, restart it:
+
+docker start dep-hallucinator-evidence-20261008
+
+If dep-hallucinator is not installed inside it, repeat STEP 6.
+
+If Docker is not responding, open Docker Desktop again:
+
+open -a Docker

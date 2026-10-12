@@ -51,6 +51,7 @@ class _BR09BrandMarketplaceScreenState
   List<Project> _projects = const [];
   List<DirectorDiscoveryItem> _items = const [];
   String _category = 'All';
+  String _subcategory = 'All';
   String _query = '';
   String? _projectId;
   String? _error;
@@ -275,10 +276,15 @@ class _BR09BrandMarketplaceScreenState
                   values: _brandDiscoveryCategories,
                   selected: _category,
                   onSelected: (category) {
-                    setState(() => _category = category);
+                    setState(() {
+                      _category = category;
+                      _subcategory = 'All';
+                    });
                     _load();
                   },
-                  labelFor: (category) => category,
+                  labelFor: (category) => category == 'Media & Equipment'
+                      ? 'Camera & Lighting'
+                      : category,
                   railColor: CineMarketplaceVisuals.of(context).surface,
                   selectedColor: CineMarketplaceVisuals.of(context).gold,
                   selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
@@ -286,6 +292,16 @@ class _BR09BrandMarketplaceScreenState
                   borderColor: CineMarketplaceVisuals.of(context).border,
                 ),
               ),
+              if (_category == 'Crew') ...[
+                const SizedBox(height: 10),
+                CineAnimatedFilterRail<String>(
+                  values: const ['All', 'DOP', 'General Crew'],
+                  selected: _subcategory,
+                  onSelected: (value) => setState(() => _subcategory = value),
+                  labelFor: (value) =>
+                      value == 'DOP' ? 'Director of Photography' : value,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -307,7 +323,11 @@ class _BR09BrandMarketplaceScreenState
                 SkeletonCard(height: 144),
               ],
             )
-          else if (_items.isEmpty)
+          else if (_items
+              .where((item) =>
+                  _subcategory == 'All' ||
+                  item.subcategories.contains(_subcategory))
+              .isEmpty)
             CoreEmptyState(
               icon: Icons.manage_search_outlined,
               title: 'No live listings match',
@@ -334,7 +354,11 @@ class _BR09BrandMarketplaceScreenState
                       : CineMarketplaceResults(
                           grid: _viewMode == _BrandMarketplaceViewMode.grid,
                           cards: [
-                            for (final entry in _items.indexed)
+                            for (final entry in _items
+                                .where((item) =>
+                                    _subcategory == 'All' ||
+                                    item.subcategories.contains(_subcategory))
+                                .indexed)
                               _buildMarketplaceCard(entry.$2, entry.$1),
                           ],
                         ),
@@ -388,6 +412,7 @@ class _BR09BrandMarketplaceScreenState
 
   Widget _buildMarketplaceCard(DirectorDiscoveryItem item, int index) {
     return CineMarketplaceCard(
+      grid: _viewMode == _BrandMarketplaceViewMode.grid,
       title: item.title,
       kind: item.kind,
       category: item.category,
@@ -691,7 +716,7 @@ class _BrandResultsToolbar extends StatelessWidget {
       children: [
         Text(
           '$count approved ${count == 1 ? 'listing' : 'listings'}'
-          '${category == 'All' ? '' : ' · $category'}',
+          '${category == 'All' ? '' : ' · ${category == 'Media & Equipment' ? 'Camera & Lighting' : category}'}',
           style: CineMarketplaceVisuals.of(context).archivo(
             size: 11.5,
             weight: FontWeight.w600,
@@ -741,7 +766,7 @@ class _BrandCategoryHeading extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '$category · $count',
+            '${category == 'Media & Equipment' ? 'Camera & Lighting' : category} · $count',
             style: visuals.archivo(
               size: 15,
               weight: FontWeight.w700,

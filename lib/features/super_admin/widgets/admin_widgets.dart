@@ -35,7 +35,7 @@ const adminNavItems = [
     route: SuperAdminRoutes.dashboard,
   ),
   AdminNavItem(
-    label: 'Marketplace',
+    label: 'Discover',
     icon: Icons.storefront_outlined,
     route: MarketplaceRoutes.browse,
   ),
