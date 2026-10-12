@@ -80,26 +80,12 @@ class DPTwoColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < AppBreakpoints.tablet) {
-          return Column(
-            children: [
-              left,
-              const SizedBox(height: 12),
-              right,
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: left),
-            const SizedBox(width: 12),
-            Expanded(child: right),
-          ],
-        );
-      },
+    return PortalSplitView(
+      primary: left,
+      secondary: right,
+      breakpoint: AppBreakpoints.tablet,
+      primaryFlex: 1,
+      secondaryFlex: 1,
     );
   }
 }

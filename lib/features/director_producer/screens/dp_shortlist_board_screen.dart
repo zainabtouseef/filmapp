@@ -4,7 +4,6 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
@@ -321,6 +320,10 @@ class _DPShortlistBoardScreenState extends State<DPShortlistBoardScreen> {
                       searches: bundle.savedSearches,
                       mutatingId: _mutatingId,
                       onDelete: _deleteSavedSearch,
+                      onDiscover: () => Navigator.pushNamed(
+                        context,
+                        DirectorProducerRoutes.marketplace,
+                      ),
                     );
                     if (constraints.maxWidth >= 860) {
                       return Row(
@@ -355,11 +358,13 @@ class _SavedSearchStrip extends StatelessWidget {
   final List<MarketplaceSavedSearch> searches;
   final String? mutatingId;
   final ValueChanged<String> onDelete;
+  final VoidCallback onDiscover;
 
   const _SavedSearchStrip({
     required this.searches,
     required this.mutatingId,
     required this.onDelete,
+    required this.onDiscover,
   });
 
   @override
@@ -394,6 +399,15 @@ class _SavedSearchStrip extends StatelessWidget {
                   )
                   .toList(),
             ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onDiscover,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Save a search from Discover'),
+            ),
+          ),
         ],
       ),
     );
@@ -550,56 +564,37 @@ class _LiveShortlistColumns extends StatelessWidget {
       return DPGlassCard(
           child: dpText(context, 'No shortlist candidates yet.'));
     }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final visibleColumns =
-            context.isDesktopWidth ? visibleBoards.length.clamp(1, 2) : 1;
-        final width = visibleBoards.length == 1
-            ? constraints.maxWidth
-            : context.isDesktopWidth
-                ? ((constraints.maxWidth - (12 * (visibleColumns - 1))) /
-                        visibleColumns)
-                    .clamp(340.0, 540.0)
-                    .toDouble()
-                : 320.0;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final (index, board) in visibleBoards.indexed) ...[
-                SizedBox(
-                  width: width,
-                  child: index == 0
-                      ? TourTarget(
-                          id: 'dp.shortlist.firstGroup',
-                          child: _LiveShortlistColumn(
-                            board: board,
-                            mutatingId: mutatingId,
-                            onDelete: onDelete,
-                            onMove: onMove,
-                            onSelect: onSelect,
-                            selectedIds: selectedIds,
-                            onToggleSelection: onToggleSelection,
-                            wrapFirstItem: true,
-                          ),
-                        )
-                      : _LiveShortlistColumn(
-                          board: board,
-                          mutatingId: mutatingId,
-                          onDelete: onDelete,
-                          onMove: onMove,
-                          onSelect: onSelect,
-                          selectedIds: selectedIds,
-                          onToggleSelection: onToggleSelection,
-                        ),
-                ),
-                if (board != visibleBoards.last) const SizedBox(width: 12),
-              ],
-            ],
-          ),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (index, board) in visibleBoards.indexed) ...[
+          if (index == 0)
+            TourTarget(
+              id: 'dp.shortlist.firstGroup',
+              child: _LiveShortlistColumn(
+                board: board,
+                mutatingId: mutatingId,
+                onDelete: onDelete,
+                onMove: onMove,
+                onSelect: onSelect,
+                selectedIds: selectedIds,
+                onToggleSelection: onToggleSelection,
+                wrapFirstItem: true,
+              ),
+            )
+          else
+            _LiveShortlistColumn(
+              board: board,
+              mutatingId: mutatingId,
+              onDelete: onDelete,
+              onMove: onMove,
+              onSelect: onSelect,
+              selectedIds: selectedIds,
+              onToggleSelection: onToggleSelection,
+            ),
+          if (index != visibleBoards.length - 1) const SizedBox(height: 12),
+        ],
+      ],
     );
   }
 }
@@ -702,13 +697,84 @@ class _LiveShortlistCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final candidate = item.listing.toCandidate();
     final shortlisted = item.status == 'selected';
+    final colors = context.appColors;
+    final category = candidate.category.toLowerCase();
+    final accent = category.contains('location')
+        ? colors.success
+        : category.contains('crew') || category.contains('equipment')
+            ? colors.infoBlue
+            : colors.infoPurple;
+
+    final actions = <Widget>[
+      _MiniAction(
+        icon: Icons.keyboard_arrow_up_rounded,
+        label: 'Rank up',
+        loading: loading,
+        onTap: onMoveUp,
+      ),
+      _MiniAction(
+        icon: Icons.keyboard_arrow_down_rounded,
+        label: 'Rank down',
+        loading: loading,
+        onTap: onMoveDown,
+      ),
+      wrapActions
+          ? TourTarget(
+              id: 'dp.shortlist.select',
+              child: _MiniAction(
+                icon: shortlisted
+                    ? Icons.undo_rounded
+                    : Icons.check_circle_outline_rounded,
+                label: shortlisted ? 'Unselect' : 'Select',
+                loading: loading,
+                onTap: onSelect,
+              ),
+            )
+          : _MiniAction(
+              icon: shortlisted
+                  ? Icons.undo_rounded
+                  : Icons.check_circle_outline_rounded,
+              label: shortlisted ? 'Unselect' : 'Select',
+              loading: loading,
+              onTap: onSelect,
+            ),
+      wrapActions
+          ? TourTarget(
+              id: 'dp.shortlist.remove',
+              child: _MiniAction(
+                icon: Icons.delete_outline_rounded,
+                label: 'Remove',
+                loading: loading,
+                onTap: onDelete,
+              ),
+            )
+          : _MiniAction(
+              icon: Icons.delete_outline_rounded,
+              label: 'Remove',
+              loading: loading,
+              onTap: onDelete,
+            ),
+    ];
+
     return DPGlassCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      accentColor: accent,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 660;
+          final identity = Row(
             children: [
+              SizedBox(
+                width: 38,
+                child: Text(
+                  item.rank.toString().padLeft(2, '0'),
+                  style: AppTextStyles.heroSerifHeadline.copyWith(
+                    color: colors.goldDark,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
               Checkbox.adaptive(
                 value: selected,
                 onChanged: loading ? null : (_) => onToggleSelection(),
@@ -719,78 +785,54 @@ class _LiveShortlistCard extends StatelessWidget {
                 label: candidate.avatarLabel,
               ),
               const SizedBox(width: 10),
-              Expanded(child: dpText(context, candidate.name, strong: true)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    dpText(context, candidate.name, strong: true),
+                    const SizedBox(height: 2),
+                    dpText(
+                      context,
+                      '${candidate.category} · ${candidate.city} · ${candidate.skills.take(2).join(' · ')}',
+                    ),
+                    if (item.notes != null && item.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        item.notes!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.smallMeta.copyWith(
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               DPStatusChip(
-                label: shortlisted ? 'Selected' : '#${item.rank}',
+                label: shortlisted ? 'Selected' : 'Rank ${item.rank}',
                 tone: shortlisted ? DpTone.success : DpTone.warning,
               ),
             ],
-          ),
-          const SizedBox(height: 6),
-          dpText(
-            context,
-            '${candidate.category} · ${candidate.city} · ${candidate.skills.take(2).join(' · ')}',
-          ),
-          if (item.notes != null && item.notes!.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            dpText(context, item.notes!),
-          ],
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                identity,
+                const SizedBox(height: 9),
+                Wrap(spacing: 7, runSpacing: 7, children: actions),
+              ],
+            );
+          }
+          return Row(
             children: [
-              _MiniAction(
-                icon: Icons.keyboard_arrow_up_rounded,
-                label: 'Rank up',
-                loading: loading,
-                onTap: onMoveUp,
-              ),
-              _MiniAction(
-                icon: Icons.keyboard_arrow_down_rounded,
-                label: 'Rank down',
-                loading: loading,
-                onTap: onMoveDown,
-              ),
-              wrapActions
-                  ? TourTarget(
-                      id: 'dp.shortlist.select',
-                      child: _MiniAction(
-                        icon: shortlisted
-                            ? Icons.undo_rounded
-                            : Icons.check_circle_outline_rounded,
-                        label: shortlisted ? 'Unselect' : 'Select',
-                        loading: loading,
-                        onTap: onSelect,
-                      ),
-                    )
-                  : _MiniAction(
-                      icon: shortlisted
-                          ? Icons.undo_rounded
-                          : Icons.check_circle_outline_rounded,
-                      label: shortlisted ? 'Unselect' : 'Select',
-                      loading: loading,
-                      onTap: onSelect,
-                    ),
-              wrapActions
-                  ? TourTarget(
-                      id: 'dp.shortlist.remove',
-                      child: _MiniAction(
-                        icon: Icons.delete_outline_rounded,
-                        label: 'Remove',
-                        loading: loading,
-                        onTap: onDelete,
-                      ),
-                    )
-                  : _MiniAction(
-                      icon: Icons.delete_outline_rounded,
-                      label: 'Remove',
-                      loading: loading,
-                      onTap: onDelete,
-                    ),
+              Expanded(child: identity),
+              const SizedBox(width: 10),
+              Wrap(spacing: 7, runSpacing: 7, children: actions),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

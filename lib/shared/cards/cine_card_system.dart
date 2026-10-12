@@ -140,8 +140,8 @@ class _CardShellState extends State<CardShell> {
       surface,
       tone,
       colors.isLight
-          ? (widget.accentEdge ? .032 : .014)
-          : (widget.accentEdge ? .075 : .032),
+          ? (widget.accentEdge ? .05 : .024)
+          : (widget.accentEdge ? .13 : .075),
     )!;
     final borderColor = _focused
         ? colors.focusRing
@@ -207,19 +207,19 @@ class _CardShellState extends State<CardShell> {
                     Color.lerp(
                       surface,
                       colors.surfaceHighlight,
-                      colors.isLight ? (openSection ? .07 : .1) : .025,
+                      colors.isLight ? (openSection ? .11 : .16) : .075,
                     )!,
                     openSection
                         ? Color.lerp(
                             surface,
                             tone,
-                            colors.isLight ? .012 : .025,
+                            colors.isLight ? .02 : .07,
                           )!
                         : tintedSurface,
                     Color.lerp(
                       surface,
                       colors.softSurface,
-                      openSection ? .28 : .08,
+                      openSection ? .38 : .15,
                     )!,
                   ],
                   stops: const [0, .48, 1],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
+import 'portal_body_canvas.dart';
 import 'portal_reference_design.dart';
 
 /// Route-scoped body styling for CineConnect operational screens.
@@ -239,12 +240,15 @@ class PortalBodyTheme extends StatelessWidget {
           ),
         ),
       ),
-      child: DefaultTextStyle.merge(
-        style: AppTextStyles.body.copyWith(
-          color: colors.textPrimary,
-          height: 1.32,
+      child: PortalBodyCanvas(
+        route: route,
+        child: DefaultTextStyle.merge(
+          style: AppTextStyles.body.copyWith(
+            color: colors.textPrimary,
+            height: 1.32,
+          ),
+          child: child,
         ),
-        child: child,
       ),
     );
   }

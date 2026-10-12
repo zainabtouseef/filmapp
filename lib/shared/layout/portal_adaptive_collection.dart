@@ -92,6 +92,55 @@ class PortalAdaptiveCollection extends StatelessWidget {
   }
 }
 
+/// Shared master/detail composition for operational workspaces.
+///
+/// It keeps a clear primary working area and a compact secondary rail on
+/// desktop, then stacks both panels without horizontal overflow on phones.
+class PortalSplitView extends StatelessWidget {
+  final Widget primary;
+  final Widget secondary;
+  final double breakpoint;
+  final double gap;
+  final int primaryFlex;
+  final int secondaryFlex;
+
+  const PortalSplitView({
+    super.key,
+    required this.primary,
+    required this.secondary,
+    this.breakpoint = 820,
+    this.gap = 12,
+    this.primaryFlex = 6,
+    this.secondaryFlex = 4,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < breakpoint) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              primary,
+              SizedBox(height: gap),
+              secondary,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: primaryFlex, child: primary),
+            SizedBox(width: gap),
+            Expanded(flex: secondaryFlex, child: secondary),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _ResponsiveWrap extends StatelessWidget {
   final List<Widget> children;
   final double minWidth;

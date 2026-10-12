@@ -211,20 +211,9 @@ class InsuranceTwoColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 820) {
-          return Column(children: [left, const SizedBox(height: 12), right]);
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 6, child: left),
-            const SizedBox(width: 12),
-            Expanded(flex: 4, child: right),
-          ],
-        );
-      },
+    return PortalSplitView(
+      primary: left,
+      secondary: right,
     );
   }
 }

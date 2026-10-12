@@ -1641,7 +1641,7 @@ class _CineDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dashboard = snapshot['dashboard'] as Map<String, dynamic>;
     final currency = _currency(snapshot);
-    final metrics = [
+    final scope = [
       ('Pages', '${dashboard['total_pages'] ?? 0}', Icons.menu_book_outlined),
       (
         'Scenes',
@@ -1660,6 +1660,8 @@ class _CineDashboard extends StatelessWidget {
         Icons.location_city_outlined
       ),
       ('Props', '${dashboard['props'] ?? 0}', Icons.inventory_2_outlined),
+    ];
+    final planning = [
       (
         'Shoot days',
         '${dashboard['scheduled_shoot_days'] ?? 0}',
@@ -1710,31 +1712,185 @@ class _CineDashboard extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         LayoutBuilder(
-          builder: (context, constraints) => GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 220,
-              mainAxisExtent: 82,
-              crossAxisSpacing: 9,
-              mainAxisSpacing: 9,
-            ),
-            itemCount: metrics.length,
-            itemBuilder: (context, index) {
-              final item = metrics[index];
-              return _MetricCard(
-                label: item.$1,
-                value: item.$2,
-                icon: item.$3,
+          builder: (context, constraints) {
+            final overview = _CineMetricLedger(
+              eyebrow: 'Production scope',
+              title: 'Script breakdown',
+              icon: Icons.auto_stories_outlined,
+              items: scope,
+            );
+            final readiness = _CineMetricLedger(
+              eyebrow: 'Planning health',
+              title: 'Ready for production',
+              icon: Icons.track_changes_rounded,
+              items: planning,
+            );
+            if (constraints.maxWidth < 760) {
+              return Column(
+                children: [
+                  overview,
+                  const SizedBox(height: 10),
+                  readiness,
+                ],
               );
-            },
-          ),
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: overview),
+                const SizedBox(width: 10),
+                Expanded(child: readiness),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         _ConflictSummary(snapshot: snapshot),
         const SizedBox(height: 12),
         _CineReadinessSummary(snapshot: snapshot),
       ],
+    );
+  }
+}
+
+class _CineMetricLedger extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final IconData icon;
+  final List<(String, String, IconData)> items;
+
+  const _CineMetricLedger({
+    required this.eyebrow,
+    required this.title,
+    required this.icon,
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final tones = [
+      colors.goldMid,
+      colors.infoBlue,
+      colors.success,
+      colors.infoPurple,
+    ];
+    return _CinePanel(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: colors.goldGlow.withValues(alpha: .72),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colors.goldLight.withValues(alpha: .4),
+                  ),
+                ),
+                child: Icon(icon, size: 19, color: colors.goldDark),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      eyebrow.toUpperCase(),
+                      style: AppTextStyles.micro.copyWith(
+                        color: colors.goldDark,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: AppTextStyles.heroSerifHeadline.copyWith(
+                        color: colors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: colors.borderMuted),
+          for (final (index, item) in items.indexed) ...[
+            _CineLedgerRow(
+              label: item.$1,
+              value: item.$2,
+              icon: item.$3,
+              color: tones[index % tones.length],
+            ),
+            if (index != items.length - 1)
+              Divider(height: 1, color: colors.borderMuted),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CineLedgerRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _CineLedgerRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Container(
+            width: 29,
+            height: 29,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .1),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 15, color: color),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.cardTitle.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
