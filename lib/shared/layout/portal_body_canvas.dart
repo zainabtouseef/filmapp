@@ -73,9 +73,9 @@ class _PortalBodyCanvasState extends State<PortalBodyCanvas>
                     center: const Alignment(.78, -.88),
                     radius: 1.2,
                     colors: [
-                      secondary.withValues(alpha: colors.isLight ? .055 : .06),
+                      secondary.withValues(alpha: colors.isLight ? .045 : .025),
                       colors.goldMid.withValues(
-                        alpha: colors.isLight ? .025 : .035,
+                        alpha: colors.isLight ? .018 : .012,
                       ),
                       Colors.transparent,
                     ],

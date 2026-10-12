@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_color_scheme.dart';
 import 'cine_card_system.dart';
 import '../layout/portal_reference_design.dart';
 import '../widgets/cine_hover_zoom.dart';
@@ -24,6 +25,36 @@ class GlassSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final route = ModalRoute.of(context)?.settings.name;
+    final reference = PortalReferenceDesign.usesReference(route);
+    final layout = PortalReferenceDesign.layoutForRoute(route);
+    final openComposition = reference &&
+        !accentEdge &&
+        !selected &&
+        {
+          PortalBodyLayout.editorial,
+          PortalBodyLayout.list,
+          PortalBodyLayout.timeline,
+          PortalBodyLayout.kanban,
+          PortalBodyLayout.gallery,
+          PortalBodyLayout.horizontalRail,
+        }.contains(layout);
+    if (openComposition) {
+      final colors = context.appColors;
+      return CineHoverZoom(
+        scale: 1.003,
+        pressedScale: 1.008,
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: colors.borderMuted),
+            ),
+          ),
+          child: child,
+        ),
+      );
+    }
     final card = CardShell(
       // Portal section wrappers pass `accentEdge: false`. Treat those as one
       // calm workspace section while nested records keep the compact card
@@ -38,10 +69,6 @@ class GlassSectionCard extends StatelessWidget {
       accentEdge: accentEdge,
       child: child,
     );
-    return PortalReferenceDesign.usesReference(
-      ModalRoute.of(context)?.settings.name,
-    )
-        ? card
-        : CineHoverZoom(child: card);
+    return reference ? card : CineHoverZoom(child: card);
   }
 }

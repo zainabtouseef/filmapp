@@ -82,6 +82,8 @@ class PortalReferenceDesign {
   /// but [usesReference] prevents this body system from styling them.
   static PortalBodyLayout layoutForRoute(String? rawRoute) {
     final route = (rawRoute ?? '').split('?').first.toLowerCase();
+    final explicit = _layoutOverrides[route];
+    if (explicit != null) return explicit;
 
     if (_containsAny(route, const [
       'cineplanner',
@@ -218,4 +220,24 @@ class PortalReferenceDesign {
   static bool _containsAny(String value, List<String> fragments) {
     return fragments.any(value.contains);
   }
+
+  /// Routes whose information job is clearer than their URL wording. Keeping
+  /// these decisions explicit prevents all 13 portals from falling back to a
+  /// generic card grid when a screen needs a timeline, ledger, gallery, or
+  /// true master/detail workspace.
+  static const _layoutOverrides = <String, PortalBodyLayout>{
+    '/talent/rates': PortalBodyLayout.editorial,
+    '/talent/reputation': PortalBodyLayout.horizontalRail,
+    '/talent/safety': PortalBodyLayout.list,
+    '/model/usage-rights': PortalBodyLayout.timeline,
+    '/model/rate-by-usage': PortalBodyLayout.analytics,
+    '/model/brand-safety': PortalBodyLayout.list,
+    '/influencer/safety': PortalBodyLayout.list,
+    '/location-owner/pricing': PortalBodyLayout.analytics,
+    '/location-owner/rules': PortalBodyLayout.list,
+    '/agency/selection-notes': PortalBodyLayout.splitView,
+    '/equipment-provider/terms': PortalBodyLayout.timeline,
+    '/legal/history-billing': PortalBodyLayout.analytics,
+    '/public/account': PortalBodyLayout.analytics,
+  };
 }

@@ -326,6 +326,7 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
         children: [
           const Positioned.fill(child: CinematicBackdrop()),
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 Padding(

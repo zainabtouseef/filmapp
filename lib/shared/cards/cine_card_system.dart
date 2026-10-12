@@ -141,7 +141,7 @@ class _CardShellState extends State<CardShell> {
       tone,
       colors.isLight
           ? (widget.accentEdge ? .05 : .024)
-          : (widget.accentEdge ? .13 : .075),
+          : (widget.accentEdge ? .055 : .025),
     )!;
     final borderColor = _focused
         ? colors.focusRing
@@ -2455,6 +2455,9 @@ class SectionContainer extends StatelessWidget {
     final referenceRoute = PortalReferenceDesign.usesReference(
       ModalRoute.of(context)?.settings.name,
     );
+    final referenceLayout = PortalReferenceDesign.layoutForRoute(
+      ModalRoute.of(context)?.settings.name,
+    );
     final sectionTone = _sectionTone(title);
     final resolvedLeading = leading ??
         (referenceRoute
@@ -2523,7 +2526,33 @@ class SectionContainer extends StatelessWidget {
             child: content,
           )
         : content;
+    final prefersOpenComposition = referenceRoute &&
+        {
+          PortalBodyLayout.editorial,
+          PortalBodyLayout.list,
+          PortalBodyLayout.timeline,
+          PortalBodyLayout.kanban,
+          PortalBodyLayout.gallery,
+          PortalBodyLayout.horizontalRail,
+        }.contains(referenceLayout);
     final section = switch (treatment) {
+      SectionTreatment.open when prefersOpenComposition => Container(
+          width: double.infinity,
+          padding: switch (density) {
+            CardDensity.compact => const EdgeInsets.all(AppSpacing.md),
+            CardDensity.standard => const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.lg,
+              ),
+            CardDensity.comfortable => const EdgeInsets.all(AppSpacing.xxl),
+          },
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: colors.borderMuted),
+            ),
+          ),
+          child: resolvedContent,
+        ),
       SectionTreatment.open when referenceRoute => CardShell(
           variant: CardVariant.section,
           density: density,

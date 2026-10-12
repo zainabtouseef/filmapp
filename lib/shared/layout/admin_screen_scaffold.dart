@@ -132,6 +132,7 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
         children: [
           const Positioned.fill(child: CinematicBackdrop()),
           SafeArea(
+            bottom: false,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 // Aligned with AppBreakpoints.laptop so the desktop side

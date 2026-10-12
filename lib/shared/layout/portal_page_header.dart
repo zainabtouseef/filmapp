@@ -73,7 +73,7 @@ class PortalPageHeader extends StatelessWidget {
                     : [
                         colors.elevatedSurface,
                         Color.lerp(
-                            colors.elevatedSurface, colors.goldMid, .12)!,
+                            colors.elevatedSurface, colors.goldMid, .045)!,
                         colors.elevatedSurface,
                       ],
                 stops: const [0, .54, 1],
@@ -420,6 +420,7 @@ class _HeroBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final resolvedOpacity = colors.isLight ? opacity : opacity * .32;
     return IgnorePointer(
       child: Container(
         width: size,
@@ -430,8 +431,8 @@ class _HeroBubble extends StatelessWidget {
             center: const Alignment(-.25, -.32),
             colors: [
               colors.surfaceHighlight.withValues(alpha: .9),
-              colors.goldLight.withValues(alpha: opacity),
-              colors.goldMid.withValues(alpha: opacity * .55),
+              colors.goldLight.withValues(alpha: resolvedOpacity),
+              colors.goldMid.withValues(alpha: resolvedOpacity * .45),
             ],
           ),
           border:

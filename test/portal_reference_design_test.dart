@@ -141,6 +141,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('all nine operational routes mount distinct layout widgets',
+      (tester) async {
+    final expected = <String, Type>{
+      '/director/reports': PortalAnalyticsLayout,
+      '/director/contracts': PortalTimelineLayout,
+      '/talent/availability': PortalCalendarLayout,
+      '/talent/rates': PortalEditorialLayout,
+      '/agency/shortlist': PortalListLayout,
+      '/brand/campaign-tracker': PortalKanbanLayout,
+      '/crew/portfolio': PortalGalleryLayout,
+      '/director/cineplanner': PortalSplitCollectionLayout,
+      '/crew/opportunities': PortalSpotlightRailLayout,
+    };
+
+    for (final entry in expected.entries) {
+      await tester.pumpWidget(
+        MaterialApp(
+          key: ValueKey(entry.key),
+          initialRoute: entry.key,
+          routes: {
+            entry.key: (_) => const Scaffold(
+                  body: PortalAdaptiveCollection(
+                    children: [
+                      SizedBox(height: 60),
+                      SizedBox(height: 60),
+                      SizedBox(height: 60),
+                    ],
+                  ),
+                ),
+          },
+        ),
+      );
+      expect(find.byType(entry.value), findsOneWidget, reason: entry.key);
+      expect(tester.takeException(), isNull, reason: entry.key);
+    }
+  });
+
   testWidgets('operational page header renders editorial hero and four stats',
       (tester) async {
     await tester.pumpWidget(

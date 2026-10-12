@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 class ThemeController extends ChangeNotifier {
   ThemeMode _themeMode;
 
-  ThemeController({ThemeMode initialThemeMode = ThemeMode.dark})
+  ThemeController({ThemeMode initialThemeMode = ThemeMode.light})
       : _themeMode = initialThemeMode;
 
   ThemeMode get themeMode => _themeMode;

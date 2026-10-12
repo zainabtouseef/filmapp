@@ -74,6 +74,7 @@ class _CineAnimatedGoldBorderState extends State<CineAnimatedGoldBorder>
                     goldDark: colors.goldDark,
                     goldMid: colors.goldMid,
                     goldLight: colors.goldLight,
+                    isLight: colors.isLight,
                     radius: widget.radius,
                     strokeWidth: widget.strokeWidth,
                   ),
@@ -92,6 +93,7 @@ class _CineGoldRingPainter extends CustomPainter {
   final Color goldDark;
   final Color goldMid;
   final Color goldLight;
+  final bool isLight;
   final double radius;
   final double strokeWidth;
 
@@ -100,6 +102,7 @@ class _CineGoldRingPainter extends CustomPainter {
     required this.goldDark,
     required this.goldMid,
     required this.goldLight,
+    required this.isLight,
     required this.radius,
     required this.strokeWidth,
   });
@@ -112,6 +115,7 @@ class _CineGoldRingPainter extends CustomPainter {
       rect.deflate(inset),
       Radius.circular((radius - inset).clamp(0, radius)),
     );
+    final peak = isLight ? 1.0 : .56;
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
@@ -121,11 +125,11 @@ class _CineGoldRingPainter extends CustomPainter {
           goldDark.withValues(alpha: .05),
           goldMid.withValues(alpha: .10),
           goldMid.withValues(alpha: .20),
-          goldMid.withValues(alpha: .92),
-          goldLight.withValues(alpha: 1),
-          const Color(0xFFFFF4BA),
-          goldLight.withValues(alpha: 1),
-          goldMid.withValues(alpha: .92),
+          goldMid.withValues(alpha: .72 * peak),
+          goldLight.withValues(alpha: .82 * peak),
+          const Color(0xFFFFF4BA).withValues(alpha: peak),
+          goldLight.withValues(alpha: .82 * peak),
+          goldMid.withValues(alpha: .72 * peak),
           goldMid.withValues(alpha: .20),
           goldDark.withValues(alpha: .05),
         ],
@@ -141,6 +145,7 @@ class _CineGoldRingPainter extends CustomPainter {
       oldDelegate.goldDark != goldDark ||
       oldDelegate.goldMid != goldMid ||
       oldDelegate.goldLight != goldLight ||
+      oldDelegate.isLight != isLight ||
       oldDelegate.radius != radius ||
       oldDelegate.strokeWidth != strokeWidth;
 }
