@@ -44,7 +44,7 @@ class _DPContractCenterScreenState extends State<DPContractCenterScreen> {
             context,
             icon: Icons.article_outlined,
             label: _generating ? 'Preparing wizard...' : 'Open contract wizard',
-            onTap: _generating ? () {} : _openContractWizard,
+            onTap: _generating ? null : _openContractWizard,
           ),
         ),
         const SizedBox(height: 8),
@@ -1176,21 +1176,24 @@ class _ContractCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 9),
-          DPHolographicButton(
-            label: 'Open Contract',
-            icon: Icons.open_in_new_rounded,
-            onTap: contractId == null
-                ? null
-                : () => Navigator.pushNamed(
-                      context,
-                      CoreRoutes.contractDetail(contractId!),
-                    ),
-            secondary: true,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              DPHolographicButton(
+                label: 'Open Contract',
+                icon: Icons.open_in_new_rounded,
+                onTap: contractId == null
+                    ? null
+                    : () => Navigator.pushNamed(
+                          context,
+                          CoreRoutes.contractDetail(contractId!),
+                        ),
+                secondary: true,
+              ),
+              if (contractId != null) _legalReviewButton(),
+            ],
           ),
-          if (contractId != null) ...[
-            const SizedBox(height: 8),
-            _legalReviewButton(),
-          ],
         ],
       ),
     );

@@ -857,7 +857,9 @@ class _LiveShortlistCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 660;
+          // The four action buttons need their own row until the panel is
+          // wide enough to keep the candidate identity readable.
+          final compact = constraints.maxWidth < 950;
           final identity = Row(
             children: [
               SizedBox(

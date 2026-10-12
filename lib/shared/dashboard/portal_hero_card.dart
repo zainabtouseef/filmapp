@@ -76,7 +76,7 @@ class PortalHeroCard extends StatelessWidget {
               child: Stack(
                 children: [
                   const Positioned.fill(
-                    child: PortalFloatingBubbles(count: 7),
+                    child: PortalFloatingBubbles(count: 3),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

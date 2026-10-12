@@ -41,7 +41,7 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
           context,
           icon: Icons.file_download_outlined,
           label: _generating ? 'Generating...' : 'Generate bookings export',
-          onTap: _generating ? () {} : _generateBookingsExport,
+          onTap: _generating ? null : _generateBookingsExport,
         ),
         const SizedBox(height: 8),
         if (future == null)
@@ -212,7 +212,7 @@ class _ReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final tone = status == 'Ready'
+    final tone = status == 'Ready' || status == 'Completed'
         ? DpTone.success
         : status == 'Generating'
             ? DpTone.info
@@ -229,7 +229,7 @@ class _ReportCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          dpText(context, '$project - $date'),
+          dpText(context, '$project · ${_displayDate(context)}'),
           const SizedBox(height: 10),
           Wrap(
             spacing: 7,
@@ -243,7 +243,7 @@ class _ReportCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                'PDF / CSV / XLS',
+                'CSV export',
                 style: AppTextStyles.smallMeta.copyWith(
                   color: colors.textSecondary,
                 ),
@@ -264,6 +264,13 @@ class _ReportCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _displayDate(BuildContext context) {
+    final parsed = DateTime.tryParse(date);
+    return parsed == null
+        ? date
+        : MaterialLocalizations.of(context).formatMediumDate(parsed.toLocal());
   }
 }
 

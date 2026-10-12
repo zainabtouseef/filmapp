@@ -97,16 +97,6 @@ class PortalPageHeader extends StatelessWidget {
                   top: -18,
                   child: _HeroBubble(size: 72, opacity: .16),
                 ),
-                const Positioned(
-                  right: 172,
-                  top: 54,
-                  child: _HeroBubble(size: 22, opacity: .19),
-                ),
-                const Positioned(
-                  left: 46,
-                  bottom: 46,
-                  child: _HeroBubble(size: 14, opacity: .13),
-                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
                   child: LayoutBuilder(

@@ -197,12 +197,7 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                           AppSpacing.pageHorizontal,
                                           contentTopGap,
                                           AppSpacing.pageHorizontal,
-                                          wide
-                                              ? 28
-                                              : reservedNavHeight +
-                                                  MediaQuery.paddingOf(context)
-                                                      .bottom +
-                                                  32,
+                                          wide ? 28 : 18,
                                         ),
                                         child: ConstrainedBox(
                                           constraints: const BoxConstraints(
@@ -228,12 +223,7 @@ class _AdminScreenScaffoldState extends State<AdminScreenScaffold> {
                                           AppSpacing.pageHorizontal,
                                           contentTopGap,
                                           AppSpacing.pageHorizontal,
-                                          wide
-                                              ? 28
-                                              : reservedNavHeight +
-                                                  MediaQuery.paddingOf(context)
-                                                      .bottom +
-                                                  32,
+                                          wide ? 28 : 18,
                                         ),
                                         child: Align(
                                           alignment: Alignment.topCenter,

@@ -39,9 +39,65 @@ const _categoryKeys = [
 
 enum _MarketplaceViewMode { list, grid }
 
+class _MarketplaceCategoryWrap extends StatelessWidget {
+  final List<String> categories;
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  const _MarketplaceCategoryWrap({
+    required this.categories,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = CineMarketplaceVisuals.of(context);
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final category in categories)
+          Semantics(
+            button: true,
+            selected: selected == category,
+            child: Material(
+              color: selected == category ? palette.gold : palette.surface,
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                onTap: () => onSelected(category),
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 42),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: palette.border),
+                  ),
+                  child: Text(
+                    category,
+                    style: AppTextStyles.caption.copyWith(
+                      color: selected == category
+                          ? palette.onGold
+                          : palette.secondary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class DPMarketplaceDiscoveryScreen extends StatefulWidget {
   final String? initialCategory;
   final String? projectId;
+  final String? initialSearch;
+  final bool initialVerifiedOnly;
   final bool publicBuyerMode;
   final bool browseOnly;
 
@@ -49,6 +105,8 @@ class DPMarketplaceDiscoveryScreen extends StatefulWidget {
     super.key,
     this.initialCategory,
     this.projectId,
+    this.initialSearch,
+    this.initialVerifiedOnly = false,
     this.publicBuyerMode = false,
     this.browseOnly = false,
   });
@@ -74,6 +132,8 @@ class _DPMarketplaceDiscoveryScreenState
   @override
   void initState() {
     super.initState();
+    _search.text = widget.initialSearch ?? '';
+    _verifiedOnly = widget.initialVerifiedOnly;
     _restoreViewMode();
   }
 
@@ -435,16 +495,28 @@ class _DPMarketplaceDiscoveryScreenState
             delay: 100,
             child: TourTarget(
               id: 'dp.marketplace.categories',
-              child: CineAnimatedFilterRail<String>(
-                values: categories,
-                selected: _category,
-                onSelected: _setCategory,
-                labelFor: (category) => category,
-                railColor: CineMarketplaceVisuals.of(context).surface,
-                selectedColor: CineMarketplaceVisuals.of(context).gold,
-                selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
-                textColor: CineMarketplaceVisuals.of(context).secondary,
-                borderColor: CineMarketplaceVisuals.of(context).border,
+              child: LayoutBuilder(
+                builder: (context, constraints) => constraints.maxWidth < 1050
+                    ? _MarketplaceCategoryWrap(
+                        categories: categories,
+                        selected: _category,
+                        onSelected: _setCategory,
+                      )
+                    : CineAnimatedFilterRail<String>(
+                        values: categories,
+                        selected: _category,
+                        onSelected: _setCategory,
+                        labelFor: (category) => category,
+                        railColor: CineMarketplaceVisuals.of(context).surface,
+                        selectedColor: CineMarketplaceVisuals.of(context).gold,
+                        selectedTextColor:
+                            CineMarketplaceVisuals.of(context).onGold,
+                        textColor: CineMarketplaceVisuals.of(context).secondary,
+                        borderColor: CineMarketplaceVisuals.of(context).border,
+                        itemHorizontalPadding: 9,
+                        gap: 2,
+                        showSelectionDot: false,
+                      ),
               ),
             ),
           ),

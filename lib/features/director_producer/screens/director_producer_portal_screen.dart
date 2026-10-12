@@ -136,10 +136,16 @@ class DirectorProducerPortalScreen extends StatelessWidget {
       DirectorProducerRoutes.discover => DPMarketplaceDiscoveryScreen(
           initialCategory: category,
           projectId: projectId,
+          initialSearch: _stringArg('query'),
+          initialVerifiedOnly:
+              arguments is Map && (arguments as Map)['verifiedOnly'] == true,
         ),
       DirectorProducerRoutes.marketplace => DPMarketplaceDiscoveryScreen(
           initialCategory: category,
           projectId: projectId,
+          initialSearch: _stringArg('query'),
+          initialVerifiedOnly:
+              arguments is Map && (arguments as Map)['verifiedOnly'] == true,
         ),
       DirectorProducerRoutes.filters => const DPSmartFiltersSheet(),
       DirectorProducerRoutes.profile => DPStakeholderProfileScreen(

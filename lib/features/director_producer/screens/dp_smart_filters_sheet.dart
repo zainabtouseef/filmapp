@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../routes/director_producer_routes.dart';
@@ -15,9 +16,52 @@ class DPSmartFiltersSheet extends StatefulWidget {
 }
 
 class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
-  String _category = 'Talent';
+  String _category = 'Actors';
   String _city = 'Lahore';
   bool _verifiedOnly = true;
+  bool _saving = false;
+
+  void _applyFilters() {
+    Navigator.pushNamed(
+      context,
+      DirectorProducerRoutes.marketplace,
+      arguments: {
+        'category': _category,
+        'query': _city,
+        'verifiedOnly': _verifiedOnly,
+      },
+    );
+  }
+
+  Future<void> _saveView() async {
+    final auth = AuthScope.maybeOf(context);
+    if (auth == null || !auth.isAuthenticated) {
+      dpSnack(context, 'Sign in to save this search.');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await auth.createSavedSearch(
+        name: '$_city $_category',
+        listingType: switch (_category) {
+          'Actors' => 'actor',
+          'Models' => 'model',
+          'Crew' => 'crew',
+          'Locations' => 'location',
+          'Media & Equipment' => 'equipment',
+          'Agencies' => 'agency',
+          'Distribution' => 'distribution',
+          _ => null,
+        },
+        queryText: _city,
+      );
+      if (mounted) dpSnack(context, 'Search saved.');
+    } catch (_) {
+      if (mounted) dpSnack(context, 'Could not save this search. Try again.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +72,7 @@ class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
           context,
           icon: Icons.tune_rounded,
           label: 'Apply',
-          onTap: () =>
-              Navigator.pushNamed(context, DirectorProducerRoutes.marketplace),
+          onTap: _applyFilters,
         ),
         const SizedBox(height: 8),
         DPTwoColumn(
@@ -42,12 +85,14 @@ class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
                 _FilterGroup(
                   title: 'Category',
                   options: const [
-                    'Talent',
+                    'Actors',
                     'Models',
+                    'Influencers',
                     'Crew',
                     'Locations',
-                    'Media',
+                    'Media & Equipment',
                     'Agencies',
+                    'Distribution',
                   ],
                   active: _category,
                   onSelected: (value) => setState(() => _category = value),
@@ -66,12 +111,11 @@ class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
                   onSelected: (value) => setState(() => _city = value),
                 ),
                 const SizedBox(height: 14),
-                _FilterRange(label: 'Rating floor', value: '4.5+'),
-                _FilterRange(
-                  label: 'Availability',
-                  value: 'Next 14 days',
-                  showDivider: false,
-                ),
+                Text(
+                    'Choose a category and city, then open matching live listings.',
+                    style: AppTextStyles.smallMeta.copyWith(
+                      color: context.appColors.textSecondary,
+                    )),
               ],
             ),
           ),
@@ -81,8 +125,6 @@ class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _FilterRange(label: 'Budget range', value: 'PKR 150k - 1.8M'),
-                _FilterRange(label: 'Usage rights', value: 'Digital + TVC'),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   value: _verifiedOnly,
@@ -97,15 +139,12 @@ class _DPSmartFiltersSheetState extends State<DPSmartFiltersSheet> {
                     DPHolographicButton(
                       label: 'Apply Filters',
                       icon: Icons.check_rounded,
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        DirectorProducerRoutes.marketplace,
-                      ),
+                      onTap: _applyFilters,
                     ),
                     DPHolographicButton(
-                      label: 'Save View',
+                      label: _saving ? 'Saving…' : 'Save View',
                       icon: Icons.bookmark_outline_rounded,
-                      onTap: () => dpSnack(context, 'Filter view saved'),
+                      onTap: _saving ? null : _saveView,
                       secondary: true,
                     ),
                   ],
@@ -161,41 +200,6 @@ class _FilterGroup extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _FilterRange extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool showDivider;
-
-  const _FilterRange({
-    required this.label,
-    required this.value,
-    this.showDivider = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: showDivider
-            ? Border(bottom: BorderSide(color: colors.borderMuted))
-            : null,
-      ),
-      child: Row(
-        children: [
-          Expanded(child: dpText(context, label, strong: true)),
-          const SizedBox(width: 10),
-          Text(
-            value,
-            style: AppTextStyles.statusText.copyWith(color: colors.goldDark),
-          ),
-        ],
-      ),
     );
   }
 }

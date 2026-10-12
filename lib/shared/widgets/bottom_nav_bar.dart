@@ -101,8 +101,7 @@ class PremiumBottomNavBar extends StatelessWidget {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final totalHeight =
         (wide ? 156.0 : (compactCenter ? 112.0 : 132.0)) + bottomInset;
-    final navHeight =
-        (wide ? 126.0 : (compactCenter ? 96.0 : 108.0)) + bottomInset;
+    final navHeight = totalHeight;
     final createSize = wide ? 118.0 : (compactCenter ? 58.0 : 82.0);
     final sidePadding = wide ? 50.0 : (compactCenter ? 18.0 : 22.0);
     final itemTop = wide ? 32.0 : (compactCenter ? 23.0 : 26.0);

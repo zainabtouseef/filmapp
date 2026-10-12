@@ -36,4 +36,24 @@ class DpProject {
     required this.progress,
     this.coverImageUrl,
   });
+
+  DpProject copyWith({int? confirmedCost, double? budgetHealth}) => DpProject(
+        id: id,
+        title: title,
+        type: type,
+        city: city,
+        dateRange: dateRange,
+        status: status,
+        estimatedBudget: estimatedBudget,
+        confirmedCost: confirmedCost ?? this.confirmedCost,
+        budgetHealth: budgetHealth ?? this.budgetHealth,
+        pendingActions: pendingActions,
+        shootDate: shootDate,
+        bookingsCount: bookingsCount,
+        contractsCount: contractsCount,
+        paymentsStatus: paymentsStatus,
+        team: team,
+        progress: progress,
+        coverImageUrl: coverImageUrl,
+      );
 }

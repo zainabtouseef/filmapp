@@ -22,6 +22,7 @@ class CineAnimatedFilterRail<T> extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final double gap;
   final double itemHeight;
+  final double itemHorizontalPadding;
   final bool showSelectionDot;
 
   const CineAnimatedFilterRail({
@@ -39,6 +40,7 @@ class CineAnimatedFilterRail<T> extends StatefulWidget {
     this.padding = const EdgeInsets.all(4),
     this.gap = 4,
     this.itemHeight = 44,
+    this.itemHorizontalPadding = 15,
     this.showSelectionDot = true,
   });
 
@@ -199,6 +201,7 @@ class _CineAnimatedFilterRailState<T> extends State<CineAnimatedFilterRail<T>> {
                         selectedTextColor: selectedTextColor,
                         textColor: textColor,
                         height: widget.itemHeight,
+                        horizontalPadding: widget.itemHorizontalPadding,
                         showSelectionDot: widget.showSelectionDot,
                         onTap: () {
                           widget.onSelected(widget.values[index]);
@@ -225,6 +228,7 @@ class _FilterItem<T> extends StatefulWidget {
   final Color selectedTextColor;
   final Color textColor;
   final double height;
+  final double horizontalPadding;
   final bool showSelectionDot;
   final VoidCallback onTap;
 
@@ -237,6 +241,7 @@ class _FilterItem<T> extends StatefulWidget {
     required this.selectedTextColor,
     required this.textColor,
     required this.height,
+    required this.horizontalPadding,
     required this.showSelectionDot,
     required this.onTap,
   });
@@ -271,7 +276,7 @@ class _FilterItemState<T> extends State<_FilterItem<T>> {
           curve: AppDurations.standardCurve,
           child: Container(
             height: widget.height,
-            padding: const EdgeInsets.symmetric(horizontal: 15),
+            padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
             alignment: Alignment.center,
             child: AnimatedDefaultTextStyle(
               duration: reduceMotion ? Duration.zero : AppDurations.tab,

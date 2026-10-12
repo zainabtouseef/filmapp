@@ -13,6 +13,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import '../routes/director_producer_routes.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
 import '../widgets/dp_status_chip.dart';
@@ -28,6 +29,8 @@ class DPProjectRoomScreen extends StatefulWidget {
 
 class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
   Future<ProjectRoom>? _roomFuture;
+  List<Project> _projects = const [];
+  String? _selectedProjectId;
   bool _started = false;
   bool _savingDecision = false;
   bool _uploadingFile = false;
@@ -46,16 +49,51 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
 
   void _reload() {
     final controller = ProjectsScope.maybeOf(context);
-    final projectId = widget.projectId;
     setState(() {
-      _roomFuture = controller == null || projectId == null
+      _roomFuture = controller == null
           ? Future<ProjectRoom>.error(
               const ApiException(
                 code: 'project.missing',
-                message: 'Project id is required.',
+                message: 'Sign in to open a project room.',
               ),
             )
-          : controller.room(projectId);
+          : _loadRoom(controller);
+    });
+  }
+
+  Future<ProjectRoom> _loadRoom(ProjectsController controller) async {
+    final projects = await controller.projects(force: true);
+    if (projects.isEmpty) {
+      throw const ApiException(
+        code: 'project.missing',
+        message: 'Create a project to open its room.',
+      );
+    }
+    final requested = _selectedProjectId ?? widget.projectId;
+    final selected = projects.any((project) => project.publicId == requested)
+        ? requested!
+        : projects
+            .firstWhere(
+              (project) => project.status != 'archived',
+              orElse: () => projects.first,
+            )
+            .publicId;
+    if (mounted) {
+      setState(() {
+        _projects = projects;
+        _selectedProjectId = selected;
+      });
+    }
+    return controller.room(selected);
+  }
+
+  void _selectProject(String? projectId) {
+    if (projectId == null || projectId == _selectedProjectId) return;
+    final controller = ProjectsScope.maybeOf(context);
+    if (controller == null) return;
+    setState(() {
+      _selectedProjectId = projectId;
+      _roomFuture = controller.room(projectId);
     });
   }
 
@@ -76,26 +114,49 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
           );
         }
         if (snapshot.hasError) {
-          return CoreEmptyState(
-            icon: Icons.cloud_off_rounded,
-            title: 'Project room unavailable',
-            message:
-                'Could not load the live project room from the database. Open a real project and retry.',
-            actionLabel: 'Retry',
-            onAction: _reload,
+          final noProject = snapshot.error is ApiException &&
+              (snapshot.error as ApiException).code == 'project.missing';
+          final empty = CoreEmptyState(
+            icon: noProject
+                ? Icons.movie_creation_outlined
+                : Icons.cloud_off_rounded,
+            title:
+                noProject ? 'No project room yet' : 'Project room unavailable',
+            message: noProject
+                ? 'Create a project to start a team room.'
+                : 'Could not load the selected project room. Choose another project or retry.',
+            actionLabel: noProject ? 'Create project' : 'Retry',
+            onAction: noProject
+                ? () => Navigator.pushNamed(
+                    context, DirectorProducerRoutes.createProject)
+                : _reload,
           );
+          return _projects.length > 1 && !noProject
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _projectSelector(),
+                    const SizedBox(height: 12),
+                    empty
+                  ],
+                )
+              : empty;
         }
         final room = snapshot.data!;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_projects.length > 1) ...[
+              _projectSelector(),
+              const SizedBox(height: 12),
+            ],
             TourTarget(
               id: 'dp.room.pinDecision',
               child: dpHeaderAction(
                 context,
                 icon: Icons.campaign_outlined,
                 label: _savingDecision ? 'Pinning...' : 'Pin Decision',
-                onTap: _savingDecision ? () {} : _pinDecision,
+                onTap: _savingDecision ? null : _pinDecision,
               ),
             ),
             const SizedBox(height: 8),
@@ -176,19 +237,99 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
     );
   }
 
+  Widget _projectSelector() => ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: DropdownButtonFormField<String>(
+          key: ValueKey(_selectedProjectId),
+          initialValue: _selectedProjectId,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Project workspace',
+            prefixIcon: Icon(Icons.movie_creation_outlined),
+          ),
+          items: [
+            for (final project in _projects)
+              DropdownMenuItem(
+                value: project.publicId,
+                child: Text(project.title, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: _selectProject,
+        ),
+      );
+
   Future<void> _pinDecision() async {
     final controller = ProjectsScope.maybeOf(context);
-    final projectId = widget.projectId;
+    final projectId = _selectedProjectId;
     if (controller == null || projectId == null) {
       dpSnack(context, 'Open a live project before pinning decisions');
       return;
     }
+    final title = TextEditingController();
+    final details = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final decision = await showDialog<({String title, String body})>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pin a team decision'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: title,
+                  autofocus: true,
+                  maxLength: 120,
+                  decoration:
+                      const InputDecoration(labelText: 'Decision title'),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter a decision title'
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: details,
+                  maxLines: 4,
+                  maxLength: 1000,
+                  decoration: const InputDecoration(
+                    labelText: 'Details',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (!formKey.currentState!.validate()) return;
+              Navigator.pop(
+                dialogContext,
+                (title: title.text.trim(), body: details.text.trim()),
+              );
+            },
+            child: const Text('Pin decision'),
+          ),
+        ],
+      ),
+    );
+    title.dispose();
+    details.dispose();
+    if (decision == null || !mounted) return;
     setState(() => _savingDecision = true);
     try {
       await controller.createRoomItem(
         projectId: projectId,
-        title: 'Production decision',
-        body: 'Decision pinned from the Director/Producer project room.',
+        title: decision.title,
+        body: decision.body,
       );
       if (!mounted) return;
       dpSnack(context, 'Decision pinned');
@@ -204,7 +345,7 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
   Future<void> _uploadFile() async {
     final auth = AuthScope.maybeOf(context);
     final projects = ProjectsScope.maybeOf(context);
-    final projectId = widget.projectId;
+    final projectId = _selectedProjectId;
     if (auth == null || projects == null || projectId == null) {
       dpSnack(context, 'Open a live project before uploading files');
       return;
@@ -247,7 +388,7 @@ class _DPProjectRoomScreenState extends State<DPProjectRoomScreen> {
   Future<void> _uploadProjectMedia(String folder) async {
     final auth = AuthScope.maybeOf(context);
     final projects = ProjectsScope.maybeOf(context);
-    final projectId = widget.projectId;
+    final projectId = _selectedProjectId;
     if (auth == null || projects == null || projectId == null) {
       dpSnack(context, 'Open a live project before uploading media');
       return;
