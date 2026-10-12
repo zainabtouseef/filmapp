@@ -114,54 +114,60 @@ class _DPCalendarScheduleScreenState extends State<DPCalendarScheduleScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        DPSectionCard(
-          title: 'Production calendar',
-          icon: Icons.calendar_month_outlined,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TourTarget(
-                id: 'dp.schedule.projectScope',
-                child: DPProjectScopePicker(
-                  selectedProjectId: _projectId,
-                  onChanged: (value) => setState(() {
-                    _projectId = value;
-                    _scheduleFuture = _loadSchedule();
-                  }),
+        DPTwoColumn(
+          left: DPSectionCard(
+            title: 'Production calendar',
+            icon: Icons.calendar_month_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TourTarget(
+                  id: 'dp.schedule.projectScope',
+                  child: DPProjectScopePicker(
+                    selectedProjectId: _projectId,
+                    onChanged: (value) => setState(() {
+                      _projectId = value;
+                      _scheduleFuture = _loadSchedule();
+                    }),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TourTarget(
-                id: 'dp.schedule.calendar',
-                child: ProductionCalendar(
-                  projectId: _projectId,
-                  refreshToken: _refreshToken,
-                  onScheduleChanged: () => setState(() {
-                    _scheduleFuture = _loadSchedule();
-                  }),
-                  initialMode: ProductionCalendarMode.today,
+                const SizedBox(height: 12),
+                TourTarget(
+                  id: 'dp.schedule.calendar',
+                  child: ProductionCalendar(
+                    projectId: _projectId,
+                    refreshToken: _refreshToken,
+                    onScheduleChanged: () => setState(() {
+                      _scheduleFuture = _loadSchedule();
+                    }),
+                    initialMode: ProductionCalendarMode.month,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          right: TourTarget(
+            id: 'dp.schedule.riskWatch',
+            child: DPSectionCard(
+              title: 'Schedule agenda',
+              icon: Icons.view_agenda_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ScheduleRiskWatch(future: _scheduleFuture),
+                  const SizedBox(height: 16),
+                  TourTarget(
+                    id: 'dp.schedule.callSheet',
+                    child: DPHolographicButton(
+                      label: 'Open call sheet',
+                      icon: Icons.description_outlined,
+                      onTap: _openCallSheet,
+                      secondary: true,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        TourTarget(
-          id: 'dp.schedule.riskWatch',
-          child: DPSectionCard(
-            title: 'Schedule risk watch',
-            icon: Icons.warning_amber_rounded,
-            child: _ScheduleRiskWatch(future: _scheduleFuture),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TourTarget(
-          id: 'dp.schedule.callSheet',
-          child: DPHolographicButton(
-            label: 'View Call Sheet',
-            icon: Icons.description_outlined,
-            onTap: _openCallSheet,
-            secondary: true,
+            ),
           ),
         ),
       ],

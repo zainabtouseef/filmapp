@@ -537,7 +537,7 @@ class _ShortlistBulkActions extends StatelessWidget {
   }
 }
 
-class _LiveShortlistColumns extends StatelessWidget {
+class _LiveShortlistColumns extends StatefulWidget {
   final List<MarketplaceShortlist> boards;
   final String? mutatingId;
   final ValueChanged<String> onDelete;
@@ -557,44 +557,134 @@ class _LiveShortlistColumns extends StatelessWidget {
   });
 
   @override
+  State<_LiveShortlistColumns> createState() => _LiveShortlistColumnsState();
+}
+
+class _LiveShortlistColumnsState extends State<_LiveShortlistColumns> {
+  int _selectedBoard = 0;
+
+  @override
   Widget build(BuildContext context) {
     final visibleBoards =
-        boards.where((board) => board.items.isNotEmpty).toList();
+        widget.boards.where((board) => board.items.isNotEmpty).toList();
     if (visibleBoards.isEmpty) {
       return DPGlassCard(
           child: dpText(context, 'No shortlist candidates yet.'));
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final (index, board) in visibleBoards.indexed) ...[
-          if (index == 0)
-            TourTarget(
-              id: 'dp.shortlist.firstGroup',
-              child: _LiveShortlistColumn(
-                board: board,
-                mutatingId: mutatingId,
-                onDelete: onDelete,
-                onMove: onMove,
-                onSelect: onSelect,
-                selectedIds: selectedIds,
-                onToggleSelection: onToggleSelection,
-                wrapFirstItem: true,
-              ),
-            )
-          else
-            _LiveShortlistColumn(
-              board: board,
-              mutatingId: mutatingId,
-              onDelete: onDelete,
-              onMove: onMove,
-              onSelect: onSelect,
-              selectedIds: selectedIds,
-              onToggleSelection: onToggleSelection,
+    final selectedIndex = _selectedBoard.clamp(0, visibleBoards.length - 1);
+    final selected = visibleBoards[selectedIndex];
+    return DPGlassCard(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final (index, board) in visibleBoards.indexed) ...[
+                  _ShortlistBoardTab(
+                    label: board.name,
+                    count: board.items.length,
+                    selected: index == selectedIndex,
+                    onTap: () => setState(() => _selectedBoard = index),
+                  ),
+                  if (index != visibleBoards.length - 1)
+                    const SizedBox(width: 8),
+                ],
+              ],
             ),
-          if (index != visibleBoards.length - 1) const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 12),
+          TourTarget(
+            id: 'dp.shortlist.firstGroup',
+            child: _LiveShortlistColumn(
+              board: selected,
+              mutatingId: widget.mutatingId,
+              onDelete: widget.onDelete,
+              onMove: widget.onMove,
+              onSelect: widget.onSelect,
+              selectedIds: widget.selectedIds,
+              onToggleSelection: widget.onToggleSelection,
+              wrapFirstItem: true,
+              embedded: true,
+            ),
+          ),
         ],
-      ],
+      ),
+    );
+  }
+}
+
+class _ShortlistBoardTab extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ShortlistBoardTab({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: selected ? colors.goldGradient : null,
+          color: selected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected ? colors.goldMid : colors.borderMuted,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: colors.goldMid.withValues(alpha: .14),
+                    blurRadius: 18,
+                    offset: const Offset(0, 7),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.label.copyWith(
+                color: selected ? colors.onGold : colors.textPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 9),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.onGold.withValues(alpha: .18)
+                    : colors.softSurface,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                '$count',
+                style: AppTextStyles.smallMeta.copyWith(
+                  color: selected ? colors.onGold : colors.textSecondary,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -608,6 +698,7 @@ class _LiveShortlistColumn extends StatelessWidget {
   final bool wrapFirstItem;
   final Set<String> selectedIds;
   final ValueChanged<String> onToggleSelection;
+  final bool embedded;
 
   const _LiveShortlistColumn({
     required this.board,
@@ -618,55 +709,60 @@ class _LiveShortlistColumn extends StatelessWidget {
     required this.selectedIds,
     required this.onToggleSelection,
     this.wrapFirstItem = false,
+    this.embedded = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return DPGlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  board.name.toUpperCase(),
-                  style: AppTextStyles.sectionHeaderStyle.copyWith(
-                    color: colors.textPrimary,
-                    fontSize: 14,
-                    letterSpacing: 1.4,
-                  ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                board.name.toUpperCase(),
+                style: AppTextStyles.sectionHeaderStyle.copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 14,
+                  letterSpacing: 1.4,
                 ),
               ),
-              DPStatusChip(label: '${board.items.length}', tone: DpTone.info),
-            ],
-          ),
-          const SizedBox(height: 10),
-          for (final (index, item) in board.items.indexed)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: () {
-                final isFirst = wrapFirstItem && index == 0;
-                final card = _LiveShortlistCard(
-                  item: item,
-                  loading: mutatingId == item.publicId,
-                  onDelete: () => onDelete(item.publicId),
-                  onMoveUp: () => onMove(item, -1),
-                  onMoveDown: () => onMove(item, 1),
-                  onSelect: () => onSelect(item),
-                  selected: selectedIds.contains(item.publicId),
-                  onToggleSelection: () => onToggleSelection(item.publicId),
-                  wrapActions: isFirst,
-                );
-                return isFirst
-                    ? TourTarget(id: 'dp.shortlist.firstCard', child: card)
-                    : card;
-              }(),
             ),
-        ],
-      ),
+            DPStatusChip(label: '${board.items.length}', tone: DpTone.info),
+          ],
+        ),
+        const SizedBox(height: 10),
+        for (final (index, item) in board.items.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: () {
+              final isFirst = wrapFirstItem && index == 0;
+              final card = _LiveShortlistCard(
+                item: item,
+                loading: mutatingId == item.publicId,
+                onDelete: () => onDelete(item.publicId),
+                onMoveUp: () => onMove(item, -1),
+                onMoveDown: () => onMove(item, 1),
+                onSelect: () => onSelect(item),
+                selected: selectedIds.contains(item.publicId),
+                onToggleSelection: () => onToggleSelection(item.publicId),
+                wrapActions: isFirst,
+              );
+              return isFirst
+                  ? TourTarget(id: 'dp.shortlist.firstCard', child: card)
+                  : card;
+            }(),
+          ),
+      ],
     );
+    return embedded
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
+            child: content,
+          )
+        : DPGlassCard(child: content);
   }
 }
 

@@ -2482,16 +2482,11 @@ class SectionContainer extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: referenceRoute
-                        ? AppTextStyles.heroSerifHeadline.copyWith(
-                            color: colors.textPrimary,
-                            fontSize: 23,
-                            fontWeight: FontWeight.w600,
-                            height: 1.05,
-                          )
-                        : AppTextStyles.sectionTitle.copyWith(
-                            color: colors.textPrimary,
-                          ),
+                    style: _sectionTitleStyle(
+                      colors: colors,
+                      layout: referenceLayout,
+                      referenceRoute: referenceRoute,
+                    ),
                   ),
                   if (description != null) ...[
                     const SizedBox(height: 4),
@@ -2526,6 +2521,13 @@ class SectionContainer extends StatelessWidget {
             child: content,
           )
         : content;
+    final composedContent = referenceRoute
+        ? _RouteSectionComposition(
+            layout: referenceLayout,
+            tone: cineToneColor(context, sectionTone),
+            child: resolvedContent,
+          )
+        : resolvedContent;
     final prefersOpenComposition = referenceRoute &&
         {
           PortalBodyLayout.editorial,
@@ -2551,7 +2553,7 @@ class SectionContainer extends StatelessWidget {
               bottom: BorderSide(color: colors.borderMuted),
             ),
           ),
-          child: resolvedContent,
+          child: composedContent,
         ),
       SectionTreatment.open when referenceRoute => CardShell(
           variant: CardVariant.section,
@@ -2559,14 +2561,14 @@ class SectionContainer extends StatelessWidget {
           radius: 22,
           accentEdge: true,
           tone: sectionTone,
-          child: resolvedContent,
+          child: composedContent,
         ),
-      SectionTreatment.open => resolvedContent,
+      SectionTreatment.open => composedContent,
       SectionTreatment.soft => CardShell(
           variant: CardVariant.soft,
           density: density,
           radius: referenceRoute ? 22 : null,
-          child: resolvedContent,
+          child: composedContent,
         ),
       SectionTreatment.elevated => CardShell(
           variant: CardVariant.section,
@@ -2574,10 +2576,77 @@ class SectionContainer extends StatelessWidget {
           radius: referenceRoute ? 22 : null,
           accentEdge: referenceRoute,
           tone: referenceRoute ? sectionTone : CineTone.neutral,
-          child: resolvedContent,
+          child: composedContent,
         ),
     };
     return section;
+  }
+}
+
+TextStyle _sectionTitleStyle({
+  required CineThemeColors colors,
+  required PortalBodyLayout layout,
+  required bool referenceRoute,
+}) {
+  if (!referenceRoute) {
+    return AppTextStyles.sectionTitle.copyWith(color: colors.textPrimary);
+  }
+  if ({
+    PortalBodyLayout.list,
+    PortalBodyLayout.timeline,
+    PortalBodyLayout.kanban,
+  }.contains(layout)) {
+    return AppTextStyles.sectionTitle.copyWith(
+      color: colors.textPrimary,
+      fontSize: 18,
+      fontWeight: FontWeight.w900,
+      height: 1.08,
+    );
+  }
+  return AppTextStyles.heroSerifHeadline.copyWith(
+    color: colors.textPrimary,
+    fontSize: 23,
+    fontWeight: FontWeight.w600,
+    height: 1.05,
+  );
+}
+
+class _RouteSectionComposition extends StatelessWidget {
+  final PortalBodyLayout layout;
+  final Color tone;
+  final Widget child;
+
+  const _RouteSectionComposition({
+    required this.layout,
+    required this.tone,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (layout == PortalBodyLayout.analytics ||
+        layout == PortalBodyLayout.calendar) {
+      return child;
+    }
+    if (layout == PortalBodyLayout.kanban) {
+      return Container(
+        padding: const EdgeInsets.only(top: 8),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: tone, width: 2)),
+        ),
+        child: child,
+      );
+    }
+    if (layout == PortalBodyLayout.splitView) {
+      return Container(
+        padding: const EdgeInsets.only(left: 12),
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: tone, width: 2)),
+        ),
+        child: child,
+      );
+    }
+    return child;
   }
 }
 

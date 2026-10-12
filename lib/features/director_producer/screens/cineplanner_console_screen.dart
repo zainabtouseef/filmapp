@@ -1711,38 +1711,12 @@ class _CineDashboard extends StatelessWidget {
               : 'Next shoot · ${dashboard['upcoming_shoot']}',
         ),
         const SizedBox(height: 14),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final overview = _CineMetricLedger(
-              eyebrow: 'Production scope',
-              title: 'Script breakdown',
-              icon: Icons.auto_stories_outlined,
-              items: scope,
-            );
-            final readiness = _CineMetricLedger(
-              eyebrow: 'Planning health',
-              title: 'Ready for production',
-              icon: Icons.track_changes_rounded,
-              items: planning,
-            );
-            if (constraints.maxWidth < 760) {
-              return Column(
-                children: [
-                  overview,
-                  const SizedBox(height: 10),
-                  readiness,
-                ],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: overview),
-                const SizedBox(width: 10),
-                Expanded(child: readiness),
-              ],
-            );
-          },
+        _CineProductionOverview(
+          scope: scope,
+          planning: planning,
+          progress: ((dashboard['production_progress'] as num? ?? 0) / 100)
+              .clamp(0.0, 1.0)
+              .toDouble(),
         ),
         const SizedBox(height: 12),
         _ConflictSummary(snapshot: snapshot),
@@ -1753,98 +1727,184 @@ class _CineDashboard extends StatelessWidget {
   }
 }
 
-class _CineMetricLedger extends StatelessWidget {
-  final String eyebrow;
-  final String title;
-  final IconData icon;
-  final List<(String, String, IconData)> items;
+class _CineProductionOverview extends StatelessWidget {
+  final List<(String, String, IconData)> scope;
+  final List<(String, String, IconData)> planning;
+  final double progress;
 
-  const _CineMetricLedger({
-    required this.eyebrow,
-    required this.title,
-    required this.icon,
-    required this.items,
+  const _CineProductionOverview({
+    required this.scope,
+    required this.planning,
+    required this.progress,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final tones = [
-      colors.goldMid,
-      colors.infoBlue,
-      colors.success,
-      colors.infoPurple,
-    ];
     return _CinePanel(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(18, 17, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: colors.goldGlow.withValues(alpha: .72),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: colors.goldLight.withValues(alpha: .4),
-                  ),
-                ),
-                child: Icon(icon, size: 19, color: colors.goldDark),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      eyebrow.toUpperCase(),
-                      style: AppTextStyles.micro.copyWith(
-                        color: colors.goldDark,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      title,
-                      style: AppTextStyles.heroSerifHeadline.copyWith(
-                        color: colors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Divider(height: 1, color: colors.borderMuted),
-          for (final (index, item) in items.indexed) ...[
-            _CineLedgerRow(
-              label: item.$1,
-              value: item.$2,
-              icon: item.$3,
-              color: tones[index % tones.length],
+          Text(
+            'PRODUCTION PULSE',
+            style: AppTextStyles.micro.copyWith(
+              color: colors.goldDark,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
             ),
-            if (index != items.length - 1)
-              Divider(height: 1, color: colors.borderMuted),
-          ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'From script intelligence to shoot readiness',
+            style: AppTextStyles.heroSerifHeadline.copyWith(
+              color: colors.textPrimary,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 18),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final ring = _CineProgressRing(value: progress);
+              final signals = Column(
+                children: [
+                  for (final (index, item) in planning.take(5).indexed) ...[
+                    _CineSignal(
+                      label: item.$1,
+                      value: item.$2,
+                      icon: item.$3,
+                      color: _cineSignalColor(colors, index),
+                    ),
+                    if (index != 4)
+                      Divider(height: 1, color: colors.borderMuted),
+                  ],
+                ],
+              );
+              if (constraints.maxWidth < 680) {
+                return Column(
+                  children: [
+                    ring,
+                    const SizedBox(height: 18),
+                    signals,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(width: 210, child: ring),
+                  const SizedBox(width: 24),
+                  Container(width: 1, height: 176, color: colors.borderMuted),
+                  const SizedBox(width: 24),
+                  Expanded(child: signals),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 18),
+          Divider(height: 1, color: colors.borderMuted),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 680;
+              if (compact) {
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    for (final (index, item) in scope.indexed)
+                      SizedBox(
+                        width: (constraints.maxWidth - 10) / 2,
+                        child: _CineScopeDatum(
+                          item: item,
+                          color: _cineSignalColor(colors, index),
+                        ),
+                      ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  for (final (index, item) in scope.indexed) ...[
+                    Expanded(
+                      child: _CineScopeDatum(
+                        item: item,
+                        color: _cineSignalColor(colors, index),
+                      ),
+                    ),
+                    if (index != scope.length - 1)
+                      Container(
+                        width: 1,
+                        height: 52,
+                        color: colors.borderMuted,
+                      ),
+                  ],
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
   }
 }
 
-class _CineLedgerRow extends StatelessWidget {
+class _CineProgressRing extends StatelessWidget {
+  final double value;
+
+  const _CineProgressRing({required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      children: [
+        SizedBox(
+          width: 150,
+          height: 150,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: value),
+            duration: const Duration(milliseconds: 750),
+            curve: Curves.easeOutCubic,
+            builder: (context, animated, _) => CustomPaint(
+              painter: _CineProgressPainter(
+                value: animated,
+                track: colors.borderMuted,
+                color: colors.goldMid,
+              ),
+              child: Center(
+                child: Text(
+                  '${(animated * 100).round()}%',
+                  style: AppTextStyles.metricNumber.copyWith(
+                    color: colors.textPrimary,
+                    fontSize: 29,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Breakdown approved',
+          style: AppTextStyles.label.copyWith(
+            color: colors.textSecondary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CineSignal extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color color;
 
-  const _CineLedgerRow({
+  const _CineSignal({
     required this.label,
     required this.value,
     required this.icon,
@@ -1855,35 +1915,23 @@ class _CineLedgerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Container(
-            width: 29,
-            height: 29,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .1),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, size: 15, color: color),
-          ),
-          const SizedBox(width: 9),
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: AppTextStyles.label.copyWith(
                 color: colors.textSecondary,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Text(
             value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: AppTextStyles.cardTitle.copyWith(
               color: colors.textPrimary,
               fontWeight: FontWeight.w900,
@@ -1893,6 +1941,103 @@ class _CineLedgerRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CineScopeDatum extends StatelessWidget {
+  final (String, String, IconData) item;
+  final Color color;
+
+  const _CineScopeDatum({required this.item, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: Column(
+        children: [
+          Icon(item.$3, size: 18, color: color),
+          const SizedBox(height: 6),
+          Text(
+            item.$2,
+            style: AppTextStyles.metricNumberCompact.copyWith(
+              color: colors.textPrimary,
+              fontSize: 20,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            item.$1,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.micro.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CineProgressPainter extends CustomPainter {
+  final double value;
+  final Color track;
+  final Color color;
+
+  const _CineProgressPainter({
+    required this.value,
+    required this.track,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 12.0;
+    final rect = Offset(stroke / 2, stroke / 2) &
+        Size(size.width - stroke, size.height - stroke);
+    canvas.drawArc(
+      rect,
+      -1.5708,
+      6.2832,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..color = track,
+    );
+    canvas.drawArc(
+      rect,
+      -1.5708,
+      6.2832 * value.clamp(0.0, 1.0),
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CineProgressPainter oldDelegate) =>
+      oldDelegate.value != value ||
+      oldDelegate.track != track ||
+      oldDelegate.color != color;
+}
+
+Color _cineSignalColor(CineThemeColors colors, int index) {
+  final tones = [
+    colors.goldMid,
+    colors.infoBlue,
+    colors.success,
+    colors.infoPurple,
+    colors.holographicTeal,
+    colors.warning,
+  ];
+  return tones[index % tones.length];
 }
 
 class _CineReadinessSummary extends StatelessWidget {

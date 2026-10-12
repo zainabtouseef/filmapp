@@ -420,7 +420,7 @@ class _ProductionCalendarState extends State<ProductionCalendar> {
     if (oldWidget.projectId != widget.projectId ||
         oldWidget.refreshToken != widget.refreshToken) {
       setState(() {
-        _mode = ProductionCalendarMode.today;
+        _mode = widget.initialMode;
         _selectedDay = null;
         _future = _load();
       });

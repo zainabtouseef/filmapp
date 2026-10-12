@@ -4,8 +4,10 @@ import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/theme/app_breakpoints.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/layout/portal_adaptive_collection.dart';
 import '../../../shared/layout/portal_page_header.dart';
+import '../../../shared/layout/portal_reference_design.dart';
 import 'dp_glass_card.dart';
 import 'dp_holographic_button.dart';
 
@@ -113,6 +115,22 @@ class DPSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final route = ModalRoute.of(context)?.settings.name;
+    if (PortalReferenceDesign.usesReference(route)) {
+      return SectionContainer(
+        title: title,
+        leading: IconBadge(
+          icon: icon,
+          tone: cineToneFromColor(context, colors.goldDark),
+          compact: true,
+        ),
+        action: actionText == null
+            ? null
+            : TextButton(onPressed: onActionTap, child: Text(actionText!)),
+        treatment: SectionTreatment.open,
+        child: child,
+      );
+    }
     return DPGlassCard(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
       child: Column(
