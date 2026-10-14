@@ -23,6 +23,10 @@ from app.models.insurance import (
 )
 from app.models.projects import Project
 from app.responses import success
+from app.services.private_fields import (
+    encrypt_optional_private_value,
+    private_field_value,
+)
 
 insurance_blueprint = Blueprint("insurance", __name__)
 
@@ -47,6 +51,7 @@ def _partner_payload(item: InsurancePartnerProfile) -> dict[str, Any]:
         "public_id": item.public_id,
         "name": item.name,
         "coverage_regions": item.coverage_regions,
+        "license_number": private_field_value(item.license_number_token),
         "status": item.status,
     }
 
@@ -128,8 +133,10 @@ def upsert_insurance_profile() -> Response:
         ]
         or None
     )
-    if payload.get("license_number"):
-        profile.license_number_token = "encrypted:pending"
+    if "license_number" in payload:
+        profile.license_number_token = encrypt_optional_private_value(
+            payload.get("license_number"), "license_number"
+        )
     db.session.commit()
     return jsonify(success({"profile": _partner_payload(profile)}))
 

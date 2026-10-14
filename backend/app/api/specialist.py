@@ -60,6 +60,10 @@ from app.models.specialist import (
     SelfTape,
 )
 from app.responses import success
+from app.services.private_fields import (
+    encrypt_optional_private_value,
+    private_field_value,
+)
 
 specialist_blueprint = Blueprint("specialist", __name__)
 
@@ -177,10 +181,17 @@ def _agency_payload(item: CastingAgency) -> dict[str, Any]:
     }
 
 
-def _invitation_payload(item: AgencyInvitation) -> dict[str, Any]:
+def _invitation_payload(
+    item: AgencyInvitation, *, include_private: bool = False
+) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
         "agency_id": item.agency.public_id,
+        **(
+            {"contact": private_field_value(item.contact_token)}
+            if include_private
+            else {}
+        ),
         "talent_user": _user_payload(item.talent_user) if item.talent_user else None,
         "representation_type": item.representation_type,
         "commission_bps": item.commission_bps,
@@ -274,6 +285,7 @@ def _commission_payload(item: AgencyCommission) -> dict[str, Any]:
 
 def _brand_profile_payload(item: BrandProfile) -> dict[str, Any]:
     return {
+        "billing_details": private_field_value(item.billing_token),
         "public_id": item.public_id,
         "name": item.name,
         "category": item.category,
@@ -507,6 +519,8 @@ def _distribution_project_payload(item: DistributionProject) -> dict[str, Any]:
 
 def _distributor_contact_payload(item: DistributorContact) -> dict[str, Any]:
     return {
+        "email": private_field_value(item.email_token),
+        "phone": private_field_value(item.phone_token),
         "public_id": item.public_id,
         "name": item.name,
         "channel": item.channel,
@@ -585,7 +599,7 @@ def create_agency_invitation() -> ResponseReturnValue:
         agency_id=agency.id,
         invited_by=user.id,
         talent_user_id=talent_user.id if talent_user else None,
-        contact_token="encrypted:pending" if payload.get("contact") else None,
+        contact_token=encrypt_optional_private_value(payload.get("contact"), "contact"),
         representation_type=str(
             payload.get("representation_type", "non_exclusive")
         ).strip()[:32],
@@ -596,7 +610,9 @@ def create_agency_invitation() -> ResponseReturnValue:
     )
     db.session.add(invitation)
     db.session.commit()
-    return jsonify(success({"invitation": _invitation_payload(invitation)})), 201
+    return jsonify(
+        success({"invitation": _invitation_payload(invitation, include_private=True)})
+    ), 201
 
 
 @specialist_blueprint.get("/agency-invitations")
@@ -608,7 +624,15 @@ def list_agency_invitations() -> Response:
         .where(AgencyInvitation.agency_id == agency.id)
         .order_by(AgencyInvitation.created_at.desc())
     ).scalars()
-    return jsonify(success({"invitations": [_invitation_payload(row) for row in rows]}))
+    return jsonify(
+        success(
+            {
+                "invitations": [
+                    _invitation_payload(row, include_private=True) for row in rows
+                ]
+            }
+        )
+    )
 
 
 @specialist_blueprint.post("/agency-invitations/<public_id>/accept")
@@ -959,8 +983,10 @@ def upsert_brand_profile() -> Response:
     brand.description = (
         str(payload.get("description", brand.description or "")).strip()[:4000] or None
     )
-    if payload.get("billing_details"):
-        brand.billing_token = "encrypted:pending"
+    if "billing_details" in payload:
+        brand.billing_token = encrypt_optional_private_value(
+            payload.get("billing_details"), "billing_details"
+        )
     if str(payload.get("logo_file_id", "")).strip():
         brand.logo_file_id = _owned_ready_file(
             str(payload.get("logo_file_id")).strip(), user.id, "logo_file_id"
@@ -2025,8 +2051,8 @@ def create_distributor_contact() -> ResponseReturnValue:
         channel=str(payload.get("channel", "cinema")).strip()[:64],
         territory=str(payload.get("territory", "")).strip()[:120] or None,
         contact_role=str(payload.get("contact_role", "")).strip()[:120] or None,
-        email_token="encrypted:pending" if payload.get("email") else None,
-        phone_token="encrypted:pending" if payload.get("phone") else None,
+        email_token=encrypt_optional_private_value(payload.get("email"), "email"),
+        phone_token=encrypt_optional_private_value(payload.get("phone"), "phone"),
         prior_project=str(payload.get("prior_project", "")).strip()[:180] or None,
         notes=str(payload.get("notes", "")).strip()[:2000] or None,
     )
@@ -2064,6 +2090,13 @@ def update_distributor_contact(public_id: str) -> Response:
             "distributor_contact.not_found", "Contact was not found.", status=404
         )
     payload = _json_body()
+    for field in ["email", "phone"]:
+        if field in payload:
+            setattr(
+                item,
+                field + "_token",
+                encrypt_optional_private_value(payload[field], field),
+            )
     if "notes" in payload:
         item.notes = str(payload.get("notes", "")).strip()[:2000] or None
     if "status" in payload:

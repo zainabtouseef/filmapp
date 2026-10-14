@@ -71,7 +71,7 @@ PROJECT_ROOM_ITEM_TYPES = {"note", "decision", "activity", "milestone"}
 
 
 def _optional_int(value: Any, field: str) -> int | None:
-    if value in {None, ""}:
+    if value is None or value == "":
         return None
     try:
         return int(str(value))
@@ -80,7 +80,7 @@ def _optional_int(value: Any, field: str) -> int | None:
 
 
 def _optional_date(value: Any, field: str) -> date | None:
-    if value in {None, ""}:
+    if value is None or value == "":
         return None
     if not isinstance(value, str):
         raise _field_error(field, "Date must be formatted as YYYY-MM-DD.")

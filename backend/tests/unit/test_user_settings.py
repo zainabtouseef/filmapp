@@ -130,6 +130,10 @@ def test_profile_and_active_session_management(client: FlaskClient) -> None:
     )
     assert revoked.status_code == 200, revoked.text
     assert revoked.json["data"] == {"revoked": True, "current": False}
+    second_headers = {
+        "Authorization": f"Bearer {second.json['data']['tokens']['access_token']}"
+    }
+    assert client.get("/api/v1/me", headers=second_headers).status_code == 401
 
     third = client.post(
         "/api/v1/auth/login",
@@ -149,3 +153,21 @@ def test_profile_and_active_session_management(client: FlaskClient) -> None:
     assert remaining.status_code == 200, remaining.text
     assert len(remaining.json["data"]["sessions"]) == 1
     assert remaining.json["data"]["sessions"][0]["is_current"] is True
+    third_headers = {
+        "Authorization": f"Bearer {third.json['data']['tokens']['access_token']}"
+    }
+    assert client.get("/api/v1/me", headers=third_headers).status_code == 401
+    assert client.get("/api/v1/me", headers=first_headers).status_code == 200
+
+
+def test_logout_invalidates_access_token_immediately(client: FlaskClient) -> None:
+    registered = _register(client)
+    headers = {"Authorization": f"Bearer {registered['tokens']['access_token']}"}
+    assert (
+        client.post(
+            "/api/v1/auth/logout",
+            json={"refresh_token": registered["tokens"]["refresh_token"]},
+        ).status_code
+        == 200
+    )
+    assert client.get("/api/v1/me", headers=headers).status_code == 401

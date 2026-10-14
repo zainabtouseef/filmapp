@@ -668,16 +668,16 @@ def productions_create() -> ResponseReturnValue:
         status="setup",
         currency=str(payload.get("currency", "PKR"))[:3].upper(),
         production_start_date=start_date,
-        maximum_shoot_days=max(
-            1, min(365, int(payload.get("maximum_shoot_days", 30) or 30))
+        maximum_shoot_days=_production_value(
+            "maximum_shoot_days", payload.get("maximum_shoot_days", 30)
         ),
-        working_hours_limit=max(
-            6, min(18, int(payload.get("working_hours_limit", 12) or 12))
+        working_hours_limit=_production_value(
+            "working_hours_limit", payload.get("working_hours_limit", 12)
         ),
-        budget_ceiling_minor=_optional_int(payload.get("budget_ceiling_minor")),
-        settings_json=payload.get("settings")
-        if isinstance(payload.get("settings"), dict)
-        else {},
+        budget_ceiling_minor=_production_value(
+            "budget_ceiling_minor", payload.get("budget_ceiling_minor")
+        ),
+        settings_json=_production_value("settings_json", payload.get("settings", {})),
     )
     db.session.add(production)
     db.session.flush()
@@ -738,15 +738,7 @@ def production_update(public_id: str) -> Response:
     for key, value in payload.items():
         if key not in allowed:
             continue
-        if key == "production_start_date":
-            value = date.fromisoformat(str(value)) if value else None
-        elif key in {
-            "maximum_shoot_days",
-            "working_hours_limit",
-            "budget_ceiling_minor",
-        }:
-            value = _optional_int(value)
-        setattr(production, key, value)
+        setattr(production, key, _production_value(key, value))
     new = {key: _json_safe(getattr(production, key)) for key in allowed}
     _audit(
         production,
@@ -759,6 +751,42 @@ def production_update(public_id: str) -> Response:
     )
     db.session.commit()
     return jsonify(success({"production": _production_payload(production)}))
+
+
+def _production_value(key: str, value: Any) -> Any:
+    if key == "production_start_date":
+        try:
+            return date.fromisoformat(str(value)) if value else None
+        except ValueError as exc:
+            raise _field_error(key, "Use YYYY-MM-DD.") from exc
+    if key in {"maximum_shoot_days", "working_hours_limit", "budget_ceiling_minor"}:
+        number = _optional_int(value)
+        if key == "budget_ceiling_minor" and number is None:
+            return None
+        lower, upper = {
+            "maximum_shoot_days": (1, 365),
+            "working_hours_limit": (6, 18),
+            "budget_ceiling_minor": (0, 2147483647),
+        }[key]
+        if number is None or not lower <= number <= upper:
+            raise _field_error(key, f"Enter a whole number from {lower} to {upper}.")
+        return number
+    if key == "settings_json":
+        if not isinstance(value, dict):
+            raise _field_error(key, "Settings must be a JSON object.")
+        return value
+    if key in {"title", "status", "currency"}:
+        if not isinstance(value, str):
+            raise _field_error(key, "Enter a text value.")
+        value = value.strip()
+        lower, upper = {"title": (2, 180), "status": (1, 32), "currency": (3, 3)}[key]
+        if not lower <= len(value) <= upper:
+            raise _field_error(key, f"Use {lower} to {upper} characters.")
+        if key == "currency":
+            if not value.isascii() or not value.isalpha():
+                raise _field_error(key, "Use a three-letter currency code.")
+            return value.upper()
+    return value
 
 
 @cineplanner_blueprint.post("/productions/<public_id>/scripts")
@@ -2661,7 +2689,7 @@ def _production_snapshot(production: CineProduction, user: User) -> dict[str, An
 
 
 def _optional_int(value: Any) -> int | None:
-    if value in {None, ""}:
+    if value is None or value == "":
         return None
     try:
         return int(str(value))

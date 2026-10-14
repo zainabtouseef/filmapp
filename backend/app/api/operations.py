@@ -42,6 +42,10 @@ from app.models.operations import (
 )
 from app.models.projects import Project, ProjectMember
 from app.responses import success
+from app.services.private_fields import (
+    encrypt_optional_private_value,
+    private_field_value,
+)
 
 operations_blueprint = Blueprint("operations", __name__)
 
@@ -230,6 +234,7 @@ def _location_payload(item: LocationProperty) -> dict[str, Any]:
         else None,
         "area_name": item.area_name,
         "public_address": item.public_address,
+        "private_address": private_field_value(item.private_address_token),
         "description": item.description,
         "capacity": item.capacity,
         "parking_spaces": item.parking_spaces,
@@ -376,12 +381,19 @@ def _equipment_profile_payload(item: EquipmentProviderProfile) -> dict[str, Any]
     }
 
 
-def _equipment_item_payload(item: EquipmentItem) -> dict[str, Any]:
+def _equipment_item_payload(
+    item: EquipmentItem, *, include_private: bool = False
+) -> dict[str, Any]:
     return {
         "public_id": item.public_id,
         "category": item.category,
         "brand": item.brand,
         "model_name": item.model_name,
+        **(
+            {"serial": private_field_value(item.serial_token)}
+            if include_private
+            else {}
+        ),
         "condition": item.condition,
         "day_rate_minor": item.day_rate_minor,
         "deposit_minor": item.deposit_minor,
@@ -601,9 +613,9 @@ def create_location_property() -> ResponseReturnValue:
         city_id=_city_id(str(payload.get("city_id", "")).strip() or None),
         area_name=str(payload.get("area_name", "")).strip()[:120] or None,
         public_address=str(payload.get("public_address", "")).strip()[:255] or None,
-        private_address_token="encrypted:pending"
-        if payload.get("private_address")
-        else None,
+        private_address_token=encrypt_optional_private_value(
+            payload.get("private_address"), "private_address"
+        ),
         description=str(payload.get("description", "")).strip()[:4000] or None,
         capacity=int(payload.get("capacity") or 0) or None,
         parking_spaces=int(payload.get("parking_spaces") or 0) or None,
@@ -650,10 +662,8 @@ def update_location_property(public_id: str) -> Response:
             str(payload.get("public_address", "")).strip()[:255] or None
         )
     if "private_address" in payload:
-        item.private_address_token = (
-            "encrypted:pending"
-            if str(payload.get("private_address", "")).strip()
-            else None
+        item.private_address_token = encrypt_optional_private_value(
+            payload.get("private_address"), "private_address"
         )
     if "description" in payload:
         item.description = str(payload.get("description", "")).strip()[:4000] or None
@@ -1114,7 +1124,7 @@ def create_equipment_item() -> ResponseReturnValue:
         category=str(payload.get("category", "camera")).strip()[:64],
         brand=str(payload.get("brand", "")).strip()[:120] or None,
         model_name=str(payload.get("model_name", "")).strip()[:120],
-        serial_token="encrypted:pending" if payload.get("serial") else None,
+        serial_token=encrypt_optional_private_value(payload.get("serial"), "serial"),
         condition=str(payload.get("condition", "good")).strip()[:64],
         day_rate_minor=int(payload.get("day_rate_minor") or 0) or None,
         deposit_minor=int(payload.get("deposit_minor") or 0) or None,
@@ -1126,7 +1136,9 @@ def create_equipment_item() -> ResponseReturnValue:
     db.session.flush()
     _sync_equipment_listing(profile)
     db.session.commit()
-    return jsonify(success({"item": _equipment_item_payload(item)})), 201
+    return jsonify(
+        success({"item": _equipment_item_payload(item, include_private=True)})
+    ), 201
 
 
 @operations_blueprint.get("/equipment/items")
@@ -1142,7 +1154,15 @@ def equipment_items() -> Response:
     rows = db.session.execute(
         select(EquipmentItem).where(EquipmentItem.provider_profile_id == profile.id)
     ).scalars()
-    return jsonify(success({"items": [_equipment_item_payload(row) for row in rows]}))
+    return jsonify(
+        success(
+            {
+                "items": [
+                    _equipment_item_payload(row, include_private=True) for row in rows
+                ]
+            }
+        )
+    )
 
 
 @operations_blueprint.patch("/equipment/items/<public_id>")
@@ -1157,7 +1177,9 @@ def update_equipment_item(public_id: str) -> Response:
     if "model_name" in payload:
         item.model_name = str(payload.get("model_name", "")).strip()[:120]
     if "serial" in payload:
-        item.serial_token = "encrypted:pending" if payload.get("serial") else None
+        item.serial_token = encrypt_optional_private_value(
+            payload.get("serial"), "serial"
+        )
     if "condition" in payload:
         item.condition = str(payload.get("condition", "")).strip()[:64]
     if "day_rate_minor" in payload:
@@ -1170,7 +1192,9 @@ def update_equipment_item(public_id: str) -> Response:
         item.status = str(payload.get("status", "available")).strip()[:32]
     _sync_equipment_listing(item.provider_profile)
     db.session.commit()
-    return jsonify(success({"item": _equipment_item_payload(item)}))
+    return jsonify(
+        success({"item": _equipment_item_payload(item, include_private=True)})
+    )
 
 
 @operations_blueprint.post("/equipment/packages")
@@ -1737,8 +1761,19 @@ def complete_safety_check_in(public_id: str) -> Response:
         )
     payload = _json_body()
     item.checked_in_at = utc_now()
-    item.latitude_token = "encrypted:pending" if payload.get("latitude") else None
-    item.longitude_token = "encrypted:pending" if payload.get("longitude") else None
+    for field, limit in [("latitude", 90), ("longitude", 180)]:
+        raw = payload.get(field)
+        if raw is None or raw == "":
+            encrypted = None
+        else:
+            try:
+                number = float(raw)
+            except (ValueError, TypeError) as exc:
+                raise _field_error(field, "Enter a valid coordinate.") from exc
+            if isinstance(raw, bool) or not -limit <= number <= limit:
+                raise _field_error(field, "Coordinate is outside the valid range.")
+            encrypted = encrypt_optional_private_value(str(number), field)
+        setattr(item, field + "_token", encrypted)
     item.status = "checked_in"
     db.session.commit()
     return jsonify(success({"check_in": _check_in_payload(item)}))

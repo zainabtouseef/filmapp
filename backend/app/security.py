@@ -151,6 +151,7 @@ def rotate_refresh_token(refresh_token: str) -> tuple[User, TokenPair]:
         session is None
         or session.revoked_at is not None
         or as_utc(session.expires_at) <= now
+        or session.user.status != "active"
     ):
         raise ValueError("Refresh token is invalid or expired.")
 

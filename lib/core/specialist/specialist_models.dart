@@ -195,6 +195,7 @@ class AgencyCommissionDto {
 
 class BrandProfileDto {
   final String publicId;
+  final String? billingDetails;
   final String name;
   final String? category;
   final String? representative;
@@ -204,6 +205,7 @@ class BrandProfileDto {
 
   const BrandProfileDto({
     required this.publicId,
+    this.billingDetails,
     required this.name,
     this.category,
     this.representative,
@@ -214,6 +216,7 @@ class BrandProfileDto {
 
   factory BrandProfileDto.fromJson(Map<String, dynamic> json) {
     return BrandProfileDto(
+      billingDetails: json['billing_details'] as String?,
       publicId: json['public_id'] as String? ?? '',
       name: json['name'] as String? ?? 'Brand',
       category: json['category'] as String?,
@@ -701,6 +704,8 @@ class DistributionProjectDto {
 
 class DistributorContactDto {
   final String publicId;
+  final String? phone;
+  final String? email;
   final String name;
   final String channel;
   final String? territory;
@@ -711,6 +716,8 @@ class DistributorContactDto {
 
   const DistributorContactDto({
     required this.publicId,
+    this.phone,
+    this.email,
     required this.name,
     required this.channel,
     this.territory,
@@ -722,6 +729,8 @@ class DistributorContactDto {
 
   factory DistributorContactDto.fromJson(Map<String, dynamic> json) {
     return DistributorContactDto(
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
       publicId: json['public_id'] as String? ?? '',
       name: json['name'] as String? ?? 'Distributor',
       channel: json['channel'] as String? ?? 'cinema',

@@ -1,6 +1,6 @@
 CINECONNECT AUDIT REMEDIATION - 14 OCTOBER 2026
 Live target: https://cine.nalexustechnologies.com
-Deployed release: 2026.10.14-audit1 (web asset revision 20261014-audit1b)
+Deployed release: 2026.10.14-audit2 (web asset revision 20261014-audit2)
 Source branch: fix/audit-connectivity-2026-10-13; baseline b66a4de
 Status meanings: FIXED = implemented and checked; LIMITED = truthful capability boundary; RETAINED DESIGN = intentional local/reference behavior.
 
@@ -156,29 +156,61 @@ F38 | DATA GAP FLAGGED | High | Historical demo file records had no stored bytes
 237 real files passed ClamAV. The other 239 records are historical demo references without stored objects; their scan and processing statuses now say missing. Records were preserved. Missing bytes require originals to be uploaded again.
 Evidence: Production-copy rehearsal and production rescan; file counts preserved
 
+F39 | FIXED | High | Revoked sessions and suspended accounts retained access
+Access requests now check the persisted session and active account status. Logout, remote-session revocation and revoke-others invalidate access immediately; suspended accounts cannot log in or refresh.
+Evidence: test_user_settings.py; test_admin_workflows.py; auth.py; security.py
+
+F40 | FIXED | Medium | Repeated role permission saves failed and new role status was ignored
+Permission updates preserve existing associations and apply only the difference. New and existing role assignments both validate and honor active/suspended status.
+Evidence: test_admin_workflows.py; admin_control.py
+
+F41 | FIXED | Medium | Invalid CinePlanner edits reached database errors
+Production updates validate dates, text lengths, currency, JSON settings and numeric bounds before persistence. Invalid fields return controlled 422 responses without changing saved values.
+Evidence: test_cineplanner_edits.py; cineplanner.py
+
+F42 | FIXED | High | Unpublished discovery profiles were accessible
+Discovery lists and detail lookups require a public, approved marketplace listing. Direct profile IDs cannot bypass visibility and moderation restrictions; private addresses remain absent from discovery.
+Evidence: test_director_discovery.py; director.py
+
+F43 | FIXED | High | Public buyer restrictions could be bypassed using a category alias
+Discovery rechecks the resolved item category against buyer permissions after resolving its listing ID, preventing an allowed category path from exposing restricted categories.
+Evidence: test_director_discovery.py; director.py
+
+F44 | FIXED | High | Private form values were discarded as encrypted placeholders
+Nine private-field columns now store authenticated ciphertext with adequate capacity. Addresses, serials, billing/contact details, licence numbers and check-in coordinates persist. Owner forms reload private values; public serializers omit them. Eighteen historical placeholder values require owner re-entry.
+Evidence: test_private_workflow_fields.py; private_field_models_test.dart; migration 9f84c2e7a6b1; live aggregate counts
+
+F45 | FIXED | High | Saving availability categories failed on valid JSON lists
+Talent availability categories now accept validated JSON lists, deduplicate selections and preserve saved selections on invalid input. Optional number/date parsers return controlled validation errors for malformed JSON objects and arrays.
+Evidence: test_profile_publishing_workflows.py; marketplace.py; projects.py; bookings.py
+
+F46 | FIXED | High | Crew publication checked talent KYC instead of crew KYC
+Crew listings now require an active crew role and approved crew-service KYC. Talent KYC alone cannot authorize crew publication; verified crew providers can publish and update the same listing.
+Evidence: test_profile_publishing_workflows.py; marketplace.py
+
 VALIDATION
-918 Flutter tests passed; final payment/startup subset passed 55 tests after the final copy corrections.
-175 backend tests passed against isolated MySQL 8.4 and Redis. Backend coverage is 75%, below the 85% repository target.
-Flutter analyze, Ruff check/format, mypy and web release build passed. Node push-worker lifecycle regression passed.
-Production-copy restore/migration rehearsal passed. Real ClamAV clean/EICAR tests passed.
-Live HTTPS, HTTP redirect, database/Redis readiness, role restriction and private endpoint guards passed.
-Chrome visual verification: pending because the browser connection is unavailable.
-Browser push transport is tested with mocked provider responses and real VAPID configuration; a real browser notification display test is still pending.
+920 Flutter tests passed.
+391 backend tests passed with isolated MySQL 8.4 and Redis; no skips.
+Backend branch/statement coverage: 85.75%; target 85%.
+Flutter analyze, Ruff check/format, mypy (74 files) and web release build passed. Node push-worker lifecycle regression passed.
+Fresh MySQL migration rehearsal passed through 9f84c2e7a6b1. Previous production-copy restore and real ClamAV clean/EICAR tests are retained.
+Live HTTPS, redirect, readiness, role restrictions, media gates and private endpoint guards passed.
+Browser visual and real notification display checks remain pending; connection unavailable.
 
 OPERATIONS
-Backup: root@srv951538.hstgr.cloud:/var/backups/cineconnect/audit-remediation-20261014
-Release: /var/www/cineconnect/releases/20261014-audit1
-API/worker/scheduler image: cineconnect-prod-api:20261014-audit1
-Migration: f8a9b0c1d2e3; additive changes only.
+Backup: root@srv951538.hstgr.cloud:/var/backups/cineconnect/audit-completion-20261014
+Release: /var/www/cineconnect/releases/20261014-audit2
+API/worker/scheduler image: cineconnect-prod-api:20261014-audit2
+Migration: 9f84c2e7a6b1; widens nine columns without deleting values.
 Preserved records: 240 users; 476 file rows; 42 bookings; 12 contracts; 10 payout accounts.
-ClamAV and definition updates remain enabled; daemon listens only on 127.0.0.1:3310.
-Nginx, LUMEN, Nexus web/API and Originality Studio remain active.
-Existing integration keys were preserved. No live OpenAI or payment-settlement calls were made.
+ClamAV, Nginx, LUMEN, Nexus web/API and Originality Studio remain active.
+Existing integration keys preserved; no live OpenAI or payment-settlement calls.
 
 REMAINING CAPABILITY LIMITS
 SMS and SMTP email are not configured. SMS verification and email recovery delivery remain unavailable.
 Native push requires a provider. Browser push is implemented and configured, but a real browser permission/subscription/display test is still pending.
 Physical Android/iOS file-save dialogs have not been exercised.
 Automated liveness, verified social metrics, Urdu translations, biometrics, two-factor authentication, WhatsApp delivery and portfolio watermarking are not implemented.
-Coverage is 75%, below the repository target of 85%. Passing tests do not prove every possible application path.
 239 historical demo file references have no source bytes. Their records are preserved and marked missing.
+Eighteen historical private-field values were replaced by placeholder text by the former code. Their original contents were never saved and require owner re-entry.
+Passing automated tests and coverage checks do not establish that every possible application path is defect-free. Browser visual verification remains pending because no browser is connected.

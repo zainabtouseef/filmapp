@@ -223,7 +223,7 @@ class _ME03InventoryManagerScreenState
     final category = TextEditingController(text: item?.category ?? 'Camera');
     final brand = TextEditingController(text: item?.brand ?? '');
     final model = TextEditingController(text: item?.modelName ?? '');
-    final serial = TextEditingController();
+    final serial = TextEditingController(text: item?.serial ?? '');
     final condition =
         TextEditingController(text: item?.condition ?? 'excellent');
     final rate = TextEditingController(
@@ -258,7 +258,7 @@ class _ME03InventoryManagerScreenState
                 label: 'Model / kit name',
                 icon: Icons.videocam_outlined,
               ),
-              if (item == null) ...[
+              ...[
                 const SizedBox(height: 10),
                 CoreTextField(
                   controller: serial,
@@ -332,7 +332,7 @@ class _ME03InventoryManagerScreenState
                     'category': category.text.trim(),
                     'brand': brand.text.trim(),
                     'model_name': model.text.trim(),
-                    if (item == null) 'serial': serial.text.trim(),
+                    'serial': serial.text.trim(),
                     'condition': condition.text.trim(),
                     'day_rate_minor': dayRate * 100,
                     'deposit_minor': depositAmount * 100,

@@ -180,7 +180,10 @@ def test_location_equipment_and_safety_operations_flow(client: FlaskClient) -> N
     )
     assert location.status_code == 201, location.text
     property_id = location.json["data"]["property"]["public_id"]
-    assert "private_address" not in location.json["data"]["property"]
+    assert (
+        location.json["data"]["property"]["private_address"]
+        == "Exact private address hidden until secured booking."
+    )
 
     space = client.post(
         f"/api/v1/location-properties/{property_id}/spaces",

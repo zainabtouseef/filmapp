@@ -97,6 +97,7 @@ class _LO02LocationListingWizardScreenState
     _type = _displayType(property.propertyType);
     _city.text = property.cityName;
     _area.text = property.areaName;
+    _exactAddress.text = property.privateAddress ?? '';
     _description.text = property.description;
     _capacity.text = property.capacity?.toString() ?? '';
     _parking.text = property.parkingSpaces?.toString() ?? '';
@@ -517,9 +518,7 @@ class _LO02LocationListingWizardScreenState
               propertyType: _apiType(_type),
               areaName: _area.text.trim(),
               publicAddress: '${_area.text.trim()}, ${_city.text.trim()}',
-              privateAddress: _exactAddress.text.trim().isEmpty
-                  ? null
-                  : _exactAddress.text.trim(),
+              privateAddress: _exactAddress.text.trim(),
               description: _description.text.trim(),
               capacity: int.tryParse(_capacity.text.trim()),
               parkingSpaces: int.tryParse(_parking.text.trim()),

@@ -476,6 +476,7 @@ def _with_listing(
         item["allows_bargaining"] = True
         item["rate_from_minor"] = None
         item["rate_label"] = "Open to offers"
+        item["verification_status"] = "unverified"
     media_kit = item.get("media_kit")
     if isinstance(media_kit, dict):
         media_kit["rate_cards"] = [
@@ -1674,7 +1675,11 @@ def _director_discovery_items(
         ).scalars()
         items.extend(_distribution_discovery_item(row) for row in partners)
 
-    return [row for row in items if _matches_discovery_query(row, query)][:120]
+    return [
+        row
+        for row in items
+        if row.get("listing_id") and _matches_discovery_query(row, query)
+    ][:120]
 
 
 def _director_discovery_facets(items: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1702,6 +1707,14 @@ def _director_discovery_detail(kind: str, public_id: str) -> dict[str, Any]:
             MarketplaceListing.moderation_status == "approved",
         )
     ).scalar_one_or_none()
+    if listing is None:
+        listing = _listing_for_profile(kind_key, public_id)
+    if listing is None:
+        raise APIError(
+            "director.discovery_not_found",
+            "Director discovery item was not found.",
+            status=404,
+        )
     if listing is not None:
         public_id = listing.profile_entity_id
         if kind_key == "actor" and listing.listing_type == "talent":
@@ -2536,4 +2549,10 @@ def director_discovery_item(kind: str, public_id: str) -> Response:
             status=403,
         )
     item = _director_discovery_detail(kind, public_id)
+    if allowed_kinds is not None and item["kind"] not in allowed_kinds:
+        raise APIError(
+            "director.discovery_forbidden",
+            "This discovery profile is not available to public buyers.",
+            status=403,
+        )
     return jsonify(success({"item": item}))

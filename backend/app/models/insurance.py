@@ -24,7 +24,7 @@ class InsurancePartnerProfile(EntityMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     name: Mapped[str] = mapped_column(String(180), nullable=False)
-    license_number_token: Mapped[str | None] = mapped_column(String(255))
+    license_number_token: Mapped[str | None] = mapped_column(Text)
     coverage_regions: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
 

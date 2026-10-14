@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
+from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
 from flask import current_app
+
+from app.errors import APIError
 
 
 def _fernet(value: str) -> Fernet:
@@ -38,3 +41,24 @@ def decrypt_private_value(value: str) -> str:
         except InvalidToken:
             continue
     raise ValueError("The private field encryption key is unavailable")
+
+
+def encrypt_optional_private_value(value: Any, field: str) -> str | None:
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str) or len(value) > 4000:
+        raise APIError(
+            "validation.invalid",
+            "Request validation failed.",
+            status=422,
+            fields={field: ["Enter text containing at most 4000 characters."]},
+        )
+    value = value.strip()
+    return encrypt_private_value(value) if value else None
+
+
+def private_field_value(value: str | None) -> str | None:
+    # Old placeholder tokens contain no recoverable submitted value.
+    if not value or not value.startswith("fernet:"):
+        return None
+    return decrypt_private_value(value)

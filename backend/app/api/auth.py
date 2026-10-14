@@ -171,12 +171,14 @@ def _current_user() -> User:
         raise APIError(
             "auth.invalid_token", "Authentication token is invalid.", status=401
         )
-    if user.status not in {"active", "suspended"}:
+    if user.status != "active":
         raise APIError(
             "auth.account_restricted", "Account access is restricted.", status=403
         )
     g.current_user = user
     g.current_session_family = payload.get("session_family")
+    if _current_session(user) is None:
+        raise APIError("auth.session_expired", "Please sign in again.", status=401)
     return user
 
 
@@ -336,7 +338,7 @@ def login() -> Response:
         raise APIError(
             "auth.invalid_credentials", "Email or password is incorrect.", status=401
         )
-    if user.status not in {"active", "suspended"}:
+    if user.status != "active":
         record_auth_event(
             "login", success=False, user=user, metadata={"status": user.status}
         )

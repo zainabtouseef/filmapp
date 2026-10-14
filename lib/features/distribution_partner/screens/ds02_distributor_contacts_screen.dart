@@ -149,6 +149,16 @@ class _DS02DistributorContactsScreenState
             value: contact.contactRole ?? 'Not set',
           ),
           DistributionInfoRow(
+            icon: Icons.email_outlined,
+            label: 'Email',
+            value: contact.email ?? 'Not provided',
+          ),
+          DistributionInfoRow(
+            icon: Icons.phone_outlined,
+            label: 'Phone',
+            value: contact.phone ?? 'Not provided',
+          ),
+          DistributionInfoRow(
             icon: Icons.notes_outlined,
             label: 'Notes',
             value: contact.notes ?? 'No notes',

@@ -1,5 +1,6 @@
 class LocationPropertyDto {
   final String publicId;
+  final String? privateAddress;
   final String name;
   final String propertyType;
   final String cityName;
@@ -19,6 +20,7 @@ class LocationPropertyDto {
 
   const LocationPropertyDto({
     required this.publicId,
+    this.privateAddress,
     required this.name,
     required this.propertyType,
     required this.cityName,
@@ -40,6 +42,7 @@ class LocationPropertyDto {
   factory LocationPropertyDto.fromJson(Map<String, dynamic> json) {
     final city = json['city'] as Map<String, dynamic>?;
     return LocationPropertyDto(
+      privateAddress: json['private_address'] as String?,
       publicId: json['public_id'] as String? ?? '',
       name: json['name'] as String? ?? 'Location',
       propertyType: json['property_type'] as String? ?? 'house',
@@ -259,6 +262,7 @@ class EquipmentProfileDto {
 
 class EquipmentItemDto {
   final String publicId;
+  final String? serial;
   final String category;
   final String brand;
   final String modelName;
@@ -270,6 +274,7 @@ class EquipmentItemDto {
 
   const EquipmentItemDto({
     required this.publicId,
+    this.serial,
     required this.category,
     required this.brand,
     required this.modelName,
@@ -282,6 +287,7 @@ class EquipmentItemDto {
 
   factory EquipmentItemDto.fromJson(Map<String, dynamic> json) {
     return EquipmentItemDto(
+      serial: json['serial'] as String?,
       publicId: json['public_id'] as String? ?? '',
       category: json['category'] as String? ?? 'Camera',
       brand: json['brand'] as String? ?? '',

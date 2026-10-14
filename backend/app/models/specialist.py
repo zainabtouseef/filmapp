@@ -61,7 +61,7 @@ class AgencyInvitation(EntityMixin, Base):
     talent_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
-    contact_token: Mapped[str | None] = mapped_column(String(255))
+    contact_token: Mapped[str | None] = mapped_column(Text)
     representation_type: Mapped[str] = mapped_column(
         String(32), nullable=False, default="non_exclusive"
     )
@@ -264,7 +264,7 @@ class BrandProfile(EntityMixin, Base):
     name: Mapped[str] = mapped_column(String(180), nullable=False)
     category: Mapped[str | None] = mapped_column(String(64))
     representative: Mapped[str | None] = mapped_column(String(120))
-    billing_token: Mapped[str | None] = mapped_column(String(255))
+    billing_token: Mapped[str | None] = mapped_column(Text)
     trust_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="pending"
     )
@@ -489,8 +489,8 @@ class DistributorContact(EntityMixin, Base):
     channel: Mapped[str] = mapped_column(String(64), nullable=False)
     territory: Mapped[str | None] = mapped_column(String(120))
     contact_role: Mapped[str | None] = mapped_column(String(120))
-    email_token: Mapped[str | None] = mapped_column(String(255))
-    phone_token: Mapped[str | None] = mapped_column(String(255))
+    email_token: Mapped[str | None] = mapped_column(Text)
+    phone_token: Mapped[str | None] = mapped_column(Text)
     prior_project: Mapped[str | None] = mapped_column(String(180))
     notes: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")

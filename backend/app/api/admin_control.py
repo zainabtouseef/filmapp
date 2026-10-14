@@ -380,23 +380,23 @@ def admin_update_user(public_id: str) -> Response:
             (record for record in item.roles if record.role_id == role.id),
             None,
         )
+        role_status = str(payload.get("role_status", "active")).strip()
+        if role_status not in {"active", "suspended"}:
+            raise APIError(
+                "validation.failed",
+                "Unsupported role status.",
+                status=422,
+                fields={"role_status": ["Use active or suspended."]},
+            )
         if user_role is None:
             user_role = UserRole(
                 user_id=item.id,
                 role_id=role.id,
-                status="active",
+                status=role_status,
                 is_primary=False,
             )
             db.session.add(user_role)
         else:
-            role_status = str(payload.get("role_status", "active")).strip()
-            if role_status not in {"active", "suspended"}:
-                raise APIError(
-                    "validation.failed",
-                    "Unsupported role status.",
-                    status=422,
-                    fields={"role_status": ["Use active or suspended."]},
-                )
             user_role.status = role_status
     db.session.commit()
     return jsonify(success({"user": _user_payload(item)}))
@@ -794,10 +794,15 @@ def admin_update_role_permissions(code: str) -> Response:
             "One or more permissions were not found.",
             status=422,
         )
+    existing_ids = {item.permission_id for item in role.permissions}
+    requested_ids = {permission.id for permission in resolved}
     for item in list(role.permissions):
-        db.session.delete(item)
+        if item.permission_id not in requested_ids:
+            role.permissions.remove(item)
+            db.session.delete(item)
     for permission in resolved:
-        role.permissions.append(RolePermission(permission_id=permission.id))
+        if permission.id not in existing_ids:
+            role.permissions.append(RolePermission(permission_id=permission.id))
     db.session.commit()
     return jsonify(success({"role": _role_payload(role)}))
 

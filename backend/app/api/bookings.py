@@ -67,13 +67,13 @@ def _parse_datetime(value: Any, field: str) -> datetime:
 
 
 def _optional_datetime(value: Any, field: str) -> datetime | None:
-    if value in {None, ""}:
+    if value is None or value == "":
         return None
     return _parse_datetime(value, field)
 
 
 def _optional_int(value: Any, field: str) -> int | None:
-    if value in {None, ""}:
+    if value is None or value == "":
         return None
     try:
         return int(str(value))

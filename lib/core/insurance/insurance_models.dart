@@ -1,11 +1,13 @@
 class InsuranceProfileDto {
   final String publicId;
+  final String? licenseNumber;
   final String name;
   final String coverageRegions;
   final String status;
 
   const InsuranceProfileDto({
     required this.publicId,
+    this.licenseNumber,
     required this.name,
     required this.coverageRegions,
     required this.status,
@@ -13,6 +15,7 @@ class InsuranceProfileDto {
 
   factory InsuranceProfileDto.fromJson(Map<String, dynamic>? json) {
     return InsuranceProfileDto(
+      licenseNumber: json?['license_number'] as String?,
       publicId: json?['public_id'] as String? ?? '',
       name: json?['name'] as String? ?? 'Insurance partner',
       coverageRegions: json?['coverage_regions'] as String? ?? '',

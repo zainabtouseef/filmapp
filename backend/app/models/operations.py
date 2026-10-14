@@ -39,7 +39,7 @@ class LocationProperty(EntityMixin, Base):
     )
     area_name: Mapped[str | None] = mapped_column(String(120))
     public_address: Mapped[str | None] = mapped_column(String(255))
-    private_address_token: Mapped[str | None] = mapped_column(String(255))
+    private_address_token: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     capacity: Mapped[int | None] = mapped_column(Integer)
     parking_spaces: Mapped[int | None] = mapped_column(Integer)
@@ -287,7 +287,7 @@ class EquipmentItem(EntityMixin, Base):
     category: Mapped[str] = mapped_column(String(64), nullable=False)
     brand: Mapped[str | None] = mapped_column(String(120))
     model_name: Mapped[str] = mapped_column(String(120), nullable=False)
-    serial_token: Mapped[str | None] = mapped_column(String(255))
+    serial_token: Mapped[str | None] = mapped_column(Text)
     condition: Mapped[str] = mapped_column(String(64), nullable=False, default="good")
     day_rate_minor: Mapped[int | None] = mapped_column(Integer)
     deposit_minor: Mapped[int | None] = mapped_column(Integer)
@@ -529,8 +529,8 @@ class SafetyCheckIn(EntityMixin, Base):
         DateTime(timezone=True), nullable=False
     )
     checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    latitude_token: Mapped[str | None] = mapped_column(String(255))
-    longitude_token: Mapped[str | None] = mapped_column(String(255))
+    latitude_token: Mapped[str | None] = mapped_column(Text)
+    longitude_token: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="scheduled")
     escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

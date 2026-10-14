@@ -56,7 +56,7 @@ def _field_error(field: str, message: str) -> APIError:
 
 
 def _optional_int(value: Any, field: str) -> int | None:
-    if value in {None, ""}:
+    if value is None or value == "":
         return None
     try:
         return int(str(value))
@@ -86,7 +86,7 @@ def _talent_availability_categories(profile: TalentProfile | None) -> list[str]:
 
 
 def _parse_talent_availability_categories(value: Any) -> list[str]:
-    if value in {None, ""}:
+    if value is None or value == "":
         return ["actor"]
     if not isinstance(value, list):
         raise _field_error(
@@ -1783,7 +1783,7 @@ def publish_listing() -> ResponseReturnValue:
                 "A crew-service role is required to publish a crew listing.",
                 status=403,
             )
-        if not _has_any_provider_kyc(user.id):
+        if not _has_approved_kyc_for_role(user.id, "crew_service"):
             raise APIError(
                 "marketplace.kyc_required",
                 "Approved crew-provider KYC is required before publishing.",

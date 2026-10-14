@@ -102,6 +102,7 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
     _category.text = profile.category ?? '';
     _representative.text = profile.representative ?? '';
     _description.text = profile.description ?? '';
+    _billingDetails.text = profile.billingDetails ?? '';
     _logoUrl = profile.logoUrl;
   }
 
@@ -490,8 +491,7 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
         'category': _category.text.trim(),
         'representative': _representative.text.trim(),
         'description': _description.text.trim(),
-        if (_billingDetails.text.trim().isNotEmpty)
-          'billing_details': _billingDetails.text.trim(),
+        'billing_details': _billingDetails.text.trim(),
         if (_logoFileId != null) 'logo_file_id': _logoFileId,
       };
       final profile = await _saveWithMediaRetry(body);
@@ -517,7 +517,6 @@ class _BR02BrandProfileScreenState extends State<BR02BrandProfileScreen> {
         _publicProfile = publicProfile ?? _publicProfile;
         _logoFileId = null;
         _logoFileName = null;
-        _billingDetails.clear();
       });
       brandSnack(context, 'Brand profile saved');
     } catch (error) {
