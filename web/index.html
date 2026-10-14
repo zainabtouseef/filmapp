@@ -77,6 +77,7 @@
     }
     @keyframes cc-boot-spin { to { transform: rotate(360deg); } }
   </style>
+  <script src="cineconnect_push.js"></script>
 </head>
 <body>
   <div id="cc-boot-screen" role="status" aria-live="polite">
@@ -103,7 +104,7 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20261013-marketplace-v48';
+    const releaseVersion = '20261014-audit1b';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;
@@ -228,13 +229,17 @@
       try {
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map((registration) =>
+          const legacy = registrations.filter((registration) => {
+            const worker = registration.active || registration.waiting || registration.installing;
+            return worker && new URL(worker.scriptURL).pathname === '/flutter_service_worker.js';
+          });
+          await Promise.all(legacy.map((registration) =>
             registration.unregister()
           ));
         }
         if ('caches' in window) {
           const cacheNames = await caches.keys();
-          await Promise.all(cacheNames.map((name) => caches.delete(name)));
+          await Promise.all(cacheNames.filter((name) => name.startsWith('flutter-')).map((name) => caches.delete(name)));
         }
       } catch (error) {
         console.warn('Could not clear a legacy Flutter cache.', error);

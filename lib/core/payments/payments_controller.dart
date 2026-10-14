@@ -70,21 +70,13 @@ class PaymentsController extends ChangeNotifier {
     return _repository.downloadReceipt(publicId);
   }
 
-  Future<PayoutAccountDto> createSandboxPayoutAccount({
-    required String accountName,
-  }) {
-    return _repository.createPayoutAccount(
-      provider: 'sandbox',
-      accountName: accountName,
-      accountMasked: 'SANDBOX-****-0001',
-      accountToken: 'sandbox-token-0001',
-    );
-  }
-
   Future<PayoutAccountDto> createPayoutAccount({
     required String provider,
     required String accountName,
     required String accountIdentifier,
+    String? bankName,
+    String? receivingName,
+    bool ownershipConfirmed = false,
   }) {
     final compact = accountIdentifier.replaceAll(' ', '');
     final suffix =
@@ -94,6 +86,9 @@ class PaymentsController extends ChangeNotifier {
       accountName: accountName,
       accountMasked: '****$suffix',
       accountToken: accountIdentifier,
+      bankName: bankName,
+      receivingName: receivingName,
+      ownershipConfirmed: ownershipConfirmed,
     );
   }
 

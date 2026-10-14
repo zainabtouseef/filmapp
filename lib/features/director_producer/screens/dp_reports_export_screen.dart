@@ -157,7 +157,8 @@ class _DPReportsExportScreenState extends State<DPReportsExportScreen> {
       final content = job.csvContent;
       final downloaded = content != null &&
           content.isNotEmpty &&
-          downloadCsv('${job.exportType}_${job.publicId}.csv', content);
+          await downloadCsv('${job.exportType}_${job.publicId}.csv', content);
+      if (!mounted) return;
       dpSnack(
         context,
         downloaded

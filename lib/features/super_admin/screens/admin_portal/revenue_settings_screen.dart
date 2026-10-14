@@ -8,6 +8,8 @@ class RevenueSettingsScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const RuntimeSettingsPanel(),
+        const SizedBox(height: 12),
         AdminSurface(
           padding: EdgeInsets.zero,
           child: IntrinsicHeight(

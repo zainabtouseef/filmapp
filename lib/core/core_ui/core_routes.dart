@@ -4,7 +4,6 @@ import '../auth/portal_access_guard.dart';
 
 import '../theme/app_breakpoints.dart';
 import '../theme/app_durations.dart';
-import '../../screens/dashboard_screen.dart';
 import '../../features/actor_talent/routes/actor_talent_routes.dart';
 import '../../features/actor_talent/screens/actor_talent_portal_screen.dart'
     deferred as actor_portal;
@@ -404,7 +403,8 @@ class CoreRoutes {
       case maintenance:
         page = const MaintenanceModeScreen();
       case dashboard:
-        page = const DashboardScreen();
+        page =
+            _marketplacePage(MarketplaceRoutes.browse, routeSettings.arguments);
       case _ when directorDeepLink != null:
         page = _directorPage(
           directorDeepLink.routeName,

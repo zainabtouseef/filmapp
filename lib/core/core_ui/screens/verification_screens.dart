@@ -5,12 +5,12 @@ import 'package:image_picker/image_picker.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/role_mapper.dart';
 import '../../network/api_exception.dart';
+import '../../payments/payments_controller.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../../uploads/upload_repository.dart';
 import '../../verification/verification_models.dart';
 import '../core_routes.dart';
-import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
 import '../widgets/core_widgets.dart';
 import 'live_selfie_capture_screen.dart';
@@ -32,6 +32,10 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   bool _roleDocUploaded = false;
   bool _ownsAccount = false;
   bool _submitting = false;
+  bool _payoutSaved = false;
+  List<Map<String, dynamic>>? _requirements;
+  String? _requirementsError;
+  bool _loadingRequirements = false;
   String? _loadingUpload;
   String? _formError;
   final Map<String, double> _uploadProgress = {};
@@ -43,9 +47,37 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   final _documentNumber = TextEditingController();
   final _expiry = TextEditingController();
   final _accountTitle = TextEditingController();
-  final _bankName = TextEditingController(text: 'HBL');
+  final _bankName = TextEditingController();
   final _iban = TextEditingController();
   final _receivingName = TextEditingController();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_requirements == null &&
+        !_loadingRequirements &&
+        _requirementsError == null) {
+      _loadRequirements();
+    }
+  }
+
+  Future<void> _loadRequirements() async {
+    _loadingRequirements = true;
+    try {
+      final response = await AuthScope.of(context).apiClient.get(
+          '/kyc/requirements/${RoleMapper.codeForLabel(widget.selectedRole)}');
+      final data = response['data'] as Map<String, dynamic>;
+      if (mounted) {
+        setState(() => _requirements = (data['documents'] as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList());
+      }
+    } catch (error) {
+      if (mounted) setState(() => _requirementsError = '$error');
+    } finally {
+      _loadingRequirements = false;
+    }
+  }
 
   @override
   void dispose() {
@@ -182,7 +214,7 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
       await _uploadPickedFile(
         slot: 'selfie',
         file: PickedFileData(
-          name: image.name.isEmpty ? 'selfie-liveness.jpg' : image.name,
+          name: image.name.isEmpty ? 'identity-selfie.jpg' : image.name,
           mimeType: image.mimeType ?? _mimeTypeForName(image.name),
           bytes: bytes,
         ),
@@ -214,8 +246,17 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
       setState(() => _formError = 'Capture a selfie before continuing.');
       return;
     }
-    if (_step == 2 && _roleDocFile == null) {
+    if (_step == 2 &&
+        _roleDocFile == null &&
+        (_requirements?.any((row) =>
+                row['type'] == 'role_proof' && row['required'] == true) ??
+            true)) {
       setState(() => _formError = 'Upload at least one role proof document.');
+      return;
+    }
+    if (_requirements == null) {
+      setState(() => _formError =
+          'Load the current document requirements before continuing.');
       return;
     }
     if (_step < 3) {
@@ -229,12 +270,43 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
     }
     setState(() => _submitting = true);
     try {
+      final expiry = _expiry.text.trim();
+      if (expiry.isNotEmpty &&
+          (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(expiry) ||
+              DateTime.tryParse(expiry)?.toIso8601String().substring(0, 10) !=
+                  expiry)) {
+        throw const ApiException(
+            code: 'kyc.invalid_expiry',
+            message: 'Use YYYY-MM-DD for the identity expiry date.');
+      }
+      if (!_payoutSaved) {
+        if (_accountTitle.text.trim().isEmpty ||
+            _iban.text.trim().length < 4 ||
+            _bankName.text.trim().isEmpty) {
+          throw const ApiException(
+              code: 'kyc.bank_required',
+              message:
+                  'Enter your bank/wallet name, account title and account number.');
+        }
+        await PaymentsScope.of(context).createPayoutAccount(
+          provider: 'bank',
+          accountName: _accountTitle.text.trim(),
+          accountIdentifier: _iban.text.trim(),
+          bankName: _bankName.text.trim(),
+          receivingName: _receivingName.text.trim(),
+          ownershipConfirmed: _ownsAccount,
+        );
+        _payoutSaved = true;
+      }
+      if (!mounted) return;
       await AuthScope.of(context).createAndSubmitKyc(
         roleCode: RoleMapper.codeForLabel(widget.selectedRole),
         documents: [
           KycDocumentDraft(
             documentType: 'national_id_front',
             fileId: _frontFile?.publicId,
+            documentNumber: _documentNumber.text.trim(),
+            expiresOn: _expiry.text.trim(),
           ),
           KycDocumentDraft(
             documentType: 'national_id_back',
@@ -443,7 +515,7 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
                   child: Text(
                     _selfieCaptured
                         ? 'Selfie captured'
-                        : 'Selfie / liveness capture',
+                        : 'Selfie for manual identity review',
                     style: AppTextStyles.label.copyWith(
                       color:
                           _selfieCaptured ? colors.success : colors.textPrimary,
@@ -466,7 +538,22 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
   }
 
   Widget _roleDocumentsStep() {
-    final documents = SharedMockData.roleDocuments(widget.selectedRole);
+    if (_requirements == null) {
+      return Column(children: [
+        if (_requirementsError == null)
+          const LinearProgressIndicator()
+        else
+          Text('Could not load document requirements: $_requirementsError'),
+        TextButton(
+            onPressed: () {
+              setState(() => _requirementsError = null);
+              _loadRequirements();
+            },
+            child: const Text('Retry')),
+      ]);
+    }
+    final documents =
+        _requirements!.where((row) => row['type'] == 'role_proof').toList();
     return CoreGlassCard(
       key: const ValueKey('role-docs'),
       child: Column(
@@ -478,7 +565,8 @@ class _KycVerificationScreenState extends State<KycVerificationScreen> {
             (doc) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: UploadCard(
-                title: doc,
+                title:
+                    '${doc['label']}${doc['required'] == true ? '' : ' (optional)'}',
                 subtitle: _uploadSubtitle(
                   slot: 'role',
                   idle: 'Attach PDF, image or portfolio link proof',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/profile/travel_preferences_panel.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/bookings/booking_models.dart' as booking_models;
@@ -163,12 +164,7 @@ class _AT04AvailabilityCalendarScreenState
               tone: ActorTone.blue,
               child: Column(
                 children: [
-                  const CoreEmptyState(
-                    icon: Icons.flight_takeoff_outlined,
-                    title: 'Travel preferences need live profile fields',
-                    message:
-                        'No dummy city/radius values are shown. Connect profile travel preferences when the backend exposes them.',
-                  ),
+                  const TravelPreferencesPanel(),
                   const SizedBox(height: 8),
                   ActorInfoRow(
                     icon: Icons.lock_clock_outlined,

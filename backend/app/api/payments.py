@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import base64
-import hashlib
 import html
 import io
 from typing import Any
 
-from cryptography.fernet import Fernet
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask.typing import ResponseReturnValue
 from reportlab.lib.pagesizes import A4
@@ -49,14 +46,9 @@ def _validate_payment_method(method: str) -> None:
 
 
 def _encrypt_private_value(value: str) -> str:
-    configured_key = str(
-        current_app.config.get("FIELD_ENCRYPTION_KEY")
-        or current_app.config["SECRET_KEY"]
-    )
-    key = base64.urlsafe_b64encode(
-        hashlib.sha256(configured_key.encode("utf-8")).digest()
-    )
-    return f"fernet:{Fernet(key).encrypt(value.encode('utf-8')).decode('ascii')}"
+    from app.services.private_fields import encrypt_private_value
+
+    return encrypt_private_value(value)
 
 
 def _has_role(user: User, *codes: str) -> bool:
@@ -251,6 +243,7 @@ def _payout_account_payload(item: PayoutAccount) -> dict[str, Any]:
         "provider": item.provider,
         "account_masked": item.account_masked,
         "account_name": item.account_name,
+        "details": item.details_json or {},
         "status": item.status,
         "is_default": item.is_default,
     }
@@ -507,8 +500,19 @@ def create_payout_account() -> ResponseReturnValue:
     provider = str(payload.get("provider", "bank")).strip()
     account_name = str(payload.get("account_name", "")).strip()
     token = str(payload.get("account_token", "")).strip()
+    details: dict[str, Any] = {}
+    for key in ["bank_name", "receiving_name"]:
+        value = payload.get(key, "")
+        if not isinstance(value, str) or len(value) > 120:
+            raise _field_error(key, "Use at most 120 characters.")
+        details[key] = value.strip()
+    details["ownership_confirmed"] = payload.get("ownership_confirmed") is True
     if provider not in {"bank", "wallet", "sandbox"}:
         raise _field_error("provider", "Unsupported payout provider.")
+    if provider == "sandbox" and current_app.config["APP_ENV"] == "production":
+        raise _field_error(
+            "provider", "Test payout accounts are not allowed in production."
+        )
     if len(account_name) < 2:
         raise _field_error("account_name", "Account name is required.")
     if len(token) < 4:
@@ -528,6 +532,7 @@ def create_payout_account() -> ResponseReturnValue:
         account_token_encrypted=_encrypt_private_value(token),
         account_masked=account_masked[:64],
         account_name=account_name[:120],
+        details_json=details,
         status="verified" if provider == "sandbox" else "pending",
         is_default=make_default,
     )

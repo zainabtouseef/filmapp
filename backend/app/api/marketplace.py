@@ -193,6 +193,9 @@ def _talent_payload(profile: TalentProfile | None) -> dict[str, Any] | None:
             json.loads(profile.social_links_json) if profile.social_links_json else {}
         ),
         "availability_categories": _talent_availability_categories(profile),
+        "travel_preferences": json.loads(profile.travel_preferences_json)
+        if profile.travel_preferences_json
+        else {},
         "languages": [
             {"language": item.language, "proficiency": item.proficiency}
             for item in profile.languages
@@ -904,6 +907,60 @@ def cities() -> Response:
         select(City).where(City.active.is_(True)).order_by(City.name.asc())
     ).scalars()
     return jsonify(success({"cities": [_city_payload(city) for city in rows]}))
+
+
+@marketplace_blueprint.get("/talent/travel-preferences")
+def get_travel_preferences() -> Response:
+    user = _current_user()
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    data = (
+        json.loads(profile.travel_preferences_json)
+        if profile and profile.travel_preferences_json
+        else {"willing_to_travel": False, "radius_km": 0, "city_ids": []}
+    )
+    return jsonify(success(data))
+
+
+@marketplace_blueprint.patch("/talent/travel-preferences")
+def update_travel_preferences() -> Response:
+    user = _current_user()
+    payload = _json_body()
+    willing, radius, city_ids = (
+        payload.get("willing_to_travel"),
+        payload.get("radius_km"),
+        payload.get("city_ids"),
+    )
+    if type(willing) is not bool or type(radius) is not int or not 0 <= radius <= 1000:
+        raise _field_error(
+            "travel_preferences",
+            "Choose a travel preference and a radius between 0 and 1000 km.",
+        )
+    if (
+        not isinstance(city_ids, list)
+        or len(city_ids) > 100
+        or any(not isinstance(value, str) for value in city_ids)
+    ):
+        raise _field_error("city_ids", "Select active cities.")
+    ids = list(dict.fromkeys(city_ids))
+    cities = list(
+        db.session.execute(
+            select(City).where(City.public_id.in_(ids), City.active.is_(True))
+        ).scalars()
+    )
+    if len(cities) != len(ids):
+        raise _field_error("city_ids", "Select active cities.")
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = TalentProfile(user_id=user.id, screen_name=user.display_name)
+        db.session.add(profile)
+    data = {"willing_to_travel": willing, "radius_km": radius, "city_ids": ids}
+    profile.travel_preferences_json = json.dumps(data)
+    db.session.commit()
+    return jsonify(success(data))
 
 
 @marketplace_blueprint.get("/me/profile")

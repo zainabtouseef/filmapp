@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
@@ -59,6 +61,7 @@ class Booking(EntityMixin, Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     secured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancellation_reason: Mapped[str | None] = mapped_column(Text)
+    terms_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     project: Mapped[Project] = relationship(lazy="joined")
     requirement: Mapped[ProjectRequirement | None] = relationship(lazy="joined")

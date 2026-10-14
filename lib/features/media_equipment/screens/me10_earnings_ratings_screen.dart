@@ -37,7 +37,6 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
   TrustSafetyController? _trust;
   Future<_EarningsData>? _future;
   String _filter = 'All';
-  bool _addingAccount = false;
 
   @override
   void didChangeDependencies() {
@@ -271,12 +270,11 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
                         ),
                     const SizedBox(height: 8),
                     CoreSecondaryButton(
-                      icon: Icons.science_outlined,
-                      label: _addingAccount
-                          ? 'Adding...'
-                          : 'Add test payout account',
+                      icon: Icons.account_balance_outlined,
+                      label: 'Manage payout accounts',
                       compact: true,
-                      onTap: _addingAccount ? null : _addSandboxAccount,
+                      onTap: () =>
+                          Navigator.pushNamed(context, CoreRoutes.settings),
                     ),
                     const SizedBox(height: 8),
                     CoreSecondaryButton(
@@ -349,23 +347,6 @@ class _ME10EarningsRatingsScreenState extends State<ME10EarningsRatingsScreen> {
       if (booking.status == 'secured') return booking.publicId;
     }
     return null;
-  }
-
-  Future<void> _addSandboxAccount() async {
-    final accountName =
-        AuthScope.maybeOf(context)?.user?.displayName ?? 'Equipment provider';
-    setState(() => _addingAccount = true);
-    try {
-      await _payments!.createSandboxPayoutAccount(accountName: accountName);
-      if (!mounted) return;
-      mediaSnack(context, 'Test payout account added');
-      _reload();
-    } catch (error) {
-      if (!mounted) return;
-      mediaSnack(context, '$error');
-    } finally {
-      if (mounted) setState(() => _addingAccount = false);
-    }
   }
 
   String _minorMoney(int amountMinor) {

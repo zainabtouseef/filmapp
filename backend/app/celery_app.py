@@ -24,7 +24,13 @@ def create_celery() -> Celery:
         enable_utc=True,
         task_acks_late=True,
         worker_prefetch_multiplier=1,
-        imports=("app.tasks.files", "app.tasks.cineplanner"),
+        imports=("app.tasks.files", "app.tasks.cineplanner", "app.tasks.notifications"),
+        beat_schedule={
+            "deliver-browser-push": {
+                "task": "app.tasks.notifications.deliver_pending",
+                "schedule": 30.0,
+            }
+        },
     )
     celery_app.set_default()
     return celery_app

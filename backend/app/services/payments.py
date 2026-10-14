@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
+from decimal import Decimal
 
+from flask import current_app
 from sqlalchemy import select
 
 from app.extensions import db
@@ -37,17 +39,33 @@ def ensure_payment_schedule_for_contract(contract: Contract) -> PaymentSchedule:
     )
     db.session.add(schedule)
     db.session.flush()
-    db.session.add(
-        PaymentMilestone(
-            schedule_id=schedule.id,
-            name="Full booking payment",
-            sequence=1,
-            amount_minor=total_minor,
-            due_at=utc_now() + timedelta(days=1),
-            release_condition="proof_verified",
-            status="pending",
+    from app.services.booking_terms import validate_payment_schedule
+
+    terms = contract.booking.terms_json or {}
+    portions = validate_payment_schedule(terms.get("payment_schedule")) or [
+        {"name": "Full booking payment", "percent": 100}
+    ]
+    allocated = 0
+    for index, portion in enumerate(portions):
+        amount = (
+            total_minor - allocated
+            if index == len(portions) - 1
+            else int(Decimal(total_minor) * Decimal(str(portion["percent"])) / 100)
         )
-    )
+        allocated += amount
+        db.session.add(
+            PaymentMilestone(
+                schedule_id=schedule.id,
+                name=portion["name"],
+                sequence=index + 1,
+                amount_minor=amount,
+                due_at=utc_now() + timedelta(days=1)
+                if index == 0
+                else contract.booking.start_at + timedelta(days=index - 1),
+                release_condition="proof_verified",
+                status="pending",
+            )
+        )
 
     fee_rule = db.session.execute(
         select(FeeRule).where(
@@ -70,7 +88,7 @@ def ensure_payment_schedule_for_contract(contract: Contract) -> PaymentSchedule:
                     {
                         "basis_points": fee_rule.basis_points,
                         "fixed_minor": fee_rule.fixed_minor,
-                        "sandbox": True,
+                        "sandbox": current_app.config["PAYMENT_MODE"] == "sandbox",
                     },
                     sort_keys=True,
                 ),

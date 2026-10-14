@@ -4,7 +4,8 @@ import '../../core/theme/app_color_scheme.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'glass_card.dart';
 
-const cineConnectReleaseLabel = 'CineConnect · 2026.09';
+const cineConnectReleaseLabel =
+    'CineConnect · ${String.fromEnvironment('CINECONNECT_RELEASE', defaultValue: '1.0.0+1')}';
 
 Future<void> showCineConnectAbout(
   BuildContext context, {

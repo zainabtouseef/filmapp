@@ -63,11 +63,15 @@ class KycDocumentDraft {
   final String documentType;
   final String country;
   final String? fileId;
+  final String? documentNumber;
+  final String? expiresOn;
 
   const KycDocumentDraft({
     required this.documentType,
     this.country = 'PK',
     this.fileId,
+    this.documentNumber,
+    this.expiresOn,
   });
 
   Map<String, dynamic> toJson() {
@@ -75,6 +79,8 @@ class KycDocumentDraft {
       'document_type': documentType,
       'country': country,
       if (fileId != null) 'file_id': fileId,
+      if (documentNumber != null) 'document_number': documentNumber,
+      if (expiresOn != null && expiresOn!.isNotEmpty) 'expires_on': expiresOn,
     };
   }
 }

@@ -44,6 +44,40 @@ class BookingsController extends ChangeNotifier {
     return _repository.booking(publicId);
   }
 
+  Future<Booking> saveBookingDraft({
+    String? draftId,
+    String? projectId,
+    required String listingId,
+    String? requirementId,
+    required String startAt,
+    required String endAt,
+    required int feeMinor,
+    String currency = 'PKR',
+    Map<String, dynamic> terms = const {},
+    String? expiresAt,
+  }) async {
+    final booking = draftId == null
+        ? await _repository.createBooking(
+            projectId: projectId,
+            listingId: listingId,
+            requirementId: requirementId,
+            startAt: startAt,
+            endAt: endAt,
+            feeMinor: feeMinor,
+            currency: currency,
+            terms: terms,
+            expiresAt: expiresAt)
+        : await _repository.updateDraft(draftId, {
+            'start_at': startAt,
+            'end_at': endAt,
+            'fee_minor': feeMinor,
+            'terms': terms,
+            if (expiresAt != null) 'expires_at': expiresAt,
+          });
+    _cachedBookings = null;
+    return booking;
+  }
+
   Future<Booking> createAndSendBooking({
     String? projectId,
     required String listingId,
@@ -53,8 +87,13 @@ class BookingsController extends ChangeNotifier {
     required int feeMinor,
     String currency = 'PKR',
     String? message,
+    Map<String, dynamic> terms = const {},
+    String? expiresAt,
+    String? draftId,
+    void Function(Booking)? onDraftSaved,
   }) async {
-    final booking = await _repository.createBooking(
+    final booking = await saveBookingDraft(
+      draftId: draftId,
       projectId: projectId,
       listingId: listingId,
       requirementId: requirementId,
@@ -62,12 +101,16 @@ class BookingsController extends ChangeNotifier {
       endAt: endAt,
       feeMinor: feeMinor,
       currency: currency,
+      terms: terms,
+      expiresAt: expiresAt,
     );
+    onDraftSaved?.call(booking);
     final sent = await _repository.sendBooking(
       bookingId: booking.publicId,
       feeMinor: feeMinor,
       currency: currency,
       message: message,
+      terms: terms,
     );
     await bookings(force: true);
     return sent;
@@ -87,6 +130,7 @@ class BookingsController extends ChangeNotifier {
     String currency = 'PKR',
     String? conditions,
     String? message,
+    List<Map<String, dynamic>>? paymentSchedule,
   }) {
     return _repository.createCounterOffer(
       bookingId: bookingId,
@@ -94,6 +138,7 @@ class BookingsController extends ChangeNotifier {
       currency: currency,
       conditions: conditions,
       message: message,
+      paymentSchedule: paymentSchedule,
     );
   }
 

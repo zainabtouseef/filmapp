@@ -391,6 +391,8 @@ class NotificationDelivery(EntityMixin, Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failed_reason: Mapped[str | None] = mapped_column(Text)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     notification: Mapped[Notification] = relationship(back_populates="deliveries")
 
@@ -406,6 +408,7 @@ class PushDevice(EntityMixin, Base):
     )
     platform: Mapped[str] = mapped_column(String(32), nullable=False)
     token_reference: Mapped[str | None] = mapped_column(String(255))
+    subscription_encrypted: Mapped[str | None] = mapped_column(Text)
     device_id: Mapped[str] = mapped_column(String(120), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

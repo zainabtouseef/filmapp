@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from decimal import Decimal
 from typing import Any
@@ -1162,32 +1163,107 @@ def mark_all_notifications_read() -> Response:
 
 @trust_safety_blueprint.post("/push-devices")
 def register_push_device() -> ResponseReturnValue:
+    from app.services.private_fields import encrypt_private_value
+    from app.services.web_push import validate_subscription, web_push_available
+
     user = _current_user()
     payload = _json_body()
     device_id = str(payload.get("device_id", "")).strip()
-    if not device_id:
-        raise _field_error("device_id", "Device id is required.")
+    if not device_id or len(device_id) > 120:
+        raise _field_error(
+            "device_id", "A device ID of at most 120 characters is required."
+        )
+    enabled = payload.get("enabled", True)
+    if type(enabled) is not bool:
+        raise _field_error("enabled", "Use true or false.")
     device = db.session.execute(
         select(PushDevice).where(
             PushDevice.user_id == user.id, PushDevice.device_id == device_id
         )
     ).scalar_one_or_none()
+    if not enabled:
+        if device:
+            device.enabled = False
+            db.session.commit()
+        return jsonify(
+            success({"push_device": {"device_id": device_id, "enabled": False}})
+        )
+    if not web_push_available():
+        raise APIError(
+            "push.unavailable", "Browser push is not configured.", status=503
+        )
+    if payload.get("platform") != "web":
+        raise _field_error(
+            "platform", "This release supports browser push subscriptions."
+        )
+    subscription = validate_subscription(payload.get("subscription"))
+    endpoint_hash = hashlib.sha256(subscription["endpoint"].encode()).hexdigest()
+    other_devices = db.session.execute(
+        select(PushDevice).where(
+            PushDevice.token_reference == endpoint_hash,
+            PushDevice.user_id != user.id,
+        )
+    ).scalars()
+    for previous in other_devices:
+        previous.enabled = False
     if device is None:
-        device = PushDevice(user_id=user.id, device_id=device_id, platform="android")
+        count = db.session.execute(
+            select(func.count())
+            .select_from(PushDevice)
+            .where(PushDevice.user_id == user.id, PushDevice.enabled.is_(True))
+        ).scalar_one()
+        if count >= 20:
+            raise _field_error(
+                "device_id", "Disable an old device before adding another."
+            )
+        device = PushDevice(user_id=user.id, device_id=device_id, platform="web")
         db.session.add(device)
-    device.platform = str(payload.get("platform", device.platform)).strip()[:32]
-    device.token_reference = "encrypted:pending" if payload.get("token") else None
-    device.enabled = bool(payload.get("enabled", True))
+    device.platform = "web"
+    device.subscription_encrypted = encrypt_private_value(json.dumps(subscription))
+    device.token_reference = endpoint_hash
+    device.enabled = True
     device.last_seen_at = utc_now()
     db.session.commit()
     return jsonify(
         success(
             {
                 "push_device": {
-                    "device_id": device.device_id,
-                    "platform": device.platform,
-                    "enabled": device.enabled,
+                    "device_id": device_id,
+                    "platform": "web",
+                    "enabled": True,
                 }
             }
         )
     ), 201
+
+
+@trust_safety_blueprint.post("/push/receipts/<token>")
+def acknowledge_push_display(token: str) -> Response:
+    import uuid
+
+    from itsdangerous import BadSignature, SignatureExpired
+
+    from app.models.trust_safety import NotificationDelivery
+    from app.services.web_push import receipt_signer
+
+    try:
+        payload = receipt_signer().loads(token, max_age=2 * 86400)
+        delivery_id = uuid.UUID(payload["delivery_id"])
+    except (BadSignature, SignatureExpired, KeyError, ValueError) as exc:
+        raise APIError(
+            "push.invalid_receipt", "Invalid display receipt.", status=403
+        ) from exc
+    row = db.session.execute(
+        select(NotificationDelivery)
+        .where(
+            NotificationDelivery.id == delivery_id,
+            NotificationDelivery.provider == "webpush",
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if row is None:
+        raise APIError("push.receipt_not_found", "Delivery was not found.", status=404)
+    if row.status == "sent":
+        row.status = "delivered"
+        db.session.commit()
+    return jsonify(success({"acknowledged": row.status == "delivered"}))

@@ -319,7 +319,7 @@ const _locationFullWalkthroughChapters = <_LocationTourChapter>[
       ),
       _LocationTourTopic(
         'Connect a payout account',
-        'Add a payout account before earnings can be released to you — use the sandbox account here while testing the flow end to end.',
+        'Add your bank or wallet account in Settings. CineConnect stores it for manual verification before earnings can be released.',
         targetId: 'location.earnings.payout',
       ),
     ],

@@ -134,7 +134,8 @@ class _ExportActionButtonState extends State<ExportActionButton> {
       final content = job.csvContent;
       final downloaded = content != null &&
           content.isNotEmpty &&
-          downloadCsv('${job.exportType}_${job.publicId}.csv', content);
+          await downloadCsv('${job.exportType}_${job.publicId}.csv', content);
+      if (!mounted) return;
       showCoreSnack(
         context,
         downloaded

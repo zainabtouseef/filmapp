@@ -344,7 +344,7 @@ class PayoutAccountDto {
   factory PayoutAccountDto.fromJson(Map<String, dynamic> json) {
     return PayoutAccountDto(
       publicId: json['public_id'] as String? ?? '',
-      provider: json['provider'] as String? ?? 'sandbox',
+      provider: json['provider'] as String? ?? 'unknown',
       accountMasked: json['account_masked'] as String? ?? '****',
       accountName: json['account_name'] as String? ?? 'Payout account',
       status: json['status'] as String? ?? 'pending',

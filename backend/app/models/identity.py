@@ -41,6 +41,7 @@ class User(EntityMixin, Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     phone_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    referral_code: Mapped[str | None] = mapped_column(String(64))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     terms_version: Mapped[str] = mapped_column(String(32), nullable=False)
     terms_accepted_at: Mapped[datetime] = mapped_column(

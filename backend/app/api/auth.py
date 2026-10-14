@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import timedelta
 from typing import Any
 
@@ -21,6 +22,7 @@ from app.models.identity import (
     UserSession,
     UserSettings,
 )
+from app.models.marketplace import City, UserProfile
 from app.responses import success
 from app.security import (
     access_token_matches_credentials,
@@ -95,6 +97,9 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "public_id": user.public_id,
         "email": user.email,
         "display_name": user.display_name,
+        "phone": user.phone_e164,
+        "phone_verified": user.phone_verified_at is not None,
+        "referral_code": user.referral_code,
         "status": user.status,
         "roles": [
             {
@@ -217,14 +222,43 @@ def _serialize_session(
 @auth_blueprint.post("/auth/register")
 @limiter.limit("20 per hour")
 def register() -> ResponseReturnValue:
+    from app.api.app import INTERNAL_ROLE_CODES
+
     payload = _json_body()
     email = _normal_email(payload.get("email"))
     password = _validate_password(payload.get("password"))
     display_name = str(payload.get("display_name", "")).strip()
     initial_role_code = str(payload.get("initial_role", "")).strip()
+    if initial_role_code in INTERNAL_ROLE_CODES:
+        raise APIError(
+            "auth.role_restricted",
+            "Internal roles require administrator assignment.",
+            status=403,
+        )
     terms_version = str(payload.get("terms_version", "")).strip()
+    phone = str(payload.get("phone") or "").strip().replace(" ", "")
+    referral = str(payload.get("referral_code") or "").strip()
+    city_id = str(payload.get("city_id") or "").strip()
 
     fields: dict[str, list[str]] = {}
+    if phone and not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
+        fields["phone"] = [
+            "Use an international phone number, for example +923001234567."
+        ]
+    if len(referral) > 64:
+        fields["referral_code"] = ["Referral code must contain at most 64 characters."]
+    city = None
+    if city_id:
+        city = db.session.execute(
+            select(City).where(City.public_id == city_id, City.active.is_(True))
+        ).scalar_one_or_none()
+        if city is None:
+            fields["city_id"] = ["Select an active city."]
+    if (
+        phone
+        and db.session.execute(select(User.id).where(User.phone_e164 == phone)).first()
+    ):
+        fields["phone"] = ["This phone number is already registered."]
     if len(display_name) < 2:
         fields["display_name"] = ["Display name must contain at least 2 characters."]
     if not terms_version:
@@ -259,9 +293,12 @@ def register() -> ResponseReturnValue:
         password_hash=hash_password(password),
         display_name=display_name,
         terms_version=terms_version,
+        phone_e164=phone or None,
+        referral_code=referral or None,
     )
     db.session.add(user)
     db.session.flush()
+    db.session.add(UserProfile(user_id=user.id, city_id=city.id if city else None))
     db.session.add(
         UserRole(
             user_id=user.id,
@@ -609,9 +646,17 @@ def update_my_settings() -> Response:
 
 @auth_blueprint.post("/me/roles")
 def add_role() -> ResponseReturnValue:
+    from app.api.app import INTERNAL_ROLE_CODES
+
     user = _current_user()
     payload = _json_body()
     role_code = str(payload.get("role", "")).strip()
+    if role_code in INTERNAL_ROLE_CODES:
+        raise APIError(
+            "auth.role_restricted",
+            "Internal roles require administrator assignment.",
+            status=403,
+        )
     role = db.session.execute(
         select(Role).where(Role.code == role_code, Role.is_active.is_(True))
     ).scalar_one_or_none()
@@ -636,8 +681,11 @@ def add_role() -> ResponseReturnValue:
             )
         )
     elif existing.status != "active":
-        existing.status = "active"
-        existing.approved_at = utc_now()
+        raise APIError(
+            "auth.role_restricted",
+            "An administrator must restore this role.",
+            status=403,
+        )
     db.session.commit()
     return jsonify(success(_serialize_user(user)["roles"])), 201
 

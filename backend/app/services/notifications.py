@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.extensions import db
 from app.models.base import utc_now
+from app.models.identity import NotificationPreference
 from app.models.trust_safety import Notification, NotificationDelivery, PushDevice
 
 
@@ -42,19 +43,32 @@ def notify_user(
         )
     )
 
-    has_push_device = db.session.execute(
-        select(PushDevice).where(
-            PushDevice.user_id == user_id, PushDevice.enabled.is_(True)
-        )
+    from app.services.web_push import web_push_available
+
+    preferences = db.session.execute(
+        select(NotificationPreference).where(NotificationPreference.user_id == user_id)
     ).scalar_one_or_none()
-    if has_push_device is not None:
+    if preferences is not None and not preferences.push_enabled:
+        return notification
+    devices = db.session.execute(
+        select(PushDevice)
+        .where(PushDevice.user_id == user_id, PushDevice.enabled.is_(True))
+        .limit(20)
+    ).scalars()
+    available = web_push_available()
+    for device in devices:
+        supported = (
+            available
+            and device.platform == "web"
+            and bool(device.subscription_encrypted)
+        )
         db.session.add(
             NotificationDelivery(
                 notification_id=notification.id,
                 channel="push",
-                provider="sandbox",
-                status="delivered",
-                sent_at=sent_at,
+                provider="webpush" if supported else "unconfigured",
+                provider_reference=str(device.id),
+                status="queued" if supported else "unavailable",
             )
         )
     return notification

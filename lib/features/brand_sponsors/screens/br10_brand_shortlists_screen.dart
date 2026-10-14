@@ -12,7 +12,7 @@ import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/cards/glass_section_card.dart';
 import '../models/brand_sponsor_models.dart';
 import '../widgets/brand_booking_dialog.dart';
-import '../widgets/brand_demo_journey.dart';
+import '../widgets/brand_project_journey.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
 
@@ -61,11 +61,11 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
       final bundle = values[0] as MarketplaceShortlistBundle;
       final projects = values[1] as List<Project>;
       var selectedProjectId = _projectId;
-      if (selectedProjectId.isEmpty && isBrandDemoAccount(_auth)) {
-        final demoProject = selectBrandDemoProject(projects);
-        final hasDemoBoard = bundle.shortlists
-            .any((board) => board.projectId == demoProject?.publicId);
-        if (hasDemoBoard) selectedProjectId = demoProject!.publicId;
+      if (selectedProjectId.isEmpty && canShowBrandProjectJourney(_auth)) {
+        final featuredProject = selectBrandProject(projects);
+        final hasProjectBoard = bundle.shortlists
+            .any((board) => board.projectId == featuredProject?.publicId);
+        if (hasProjectBoard) selectedProjectId = featuredProject!.publicId;
       }
       setState(() {
         _bundle = bundle;

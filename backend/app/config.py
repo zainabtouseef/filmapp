@@ -16,6 +16,7 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "development-secret-change-me")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "development-jwt-change-me")
     FIELD_ENCRYPTION_KEY = os.getenv("FIELD_ENCRYPTION_KEY", "")
+    LEGACY_FIELD_ENCRYPTION_KEYS = os.getenv("LEGACY_FIELD_ENCRYPTION_KEYS", "")
 
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
@@ -43,6 +44,20 @@ class Config:
     API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "http://localhost:5000")
     CORS_ALLOWED_ORIGINS = _csv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
     PAYMENT_MODE = os.getenv("PAYMENT_MODE", "sandbox")
+    MAINTENANCE_ENABLED = os.getenv("MAINTENANCE_ENABLED", "false").lower() == "true"
+    MAINTENANCE_MESSAGE = os.getenv("MAINTENANCE_MESSAGE", "")
+    MAINTENANCE_RETURN_AT = os.getenv("MAINTENANCE_RETURN_AT", "")
+    FORCE_UPDATE_REQUIRED = (
+        os.getenv("FORCE_UPDATE_REQUIRED", "false").lower() == "true"
+    )
+    APP_STORE_URL = os.getenv("APP_STORE_URL", "")
+    RELEASE_VERSION = os.getenv("RELEASE_VERSION", "1.0.0+1")
+    FILE_SCAN_COMMAND = os.getenv("FILE_SCAN_COMMAND", "")
+    CLAMD_HOST = os.getenv("CLAMD_HOST", "127.0.0.1")
+    CLAMD_PORT = int(os.getenv("CLAMD_PORT", "3310"))
+    VAPID_PRIVATE_KEY_FILE = os.getenv("VAPID_PRIVATE_KEY_FILE", "")
+    VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+    VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "https://cine.nalexustechnologies.com")
     ACCESS_TOKEN_MINUTES = int(os.getenv("ACCESS_TOKEN_MINUTES", "15"))
     REFRESH_TOKEN_DAYS = int(os.getenv("REFRESH_TOKEN_DAYS", "30"))
     OBJECT_STORAGE_BUCKET_PRIVATE = os.getenv(

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
-from typing import Any
+from datetime import date, timedelta
+from typing import Any, cast
 
 from celery import Celery
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
@@ -13,6 +13,7 @@ from sqlalchemy import and_, or_, select
 from app.api.auth import _current_user, _json_body
 from app.errors import APIError
 from app.extensions import db, limiter
+from app.models.app_settings import AppSetting
 from app.models.base import utc_now
 from app.models.casting import CastingApplication, CastingRoleBrief
 from app.models.files import FileAsset, UploadSession
@@ -28,6 +29,103 @@ from app.services.local_storage import public_url_for, resolve_path, save_stream
 from app.services.notifications import notify_user
 
 verification_blueprint = Blueprint("verification", __name__)
+
+
+def role_requirements(role_code: str) -> list[dict[str, Any]]:
+    configured = db.session.execute(
+        select(AppSetting).where(AppSetting.key == f"kyc:{role_code}")
+    ).scalar_one_or_none()
+    if configured:
+        return cast(list[dict[str, Any]], configured.value_json["documents"])
+    required_proof = role_code not in {
+        "actor_talent",
+        "model",
+        "influencer",
+        "general_public",
+    }
+    return [
+        {
+            "type": "national_id_front",
+            "label": "Identity document front",
+            "required": True,
+        },
+        {
+            "type": "national_id_back",
+            "label": "Identity document back",
+            "required": True,
+        },
+        {
+            "type": "selfie_liveness",
+            "label": "Selfie for manual identity review",
+            "required": True,
+        },
+        {
+            "type": "role_proof",
+            "label": "Role or business supporting document",
+            "required": required_proof,
+        },
+    ]
+
+
+@verification_blueprint.get("/kyc/requirements/<role_code>")
+def get_kyc_requirements(role_code: str) -> Response:
+    role = db.session.execute(
+        select(Role).where(Role.code == role_code, Role.is_active.is_(True))
+    ).scalar_one_or_none()
+    if role is None:
+        raise _field_error("role", "Select a supported role.")
+    return jsonify(
+        success(
+            {
+                "role": role.code,
+                "documents": role_requirements(role.code),
+                "selfie_verification": "manual_review",
+            }
+        )
+    )
+
+
+@verification_blueprint.patch("/admin/kyc/requirements/<role_code>")
+def update_kyc_requirements(role_code: str) -> Response:
+    user = _current_user()
+    if not _has_role_code(user, {"super_admin"}):
+        raise APIError(
+            "kyc.permission_denied", "Super Admin access is required.", status=403
+        )
+    payload = _json_body()
+    documents = payload.get("documents")
+    supported = {
+        "national_id_front",
+        "national_id_back",
+        "selfie_liveness",
+        "role_proof",
+    }
+    if (
+        not isinstance(documents, list)
+        or len(documents) != 4
+        or {row.get("type") for row in documents if isinstance(row, dict)} != supported
+    ):
+        raise _field_error("documents", "Configure the four supported document types.")
+    for row in documents:
+        if (
+            type(row.get("required")) is not bool
+            or not isinstance(row.get("label"), str)
+            or not 1 <= len(row["label"]) <= 120
+        ):
+            raise _field_error(
+                "documents", "Each document needs a label and required flag."
+            )
+    setting = db.session.execute(
+        select(AppSetting).where(AppSetting.key == f"kyc:{role_code}")
+    ).scalar_one_or_none()
+    if setting is None:
+        setting = AppSetting(key=f"kyc:{role_code}", value_json=payload)
+        db.session.add(setting)
+    else:
+        setting.value_json = payload
+    db.session.commit()
+    return jsonify(success({"role": role_code, "documents": documents}))
+
 
 ALLOWED_UPLOAD_MIME_TYPES = {
     "image/jpeg",
@@ -256,6 +354,10 @@ def _serialize_submission(submission: KycSubmission) -> dict[str, Any]:
             {
                 "document_type": document.document_type,
                 "country": document.country,
+                "expires_on": document.expires_on.isoformat()
+                if document.expires_on
+                else None,
+                "document_number_present": bool(document.document_number_encrypted),
                 "status": document.status,
                 "rejection_reason": document.rejection_reason,
                 "file": _serialize_file(document.file) if document.file else None,
@@ -518,6 +620,16 @@ def download_file(public_id: str) -> ResponseReturnValue:
         user = _current_user()
         if not _can_download_file(file, user):
             raise APIError("files.not_found", "File was not found.", status=404)
+    if file.processing_status == "missing":
+        raise APIError(
+            "files.missing",
+            "File bytes are not available. Upload the original again.",
+            status=404,
+        )
+    if file.scan_status not in {"pending", "clean"}:
+        raise APIError(
+            "files.quarantined", "This file failed security checks.", status=403
+        )
     path = resolve_path(file)
     if not path.exists() or not path.is_file():
         raise APIError("files.missing", "File bytes are not available.", status=404)
@@ -531,8 +643,27 @@ def download_file(public_id: str) -> ResponseReturnValue:
     return response
 
 
+@verification_blueprint.get("/media/<path:storage_key>")
+def public_media(storage_key: str) -> ResponseReturnValue:
+    file = db.session.execute(
+        select(FileAsset).where(
+            FileAsset.storage_key == storage_key,
+            FileAsset.visibility == "public",
+            FileAsset.scan_status == "clean",
+            FileAsset.processing_status == "ready",
+        )
+    ).scalar_one_or_none()
+    if file is None or not resolve_path(file).is_file():
+        raise APIError("files.not_found", "File was not found.", status=404)
+    return send_file(
+        resolve_path(file), mimetype=file.mime_type, conditional=True, max_age=3600
+    )
+
+
 @verification_blueprint.post("/kyc/submissions")
 def create_kyc_submission() -> ResponseReturnValue:
+    from app.services.private_fields import encrypt_private_value
+
     user = _current_user()
     payload = _json_body()
     role_code = str(payload.get("role", "")).strip()
@@ -558,15 +689,39 @@ def create_kyc_submission() -> ResponseReturnValue:
     submission = KycSubmission(user_id=user.id, role_id=role.id)
     db.session.add(submission)
     db.session.flush()
-    for item in payload.get("documents", []):
-        if not isinstance(item, dict):
-            continue
+    documents = payload.get("documents", [])
+    supported_types = {row["type"] for row in role_requirements(role.code)}
+    if not isinstance(documents, list) or len(documents) > 4:
+        raise _field_error("documents", "Provide at most four identity documents.")
+    seen_types = set()
+    for item in documents:
+        if (
+            not isinstance(item, dict)
+            or item.get("document_type") not in supported_types
+        ):
+            raise _field_error("documents", "Unsupported document type.")
+        if item["document_type"] in seen_types:
+            raise _field_error("documents", "Document types must be unique.")
+        seen_types.add(item["document_type"])
         document = KycDocument(
             submission_id=submission.id,
             document_type=str(item.get("document_type", "")).strip(),
             country=str(item.get("country", "PK")).strip().upper()[:2],
         )
         file_public_id = str(item.get("file_id", "")).strip()
+        number = str(item.get("document_number") or "").strip()
+        if len(number) > 100:
+            raise _field_error("document_number", "Document number is too long.")
+        if number:
+            document.document_number_encrypted = encrypt_private_value(number)
+        expiry = str(item.get("expires_on") or "").strip()
+        if expiry:
+            try:
+                document.expires_on = date.fromisoformat(expiry)
+            except ValueError as exc:
+                raise _field_error(
+                    "expires_on", "Use an ISO date (YYYY-MM-DD)."
+                ) from exc
         if file_public_id:
             file = db.session.execute(
                 select(FileAsset).where(
@@ -589,6 +744,25 @@ def create_kyc_submission() -> ResponseReturnValue:
     return jsonify(success({"submission": _serialize_submission(submission)})), 201
 
 
+def _validate_submission_documents(submission: KycSubmission) -> None:
+    documents = {row.document_type: row for row in submission.documents}
+    for requirement in role_requirements(submission.role.code):
+        document = documents.get(requirement["type"])
+        if requirement["required"] and (document is None or document.file is None):
+            raise _field_error("documents", f"{requirement['label']} is required.")
+    for document in submission.documents:
+        if document.file and (
+            document.file.owner_user_id != submission.user_id
+            or document.file.scan_status != "clean"
+            or document.file.processing_status != "ready"
+        ):
+            raise _field_error(
+                "documents", "Wait for all uploaded documents to pass scanning."
+            )
+        if document.expires_on and document.expires_on < date.today():
+            raise _field_error("expires_on", "Identity document has expired.")
+
+
 @verification_blueprint.post("/kyc/submissions/<public_id>/submit")
 def submit_kyc(public_id: str) -> Response:
     user = _current_user()
@@ -600,6 +774,13 @@ def submit_kyc(public_id: str) -> Response:
     ).scalar_one_or_none()
     if submission is None:
         raise APIError("kyc.not_found", "KYC submission was not found.", status=404)
+    if submission.status == "pending":
+        return jsonify(success({"submission": _serialize_submission(submission)}))
+    if submission.status != "draft":
+        raise APIError(
+            "kyc.invalid_state", "Only draft submissions can be submitted.", status=409
+        )
+    _validate_submission_documents(submission)
     previous = submission.status
     submission.status = "pending"
     submission.submitted_at = utc_now()
@@ -638,6 +819,13 @@ def resubmit_kyc(public_id: str) -> Response:
     ).scalar_one_or_none()
     if submission is None:
         raise APIError("kyc.not_found", "KYC submission was not found.", status=404)
+    if submission.status not in {"rejected", "needs_resubmission"}:
+        raise APIError(
+            "kyc.invalid_state",
+            "This submission does not require resubmission.",
+            status=409,
+        )
+    _validate_submission_documents(submission)
     previous = submission.status
     submission.status = "pending"
     submission.submitted_at = utc_now()

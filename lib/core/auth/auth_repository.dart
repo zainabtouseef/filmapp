@@ -25,6 +25,9 @@ class AuthRepository {
     required String password,
     required String displayName,
     required String initialRole,
+    String? phone,
+    String? cityId,
+    String? referralCode,
     required String termsVersion,
   }) async {
     final response = await _client.post(
@@ -35,6 +38,9 @@ class AuthRepository {
         'display_name': displayName,
         'initial_role': initialRole,
         'terms_version': termsVersion,
+        if (phone != null) 'phone': phone,
+        if (cityId != null) 'city_id': cityId,
+        if (referralCode != null) 'referral_code': referralCode,
       },
     );
     return AuthSession.fromJson(response);

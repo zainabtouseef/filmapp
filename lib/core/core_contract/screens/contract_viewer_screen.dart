@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../auth/auth_controller.dart';
 
 import '../../contracts/contract_models.dart';
 import '../../contracts/contracts_controller.dart';
@@ -11,7 +13,7 @@ class ContractViewerScreen extends StatefulWidget {
   final String? contractId;
   final bool showAddendumBanner;
 
-  /// Called once the in-sheet OTP signature actually succeeds — lets a
+  /// Called once the authenticated signature succeeds - lets a
   /// caller sync its own booking/contract state without this shared
   /// screen depending on any portal-specific store.
   final VoidCallback? onSigned;
@@ -178,13 +180,14 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
     try {
       final download = await contracts.downloadContract(contract.publicId);
       if (!mounted) return;
-      final saved =
-          saveDownload(download.filename, download.bytes, download.contentType);
+      final saved = await saveDownload(
+          download.filename, download.bytes, download.contentType);
+      if (!mounted) return;
       showCoreSnack(
         context,
         saved
             ? 'Contract PDF downloaded'
-            : 'Contract PDF is ready. Browser download is available on web.',
+            : 'Saving the contract was cancelled.',
       );
     } catch (error) {
       if (mounted) showCoreSnack(context, 'Contract download failed: $error');
@@ -197,6 +200,43 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
     setState(() {
       _contractFuture = contracts.contract(widget.contractId!);
     });
+  }
+
+  Future<void> _showVerificationQr(CineContract contract) async {
+    try {
+      final response = await AuthScope.of(context)
+          .apiClient
+          .get('/contracts/${contract.publicId}/verification');
+      final data = response['data'] as Map<String, dynamic>;
+      if (!mounted) return;
+      await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+                title: const Text('Contract verification'),
+                content: SizedBox(
+                    width: 320,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Image.memory(
+                          base64Decode(data['qr_png_base64'] as String),
+                          width: 260,
+                          height: 260),
+                      const SizedBox(height: 12),
+                      const Text(
+                          'Scan to verify this document version and its current signing status.'),
+                      const SizedBox(height: 8),
+                      SelectableText(data['url'] as String),
+                    ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'))
+                ],
+              ));
+    } catch (error) {
+      if (mounted) {
+        showCoreSnack(context, 'Could not create verification QR: $error');
+      }
+    }
   }
 
   @override
@@ -344,11 +384,8 @@ class _ContractViewerScreenState extends State<ContractViewerScreen> {
                   () => _downloadPdf(contract)),
               _actionButton(
                 Icons.qr_code_2_rounded,
-                'QR verification unavailable',
-                () => showCoreSnack(
-                  context,
-                  'QR verification requires a signed verification service and is not enabled.',
-                ),
+                'QR verification',
+                () => _showVerificationQr(contract),
               ),
             ],
           ),

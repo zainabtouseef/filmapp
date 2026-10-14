@@ -8,36 +8,23 @@ import '../../../core/tour/tour_target.dart';
 import '../routes/brand_sponsor_routes.dart';
 import 'brand_sponsor_live.dart';
 
-const brandDemoProjectId = 'DEMO-BRAND-PRJ-001';
-const brandDemoProjectTitle = 'Nova Cola Winter Stories';
+bool canShowBrandProjectJourney(AuthController? auth) =>
+    auth?.isAuthenticated == true;
 
-bool isBrandDemoAccount(AuthController? auth) {
-  return auth?.user?.email.toLowerCase() ==
-      'brand01@demo.cine.nalexustechnologies.com';
-}
-
-Project? selectBrandDemoProject(Iterable<Project> projects) {
+Project? selectBrandProject(Iterable<Project> projects) {
   final rows = projects.toList();
-  for (final project in rows) {
-    if (project.publicId == brandDemoProjectId) return project;
-  }
-  for (final project in rows) {
-    if (project.title == brandDemoProjectTitle) return project;
-  }
-  for (final project in rows) {
-    if (project.status == 'active') return project;
-  }
-  return rows.isEmpty ? null : rows.first;
+  return rows.where((project) => project.status == 'active').firstOrNull ??
+      rows.firstOrNull;
 }
 
-class BrandDemoJourneyCard extends StatelessWidget {
+class BrandProjectJourneyCard extends StatelessWidget {
   final Project project;
   final int shortlistCount;
   final int requestCount;
   final int confirmedCount;
   final VoidCallback onPlay;
 
-  const BrandDemoJourneyCard({
+  const BrandProjectJourneyCard({
     super.key,
     required this.project,
     required this.shortlistCount,
@@ -102,9 +89,9 @@ class BrandDemoJourneyCard extends StatelessWidget {
     ];
 
     return TourTarget(
-      id: 'brand:demo:journey',
+      id: 'brand:project:journey',
       child: Container(
-        key: const ValueKey('brand-demo-project-journey'),
+        key: const ValueKey('brand-project-project-journey'),
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -166,7 +153,7 @@ class BrandDemoJourneyCard extends StatelessWidget {
                   ],
                 );
                 final play = FilledButton.icon(
-                  key: const ValueKey('brand-demo-journey-play'),
+                  key: const ValueKey('brand-project-journey-play'),
                   onPressed: onPlay,
                   icon: const Icon(Icons.play_circle_outline_rounded),
                   label: const Text('Play project story'),

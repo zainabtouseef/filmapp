@@ -1,15 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../auth/role_mapper.dart';
+import '../../profile/profile_models.dart';
 import '../../network/api_exception.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../../../features/general_public/routes/general_public_routes.dart';
 import '../core_routes.dart';
-import '../mock_data/shared_mock_data.dart';
 import '../widgets/core_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -162,11 +160,11 @@ class SignUpFlowScreen extends StatefulWidget {
 }
 
 class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
-  int _step = 0;
   bool _terms = false;
   bool _showPassword = false;
   bool _loading = false;
-  String _city = SharedMockData.cities.first;
+  String? _cityId;
+  Future<List<ProfileCity>>? _citiesFuture;
 
   final _fullName = TextEditingController();
   final _phone = TextEditingController();
@@ -174,34 +172,23 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   final _referral = TextEditingController();
-  final _otp = TextEditingController();
   final Map<String, String?> _errors = {};
-  int _resendSeconds = 30;
-  Timer? _timer;
 
   @override
   void dispose() {
-    _timer?.cancel();
     _fullName.dispose();
     _phone.dispose();
     _email.dispose();
     _password.dispose();
     _confirm.dispose();
     _referral.dispose();
-    _otp.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    setState(() => _resendSeconds = 30);
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendSeconds == 0) {
-        timer.cancel();
-      } else {
-        setState(() => _resendSeconds--);
-      }
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _citiesFuture ??= AuthScope.of(context).cities();
   }
 
   bool _validateSignup() {
@@ -218,6 +205,7 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
             : null
         ..['confirm'] =
             _confirm.text != _password.text ? 'Passwords must match' : null
+        ..['city'] = _cityId == null ? 'Select a city' : null
         ..['terms'] = _terms ? null : 'Accept terms to continue';
     });
     return _errors.values.every((error) => error == null);
@@ -232,41 +220,35 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
         password: _password.text,
         displayName: _fullName.text.trim(),
         initialRole: RoleMapper.codeForLabel(widget.selectedRole),
+        phone: _phone.text.trim().startsWith('0')
+            ? '+92${_phone.text.trim().substring(1)}'
+            : _phone.text.trim(),
+        cityId: _cityId,
+        referralCode: _referral.text.trim(),
       );
       if (!mounted) return;
-      _startTimer();
-      setState(() => _step = 1);
+      showCoreSnack(context,
+          'Account created. Your phone is saved but is not SMS verified.');
+      Navigator.pushReplacementNamed(
+        context,
+        widget.selectedRole == 'General Public'
+            ? GeneralPublicRoutes.home
+            : CoreRoutes.kyc,
+        arguments: widget.selectedRole,
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
         _errors['email'] = error.fields['email']?.first;
         _errors['password'] = error.fields['password']?.first;
         _errors['fullName'] = error.fields['display_name']?.first;
+        _errors['phone'] = error.fields['phone']?.first;
+        _errors['city'] = error.fields['city_id']?.first;
         _errors['form'] = error.message;
       });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _verifyOtp() {
-    if (_otp.text.trim().length != 6) {
-      setState(() => _errors['otp'] = 'Enter any 6-digit OTP');
-      return;
-    }
-    if (widget.selectedRole == 'General Public') {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        GeneralPublicRoutes.home,
-        (route) => false,
-      );
-      return;
-    }
-    Navigator.pushNamed(
-      context,
-      CoreRoutes.kyc,
-      arguments: widget.selectedRole,
-    );
   }
 
   @override
@@ -277,18 +259,17 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CoreAppHeader(
-            title: _step == 0 ? 'Create Account' : 'Verify Your Phone',
-            subtitle: _step == 0
-                ? 'Build your verified CineConnect profile.'
-                : 'Enter the 6-digit code sent to your number.',
-            icon: _step == 0
-                ? Icons.person_add_alt_1_outlined
-                : Icons.sms_outlined,
+            title: 'Create Account',
+            subtitle:
+                'Create your account, then submit identity documents for review.',
+            icon: Icons.person_add_alt_1_outlined,
           ),
           const SizedBox(height: 20),
-          StepWizardIndicator(currentStep: _step, totalSteps: 2),
+          const InlineNotice(
+              message:
+                  'SMS verification is not configured. Phone numbers remain unverified.'),
           const SizedBox(height: 20),
-          if (_step == 0) _signupForm(context) else _otpForm(context),
+          _signupForm(context),
         ],
       ),
     );
@@ -361,12 +342,39 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
             errorText: _errors['confirm'],
           ),
           const SizedBox(height: 14),
-          CoreDropdownField<String>(
-            value: _city,
-            values: SharedMockData.cities,
-            label: 'City',
-            icon: Icons.location_on_outlined,
-            onChanged: (value) => setState(() => _city = value ?? _city),
+          FutureBuilder<List<ProfileCity>>(
+            future: _citiesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Column(children: [
+                  const InlineNotice(
+                      message: 'Could not load cities. Please retry.'),
+                  TextButton(
+                      onPressed: () => setState(
+                          () => _citiesFuture = AuthScope.of(context).cities()),
+                      child: const Text('Retry')),
+                ]);
+              }
+              if (!snapshot.hasData) return const LinearProgressIndicator();
+              final cities = snapshot.data!;
+              if (cities.isEmpty) {
+                return const InlineNotice(
+                    message:
+                        'No active cities are configured. Contact support.');
+              }
+              return Column(children: [
+                CoreDropdownField<String?>(
+                  value: _cityId,
+                  values: cities.map<String?>((city) => city.publicId).toList(),
+                  labelBuilder: (id) =>
+                      cities.firstWhere((city) => city.publicId == id).name,
+                  label: 'City',
+                  icon: Icons.location_on_outlined,
+                  onChanged: (value) => setState(() => _cityId = value),
+                ),
+                if (_errors['city'] != null) Text(_errors['city']!),
+              ]);
+            },
           ),
           const SizedBox(height: 14),
           CoreTextField(
@@ -401,56 +409,6 @@ class _SignUpFlowScreenState extends State<SignUpFlowScreen> {
             label: 'Create Account',
             loading: _loading,
             onTap: _loading ? null : _createAccount,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _otpForm(BuildContext context) {
-    final colors = context.appColors;
-    return CoreGlassCard(
-      child: Column(
-        children: [
-          Container(
-            width: 74,
-            height: 74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.goldMid.withValues(alpha: 0.12),
-            ),
-            child: Icon(Icons.sms_outlined, color: colors.goldMid, size: 34),
-          ),
-          const SizedBox(height: 18),
-          OtpInputRow(controller: _otp, errorText: _errors['otp']),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _resendSeconds == 0
-                      ? 'You can resend the code now'
-                      : 'Resend available in $_resendSeconds seconds',
-                  style: AppTextStyles.caption.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _resendSeconds == 0 ? _startTimer : null,
-                child: const Text('Resend'),
-              ),
-            ],
-          ),
-          TextButton(
-            onPressed: () => setState(() => _step = 0),
-            child: const Text('Change phone number'),
-          ),
-          const SizedBox(height: 12),
-          CorePrimaryButton(
-            icon: Icons.verified_outlined,
-            label: 'Verify',
-            onTap: _verifyOtp,
           ),
         ],
       ),

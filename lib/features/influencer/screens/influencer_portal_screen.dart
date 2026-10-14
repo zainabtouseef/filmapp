@@ -572,7 +572,7 @@ class _InfluencerMediaKitScreenState extends State<InfluencerMediaKitScreen> {
             children: [
               ActorCollapsibleSection(
                 title: 'Audience channels',
-                subtitle: 'Social handles and reach',
+                subtitle: 'Self-reported social handles and reach',
                 icon: Icons.public_outlined,
                 initiallyExpanded: true,
                 child: Column(
@@ -694,16 +694,11 @@ class _InfluencerPackagesScreenState extends State<InfluencerPackagesScreen> {
   Future<TalentProfile> _load() async {
     final talent = await AuthScope.of(context).talentProfile();
     final packages = influencerPackages(talent);
-    final defaults = [
-      ('Reel Starter', '1 reel, 3 story frames, 7-day usage', '75000'),
-      ('Launch Push', '2 reels, 6 story frames, BTS approval', '150000'),
-      ('Brand Ambassador', 'Monthly content, exclusivity reviewed', '300000'),
-    ];
     for (var i = 0; i < 3; i++) {
       final row = i < packages.length ? packages[i] : null;
-      names[i].text = row?['name']?.toString() ?? defaults[i].$1;
-      deliverables[i].text = row?['deliverables']?.toString() ?? defaults[i].$2;
-      prices[i].text = row?['price']?.toString() ?? defaults[i].$3;
+      names[i].text = row?['name']?.toString() ?? '';
+      deliverables[i].text = row?['deliverables']?.toString() ?? '';
+      prices[i].text = row?['price']?.toString() ?? '';
     }
     return talent;
   }

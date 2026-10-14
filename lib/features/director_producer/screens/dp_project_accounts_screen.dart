@@ -166,6 +166,7 @@ class _DPProjectAccountsScreenState extends State<DPProjectAccountsScreen> {
   Future<void> _exportLedger() async {
     final analytics = AnalyticsScope.maybeOf(context);
     if (analytics == null) {
+      if (!mounted) return;
       dpSnack(context, 'Sign in to export the ledger.');
       return;
     }
@@ -176,7 +177,8 @@ class _DPProjectAccountsScreenState extends State<DPProjectAccountsScreen> {
       final csv = job.csvContent;
       final downloaded = csv != null &&
           csv.isNotEmpty &&
-          downloadCsv('cineconnect_ledger_${job.publicId}.csv', csv);
+          await downloadCsv('cineconnect_ledger_${job.publicId}.csv', csv);
+      if (!mounted) return;
       dpSnack(
         context,
         downloaded

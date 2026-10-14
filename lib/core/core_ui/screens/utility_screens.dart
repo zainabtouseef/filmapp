@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../auth/auth_controller.dart';
-import '../../network/open_url.dart';
-import '../../theme/app_color_scheme.dart';
-import '../../theme/app_text_styles.dart';
+import 'runtime_status_screen.dart';
 import '../core_back_navigation.dart';
 import '../core_routes.dart';
 import '../widgets/core_widgets.dart';
@@ -137,107 +135,14 @@ class _NoInternetScreenState extends State<NoInternetScreen> {
 
 class ForceUpdateScreen extends StatelessWidget {
   const ForceUpdateScreen({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return CoreScreenScaffold(
-      centerContent: true,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CoreEmptyState(
-            icon: Icons.system_update_alt_rounded,
-            title: 'Update Required',
-            message: 'A newer version of CineConnect is required to continue.',
-          ),
-          const SizedBox(height: 16),
-          CoreGlassCard(
-            child: Row(
-              children: [
-                Icon(Icons.info_outline_rounded, color: colors.goldDark),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Current v1.0.0 · Required v1.1.0',
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          CorePrimaryButton(
-            icon: Icons.open_in_new_rounded,
-            label: 'Update App',
-            onTap: () async {
-              final opened = await openUrlInNewTab(
-                'https://cine.nalexustechnologies.com',
-              );
-              if (!opened && context.mounted) {
-                showCoreSnack(
-                    context, 'Could not open the CineConnect download page.');
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const RuntimeStatusScreen(maintenance: false);
 }
 
 class MaintenanceModeScreen extends StatelessWidget {
   const MaintenanceModeScreen({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return CoreScreenScaffold(
-      centerContent: true,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CoreEmptyState(
-            icon: Icons.construction_rounded,
-            title: 'CineConnect is Under Maintenance',
-            message:
-                'We are improving your production experience. Please check back soon.',
-          ),
-          const SizedBox(height: 16),
-          CoreGlassCard(
-            child: Row(
-              children: [
-                Icon(Icons.schedule_rounded, color: colors.goldDark),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Estimated return: Today, 8:30 PM PKT',
-                    style: AppTextStyles.label.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          CoreSecondaryButton(
-            icon: Icons.support_agent_outlined,
-            label: 'Contact support',
-            onTap: () {
-              final auth = AuthScope.maybeOf(context);
-              Navigator.pushNamed(
-                context,
-                auth?.isAuthenticated == true
-                    ? CoreRoutes.settings
-                    : CoreRoutes.login,
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const RuntimeStatusScreen(maintenance: true);
 }

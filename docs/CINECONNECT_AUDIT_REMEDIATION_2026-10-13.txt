@@ -1,0 +1,184 @@
+CINECONNECT AUDIT REMEDIATION - 14 OCTOBER 2026
+Live target: https://cine.nalexustechnologies.com
+Deployed release: 2026.10.14-audit1 (web asset revision 20261014-audit1b)
+Source branch: fix/audit-connectivity-2026-10-13; baseline b66a4de
+Status meanings: FIXED = implemented and checked; LIMITED = truthful capability boundary; RETAINED DESIGN = intentional local/reference behavior.
+
+F01 | CAPABILITY LIMITED | High | Signup phone OTP is a local length check
+Removed the fake OTP and resend steps. Signup saves the phone number without claiming ownership verification. SMS OTP remains unavailable because no SMS provider is configured.
+Evidence: auth_screens.dart; api/auth.py; registration regression
+
+F02 | FIXED | High | File worker declares files clean without scanning
+Installed ClamAV on loopback. Workers verify stored length and SHA-256, scan real bytes, quarantine infections and retry scanner failures. Public media now passes the API scan gate. Rescanned all existing records.
+Evidence: services/file_processing.py; api/verification.py; live clean/EICAR checks
+
+F03 | FIXED | High | Test payout accounts are accepted as verified in production mode
+Production rejects sandbox payout accounts. Removed test-account creation buttons and replaced them with real account management. Submitted bank accounts remain pending manual verification.
+Evidence: api/payments.py; lo09/me10 screens; production payout regression
+
+F04 | FIXED | High | Reachable legacy dashboard displays fixed talent business data
+The legacy dashboard route now opens the API-backed marketplace. Removed the fixed talent fixture catalogue from the reachable dashboard path.
+Evidence: core_routes.dart; dashboard_screen.dart; models/talent.dart
+
+F05 | FIXED | High | Booking review terms are omitted from submitted API data
+Booking requests persist deliverables, usage rights, conditions, category fields and payment percentages. Accepted terms appear in contract snapshots and clauses; agreed percentages generate payment milestones.
+Evidence: booking_terms.py; bookings.py; contracts.py; counter/contract regression
+
+F06 | FIXED | High | KYC identity and bank inputs are not submitted
+KYC submits encrypted identity numbers, expiry dates and real owned file IDs. Bank name, receiving name, account identifier and ownership confirmation are stored in payout accounts. Submission requires clean required documents.
+Evidence: verification_screens.dart; verification.py; payments.py; KYC regression
+
+F07 | FIXED | High | Push delivery is recorded as delivered without provider delivery
+Replaced simulated push delivery with encrypted Web Push subscriptions and a queued sender. Provider acceptance is recorded as sent; delivered requires a signed browser display receipt. Relabelled one historical simulated delivery as unverified.
+Evidence: web_push.py; notifications.py; push receipt regression; live metadata repair
+
+F08 | FIXED | High | Live public payment configuration still reports sandbox
+The live API now runs with APP_ENV=production and manual_bank_transfer payment mode. Public origins use the actual HTTPS domain. Production guards reject sandbox financial inputs.
+Evidence: private production configuration; live public-config and health checks
+
+F09 | FIXED | Medium | Booking Save draft shows success without saving
+Save draft creates or updates a server booking. Reopening a listing restores its draft and selected project, dates and terms. Failed sends retain the saved draft ID for retry.
+Evidence: bookings_controller.dart; dp_booking_request_form_screen.dart; draft regression
+
+F10 | FIXED | Medium | Negotiation counter amount starts at fixed PKR 275,000
+Counter-offer amount initializes from the current server offer instead of PKR 275,000.
+Evidence: dp_negotiation_thread_screen.dart; Flutter suite
+
+F11 | FIXED | Medium | Editable negotiation payment schedule is never sent
+Counter-offers send their edited payment schedule. The API validates positive portions totalling 100 and carries the accepted schedule into contracts and milestones.
+Evidence: bookings_repository.dart; booking_terms.py; counter/contract regression
+
+F12 | FIXED | Medium | Influencer packages prefill fixed commercial prices
+Removed fixed influencer package prices. New commercial packages start with empty pricing inputs and use submitted backend values.
+Evidence: influencer_portal_screen.dart; Flutter suite
+
+F13 | FIXED | Medium | Business notifications do not consult stored channel preferences
+Notification creation and delivery consult stored push preferences and enabled devices. Opt-out prevents queueing and cancels pending sends. In-app booking/security records remain available.
+Evidence: services/notifications.py; services/web_push.py; opt-out regression
+
+F14 | CAPABILITY LIMITED | Medium | Language selection saves a locale but does not localize the UI
+Removed unsupported language choices from Settings. The shipped interface is explicitly English-only; full Urdu translations have not been implemented. Existing locale metadata is retained for compatibility.
+Evidence: settings_account_screen.dart
+
+F15 | FIXED | Medium | Maintenance and forced-update controls return constants
+Maintenance and forced-update configuration is stored in the database and administered through authenticated Super Admin endpoints and a Settings panel. Bootstrap reads the persisted values.
+Evidence: app_settings.py; api/app.py; runtime_settings_panel.dart; admin regression
+
+F16 | FIXED | Medium | Maintenance page promises a fixed return time
+The maintenance screen reads the configured message and optional timezone-qualified return estimate. Removed the fixed return time and version promise.
+Evidence: runtime_status_screen.dart; runtime settings validation
+
+F17 | FIXED | Medium | Signup phone, city and referral inputs are dropped
+Registration sends and stores phone, active city ID and referral code. Phone remains unverified until a real verification process exists.
+Evidence: auth_repository.dart; api/auth.py; registration persistence regression
+
+F18 | FIXED | Low | Role selection silently falls back to a fixed catalogue
+Role selection uses the active database catalogue, with loading/error/retry states and no silent mock fallback. Internal roles are excluded from public catalogues.
+Evidence: role_selection_screen.dart; api/app.py; catalogue regression
+
+F19 | FIXED | Low | Signup city choices come from five hardcoded names
+Signup city selection loads active city IDs from the API. Removed the five-name fallback. Invalid city IDs fail server validation.
+Evidence: auth_screens.dart; api/auth.py; registration regression
+
+F20 | FIXED | Low | Role-specific KYC document instructions are client constants
+KYC instructions are loaded from a role requirements API. Super Admin can persist labels and required flags for the four supported document types. Server submission enforces those requirements.
+Evidence: api/verification.py; AppSetting; verification_screens.dart
+
+F21 | IMPLEMENTED - DEVICE CHECK PENDING | Medium | PDF and CSV saving is web-only
+Native saves use the platform file picker and write actual bytes to the selected destination. PDF/CSV callers await the result. Desktop byte writing and cancellation pass tests; physical Android/iOS save dialogs were not exercised.
+Evidence: save_download_stub.dart; csv_download_stub.dart; native_download_test.dart
+
+F22 | FIXED | Low | Distribution statements have no export action
+Distribution statements now export authenticated CSV data from owned backend reports. Export supports a project filter and escapes spreadsheet formula prefixes.
+Evidence: api/specialist.py; ds04 screen; CSV ownership/formula regression
+
+F23 | FIXED | Low | Talent travel preferences remain an explicit gap
+Talent travel willingness, radius and active city IDs have persistent API storage and an editor on the availability page. Talent profile payloads include the preferences.
+Evidence: api/marketplace.py; TravelPreferencesPanel; persistence regression
+
+F24 | CAPABILITY LIMITED | Low | Several Settings controls are fixed or unavailable
+Settings now reflect real push capability and browser subscription state, provider availability and stored preferences. Unsupported SMS, WhatsApp, watermark, biometric and two-factor controls are disabled with explanations; profile visibility links to role management.
+Evidence: settings_account_screen.dart; bootstrap capability flags
+
+F25 | FIXED | Low | Contract QR verification is unavailable
+Participants can obtain a QR code and signed verification URL. Public verification checks the current contract content hash and version, returns minimal status data and rejects tampered links.
+Evidence: api/contracts.py; contract_verification.html; QR/tamper regression
+
+F26 | RETAINED DESIGN | Info | Smart match scores are computed locally over API candidates
+Smart-match scores remain deterministic client computations over API candidates. They are ranking calculations, not fabricated persisted marketplace records.
+Evidence: Original audit classification retained; API candidate source preserved
+
+F27 | RETAINED DESIGN | Info | Contract wizard clause choices are static but saved through APIs
+Clause choices remain static UI options whose selections are saved through contract APIs. New agreed booking terms are also copied into server contract clauses.
+Evidence: Contract wizard and contract API persistence retained
+
+F28 | FIXED | Info | Brand demo journey has account-specific hardcoded selectors
+Removed account-specific demo selectors. The brand project journey uses the authenticated brand account, its real projects and backend counts.
+Evidence: brand_project_journey.dart; brand portal screens
+
+F29 | FIXED | Info | Unused fixture business records and a synthetic upload helper remain
+Deleted unused shared mock business records and the synthetic demo-upload helper. Real uploads require selected bytes and server completion.
+Evidence: shared_mock_data.dart removed; AuthController helper removed
+
+F30 | FIXED | Info | About release label is a fixed 2026.09 string
+About reads a compile-time release label supplied during deployment. Bootstrap also reports the configured backend release version.
+Evidence: cine_about_button.dart; CINECONNECT_RELEASE; RELEASE_VERSION
+
+F31 | RETAINED DESIGN | Info | Device drafts, tours and discovery preferences are intentionally local
+Tours, device draft conveniences and discovery preferences remain local by design. Business booking drafts are now saved to the server separately.
+Evidence: Local preference scope retained; F09 supplies server booking drafts
+
+F32 | CAPABILITY LIMITED | Info | Selfie capture does not establish automated liveness verification
+Selfie capture is described as manual identity review. The app no longer claims that a camera capture establishes automated liveness.
+Evidence: verification_screens.dart; bootstrap liveness=manual_review
+
+F33 | CAPABILITY LIMITED | Info | Influencer social metrics are user-entered profile data
+Influencer social handles, reach and metrics are labelled self-reported profile data. No external social-account verification or metric synchronisation is claimed.
+Evidence: influencer_portal_screen.dart; bootstrap social_metrics=self_reported
+
+F34 | FIXED | Low | Push-device registration API has no runtime caller
+Settings registers and disables actual browser subscriptions through /push-devices. Logout unsubscribes the browser; reusing a subscription for another account disables the prior account device. Native push is unavailable without a provider.
+Evidence: browser_push*.dart; cineconnect_push*.js; shared-browser regression
+
+F35 | RETAINED DESIGN | Info | Create-project Team values are descriptive references, not invitations
+Create-project Team values remain descriptive references. They do not send invitations or grant project membership; actual membership workflows remain separate.
+Evidence: Original audit classification retained; no unsolicited invitations
+
+F36 | FIXED | Low | Public payment notice stays a demo string in other payment modes
+The payment notice follows runtime mode. Production explains external bank transfers and proof reconciliation; the demo wording is limited to sandbox mode.
+Evidence: api/app.py; live public payment configuration
+
+F37 | FIXED | Critical | Public registration and role-add could grant internal staff roles
+Blocked self-assignment of super_admin, finance_admin, reviewer and support_agent. Disabled roles cannot be reactivated by their holder. Public catalogues exclude internal roles. Existing 16 staff accounts were preserved; no internal initial-registration events were found.
+Evidence: Four-role regression cases; live registration returns 403
+
+F38 | DATA GAP FLAGGED | High | Historical demo file records had no stored bytes
+237 real files passed ClamAV. The other 239 records are historical demo references without stored objects; their scan and processing statuses now say missing. Records were preserved. Missing bytes require originals to be uploaded again.
+Evidence: Production-copy rehearsal and production rescan; file counts preserved
+
+VALIDATION
+918 Flutter tests passed; final payment/startup subset passed 55 tests after the final copy corrections.
+175 backend tests passed against isolated MySQL 8.4 and Redis. Backend coverage is 75%, below the 85% repository target.
+Flutter analyze, Ruff check/format, mypy and web release build passed. Node push-worker lifecycle regression passed.
+Production-copy restore/migration rehearsal passed. Real ClamAV clean/EICAR tests passed.
+Live HTTPS, HTTP redirect, database/Redis readiness, role restriction and private endpoint guards passed.
+Chrome visual verification: pending because the browser connection is unavailable.
+Browser push transport is tested with mocked provider responses and real VAPID configuration; a real browser notification display test is still pending.
+
+OPERATIONS
+Backup: root@srv951538.hstgr.cloud:/var/backups/cineconnect/audit-remediation-20261014
+Release: /var/www/cineconnect/releases/20261014-audit1
+API/worker/scheduler image: cineconnect-prod-api:20261014-audit1
+Migration: f8a9b0c1d2e3; additive changes only.
+Preserved records: 240 users; 476 file rows; 42 bookings; 12 contracts; 10 payout accounts.
+ClamAV and definition updates remain enabled; daemon listens only on 127.0.0.1:3310.
+Nginx, LUMEN, Nexus web/API and Originality Studio remain active.
+Existing integration keys were preserved. No live OpenAI or payment-settlement calls were made.
+
+REMAINING CAPABILITY LIMITS
+SMS and SMTP email are not configured. SMS verification and email recovery delivery remain unavailable.
+Native push requires a provider. Browser push is implemented and configured, but a real browser permission/subscription/display test is still pending.
+Physical Android/iOS file-save dialogs have not been exercised.
+Automated liveness, verified social metrics, Urdu translations, biometrics, two-factor authentication, WhatsApp delivery and portfolio watermarking are not implemented.
+Coverage is 75%, below the repository target of 85%. Passing tests do not prove every possible application path.
+239 historical demo file references have no source bytes. Their records are preserved and marked missing.

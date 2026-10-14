@@ -48,14 +48,27 @@ def test_bootstrap_has_no_real_payment_claim(client: FlaskClient) -> None:
     assert payments["notice"] == "Demo payment only — no money is moved."
 
 
-def test_roles_are_stable_and_kyc_gated(client: FlaskClient) -> None:
-    response = client.get("/api/v1/roles")
+def test_roles_use_active_database_catalogue(client: FlaskClient, app: Flask) -> None:
+    from app.extensions import db
+    from app.models.identity import Role
 
-    assert response.status_code == 200
-    roles = response.json["data"]
-    assert roles[0]["code"] == "director_producer"
-    assert len(roles) == 11
-    assert all(role["requires_kyc"] for role in roles)
+    assert client.get("/api/v1/roles").json["data"] == []
+    with app.app_context():
+        db.session.add(
+            Role(
+                code="crew_service",
+                name="Crew Service",
+                portal_route="/crew",
+                requires_kyc=True,
+                is_active=True,
+                display_order=1,
+            )
+        )
+        db.session.commit()
+    roles = client.get("/api/v1/roles").json["data"]
+    assert [row["code"] for row in roles] == ["crew_service"]
+    assert roles[0]["requires_kyc"] is True
+    assert client.get("/api/v1/app/bootstrap").json["data"]["supported_roles"] == roles
 
 
 def test_openapi_contract_is_served(client: FlaskClient) -> None:

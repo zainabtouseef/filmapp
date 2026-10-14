@@ -26,6 +26,8 @@ dependencies = [
   "python-dotenv>=1.1,<2",
   "redis>=6,<7",
   "reportlab>=4.4,<5",
+  "qrcode[pil]>=8,<9",
+  "pywebpush>=2,<3",
   "sentry-sdk[flask]>=2.32,<3",
   "structlog>=25,<26",
 ]
@@ -40,6 +42,7 @@ dev = [
   "types-PyMySQL>=1.1,<2",
   "types-redis>=4.6,<5",
   "types-reportlab>=4.4,<5",
+  "types-qrcode>=8,<9",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -90,4 +93,8 @@ exclude = ["migrations"]
 
 [[tool.mypy.overrides]]
 module = ["celery", "celery.*", "flask_migrate", "flask_migrate.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pywebpush", "pywebpush.*"]
 ignore_missing_imports = true

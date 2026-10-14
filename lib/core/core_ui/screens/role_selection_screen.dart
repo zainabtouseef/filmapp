@@ -6,7 +6,6 @@ import '../../auth/role_mapper.dart';
 import '../../theme/app_color_scheme.dart';
 import '../../theme/app_text_styles.dart';
 import '../core_routes.dart';
-import '../mock_data/shared_mock_data.dart';
 import '../models/shared_models.dart';
 import '../widgets/core_widgets.dart';
 
@@ -28,24 +27,15 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   }
 
   Future<List<CineRole>> _loadRoles() async {
-    try {
-      final roles = await AuthScope.of(context).roles();
-      return roles.map(_roleFromApi).toList();
-    } catch (_) {
-      return SharedMockData.roles;
-    }
+    final roles = await AuthScope.of(context).roles();
+    return roles.map(_roleFromApi).toList();
   }
 
   CineRole _roleFromApi(AuthRole role) {
-    final fallback = SharedMockData.roles.where(
-      (item) => item.name == role.name,
-    );
     return CineRole(
       icon: RoleMapper.iconForCode(role.code),
       name: role.name,
-      description: fallback.isEmpty
-          ? 'Create a verified CineConnect profile for this role.'
-          : fallback.first.description,
+      description: 'Open your ${role.name} workspace.',
     );
   }
 
@@ -67,7 +57,22 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           FutureBuilder<List<CineRole>>(
             future: _rolesFuture,
             builder: (context, snapshot) {
-              final roles = snapshot.data ?? SharedMockData.roles;
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Column(children: [
+                  const InlineNotice(
+                      message: 'Could not load available roles. Please retry.'),
+                  TextButton(
+                      onPressed: () => setState(() {
+                            _selectedPrimaryRole = null;
+                            _rolesFuture = _loadRoles();
+                          }),
+                      child: const Text('Retry')),
+                ]);
+              }
+              final roles = snapshot.data ?? const <CineRole>[];
               return LayoutBuilder(
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;

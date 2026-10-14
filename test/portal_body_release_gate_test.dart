@@ -7,14 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('release inventory includes all 162 screen files', () {
+  test('release inventory includes all 163 screen files', () {
     final files = <File>[
       ...Directory('lib/features').listSync(recursive: true).whereType<File>(),
       ...Directory('lib/core').listSync(recursive: true).whereType<File>(),
     ].where((file) => file.path.endsWith('screen.dart')).toList()
       ..sort((a, b) => a.path.compareTo(b.path));
 
-    expect(files, hasLength(162));
+    expect(files, hasLength(163));
     expect(
       files.every((file) => file.readAsStringSync().contains('Widget build')),
       isTrue,

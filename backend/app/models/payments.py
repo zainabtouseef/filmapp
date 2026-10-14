@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
@@ -278,6 +280,7 @@ class PayoutAccount(EntityMixin, Base):
     account_token_encrypted: Mapped[str] = mapped_column(String(256), nullable=False)
     account_masked: Mapped[str] = mapped_column(String(64), nullable=False)
     account_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    details_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

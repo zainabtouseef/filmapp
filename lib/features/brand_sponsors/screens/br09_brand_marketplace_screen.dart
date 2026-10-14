@@ -17,7 +17,7 @@ import '../../../shared/marketplace/marketplace_preferences.dart';
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../../../shared/widgets/talent_profile_showcase.dart';
 import '../../../shared/widgets/cine_marketplace_card.dart';
-import '../widgets/brand_demo_journey.dart';
+import '../widgets/brand_project_journey.dart';
 import '../widgets/brand_booking_dialog.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
@@ -118,8 +118,8 @@ class _BR09BrandMarketplaceScreenState
       final loadedProjects = values[1] as List<Project>;
       String? selectedProjectId = _projectId;
       if (selectedProjectId == null) {
-        if (isBrandDemoAccount(_auth)) {
-          selectedProjectId = selectBrandDemoProject(loadedProjects)?.publicId;
+        if (canShowBrandProjectJourney(_auth)) {
+          selectedProjectId = selectBrandProject(loadedProjects)?.publicId;
         }
         for (final project in loadedProjects) {
           if (selectedProjectId != null) break;

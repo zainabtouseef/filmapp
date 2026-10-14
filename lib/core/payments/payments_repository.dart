@@ -90,6 +90,9 @@ class PaymentsRepository {
     required String accountMasked,
     required String accountToken,
     bool isDefault = true,
+    String? bankName,
+    String? receivingName,
+    bool ownershipConfirmed = false,
   }) async {
     final response = await _client.post(
       '/payout-accounts',
@@ -99,6 +102,9 @@ class PaymentsRepository {
         'account_masked': accountMasked,
         'account_token': accountToken,
         'is_default': isDefault,
+        if (bankName != null) 'bank_name': bankName,
+        if (receivingName != null) 'receiving_name': receivingName,
+        'ownership_confirmed': ownershipConfirmed,
       },
     );
     final data = response['data'] as Map<String, dynamic>;

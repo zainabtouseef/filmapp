@@ -34,9 +34,10 @@ class DPNegotiationThreadScreen extends StatefulWidget {
 
 class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
   late Future<NegotiationThread> _future;
-  final _rate = TextEditingController(text: '275000');
-  final _schedule = TextEditingController(text: '30% / 40% / 30%');
+  final _rate = TextEditingController();
+  final _schedule = TextEditingController();
   bool _sending = false;
+  String? _initializedThread;
 
   @override
   void didChangeDependencies() {
@@ -89,6 +90,19 @@ class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
             onAction: _reload,
           );
         }
+        final thread = snapshot.data!;
+        if (_initializedThread != thread.publicId) {
+          _initializedThread = thread.publicId;
+          _rate.text = ((thread.currentOffer?.feeMinor ??
+                      thread.booking.agreedAmountMinor ??
+                      0) ~/
+                  100)
+              .toString();
+          final schedule = thread.currentOffer?.paymentSchedule ?? const [];
+          _schedule.text = schedule.isEmpty
+              ? '100%'
+              : schedule.map((row) => '${row["percent"]}%').join(' / ');
+        }
         return _LiveNegotiationThread(
           thread: snapshot.data!,
           rate: _rate,
@@ -115,6 +129,19 @@ class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
       dpSnack(context, 'Enter a valid rate before sending a counter.');
       return;
     }
+    final values = _schedule.text
+        .split('/')
+        .map((part) => double.tryParse(part.replaceAll('%', '').trim()))
+        .toList();
+    if (values.isEmpty ||
+        values.any((value) => value == null || !value.isFinite || value <= 0) ||
+        (values.fold<double>(0, (sum, value) => sum + (value ?? 0)) - 100)
+                .abs() >
+            0.0001) {
+      dpSnack(context, 'Payment percentages must total 100%.');
+      return;
+    }
+    final old = thread.currentOffer?.paymentSchedule ?? const [];
     setState(() => _sending = true);
     try {
       await BookingsScope.of(context).createCounterOffer(
@@ -122,6 +149,13 @@ class _DPNegotiationThreadScreenState extends State<DPNegotiationThreadScreen> {
         feeMinor: feeMinor,
         currency: thread.currentOffer?.currency ?? thread.booking.currency,
         message: 'Counter sent from Negotiation Detail.',
+        paymentSchedule: [
+          for (var i = 0; i < values.length; i++)
+            {
+              'name': i < old.length ? old[i]['name'] : 'Milestone ${i + 1}',
+              'percent': values[i]
+            }
+        ],
       );
       if (!mounted) return;
       dpSnack(context, 'Counter sent');

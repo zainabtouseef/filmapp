@@ -40,7 +40,7 @@ def register_middleware(app: Flask) -> None:
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=()"
         )
-        response.headers["Content-Security-Policy"] = "default-src 'none'"
+        response.headers.setdefault("Content-Security-Policy", "default-src 'none'")
         response.headers["Cache-Control"] = "no-store"
         if app.config["APP_ENV"] == "production":
             response.headers["Strict-Transport-Security"] = (

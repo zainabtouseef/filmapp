@@ -142,6 +142,7 @@ def _booking_payload(item: Booking) -> dict[str, Any]:
         "allows_bargaining": pricing_mode != "fixed",
         "category": item.category,
         "status": item.status,
+        "terms": item.terms_json or {},
         "requester": _user_payload(item.requester),
         "provider": _user_payload(item.provider),
         "agreed_amount_minor": item.agreed_amount_minor,
@@ -247,7 +248,9 @@ def _booking_for_user(public_id: str, user: User) -> Booking:
             Booking.status.in_(BOOKING_VISIBLE_STATUSES),
         )
     ).scalar_one_or_none()
-    if booking is None:
+    if booking is None or (
+        booking.status == "draft" and booking.requester_user_id != user.id
+    ):
         raise APIError("booking.not_found", "Booking was not found.", status=404)
     return booking
 
@@ -548,6 +551,13 @@ def _create_offer(
     currency = str(payload.get("currency") or booking.currency).strip().upper()
     if len(currency) != 3:
         raise _field_error("currency", "Currency must be a 3-letter ISO code.")
+    from app.services.booking_terms import validate_payment_schedule
+
+    payment_schedule = validate_payment_schedule(
+        payload.get(
+            "payment_schedule", (booking.terms_json or {}).get("payment_schedule")
+        )
+    )
     for existing in booking.offers:
         if existing.status == "active":
             existing.status = "superseded"
@@ -560,7 +570,7 @@ def _create_offer(
         currency=currency,
         schedule_json=json.dumps(payload.get("schedule") or {}, sort_keys=True),
         conditions=str(payload.get("conditions", "")).strip()[:4000] or None,
-        payment_schedule_json=json.dumps(payload.get("payment_schedule") or []),
+        payment_schedule_json=json.dumps(payment_schedule),
         status="active",
         expires_at=_optional_datetime(payload.get("expires_at"), "expires_at"),
     )
@@ -767,6 +777,7 @@ def bookings() -> Response:
         .where(
             BookingParticipant.user_id == user.id,
             Booking.status.in_(BOOKING_VISIBLE_STATUSES),
+            or_(Booking.status != "draft", Booking.requester_user_id == user.id),
         )
     )
     role = request.args.get("role")
@@ -812,6 +823,9 @@ def booking_detail(public_id: str) -> Response:
 def create_booking() -> ResponseReturnValue:
     user = _current_user()
     payload = _json_body()
+    from app.services.booking_terms import validate_booking_terms
+
+    terms = validate_booking_terms(payload.get("terms"))
     listing = _listing_for_booking(str(payload.get("listing_id", "")).strip())
     if listing.owner_user_id == user.id:
         raise _field_error("listing_id", "You cannot book your own listing.")
@@ -860,6 +874,7 @@ def create_booking() -> ResponseReturnValue:
         listing_id=listing.id,
         category=str(payload.get("category") or listing.listing_type).strip(),
         status="draft",
+        terms_json=terms,
         agreed_amount_minor=amount,
         currency=str(payload.get("currency") or listing.currency).strip().upper(),
         start_at=start_at,
@@ -921,8 +936,11 @@ def send_booking(public_id: str) -> Response:
             "start_at": booking.start_at.isoformat(),
             "end_at": booking.end_at.isoformat(),
         },
-        "conditions": payload.get("conditions"),
-        "payment_schedule": payload.get("payment_schedule") or [],
+        "conditions": payload.get("conditions")
+        or (booking.terms_json or {}).get("conditions"),
+        "payment_schedule": payload.get("payment_schedule")
+        or (booking.terms_json or {}).get("payment_schedule")
+        or [],
         "expires_at": payload.get("expires_at") or booking.expires_at.isoformat()
         if booking.expires_at
         else None,
@@ -941,6 +959,11 @@ def send_booking(public_id: str) -> Response:
     )
     booking.agreed_amount_minor = offer.fee_minor
     booking.currency = offer.currency
+    if booking.terms_json:
+        booking.terms_json = {
+            **booking.terms_json,
+            "payment_schedule": json.loads(offer.payment_schedule_json or "[]"),
+        }
     _set_status(booking, "sent", user, reason="Initial offer sent.")
     _sync_casting_application_status(
         booking,
@@ -959,6 +982,39 @@ def send_booking(public_id: str) -> Response:
         route_name="/talent/offers/:id",
         route_params={"id": booking.public_id},
     )
+    db.session.commit()
+    return jsonify(success({"booking": _booking_payload(booking)}))
+
+
+@bookings_blueprint.patch("/bookings/<public_id>")
+def update_booking_draft(public_id: str) -> Response:
+    from app.services.booking_terms import validate_booking_terms
+
+    user = _current_user()
+    booking = _booking_for_user(public_id, user)
+    if booking.requester_user_id != user.id or booking.status != "draft":
+        raise APIError(
+            "booking.invalid_state", "Only your own draft can be edited.", status=409
+        )
+    payload = _json_body()
+    start = _parse_datetime(
+        payload.get("start_at", booking.start_at.isoformat()), "start_at"
+    )
+    end = _parse_datetime(payload.get("end_at", booking.end_at.isoformat()), "end_at")
+    if end <= start:
+        raise _field_error("end_at", "End time must be after start time.")
+    amount = _optional_int(
+        payload.get("fee_minor", booking.agreed_amount_minor), "fee_minor"
+    )
+    if amount is None or amount <= 0:
+        raise _field_error("fee_minor", "Fee must be positive.")
+    _enforce_listing_pricing(booking.listing, amount, counter=False)
+    booking.start_at, booking.end_at = start, end
+    booking.agreed_amount_minor = amount
+    if "terms" in payload:
+        booking.terms_json = validate_booking_terms(payload["terms"])
+    if "expires_at" in payload:
+        booking.expires_at = _optional_datetime(payload["expires_at"], "expires_at")
     db.session.commit()
     return jsonify(success({"booking": _booking_payload(booking)}))
 
@@ -1055,6 +1111,11 @@ def accept_offer(public_id: str) -> Response:
     offer.status = "accepted"
     booking.agreed_amount_minor = offer.fee_minor
     booking.currency = offer.currency
+    booking.terms_json = {
+        **(booking.terms_json or {}),
+        "payment_schedule": json.loads(offer.payment_schedule_json or "[]"),
+        "conditions": offer.conditions or "",
+    }
     booking.secured_at = utc_now()
     if booking.negotiation_thread:
         booking.negotiation_thread.status = "accepted"

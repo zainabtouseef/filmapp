@@ -21,8 +21,10 @@ def _compile_longtext_sqlite(_element: LONGTEXT, _compiler: Any, **_kwargs: Any)
 
 
 @pytest.fixture
-def app(tmp_path: Path) -> Flask:
-    if os.getenv("RUN_INTEGRATION_TESTS") == "1":
+def app(tmp_path: Path, request: pytest.FixtureRequest) -> Flask:
+    if os.getenv("RUN_INTEGRATION_TESTS") == "1" and request.node.get_closest_marker(
+        "integration"
+    ):
         return create_app(TestConfig)
 
     class SQLiteTestConfig(TestConfig):

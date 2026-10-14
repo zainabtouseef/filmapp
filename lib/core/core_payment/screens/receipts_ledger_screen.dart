@@ -54,13 +54,12 @@ class _ReceiptsLedgerScreenState extends State<ReceiptsLedgerScreen> {
       final download =
           await PaymentsScope.of(context).downloadReceipt(row.receiptId);
       if (!mounted) return;
-      final saved =
-          saveDownload(download.filename, download.bytes, download.contentType);
+      final saved = await saveDownload(
+          download.filename, download.bytes, download.contentType);
+      if (!mounted) return;
       showCoreSnack(
         context,
-        saved
-            ? 'Receipt PDF downloaded'
-            : 'Receipt PDF is ready. Browser download is available on web.',
+        saved ? 'Receipt PDF downloaded' : 'Saving the receipt was cancelled.',
       );
     } catch (error) {
       if (mounted) showCoreSnack(context, 'Receipt download failed: $error');

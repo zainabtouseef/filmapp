@@ -42,6 +42,8 @@ class BookingsRepository {
     required String endAt,
     required int feeMinor,
     String currency = 'PKR',
+    Map<String, dynamic> terms = const {},
+    String? expiresAt,
   }) async {
     final response = await _client.post(
       '/bookings',
@@ -53,6 +55,8 @@ class BookingsRepository {
         'end_at': endAt,
         'fee_minor': feeMinor,
         'currency': currency,
+        'terms': terms,
+        if (expiresAt != null) 'expires_at': expiresAt,
       },
     );
     final data = response['data'] as Map<String, dynamic>;
@@ -64,6 +68,7 @@ class BookingsRepository {
     required int feeMinor,
     String currency = 'PKR',
     String? message,
+    Map<String, dynamic> terms = const {},
   }) async {
     final response = await _client.post(
       '/bookings/$bookingId/send',
@@ -71,6 +76,9 @@ class BookingsRepository {
         'fee_minor': feeMinor,
         'currency': currency,
         if (message != null) 'message': message,
+        if (terms['payment_schedule'] != null)
+          'payment_schedule': terms['payment_schedule'],
+        if (terms['conditions'] != null) 'conditions': terms['conditions'],
       },
     );
     final data = response['data'] as Map<String, dynamic>;
@@ -83,6 +91,12 @@ class BookingsRepository {
     return (data['negotiations'] as List<dynamic>? ?? const [])
         .map((item) => NegotiationThread.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<Booking> updateDraft(String id, Map<String, dynamic> body) async {
+    final response = await _client.patch('/bookings/$id', body: body);
+    return Booking.fromJson((response['data']
+        as Map<String, dynamic>)['booking'] as Map<String, dynamic>);
   }
 
   Future<NegotiationThread> negotiation(String publicId) async {
@@ -99,6 +113,7 @@ class BookingsRepository {
     String currency = 'PKR',
     String? conditions,
     String? message,
+    List<Map<String, dynamic>>? paymentSchedule,
   }) async {
     final response = await _client.post(
       '/bookings/$bookingId/offers',
@@ -107,6 +122,7 @@ class BookingsRepository {
         'currency': currency,
         if (conditions != null) 'conditions': conditions,
         if (message != null) 'message': message,
+        if (paymentSchedule != null) 'payment_schedule': paymentSchedule,
       },
     );
     final data = response['data'] as Map<String, dynamic>;

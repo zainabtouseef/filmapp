@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import json
 import uuid
 from datetime import datetime
@@ -2120,4 +2122,66 @@ def list_distribution_reports() -> Response:
     ).scalars()
     return jsonify(
         success({"reports": [_distribution_report_payload(row) for row in rows]})
+    )
+
+
+@specialist_blueprint.get("/distribution-reports/export.csv")
+def export_distribution_reports() -> Response:
+    user = _current_user()
+    partner = _distribution_partner_for_owner(user)
+    query = select(DistributionReport).where(
+        DistributionReport.partner_profile_id == partner.id
+    )
+    project_id = request.args.get("distribution_project_id")
+    if project_id:
+        project = _distribution_project_for_partner(project_id, user)
+        query = query.where(DistributionReport.distribution_project_id == project.id)
+    rows = db.session.execute(
+        query.order_by(DistributionReport.period_start.desc())
+    ).scalars()
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow(
+        [
+            "Report ID",
+            "Project ID",
+            "Territory",
+            "Channel",
+            "Period start",
+            "Period end",
+            "Audience",
+            "Revenue minor",
+            "Currency",
+            "Status",
+        ]
+    )
+
+    def safe(value: Any) -> str:
+        text = str(value)
+        return "'" + text if text.startswith(("=", "+", "-", "@", "\t", "\r")) else text
+
+    for row in rows:
+        writer.writerow(
+            [
+                safe(value)
+                for value in [
+                    row.public_id,
+                    row.distribution_project.public_id,
+                    row.territory,
+                    row.channel,
+                    row.period_start.isoformat(),
+                    row.period_end.isoformat(),
+                    row.audience_count,
+                    row.revenue_minor,
+                    row.currency,
+                    row.status,
+                ]
+            ]
+        )
+    return Response(
+        "\ufeff" + stream.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="distribution-statements.csv"'
+        },
     )

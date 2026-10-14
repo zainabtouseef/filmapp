@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/auth/auth_controller.dart';
+import '../../../core/network/save_download.dart';
 
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
 
@@ -332,10 +334,26 @@ class _RevenueSupportCard extends StatelessWidget {
             value: '${rows.length}',
           ),
           const SizedBox(height: 10),
-          const InlineNotice(
-            message:
-                'Exports are disabled until the backend exposes a real statement export endpoint.',
-            icon: Icons.info_outline_rounded,
+          CoreSecondaryButton(
+            label: 'Export statements',
+            icon: Icons.download_outlined,
+            onTap: () async {
+              try {
+                final download = await AuthScope.of(context).apiClient.getBytes(
+                    '/distribution-reports/export.csv',
+                    fallbackFilename: 'distribution-statements.csv');
+                final saved = await saveDownload(
+                    download.filename, download.bytes, download.contentType);
+                if (context.mounted) {
+                  showCoreSnack(context,
+                      saved ? 'Statement downloaded' : 'Saving cancelled');
+                }
+              } catch (error) {
+                if (context.mounted) {
+                  showCoreSnack(context, 'Could not export statements: $error');
+                }
+              }
+            },
           ),
         ],
       ),

@@ -14,7 +14,7 @@ import '../../../core/tour/tour_target.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../routes/brand_sponsor_routes.dart';
 import '../widgets/brand_sponsor_components.dart';
-import '../widgets/brand_demo_journey.dart';
+import '../widgets/brand_project_journey.dart';
 import '../widgets/brand_sponsor_live.dart';
 import '../widgets/brand_sponsor_shell.dart' show startBrandFullWalkthrough;
 
@@ -169,8 +169,8 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
         .length;
     final active = activeBrandOpportunity(_opportunities);
     final production = _productionDashboard?.summary;
-    final demoProject = isBrandDemoAccount(_auth)
-        ? selectBrandDemoProject(_productionDashboard?.projects ?? const [])
+    final featuredProject = canShowBrandProjectJourney(_auth)
+        ? selectBrandProject(_productionDashboard?.projects ?? const [])
         : null;
     return PortalDashboardPage(
       children: [
@@ -208,18 +208,19 @@ class _BR01BrandDashboardScreenState extends State<BR01BrandDashboardScreen> {
             icon: Icons.warning_amber_rounded,
             tone: CoreStatusTone.warning,
           ),
-        if (demoProject != null)
-          BrandDemoJourneyCard(
-            project: demoProject,
+        if (featuredProject != null)
+          BrandProjectJourneyCard(
+            project: featuredProject,
             shortlistCount: (_shortlistBundle?.shortlists ?? const [])
-                .where((board) => board.projectId == demoProject.publicId)
+                .where((board) => board.projectId == featuredProject.publicId)
                 .fold<int>(0, (total, board) => total + board.items.length),
             requestCount: _productionBookings
-                .where((booking) => booking.projectId == demoProject.publicId)
+                .where(
+                    (booking) => booking.projectId == featuredProject.publicId)
                 .length,
             confirmedCount: _productionBookings
                 .where((booking) =>
-                    booking.projectId == demoProject.publicId &&
+                    booking.projectId == featuredProject.publicId &&
                     {'accepted', 'secured', 'completed'}
                         .contains(booking.status))
                 .length,

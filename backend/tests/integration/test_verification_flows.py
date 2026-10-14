@@ -136,7 +136,9 @@ def test_upload_and_kyc_submission_review_flow(client: FlaskClient) -> None:
                     "document_type": "national_id_front",
                     "country": "PK",
                     "file_id": file_id,
-                }
+                },
+                {"document_type": "national_id_back", "file_id": file_id},
+                {"document_type": "selfie_liveness", "file_id": file_id},
             ],
         },
     )

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
 
 import '../../../core/analytics/analytics_widgets.dart';
-import '../../../core/auth/auth_controller.dart';
 import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/payments/payment_models.dart';
@@ -31,7 +30,6 @@ class _LO09EarningsDepositsScreenState
   PaymentsController? _payments;
   Future<_EarningsData>? _future;
   String _filter = 'All';
-  bool _addingAccount = false;
 
   @override
   void didChangeDependencies() {
@@ -233,13 +231,11 @@ class _LO09EarningsDepositsScreenState
                     TourTarget(
                       id: 'location.earnings.payout',
                       child: CoreSecondaryButton(
-                        icon: Icons.science_outlined,
-                        label: _addingAccount
-                            ? 'Adding...'
-                            : 'Add test payout account',
+                        icon: Icons.account_balance_outlined,
+                        label: 'Manage payout accounts',
                         compact: true,
-                        onTap:
-                            _addingAccount ? null : () => _addSandboxAccount(),
+                        onTap: () =>
+                            Navigator.pushNamed(context, CoreRoutes.settings),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -281,23 +277,6 @@ class _LO09EarningsDepositsScreenState
         _ => true,
       };
     }).toList();
-  }
-
-  Future<void> _addSandboxAccount() async {
-    final name =
-        AuthScope.maybeOf(context)?.user?.displayName ?? 'Location owner';
-    setState(() => _addingAccount = true);
-    try {
-      await _payments!.createSandboxPayoutAccount(accountName: name);
-      if (!mounted) return;
-      locationSnack(context, 'Test payout account added');
-      _reload();
-    } catch (error) {
-      if (!mounted) return;
-      locationSnack(context, locationApiMessage(error));
-    } finally {
-      if (mounted) setState(() => _addingAccount = false);
-    }
   }
 
   String _minorMoney(int amountMinor) {

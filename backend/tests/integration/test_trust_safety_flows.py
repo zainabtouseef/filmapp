@@ -486,7 +486,8 @@ def test_announcement_and_push_device_flow(client: FlaskClient) -> None:
         headers=recipient_headers,
         json={"device_id": "device-1", "platform": "android", "token": "raw-token"},
     )
-    assert device.status_code == 201, device.text
+    assert device.status_code == 503, device.text
+    assert device.json["error"]["code"] == "push.unavailable"
 
     announcement = client.post(
         "/api/v1/admin/announcements",

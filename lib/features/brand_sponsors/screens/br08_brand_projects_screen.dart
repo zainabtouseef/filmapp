@@ -15,7 +15,7 @@ import '../../../core/tour/tour_target.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/widgets/cine_animated_filter_rail.dart';
 import '../models/brand_sponsor_models.dart';
-import '../widgets/brand_demo_journey.dart';
+import '../widgets/brand_project_journey.dart';
 import '../widgets/brand_sponsor_components.dart';
 import '../widgets/brand_sponsor_live.dart';
 
@@ -92,8 +92,8 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
       Project? selected;
       final targetId = selectId ??
           _selected?.publicId ??
-          (isBrandDemoAccount(_auth)
-              ? selectBrandDemoProject(projects)?.publicId
+          (canShowBrandProjectJourney(_auth)
+              ? selectBrandProject(projects)?.publicId
               : null);
       if (projects.isNotEmpty) {
         final summary = projects.firstWhere(

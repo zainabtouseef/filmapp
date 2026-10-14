@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import html
 import io
@@ -8,8 +9,18 @@ from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request, send_file
+import qrcode
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+)
 from flask.typing import ResponseReturnValue
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
@@ -267,6 +278,91 @@ def _contract_for_user(public_id: str, user: User) -> Contract:
     return contract
 
 
+def _verification_digest(contract: Contract) -> str:
+    clauses = [
+        (row.clause_key, row.body_text)
+        for row in sorted(
+            contract.clauses, key=lambda row: (row.sort_order, row.clause_key)
+        )
+    ]
+    return hashlib.sha256(
+        json.dumps(
+            [contract.version_number, contract.content_snapshot_json, clauses],
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+
+
+@contracts_blueprint.get("/contracts/<public_id>/verification")
+def contract_verification_link(public_id: str) -> Response:
+    contract = _contract_for_user(public_id, _current_user())
+    signer = URLSafeTimedSerializer(
+        current_app.config["SECRET_KEY"], salt="contract-verification-v1"
+    )
+    token = signer.dumps(
+        {"id": contract.public_id, "digest": _verification_digest(contract)}
+    )
+    url = (
+        str(current_app.config["API_PUBLIC_URL"]).rstrip("/")
+        + "/api/v1/contracts/verify/"
+        + token
+    )
+    image = qrcode.make(url)
+    buffer = io.BytesIO()
+    image.save(buffer)
+    return jsonify(
+        success(
+            {
+                "url": url,
+                "qr_png_base64": base64.b64encode(buffer.getvalue()).decode("ascii"),
+            }
+        )
+    )
+
+
+@contracts_blueprint.get("/contracts/verify/<token>")
+def verify_contract_link(token: str) -> Response:
+    signer = URLSafeTimedSerializer(
+        current_app.config["SECRET_KEY"], salt="contract-verification-v1"
+    )
+    try:
+        payload = signer.loads(token, max_age=365 * 86400)
+    except (BadSignature, SignatureExpired) as exc:
+        raise APIError(
+            "contract.invalid_verification",
+            "Verification link is invalid or expired.",
+            status=403,
+        ) from exc
+    contract = db.session.execute(
+        select(Contract).where(Contract.public_id == payload.get("id"))
+    ).scalar_one_or_none()
+    if contract is None or _verification_digest(contract) != payload.get("digest"):
+        raise APIError(
+            "contract.verification_changed",
+            "The referenced contract version is unavailable or has changed.",
+            status=409,
+        )
+    data = {
+        "contract_id": contract.public_id,
+        "version": contract.version_number,
+        "record_verified": True,
+        "status": contract.status,
+        "signed_parties": sum(bool(party.signatures) for party in contract.parties),
+        "total_parties": len(contract.parties),
+        "document_sha256": payload["digest"],
+    }
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify(success(data))
+    response = Response(
+        render_template("contract_verification.html", data=data), mimetype="text/html"
+    )
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; style-src 'unsafe-inline'; "
+        "base-uri 'none'; frame-ancestors 'none'"
+    )
+    return response
+
+
 def _published_template(category: str) -> ContractTemplate:
     template = db.session.execute(
         select(ContractTemplate).where(
@@ -418,6 +514,7 @@ def generate_contract(public_id: str) -> ResponseReturnValue:
         "amount_minor": booking.agreed_amount_minor,
         "currency": booking.currency,
         "template_version": template.version_number,
+        "booking_terms": booking.terms_json or {},
     }
     contract = Contract(
         booking_id=booking.id,
@@ -460,6 +557,21 @@ def generate_contract(public_id: str) -> ResponseReturnValue:
                 sort_order=clause.sort_order,
                 highlighted=clause.clause_key in {"usage_rights", "payment_schedule"},
                 source_template_clause_id=clause.id,
+            )
+        )
+    for index, (key, value) in enumerate((booking.terms_json or {}).items()):
+        if not value:
+            continue
+        db.session.add(
+            ContractClause(
+                contract_id=contract.id,
+                clause_key=f"agreed_{key}",
+                title=f"Agreed {key.replace('_', ' ')}",
+                body_text=value
+                if isinstance(value, str)
+                else json.dumps(value, ensure_ascii=False),
+                sort_order=1000 + index,
+                highlighted=True,
             )
         )
     db.session.commit()

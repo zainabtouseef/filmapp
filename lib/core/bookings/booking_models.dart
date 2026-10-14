@@ -24,6 +24,7 @@ class BookingOffer {
   final int feeMinor;
   final String currency;
   final String? conditions;
+  final List<Map<String, dynamic>> paymentSchedule;
   final String status;
   final DateTime? expiresAt;
   final DateTime? createdAt;
@@ -36,6 +37,7 @@ class BookingOffer {
     required this.feeMinor,
     required this.currency,
     required this.conditions,
+    this.paymentSchedule = const [],
     required this.status,
     required this.expiresAt,
     required this.createdAt,
@@ -51,6 +53,9 @@ class BookingOffer {
       feeMinor: json['fee_minor'] as int? ?? 0,
       currency: json['currency'] as String? ?? 'PKR',
       conditions: json['conditions'] as String?,
+      paymentSchedule: (json['payment_schedule'] as List<dynamic>? ?? const [])
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList(),
       status: json['status'] as String? ?? 'active',
       expiresAt: DateTime.tryParse(json['expires_at'] as String? ?? ''),
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
@@ -85,6 +90,7 @@ class Booking {
   final String? conversationId;
   final String? negotiationId;
   final List<BookingOffer> offers;
+  final Map<String, dynamic> terms;
 
   const Booking({
     required this.publicId,
@@ -111,6 +117,7 @@ class Booking {
     required this.conversationId,
     required this.negotiationId,
     required this.offers,
+    this.terms = const {},
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -143,6 +150,7 @@ class Booking {
       offers: rawOffers
           .map((item) => BookingOffer.fromJson(item as Map<String, dynamic>))
           .toList(),
+      terms: Map<String, dynamic>.from(json['terms'] as Map? ?? const {}),
     );
   }
 

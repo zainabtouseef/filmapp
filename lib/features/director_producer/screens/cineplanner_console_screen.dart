@@ -934,7 +934,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
         productionId: controller.selectedProductionId!,
         callSheetId: sheetId,
       );
-      final saved = saveDownload(
+      final saved = await saveDownload(
         download.filename,
         download.bytes,
         download.contentType,
@@ -3268,7 +3268,7 @@ class _CineReportsState extends State<_CineReports> {
         reportType: _type,
         format: format,
       );
-      final saved = saveDownload(
+      final saved = await saveDownload(
         download.filename,
         download.bytes,
         download.contentType,

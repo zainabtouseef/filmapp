@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/bookings/bookings_controller.dart';
+import '../../../core/bookings/booking_models.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/marketplace/marketplace_models.dart';
 import '../../../core/network/api_exception.dart';
@@ -73,6 +74,10 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
   final _dynamicC = TextEditingController();
   int _step = 0;
   bool _sending = false;
+  Booking? _serverDraft;
+  String? _draftId;
+  DateTime? _chosenStart;
+  DateTime? _chosenEnd;
 
   bool get _isPublicBuyer =>
       AuthScope.maybeOf(context)?.user?.primaryRole?.code == 'general_public';
@@ -107,6 +112,15 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
       );
     }
     final listing = await auth.marketplaceListing(listingId);
+    if (!mounted) throw StateError('Booking form closed');
+    final drafts = await BookingsScope.of(context)
+        .bookings(role: 'requester', force: true);
+    _serverDraft = drafts
+        .where((booking) =>
+            booking.status == 'draft' &&
+            booking.listingId == listingId &&
+            (widget.projectId == null || booking.projectId == widget.projectId))
+        .firstOrNull;
     final projects = projectsController == null
         ? const <Project>[]
         : await projectsController.projects();
@@ -116,10 +130,11 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
         message: 'Create a live project before sending booking requests.',
       );
     }
+    final preferredProjectId = _serverDraft?.projectId ?? widget.projectId;
     final initialProjectId = projects.isEmpty
         ? null
-        : projects.any((project) => project.publicId == widget.projectId)
-            ? widget.projectId!
+        : projects.any((project) => project.publicId == preferredProjectId)
+            ? preferredProjectId!
             : projects.first.publicId;
     final requirements = initialProjectId == null || projectsController == null
         ? const <ProjectRequirement>[]
@@ -133,9 +148,7 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
   }
 
   void _acceptData(_BookingFormData data) {
-    if (_listing?.publicId == data.listing.publicId &&
-        _projectId == data.projectId &&
-        _requirements.length == data.requirements.length) {
+    if (_listing?.publicId == data.listing.publicId) {
       return;
     }
     _listing = data.listing;
@@ -147,6 +160,36 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
     _requirementId =
         data.requirements.isEmpty ? null : data.requirements.first.publicId;
     _prefillFromSelection();
+    final draft = _serverDraft;
+    if (draft != null) {
+      _draftId = draft.publicId;
+      _requirementId = draft.requirementId;
+      _chosenStart = draft.startAt.toLocal();
+      _chosenEnd = draft.endAt.toLocal();
+      _dates.text = _dateRange(_chosenStart, _chosenEnd);
+      _fee.text = ((draft.agreedAmountMinor ?? 0) ~/ 100).toString();
+      _deliverables.text = draft.terms['deliverables']?.toString() ?? '';
+      _usageRights.text = draft.terms['usage_rights']?.toString() ?? '';
+      _conditions.text = draft.terms['conditions']?.toString() ?? '';
+      final schedule =
+          (draft.terms['payment_schedule'] as List<dynamic>? ?? const []);
+      final controllers = [_deposit, _middle, _final];
+      for (var i = 0; i < controllers.length; i++) {
+        controllers[i].text = i < schedule.length
+            ? '${schedule[i]['percent']}'.replaceAll('.0', '')
+            : '0';
+      }
+      final fields = draft.terms['category_fields'] as Map? ?? const {};
+      final dynamicControllers = [_dynamicA, _dynamicB, _dynamicC];
+      for (var i = 0; i < _schema.fields.length && i < 3; i++) {
+        dynamicControllers[i].text =
+            fields[_schema.fields[i]]?.toString() ?? '';
+      }
+      if (draft.expiresAt != null) {
+        _expiry.text =
+            '${draft.expiresAt!.difference(DateTime.now()).inHours.clamp(1, 720)}';
+      }
+    }
   }
 
   @override
@@ -304,6 +347,10 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
               final requirements = await projectsController.requirements(value);
               setState(() {
                 _projectId = value;
+                _draftId = null;
+                _serverDraft = null;
+                _chosenStart = null;
+                _chosenEnd = null;
                 _requirements = requirements;
                 _requirementId =
                     requirements.isEmpty ? null : requirements.first.publicId;
@@ -319,6 +366,9 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
           onRequirementChanged: (value) {
             setState(() {
               _requirementId = value;
+              _draftId = null;
+              _chosenStart = null;
+              _chosenEnd = null;
               _prefillFromSelection();
             });
           },
@@ -327,6 +377,7 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
           candidate: _candidate!,
           schema: _schema,
           dates: _dates,
+          onPickDates: _pickDates,
           fee: _fee,
           deposit: _deposit,
           middle: _middle,
@@ -371,20 +422,97 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
     _send();
   }
 
-  void _saveDraft() {
-    dpSnack(
-      context,
-      _project == null
-          ? 'Campaign booking draft staged.'
-          : 'Draft saved to ${_project!.title} → ${_selectedRequirement?.title ?? 'General request'}.',
-    );
+  Map<String, dynamic> get _terms => {
+        'deliverables': _deliverables.text.trim(),
+        'usage_rights': _usageRights.text.trim(),
+        'conditions': _conditions.text.trim(),
+        'category_fields': {
+          for (var i = 0; i < _schema.fields.length && i < 3; i++)
+            _schema.fields[i]: [_dynamicA, _dynamicB, _dynamicC][i].text.trim()
+        },
+        'payment_schedule': [
+          for (final row in [
+            ('Deposit', _deposit),
+            ('Milestone', _middle),
+            ('Final payment', _final)
+          ])
+            if (_parsePercent(row.$2.text) > 0)
+              {'name': row.$1, 'percent': _parsePercent(row.$2.text)},
+        ],
+      };
+
+  String get _expiresIso => DateTime.now()
+      .add(Duration(hours: int.tryParse(_expiry.text) ?? 72))
+      .toUtc()
+      .toIso8601String();
+
+  bool get _validTerms {
+    final hours = int.tryParse(_expiry.text);
+    return hours != null &&
+        hours >= 1 &&
+        hours <= 720 &&
+        [_deposit, _middle, _final].every((field) {
+          final percent = int.tryParse(field.text);
+          return percent != null && percent >= 0 && percent <= 100;
+        }) &&
+        _scheduleTotal == 100;
+  }
+
+  Future<void> _saveDraft() async {
+    final listing = _listing;
+    if (listing == null || _sending) return;
+    if (!_validTerms || _moneyFromLabel(_fee.text) <= 0) {
+      dpSnack(context,
+          'Enter a valid fee, payment percentages totalling 100%, and expiry of 1–720 hours.');
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final draft = await BookingsScope.of(context).saveBookingDraft(
+        draftId: _draftId,
+        projectId: _projectId,
+        listingId: listing.publicId,
+        requirementId: _requirementId,
+        startAt: _startIso(),
+        endAt: _endIso(),
+        feeMinor: _moneyFromLabel(_fee.text) * 100,
+        currency: listing.currency,
+        terms: _terms,
+        expiresAt: _expiresIso,
+      );
+      if (!mounted) return;
+      _draftId = draft.publicId;
+      dpSnack(context, 'Draft saved online. Reopen this listing to continue.');
+    } catch (error) {
+      if (mounted) dpSnack(context, 'Draft was not saved: $error');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _pickDates() async {
+    final now = DateTime.now();
+    final range = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(now.year - 1),
+        lastDate: DateTime(now.year + 5),
+        initialDateRange: _chosenStart != null && _chosenEnd != null
+            ? DateTimeRange(start: _chosenStart!, end: _chosenEnd!)
+            : null);
+    if (range == null || !mounted) return;
+    setState(() {
+      _chosenStart = range.start;
+      _chosenEnd = range.end.add(const Duration(hours: 23, minutes: 59));
+      _dates.text = _dateRange(_chosenStart, _chosenEnd);
+    });
   }
 
   Future<void> _send() async {
     if (!_isPublicBuyer && !await ensureKycApproved(context)) return;
     if (!mounted) return;
-    if (_scheduleTotal != 100) {
-      dpSnack(context, 'Payment schedule must total 100%.');
+    if (!_validTerms) {
+      dpSnack(context,
+          'Use payment percentages totalling 100% and an expiry of 1–720 hours.');
       setState(() => _step = 2);
       return;
     }
@@ -411,6 +539,10 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
         feeMinor: feeMinor,
         currency: listing.currency,
         message: _conditions.text,
+        terms: _terms,
+        expiresAt: _expiresIso,
+        draftId: _draftId,
+        onDraftSaved: (draft) => _draftId = draft.publicId,
       );
       if (!mounted) return;
       dpSnack(context, 'Booking request sent to ${_candidate!.name}.');
@@ -446,14 +578,16 @@ class _DPBookingRequestFormScreenState extends State<DPBookingRequestFormScreen>
   }
 
   String _startIso() {
-    final start = _selectedRequirement?.startDate ?? _project?.startDate;
+    final start =
+        _chosenStart ?? _selectedRequirement?.startDate ?? _project?.startDate;
     return (start ?? DateTime.now().add(const Duration(days: 1)))
         .toUtc()
         .toIso8601String();
   }
 
   String _endIso() {
-    final end = _selectedRequirement?.endDate ?? _project?.endDate;
+    final end =
+        _chosenEnd ?? _selectedRequirement?.endDate ?? _project?.endDate;
     final fallback = DateTime.now().add(const Duration(days: 2));
     return (end ?? fallback).toUtc().toIso8601String();
   }
@@ -647,6 +781,7 @@ class _TermsStep extends StatelessWidget {
   final DpCandidate candidate;
   final _BookingSchema schema;
   final TextEditingController dates;
+  final VoidCallback onPickDates;
   final TextEditingController fee;
   final TextEditingController deposit;
   final TextEditingController middle;
@@ -665,6 +800,7 @@ class _TermsStep extends StatelessWidget {
     required this.candidate,
     required this.schema,
     required this.dates,
+    required this.onPickDates,
     required this.fee,
     required this.deposit,
     required this.middle,
@@ -690,12 +826,14 @@ class _TermsStep extends StatelessWidget {
           children: [
             TourTarget(
               id: 'dp.booking.dates',
-              child: CoreTextField(
-                controller: dates,
-                label: 'Dates',
-                icon: Icons.date_range_outlined,
-                onChanged: (_) => onChanged(),
-              ),
+              child: InkWell(
+                  onTap: onPickDates,
+                  child: IgnorePointer(
+                      child: CoreTextField(
+                    controller: dates,
+                    label: 'Dates',
+                    icon: Icons.date_range_outlined,
+                  ))),
             ),
             if (!candidate.available) ...[
               const SizedBox(height: 8),

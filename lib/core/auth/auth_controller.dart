@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 
 import '../network/api_client.dart';
 import '../network/api_exception.dart';
+import '../network/browser_push.dart';
 import '../director/director_dashboard_models.dart';
 import '../director/director_discovery_models.dart';
 import '../director/director_repository.dart';
@@ -149,6 +149,9 @@ class AuthController extends ChangeNotifier {
     required String password,
     required String displayName,
     required String initialRole,
+    String? phone,
+    String? cityId,
+    String? referralCode,
   }) async {
     final session = await _repository.register(
       email: email,
@@ -156,6 +159,9 @@ class AuthController extends ChangeNotifier {
       displayName: displayName,
       initialRole: initialRole,
       termsVersion: '2026-07',
+      phone: phone,
+      cityId: cityId,
+      referralCode: referralCode,
     );
     await _acceptSession(session);
   }
@@ -175,6 +181,15 @@ class AuthController extends ChangeNotifier {
 
   Future<void> logout() async {
     final token = _refreshToken;
+    try {
+      final device =
+          await unsubscribeBrowserPush().timeout(const Duration(seconds: 3));
+      if (device.isNotEmpty) {
+        await _client.post('/push-devices', body: device);
+      }
+    } catch (_) {
+      // Local sign-out must still finish if the device or network is unavailable.
+    }
     try {
       if (token != null) {
         await _repository.logout(token);
@@ -228,26 +243,6 @@ class AuthController extends ChangeNotifier {
       emailEnabled: emailEnabled,
       smsEnabled: smsEnabled,
       pushEnabled: pushEnabled,
-    );
-  }
-
-  Future<UploadedFile> completeDemoUpload({
-    required String purpose,
-    required String mimeType,
-    required String originalName,
-    required int sizeBytes,
-  }) async {
-    final seed = originalName.codeUnits.isEmpty ? [0] : originalName.codeUnits;
-    final bytes = Uint8List.fromList(
-      List<int>.generate(sizeBytes, (index) => seed[index % seed.length]),
-    );
-    return uploadFile(
-      purpose: purpose,
-      file: PickedFileData(
-        name: originalName,
-        mimeType: mimeType,
-        bytes: bytes,
-      ),
     );
   }
 

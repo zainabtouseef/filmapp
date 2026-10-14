@@ -5,6 +5,7 @@ import '../../auth/auth_models.dart';
 import '../../core_ui/core_routes.dart';
 import '../../core_ui/widgets/core_widgets.dart';
 import '../../network/api_exception.dart';
+import '../../network/browser_push.dart';
 import '../../payments/payment_models.dart';
 import '../../payments/payments_controller.dart';
 import '../../theme/app_color_scheme.dart';
@@ -20,14 +21,15 @@ class SettingsAccountScreen extends StatefulWidget {
 
 class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
   final bool _inApp = true;
-  bool _push = true;
-  bool _email = true;
+  bool _push = false;
+  bool _pushSubscribed = false;
+  Map<String, dynamic> _capabilities = const {};
+  bool _email = false;
   bool _sms = false;
   final bool _whatsapp = false;
   final bool _hidePhone = true;
   final bool _hideLocation = true;
-  final bool _watermark = true;
-  final bool _discovery = true;
+  final bool _watermark = false;
   final bool _biometric = false;
   final bool _twoFactor = false;
   bool _loggingOut = false;
@@ -50,8 +52,17 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
 
   Future<void> _loadSettings() async {
     try {
-      final settings = await AuthScope.of(context).settings();
-      if (mounted) _applySettings(settings);
+      final auth = AuthScope.of(context);
+      final settings = await auth.settings();
+      final bootstrap = await auth.bootstrap();
+      final data = bootstrap['data'] as Map<String, dynamic>;
+      _capabilities =
+          Map<String, dynamic>.from(data['capabilities'] as Map? ?? const {});
+      final subscribed = await browserPushSubscribed();
+      if (mounted) {
+        _pushSubscribed = subscribed;
+        _applySettings(settings);
+      }
     } on ApiException catch (error) {
       if (mounted) {
         setState(() {
@@ -65,13 +76,11 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
   void _applySettings(AuthSettings settings) {
     setState(() {
       _language = switch (settings.locale) {
-        'ur-PK' => 'Urdu',
-        'ur-Latn-PK' => 'Roman Urdu',
         _ => 'English',
       };
-      _push = settings.pushEnabled;
-      _email = settings.emailEnabled;
-      _sms = settings.smsEnabled;
+      _push = settings.pushEnabled && _pushSubscribed;
+      _email = settings.emailEnabled && _capabilities['email'] == true;
+      _sms = settings.smsEnabled && _capabilities['sms_otp'] == true;
       _settingsError = null;
       _loadingSettings = false;
       _savingSettings = false;
@@ -106,6 +115,26 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
         _savingSettings = false;
       });
       showCoreSnack(context, error.message);
+    }
+  }
+
+  Future<void> _savePush(bool enabled) async {
+    try {
+      final auth = AuthScope.of(context);
+      final body = enabled
+          ? await subscribeBrowserPush(
+              _capabilities['vapid_public_key'] as String)
+          : await unsubscribeBrowserPush();
+      if (body.isNotEmpty) {
+        await auth.apiClient.post('/push-devices', body: body);
+      }
+      if (!mounted) return;
+      _pushSubscribed = enabled;
+      await _saveSettings(pushEnabled: enabled);
+    } catch (error) {
+      if (mounted) {
+        showCoreSnack(context, 'Push settings were not changed: $error');
+      }
     }
   }
 
@@ -331,25 +360,35 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
               Icons.phone_iphone_rounded,
               'Push',
               _push,
-              _loadingSettings || _savingSettings
+              _loadingSettings ||
+                      _savingSettings ||
+                      _capabilities['push'] != true ||
+                      !browserPushSupported
                   ? null
-                  : (value) => _saveSettings(pushEnabled: value),
+                  : _savePush,
+              subtitle: browserPushSupported && _capabilities['push'] == true
+                  ? 'Notifications on this browser'
+                  : 'Push is unavailable on this device.',
             ),
             _toggle(
               Icons.email_outlined,
               'Email',
               _email,
-              _loadingSettings || _savingSettings
+              _loadingSettings ||
+                      _savingSettings ||
+                      _capabilities['email'] != true
                   ? null
                   : (value) => _saveSettings(emailEnabled: value),
+              subtitle: _capabilities['email'] == true
+                  ? null
+                  : 'Email delivery is not configured.',
             ),
             _toggle(
               Icons.sms_outlined,
               'SMS',
               _sms,
-              _loadingSettings || _savingSettings
-                  ? null
-                  : (value) => _saveSettings(smsEnabled: value),
+              null,
+              subtitle: 'SMS delivery is not configured.',
             ),
             _toggle(
               Icons.chat_outlined,
@@ -382,12 +421,11 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
               null,
               subtitle: 'Portfolio-level control is not available yet.',
             ),
-            _toggle(
+            _navRow(
               Icons.travel_explore_outlined,
-              'Allow profile discovery',
-              _discovery,
-              null,
-              subtitle: 'Manage visibility from your role profile.',
+              'Manage profile visibility',
+              () => Navigator.pushNamed(context, CoreRoutes.profileRoles),
+              subtitle: 'Open your role profile to control its visibility.',
             ),
           ]),
           _paymentSection(),
@@ -460,7 +498,7 @@ class _SettingsAccountScreenState extends State<SettingsAccountScreen> {
           const SizedBox(height: 10),
           CoreDropdownField<String>(
             value: _language,
-            values: const ['English', 'Urdu', 'Roman Urdu'],
+            values: const ['English'],
             label: 'Language',
             icon: Icons.translate_rounded,
             onChanged: (value) {
