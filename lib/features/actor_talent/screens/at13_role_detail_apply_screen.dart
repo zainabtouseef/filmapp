@@ -256,7 +256,7 @@ class _AT13RoleDetailApplyScreenState extends State<AT13RoleDetailApplyScreen> {
     }
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['mp4'],
+      allowedExtensions: const ['mp4', 'mov'],
       withData: true,
     );
     final file = result?.files.single;
@@ -271,7 +271,9 @@ class _AT13RoleDetailApplyScreenState extends State<AT13RoleDetailApplyScreen> {
         purpose: 'self_tape',
         file: PickedFileData(
           name: file.name,
-          mimeType: 'video/mp4',
+          mimeType: file.extension?.toLowerCase() == 'mov'
+              ? 'video/quicktime'
+              : 'video/mp4',
           bytes: bytes,
         ),
         onProgress: (sent, total) {

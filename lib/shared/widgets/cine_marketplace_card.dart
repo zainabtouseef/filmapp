@@ -136,7 +136,8 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
 
         return Semantics(
           button: widget.onProfile != null,
-          label: '${widget.title}, ${widget.category}',
+          label:
+              '${widget.title}, ${marketplaceCategoryLabel(widget.category)}',
           child: MouseRegion(
             cursor: widget.busy || widget.onProfile == null
                 ? SystemMouseCursors.basic
@@ -314,9 +315,7 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
                   top: 14,
                   left: 14,
                   child: _GridBadge(
-                      label: widget.category == 'Media & Equipment'
-                          ? 'Camera & Lighting'
-                          : widget.category),
+                      label: marketplaceCategoryLabel(widget.category)),
                 ),
                 if (widget.rating > 0)
                   Positioned(
@@ -342,9 +341,10 @@ class _CineMarketplaceCardState extends State<CineMarketplaceCard> {
                               height: 1.08)),
                       const SizedBox(height: 7),
                       Text(
-                          [widget.subtitle, widget.city]
-                              .where((part) => part.trim().isNotEmpty)
-                              .join(' · '),
+                          [
+                            marketplaceCategoryLabel(widget.subtitle),
+                            widget.city
+                          ].where((part) => part.trim().isNotEmpty).join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: palette.archivo(
@@ -430,8 +430,8 @@ class _MarketplaceIdentity extends StatelessWidget {
       _ => 'Offers welcome',
     };
     final role = widget.subtitle.trim().isEmpty
-        ? widget.category
-        : widget.subtitle.trim();
+        ? marketplaceCategoryLabel(widget.category)
+        : marketplaceCategoryLabel(widget.subtitle.trim());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -483,7 +483,7 @@ class _MarketplaceIdentity extends StatelessWidget {
         SizedBox(height: compact ? 4 : 6),
         Text(
           widget.summary.trim().isEmpty
-              ? widget.category
+              ? marketplaceCategoryLabel(widget.category)
               : widget.summary.trim(),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -1044,6 +1044,16 @@ String _displayRate(String value) {
     (_) => 'K',
   );
 }
+
+/// Presentation-only names. Marketplace query and listing keys stay stable.
+String marketplaceCategoryLabel(String value) => switch (value.trim()) {
+      'Talent' || 'Actor / Talent' => 'Actor',
+      'Crew' || 'Crew / Services' || 'Crew Services' => 'Production Services',
+      'General Crew' => 'General Production',
+      'Camera Crew' => 'Camera Department',
+      'Media & Equipment' => 'Camera & Lighting',
+      _ => value,
+    };
 
 IconData cineMarketplaceKindIcon(String kind) {
   return switch (kind.toLowerCase()) {

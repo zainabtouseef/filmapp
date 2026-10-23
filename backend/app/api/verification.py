@@ -200,6 +200,14 @@ def _serialize_file(file: FileAsset) -> dict[str, Any]:
 
 
 def _can_download_file(file: FileAsset, user: Any) -> bool:
+    from app.models.cineplanner_access import CineSubscriptionPayment
+
+    if _has_role_code(user, {"finance_admin", "super_admin"}) and db.session.scalar(
+        select(CineSubscriptionPayment.id).where(
+            CineSubscriptionPayment.proof_file_id == file.id
+        )
+    ):
+        return True
     is_owner = file.owner_user_id == user.id
     is_kyc_evidence_reviewer = (
         not is_owner

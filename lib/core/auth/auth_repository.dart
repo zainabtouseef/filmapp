@@ -3,11 +3,33 @@ import '../marketplace/marketplace_models.dart';
 import '../profile/profile_models.dart';
 import '../verification/verification_models.dart';
 import 'auth_models.dart';
+import 'demo_account_models.dart';
 
 class AuthRepository {
   final ApiClient _client;
 
   const AuthRepository(this._client);
+
+  Future<DemoAccountDirectory> demoAccounts(String accessKey) async {
+    final response = await _client.post('/auth/demo/accounts', body: {
+      'access_key': accessKey,
+    });
+    return DemoAccountDirectory.fromJson(
+        response['data'] as Map<String, dynamic>);
+  }
+
+  Future<AuthSession> demoLogin({
+    required String accessKey,
+    required String userId,
+    required String roleCode,
+  }) async {
+    final response = await _client.post('/auth/demo/login', body: {
+      'access_key': accessKey,
+      'user_id': userId,
+      'role_code': roleCode,
+    });
+    return AuthSession.fromJson(response);
+  }
 
   Future<List<AuthRole>> roles() async {
     final response = await _client.get('/roles');
@@ -139,6 +161,12 @@ class AuthRepository {
       '/me/primary-role',
       body: {'role': roleCode},
     );
+    return AuthUser.fromJson(response['data'] as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> addRole(String roleCode) async {
+    await _client.post('/me/roles', body: {'role': roleCode});
+    final response = await _client.get('/me');
     return AuthUser.fromJson(response['data'] as Map<String, dynamic>);
   }
 

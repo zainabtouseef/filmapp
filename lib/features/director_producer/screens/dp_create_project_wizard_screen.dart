@@ -15,6 +15,7 @@ import '../../../core/uploads/upload_repository.dart';
 import '../../../core/tour/tour_local_step_sync.dart';
 import '../../../core/tour/tour_target.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../data/project_draft_store.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_budget_health_bar.dart';
@@ -1938,7 +1939,7 @@ class _RequirementEditorSheetState extends State<_RequirementEditorSheet> {
                     GestureDetector(
                       onTap: () => setState(() => _category = category),
                       child: DPStatusChip(
-                        label: category,
+                        label: marketplaceCategoryLabel(category),
                         tone: _category == category
                             ? DpTone.warning
                             : DpTone.neutral,

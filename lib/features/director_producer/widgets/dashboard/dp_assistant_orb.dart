@@ -35,8 +35,8 @@ const _orbActions = [
   ),
   _OrbAction(
     icon: Icons.manage_search_rounded,
-    label: 'Find talent',
-    subtitle: 'Open the marketplace scoped to Talent',
+    label: 'Find actors',
+    subtitle: 'Browse actors in the marketplace',
     route: DirectorProducerRoutes.marketplace,
     argument: {'category': 'Talent'},
   ),

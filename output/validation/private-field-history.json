@@ -1,0 +1,11 @@
+{
+  "location_properties.private_address_token": 4,
+  "equipment_items.serial_token": 2,
+  "safety_check_ins.latitude_token": 3,
+  "safety_check_ins.longitude_token": 3,
+  "agency_invitations.contact_token": 0,
+  "brand_profiles.billing_token": 1,
+  "distributor_contacts.email_token": 1,
+  "distributor_contacts.phone_token": 1,
+  "insurance_partner_profiles.license_number_token": 3
+}

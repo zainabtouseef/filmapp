@@ -289,7 +289,7 @@ class _MD03PortfolioCategoriesScreenState
       type: FileType.custom,
       allowedExtensions: kind == _SlotKind.image
           ? const ['jpg', 'jpeg', 'png', 'webp']
-          : const ['mp4'],
+          : const ['mp4', 'mov'],
       withData: true,
     );
     final item = result?.files.single;
@@ -303,7 +303,9 @@ class _MD03PortfolioCategoriesScreenState
               'webp' => 'image/webp',
               _ => 'image/jpeg',
             }
-          : 'video/mp4',
+          : item.extension?.toLowerCase() == 'mov'
+              ? 'video/quicktime'
+              : 'video/mp4',
       bytes: bytes,
     );
   }

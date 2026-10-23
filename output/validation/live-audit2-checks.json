@@ -1,0 +1,63 @@
+{
+  "release": "2026.10.14-audit2",
+  "ready": true,
+  "private_endpoint_statuses": {
+    "/me": 401,
+    "/me/settings": 401,
+    "/admin/control/users": 401,
+    "/bookings": 401,
+    "/location-properties": 401,
+    "/distributor-contacts": 401
+  },
+  "media_gates": {
+    "clean": 200,
+    "private": 404,
+    "missing": 404
+  },
+  "http_redirect": true,
+  "web_sha256": "0c89dcea93f34036cf387e917490447019f8d6334cb1a8658bfedff09a2ff0d6",
+  "provider_capabilities": {
+    "push": true,
+    "sms_otp": false,
+    "email": false
+  },
+  "services": {
+    "nginx": "active",
+    "clamav-daemon": "active",
+    "clamav-freshclam": "active",
+    "lumen-city": "active",
+    "nexus-devos-web": "active",
+    "nexus-devos-api": "active",
+    "originality-studio": "active"
+  },
+  "historical": {
+    "location_properties.private_address_token": 4,
+    "equipment_items.serial_token": 2,
+    "safety_check_ins.latitude_token": 3,
+    "safety_check_ins.longitude_token": 3,
+    "agency_invitations.contact_token": 0,
+    "brand_profiles.billing_token": 1,
+    "distributor_contacts.email_token": 1,
+    "distributor_contacts.phone_token": 1,
+    "insurance_partner_profiles.license_number_token": 3
+  },
+  "widths": {
+    "location_properties.private_address_token": "text",
+    "equipment_items.serial_token": "text",
+    "safety_check_ins.latitude_token": "text",
+    "safety_check_ins.longitude_token": "text",
+    "agency_invitations.contact_token": "text",
+    "brand_profiles.billing_token": "text",
+    "distributor_contacts.email_token": "text",
+    "distributor_contacts.phone_token": "text",
+    "insurance_partner_profiles.license_number_token": "text"
+  },
+  "migration": "9f84c2e7a6b1",
+  "counts": {
+    "users": 240,
+    "files": 476,
+    "bookings": 42,
+    "contracts": 12,
+    "payout_accounts": 10
+  }
+}

@@ -230,13 +230,13 @@ class _AT04AvailabilityCalendarScreenState
           startAt: start.toIso8601String(),
           endAt: end.toIso8601String(),
           status: _backendStatus(status),
-          note: 'Talent availability',
+          note: 'Actor availability',
         );
       } else {
         await bookings.updateAvailability(
           entryId: existing.publicId,
           status: _backendStatus(status),
-          note: 'Talent availability',
+          note: 'Actor availability',
         );
       }
       if (!mounted) return;

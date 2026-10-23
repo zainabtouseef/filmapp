@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 from threading import Barrier
 from types import SimpleNamespace
@@ -150,9 +152,22 @@ class _FakeOpenAIResponses:
         self.stages.append(stage)
         self.barrier.wait(timeout=2)
         keys = kwargs["text"]["format"]["schema"]["properties"]
-        return SimpleNamespace(
-            output_text=json.dumps({key: self.results[key] for key in keys})
-        )
+        source = kwargs["input"][0]["content"][0]["text"]
+        ids = set(re.findall(r"\[SOURCE_SCENE ([^;]+);", source))
+        result = copy.deepcopy({key: self.results[key] for key in keys})
+        for value in result.values():
+            if isinstance(value, dict) and "items" in value:
+                value["items"] = [
+                    r
+                    for r in value["items"]
+                    if "scene_number" not in r or str(r["scene_number"]) in ids
+                ]
+                for row in value["items"]:
+                    if "scene_numbers" in row:
+                        row["scene_numbers"] = [
+                            n for n in row["scene_numbers"] if str(n) in ids
+                        ]
+        return SimpleNamespace(status="completed", output_text=json.dumps(result))
 
 
 class _FakeOpenAI:
@@ -175,10 +190,10 @@ def _complete_ai_parse(app: Flask, production_id: str) -> None:
         with patch("openai.OpenAI", return_value=fake_client):
             result = analyze_screenplay_job(job.public_id)
         assert result["status"] == "completed"
-        assert sorted(fake_client.responses.stages) == sorted(
-            stage for stage, _, _ in STAGES
-        )
-        assert fake_client.files.deleted_ids == ["file_cineplanner_test"]
+        assert set(fake_client.responses.stages) == {stage for stage, _, _ in STAGES}
+        assert len(fake_client.responses.stages) > len(STAGES)
+        assert fake_client.files.deleted_ids == []
+        assert job.stage_results_json["coverage"]["scenes_analyzed"] == 90
 
 
 def test_portal_projects_automatically_receive_one_cineplanner_workspace(
@@ -432,3 +447,50 @@ def test_complete_cineplanner_producer_workflow(
         assert report.status_code == 200, report.text
         if signature:
             assert report.data.startswith(signature)
+
+
+def test_interrupted_feature_resumes_only_unfinished_stages(
+    cineplanner_app, cineplanner_client
+):
+    headers = _headers(cineplanner_client)
+    response = cineplanner_client.post(
+        "/api/v1/cineplanner/productions",
+        headers=headers,
+        json={"title": "Resumable feature"},
+    )
+    production_id = response.json["data"]["production"]["public_id"]
+    file_id = _screenplay_file(cineplanner_app, headers)
+    with patch("app.api.cineplanner._enqueue_analysis"):
+        uploaded = cineplanner_client.post(
+            f"/api/v1/cineplanner/productions/{production_id}/scripts",
+            headers=headers,
+            json={"file_id": file_id},
+        )
+    job_id = uploaded.json["data"]["job"]["public_id"]
+    fake = _FakeOpenAI(screenplay_results())
+    fake.responses.barrier = SimpleNamespace(wait=lambda **_: None)
+    original = fake.responses.create
+    failed = False
+
+    def interrupt(**kwargs):
+        nonlocal failed
+        if (
+            kwargs["text"]["format"]["name"] == "cineplanner_production_elements"
+            and not failed
+        ):
+            failed = True
+            raise RuntimeError("Simulated provider interruption")
+        return original(**kwargs)
+
+    with (
+        cineplanner_app.app_context(),
+        patch("openai.OpenAI", return_value=fake),
+        patch.object(fake.responses, "create", side_effect=interrupt),
+    ):
+        assert analyze_screenplay_job(job_id)["status"] == "failed"
+        job = db.session.scalar(select(CineAIJob).where(CineAIJob.public_id == job_id))
+        assert len(job.completed_stages_json) == 3
+        assert analyze_screenplay_job(job_id)["status"] == "completed"
+        assert len(fake.responses.stages) == 60  # 15 sections x 4 successful stages
+        assert job.stage_results_json["coverage"]["completed_sections"] == 15
+        assert job.error_code is None

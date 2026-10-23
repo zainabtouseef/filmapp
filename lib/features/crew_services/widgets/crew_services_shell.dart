@@ -20,7 +20,7 @@ const crewMenuEntries = <ActorShellMenuEntry>[
   (
     route: CrewServicesRoutes.home,
     screenId: 'CR-01',
-    label: 'Crew Dashboard',
+    label: 'Dashboard',
     icon: Icons.dashboard_outlined,
   ),
   (
@@ -101,8 +101,8 @@ class CrewServicesShell extends StatelessWidget {
       routeName: routeName,
       title: title,
       screenId: screenId,
-      portalLabel: 'Crew & Production Services',
-      menuTitle: 'Crew service screens',
+      portalLabel: 'Production Services',
+      menuTitle: 'Production service screens',
       navRoutes: CrewServicesRoutes.primaryNav,
       navDestinations: _crewBottomDestinations,
       menuEntries: crewMenuEntries,
@@ -110,9 +110,9 @@ class CrewServicesShell extends StatelessWidget {
       fullWalkthroughTourId: crewFullWalkthroughTourId,
       bottomIndexOverrides: _crewBottomIndexOverrides,
       workspaceLayout: true,
-      workspaceTitle: 'Crew Workspace',
-      workspaceSectionLabel: 'CREW / PRODUCTION SERVICES',
-      workspaceBadgeLabel: 'Crew Pro',
+      workspaceTitle: 'Production Services',
+      workspaceSectionLabel: 'PRODUCTION SERVICES',
+      workspaceBadgeLabel: 'Service Professional',
       workspaceStatusSubtitle:
           'Profile, credits, availability, requests and payments',
       workspaceSearchHint: 'Search requests, projects and opportunities...',
@@ -128,7 +128,7 @@ class CrewServicesShell extends StatelessWidget {
 
 String _crewEyebrow(String route) {
   return switch (route) {
-    CrewServicesRoutes.home => 'Crew workspace · live operations',
+    CrewServicesRoutes.home => 'Production services · live operations',
     CrewServicesRoutes.profile => 'Public identity · services · coverage',
     CrewServicesRoutes.portfolio => 'Credits · reels · production work',
     CrewServicesRoutes.availability => 'Schedule · holds · confirmed work',
@@ -136,6 +136,6 @@ String _crewEyebrow(String route) {
     CrewServicesRoutes.contracts => 'Contracts · earnings · payout ledger',
     CrewServicesRoutes.ratings => 'Reputation · reviews · work history',
     CrewServicesRoutes.opportunities => 'Open projects · applications',
-    _ => 'Crew production workspace',
+    _ => 'Production services workspace',
   };
 }

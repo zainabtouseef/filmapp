@@ -70,7 +70,7 @@ class _CR04AvailabilityCalendarScreenState
           const CoreEmptyState(
             icon: Icons.cloud_sync_outlined,
             title: 'Sign in to manage availability',
-            message: 'Your crew schedule is stored in the backend.',
+            message: 'Your availability is stored in the backend.',
           )
         else
           FutureBuilder<List<AvailabilityEntry>>(
@@ -143,7 +143,7 @@ class _CR04AvailabilityCalendarScreenState
                             icon: Icons.edit_calendar_outlined,
                             title: 'No schedule blocks yet',
                             message:
-                                'Add your available dates so directors can book your crew with confidence.',
+                                'Add your available dates so directors can book your services with confidence.',
                             actionLabel: 'Add availability',
                             onAction: _addDates,
                           )
@@ -197,7 +197,7 @@ class _CR04AvailabilityCalendarScreenState
           59,
         ).toUtc().toIso8601String(),
         status: 'available',
-        note: 'Published from Crew Workspace',
+        note: 'Published from Production Services',
       );
       if (!mounted) return;
       crewSnack(context, 'Availability published');
@@ -290,7 +290,7 @@ class _AvailabilityCard extends StatelessWidget {
                           ? entry.note!
                           : locked
                               ? 'Created by a confirmed booking'
-                              : 'Crew schedule block',
+                              : 'Availability block',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.smallMeta.copyWith(

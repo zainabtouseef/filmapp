@@ -1,0 +1,234 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "elapsed_ms": 969,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:42 GMT",
+      "Content-Type": "text/html",
+      "Last-Modified": "Wed, 14 Oct 2026 15:07:01 GMT",
+      "Transfer-Encoding": "chunked",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "ETag": "W/\"6acf9a95-4c02\"",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Content-Encoding": "gzip"
+    },
+    "bytes": 19458
+  },
+  {
+    "path": "/api/v1/health/live",
+    "status": 200,
+    "elapsed_ms": 843,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:42 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "122",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "X-Request-ID": "req_cLPV6XMZAgCqeBwtDqlQEA",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'none'",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+      "Access-Control-Allow-Origin": "https://cine.nalexustechnologies.com",
+      "Access-Control-Allow-Credentials": "true",
+      "X-RateLimit-Limit": "300",
+      "X-RateLimit-Remaining": "299",
+      "X-RateLimit-Reset": "1791992443",
+      "Retry-After": "60"
+    },
+    "bytes": 122,
+    "body": {
+      "data": {
+        "service": "cineconnect-api",
+        "status": "ok"
+      },
+      "meta": {
+        "pagination": null,
+        "request_id": "req_cLPV6XMZAgCqeBwtDqlQEA"
+      }
+    }
+  },
+  {
+    "path": "/api/v1/health/ready",
+    "status": 200,
+    "elapsed_ms": 907,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:42 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "168",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "X-Request-ID": "req_HruA1nvsrZFHz5akZBDd8A",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'none'",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+      "Access-Control-Allow-Origin": "https://cine.nalexustechnologies.com",
+      "Access-Control-Allow-Credentials": "true",
+      "X-RateLimit-Limit": "300",
+      "X-RateLimit-Remaining": "299",
+      "X-RateLimit-Reset": "1791992443",
+      "Retry-After": "60"
+    },
+    "bytes": 168,
+    "body": {
+      "data": {
+        "dependencies": {
+          "database": "ok",
+          "redis": "ok"
+        },
+        "service": "cineconnect-api",
+        "status": "ok"
+      },
+      "meta": {
+        "pagination": null,
+        "request_id": "req_HruA1nvsrZFHz5akZBDd8A"
+      }
+    }
+  },
+  {
+    "path": "/api/v1/app/config",
+    "status": 404,
+    "elapsed_ms": 442,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:42 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "223",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "Access-Control-Allow-Origin": "https://cine.nalexustechnologies.com",
+      "Access-Control-Allow-Credentials": "true",
+      "X-Request-ID": "req_2TCF1VKH3KRPD1ehS2XKgA",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'none'",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+    },
+    "bytes": 223
+  },
+  {
+    "path": "/api/v1/auth/me",
+    "status": 404,
+    "elapsed_ms": 391,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:42 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "223",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "Access-Control-Allow-Origin": "https://cine.nalexustechnologies.com",
+      "Access-Control-Allow-Credentials": "true",
+      "X-Request-ID": "req_NU38L-4o37Z8sFKEjgkqZg",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'none'",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+    },
+    "bytes": 223
+  },
+  {
+    "path": "/api/v1/projects",
+    "status": 401,
+    "elapsed_ms": 466,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:42 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "134",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "https://cine.nalexustechnologies.com",
+      "Access-Control-Allow-Credentials": "true",
+      "X-Request-ID": "req__H8fP1jIn89n2Fds9WKglQ",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'none'",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+      "X-RateLimit-Limit": "300",
+      "X-RateLimit-Remaining": "299",
+      "X-RateLimit-Reset": "1791992443",
+      "Retry-After": "60"
+    },
+    "bytes": 134
+  },
+  {
+    "path": "/api/v1/admin/users",
+    "status": 404,
+    "elapsed_ms": 408,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:43 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "223",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "Access-Control-Allow-Origin": "https://cine.nalexustechnologies.com",
+      "Access-Control-Allow-Credentials": "true",
+      "X-Request-ID": "req_aJrWjv98SLw2vqlFsr0ftw",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'none'",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+    },
+    "bytes": 223
+  },
+  {
+    "path": "/manifest.json",
+    "status": 200,
+    "elapsed_ms": 399,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:43 GMT",
+      "Content-Type": "application/json",
+      "Content-Length": "953",
+      "Last-Modified": "Fri, 17 Jul 2026 14:46:20 GMT",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "ETag": "\"6a5a403c-3b9\"",
+      "Accept-Ranges": "bytes"
+    },
+    "bytes": 953
+  },
+  {
+    "path": "/flutter_service_worker.js",
+    "status": 200,
+    "elapsed_ms": 415,
+    "headers": {
+      "Server": "nginx",
+      "Date": "Wed, 14 Oct 2026 15:39:43 GMT",
+      "Content-Type": "application/javascript",
+      "Content-Length": "784",
+      "Last-Modified": "Wed, 14 Oct 2026 15:07:22 GMT",
+      "Connection": "keep-alive",
+      "Vary": "Accept-Encoding",
+      "ETag": "\"6acf9aaa-310\"",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Accept-Ranges": "bytes"
+    },
+    "bytes": 784
+  }
+]

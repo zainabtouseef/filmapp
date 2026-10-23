@@ -275,7 +275,7 @@ class _AICastingMatchSheetState extends State<_AICastingMatchSheet> {
                   ),
                   const SizedBox(height: 12),
                   _ChoiceSection(
-                    label: 'Talent type',
+                    label: 'Performer type',
                     values: _categories,
                     selected: _category,
                     onSelected: (value) {
@@ -355,7 +355,7 @@ class _AICastingMatchSheetState extends State<_AICastingMatchSheet> {
                       if (candidates.isEmpty) {
                         return const DPEmptyState(
                           icon: Icons.person_search_outlined,
-                          title: 'No live talent to rank',
+                          title: 'No live actors to rank',
                           message:
                               'Publish actor, model or influencer marketplace listings first, then run CineMatch again.',
                         );
@@ -371,7 +371,7 @@ class _AICastingMatchSheetState extends State<_AICastingMatchSheet> {
                           icon: Icons.verified_user_outlined,
                           title: 'No verified matches',
                           message:
-                              'Turn off “Prefer verified” or approve more talent profiles in Super Admin.',
+                              'Turn off “Prefer verified” or approve more actor profiles in Super Admin.',
                         );
                       }
                       return Column(
@@ -428,7 +428,7 @@ class _AICastingMatchSheetState extends State<_AICastingMatchSheet> {
       score += 6;
     } else if (candidate.category == _category) {
       score += 18;
-      reasons.add('Correct talent type');
+      reasons.add('Correct performer type');
     }
 
     if (_city == 'Any city') {

@@ -15,8 +15,8 @@ class CR08OpportunitiesScreen extends StatelessWidget {
       id: 'crew.opportunities.screen',
       child: OpportunityInboxScreen(
         category: 'crew',
-        sectionTitle: 'Open Crew Requests',
-        emptyMessage: 'New crew requirements from directors will appear here.',
+        sectionTitle: 'Open Service Requests',
+        emptyMessage: 'New production service requests from directors will appear here.',
         detailRoute: CrewServicesRoutes.opportunityApplicationDetail,
       ),
     );

@@ -1,0 +1,31 @@
+{
+  "runtime_schema_privileges": [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "CREATE",
+    "DROP",
+    "REFERENCES",
+    "INDEX",
+    "ALTER",
+    "CREATE TEMPORARY TABLES",
+    "LOCK TABLES",
+    "EXECUTE",
+    "CREATE VIEW",
+    "SHOW VIEW",
+    "CREATE ROUTINE",
+    "ALTER ROUTINE",
+    "EVENT",
+    "TRIGGER"
+  ],
+  "python_version": "3.12.13",
+  "redis_persistence": {
+    "rdb_changes_since_last_save": 42,
+    "rdb_last_save_time": 1791992722,
+    "rdb_last_bgsave_status": "ok",
+    "aof_enabled": 0
+  },
+  "rate_limit_uri_matches_redis": true,
+  "celery_queue_length": 0
+}

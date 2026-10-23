@@ -69,9 +69,27 @@ def test_credit_entry_crud_flow(client: FlaskClient) -> None:
     assert item["year"] == 2023
     credit_id = item["public_id"]
 
+    # A title alone is enough to identify a credit; the production can be
+    # added later when the user has those details.
+    title_only = client.post(
+        "/api/v1/credits",
+        headers=headers,
+        json={"profile_type": "talent", "title": "Twisted Sapnay"},
+    )
+    assert title_only.status_code == 201, title_only.text
+    assert title_only.json["data"]["item"]["production_name"] == ""
+    title_only_id = title_only.json["data"]["item"]["public_id"]
+    cleared = client.patch(
+        f"/api/v1/credits/{credit_id}",
+        headers=headers,
+        json={"production_name": ""},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json["data"]["item"]["production_name"] == ""
+
     listed = client.get("/api/v1/credits?profile_type=talent", headers=headers)
     assert listed.status_code == 200, listed.text
-    assert len(listed.json["data"]["items"]) == 1
+    assert len(listed.json["data"]["items"]) == 2
 
     missing_title = client.post(
         "/api/v1/credits",
@@ -99,6 +117,10 @@ def test_credit_entry_crud_flow(client: FlaskClient) -> None:
 
     deleted = client.delete(f"/api/v1/credits/{credit_id}", headers=headers)
     assert deleted.status_code == 200, deleted.text
+    deleted_title_only = client.delete(
+        f"/api/v1/credits/{title_only_id}", headers=headers
+    )
+    assert deleted_title_only.status_code == 200, deleted_title_only.text
 
     after_delete = client.get("/api/v1/credits?profile_type=talent", headers=headers)
     assert after_delete.status_code == 200, after_delete.text

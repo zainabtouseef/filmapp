@@ -1,0 +1,94 @@
+{
+  "checked_at": "2026-10-14T15:40:36.608292+00:00",
+  "cineconnect-api": {
+    "image": "cineconnect-prod-api:20261014-audit2",
+    "user": "cineconnect",
+    "restart": {
+      "Name": "unless-stopped",
+      "MaximumRetryCount": 0
+    },
+    "memory": 0,
+    "nano_cpus": 0,
+    "pids_limit": null,
+    "read_only_root": false,
+    "network": "host",
+    "log": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "health": null,
+    "mounts": [
+      {
+        "dest": "/data/storage",
+        "rw": true
+      },
+      {
+        "dest": "/run/secrets/cineconnect-vapid.pem",
+        "rw": false
+      }
+    ]
+  },
+  "cineconnect-worker": {
+    "image": "cineconnect-prod-api:20261014-audit2",
+    "user": "cineconnect",
+    "restart": {
+      "Name": "unless-stopped",
+      "MaximumRetryCount": 0
+    },
+    "memory": 0,
+    "nano_cpus": 0,
+    "pids_limit": null,
+    "read_only_root": false,
+    "network": "host",
+    "log": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "health": null,
+    "mounts": [
+      {
+        "dest": "/data/storage",
+        "rw": true
+      },
+      {
+        "dest": "/run/secrets/cineconnect-vapid.pem",
+        "rw": false
+      }
+    ]
+  },
+  "cineconnect-scheduler": {
+    "image": "cineconnect-prod-api:20261014-audit2",
+    "user": "cineconnect",
+    "restart": {
+      "Name": "unless-stopped",
+      "MaximumRetryCount": 0
+    },
+    "memory": 0,
+    "nano_cpus": 0,
+    "pids_limit": null,
+    "read_only_root": false,
+    "network": "host",
+    "log": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "health": null,
+    "mounts": [
+      {
+        "dest": "/run/secrets/cineconnect-vapid.pem",
+        "rw": false
+      }
+    ]
+  },
+  "listeners": "Omitted shared-host inventory; relevant listeners separately verified in audit.",
+  "disk": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       193G  165G   28G  86% /\n/dev/sda1       193G  165G   28G  86% /",
+  "memory": "total        used        free      shared  buff/cache   available\nMem:           15992       12884         294         115        3338        3107\nSwap:           2047        2047           0",
+  "timers": "Certbot renewal timer present. No CineConnect backup/retention/monitor timer found; daily DB cron separately verified.",
+  "cron_files": "Root cron and /etc/cron.d inspected; see backup-controls.json",
+  "backup_files": "/var/backups/cineconnect/cineconnect-20261007-020001.sql.gz 737454 bytes\n/var/backups/cineconnect/web-pre-brand-20260908-1745.tar.gz 15271964 bytes\n/var/backups/cineconnect/audit-remediation-20261014/containers-pre-cutover.json 18296 bytes\n/var/backups/cineconnect/audit-remediation-20261014/containers.json 18296 bytes\n/var/backups/cineconnect/audit-remediation-20261014/CINECONNECT_REMEDIATION_COMPLETION_2026-10-14.pdf 1393565 bytes\n/var/backups/cineconnect/audit-remediation-20261014/cineconnect-worker-post-release.log 2684 bytes\n/var/backups/cineconnect/audit-remediation-20261014/deployment.log 52084 bytes\n/var/backups/cineconnect/audit-remediation-20261014/web.tar.gz 80398854 bytes\n/var/backups/cineconnect/audit-remediation-20261014/production-integrity-results.json 206 bytes\n/var/backups/cineconnect/audit-remediation-20261014/release.tar.gz 39067610 bytes\n/var/backups/cineconnect/audit-remediation-20261014/nginx.conf 4590 bytes\n/var/backups/cineconnect/audit-remediation-20261014/database.sql.gz 734447 bytes\n/var/backups/cineconnect/audit-remediation-20261014/storage.tar.gz 134637072 bytes\n/var/backups/cineconnect/audit-remediation-20261014/rollback.py 1143 bytes\n/var/backups/cineconnect/audit-remediation-20261014/database-pre-cutover.sql.gz 734501 bytes\n/var/backups/cineconnect/audit-remediation-20261014/cineconnect-api-post-release.log 4419 bytes\n/var/backups/cineconnect/audit-remediation-20261014/nginx-pre-cutover.conf 4590 bytes\n/var/backups/cineconnect/audit-remediation-20261014/cineconnect-scheduler-post-release.log 1103 bytes\n/var/backups/cineconnect/audit-remediation-20261014/storage-pre-cutover.tar.gz 134637072 bytes\n/var/backups/cineconnect/cineconnect-20261009-020001.sql.gz 737455 bytes\n/var/backups/cineconnect/cineconnect-storage-20260822-185250.tar.gz 111549887 bytes\n/var/backups/cineconnect/cineconnect-20260929-020001.sql.gz 735658 bytes\n/var/backups/cineconnect/cineconnect-20260930-020001.sql.gz 736317 bytes\n/var/backups/cineconnect/cineconnect-20261010-020001.sql.gz 737454 bytes\n/var/backups/cineconnect/cineconnect-20261014-020001.sql.gz 750655 bytes\n/var/backups/cineconnect/cineconnect-20261012-020001.sql.gz 749363 bytes\n/var/backups/cineconnect/v48-b66a4de-runtime.env 1531 bytes\n/var/backups/cineconnect/web-pre-connected-demo-20260909.tar.gz 15292207 bytes\n/var/backups/cineconnect/cineconnect-20260822-185046.sql.gz.tmp 20 bytes\n/var/backups/cineconnect/cineconnect-20261005-020001.sql.gz 737455 bytes\n/var/backups/cineconnect/cineconnect-web-20260822-1855.tar.gz 15219669 bytes\n/var/backups/cineconnect/v48-b66a4de-api-inspect.json 6238 bytes\n/var/backups/cineconnect/v48-b66a4de-before.sql.gz 734331 bytes\n/var/backups/cineconnect/audit-completion-20261014/containers-pre-cutover.json 20745 bytes\n/var/backups/cineconnect/audit-completion-20261014/previous-links.json 128 bytes\n/var/backups/cineconnect/audit-completion-20261014/cineconnect-audit2-evidence.tar.gz 381750 bytes\n/var/backups/cineconnect/audit-completion-20261014/deployment.log 1107495 bytes\n/var/backups/cineconnect/audit-completion-20261014/rollback.py 915 bytes\n/var/backups/cineconnect/audit-completion-20261014/database-pre-cutover.sql.gz 734631 bytes\n/var/backups/cineconnect/audit-completion-20261014/storage-pre-cutover.tar.gz 134637072 bytes\n/var/backups/cineconnect/cineconnect-20261008-020001.sql.gz 737455 bytes\n/var/backups/cineconnect/cineconnect-20261004-020001.sql.gz 736997 bytes\n/var/backups/cineconnect/cineconnect-20261013-020001.sql.gz 750633 bytes\n/var/backups/cineconnect/cineconnect-20261001-020001.sql.gz 736997 bytes\n/var/backups/cineconnect/cineconnect-20261006-020002.sql.gz 737454 bytes\n/var/backups/cineconnect/cineconnect-20261003-020001.sql.gz 736997 bytes\n/var/backups/cineconnect/pre-marketplace-280d21c-20260920T104415Z/web.tar.gz 13582796 bytes\n/var/backups/cineconnect/pre-marketplace-280d21c-20260920T104415Z/backend-source.tar.gz 10298957 bytes\n/var/backups/cineconnect/audit-completion-20261014-first-attempt/containers-pre-cutover.json 20715 bytes\n/var/backups/cineconnect/audit-completion-20261014-first-attempt/previous-links.json 128 bytes\n/var/backups/cineconnect/audit-completion-20261014-first-attempt/deployment.log 1107499 bytes\n/var/backups/cineconnect/audit-completion-20261014-first-attempt/database-pre-cutover.sql.gz 734634 bytes\n/var/backups/cineconnect/audit-completion-20261014-first-attempt/storage-pre-cutover.tar.gz 134637072 bytes\n/var/backups/cineconnect/cineconnect-20261002-020001.sql.gz 736998 bytes\n/var/backups/cineconnect/cineconnect-20261011-020001.sql.gz 742271 bytes",
+  "ufw": "Active; allows TCP 3306 from Anywhere (IPv4), plus SSH/HTTP/HTTPS and unrelated shared-host services.",
+  "certificates": "cine.nalexustechnologies.com expires 2026-12-14 14:56:04 UTC",
+  "service_states": "active\nactive\nactive",
+  "release": "/var/www/cineconnect/releases/20261014-audit2",
+  "nginx": "server {\n    server_name cine.nalexustechnologies.com;\n\n    root /var/www/cineconnect/web;\n    index index.html;\n\n    # Flutter's release bundle is large. Make sure this vhost does not inherit\n    # a per-request throttle and let Nginx stream/compress static assets.\n    limit_rate 0;\n    sendfile on;\n    tcp_nopush on;\n    gzip on;\n    gzip_vary on;\n    gzip_min_length 1024;\n    gzip_comp_level 6;\n    gzip_types\n        application/javascript\n        application/json\n        application/manifest+json\n        application/octet-stream\n        application/wasm\n        application/xml\n        font/otf\n        font/ttf\n        image/svg+xml\n        text/css\n        text/javascript\n        text/plain;\n\n    location /.well-known/acme-challenge/ {\n        root /var/www/cineconnect/bootstrap;\n        try_files $uri =404;\n    }\n\n    client_max_body_size 260m;\n\n    # Host-managed routes used by the Nalexus monitoring/SEO services.\n    include /etc/nginx/snippets/nalexus-agent.conf;\n    include /etc/nginx/snippets/nalexus-seo-agent.conf;\n\n    location ^~ /media/ {\n        proxy_pass http://127.0.0.1:5002/api/v1/media/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_read_timeout 60s;\n    }\n\n    # Keep API traffic on Gunicorn while Nginx serves the Flutter application.\n    location = /cineconnect_push.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n    location = /cineconnect_push_worker.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location /api/ {\n        proxy_pass http://127.0.0.1:5002;\n        proxy_http_version 1.1;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n        proxy_read_timeout 60s;\n        proxy_send_timeout 60s;\n    }\n\n    # Entry points must revalidate so a deployment cannot strand browsers on\n    # a stale service worker or an old HTML bootstrap file.\n    location = /index.html {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = / {\n        try_files /index.html =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = /flutter_service_worker.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = /flutter_bootstrap.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = /version.json {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = /director_tutorial.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = /director_tutorial.css {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    location = /director_tutorial_bootstrap.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, no-store, must-revalidate\" always;\n    }\n\n    # The HTML bootstrap appends the release/service-worker version to this\n    # stable filename. Cache that versioned URL so returning visits do not\n    # download the multi-megabyte Flutter bundle again; every deployment gets\n    # a different query string and therefore a fresh browser cache entry.\n    location = /main.dart.js {\n        try_files $uri =404;\n        add_header Cache-Control \"no-cache, must-revalidate\" always;\n    }\n\n    location ~* \\.(?:wasm|mjs|js|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf)$ {\n        try_files $uri =404;\n        add_header Cache-Control \"public, max-age=86400\" always;\n        access_log off;\n    }\n\n    # Flutter uses hash routes today, but this fallback also keeps path-based\n    # bookmarks and future URL-strategy routes working.\n    location / {\n        try_files $uri $uri/ /index.html;\n    }\n\n    listen [::]:443 ssl; # managed by Certbot\n    listen 443 ssl; # managed by Certbot\n    ssl_certificate /etc/letsencrypt/live/cine.nalexustechnologies.com/fullchain.pem; # managed by Certbot\n    ssl_certificate_key /etc/letsencrypt/live/cine.nalexustechnologies.com/privkey.pem; # managed by Certbot\n    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot\n    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot\n\n}\nserver {\n    if ($host = cine.nalexustechnologies.com) {\n        return 301 https://$host$request_uri;\n    } # managed by Certbot\n\n\n    listen 80;\n    listen [::]:80;\n    server_name cine.nalexustechnologies.com;\n    return 404; # managed by Certbot\n\n\n}\n"
+}

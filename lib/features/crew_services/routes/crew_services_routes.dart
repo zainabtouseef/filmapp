@@ -33,7 +33,7 @@ class CrewServicesRoutes {
 
   static String titleFor(String route) {
     return switch (route) {
-      home => 'Crew Dashboard',
+      home => 'Dashboard',
       profile => 'Service Profile',
       portfolio => 'Portfolio & Credits',
       availability => 'Availability Calendar',
@@ -42,7 +42,7 @@ class CrewServicesRoutes {
       ratings => 'Ratings & Work History',
       opportunities => 'Opportunities',
       opportunityApplicationDetail => 'Application Details',
-      _ => 'Crew Services',
+      _ => 'Production Services',
     };
   }
 

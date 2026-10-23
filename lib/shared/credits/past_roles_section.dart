@@ -258,16 +258,18 @@ class _CreditCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            [
-              entry.productionName,
-              if (entry.year != null) '${entry.year}',
-            ].join(' · '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
-          ),
+          if (entry.productionName.trim().isNotEmpty || entry.year != null)
+            Text(
+              [
+                if (entry.productionName.trim().isNotEmpty)
+                  entry.productionName,
+                if (entry.year != null) '${entry.year}',
+              ].join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  AppTextStyles.smallMeta.copyWith(color: colors.textSecondary),
+            ),
           if ((entry.roleLabel ?? '').isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
@@ -411,7 +413,7 @@ class _CreditFormDialogState extends State<_CreditFormDialog> {
               const SizedBox(height: 10),
               CoreTextField(
                 controller: _productionName,
-                label: 'Production name',
+                label: 'Production name (optional)',
                 icon: Icons.movie_outlined,
               ),
               const SizedBox(height: 10),
@@ -480,8 +482,8 @@ class _CreditFormDialogState extends State<_CreditFormDialog> {
       return;
     }
     final productionName = _productionName.text.trim();
-    if (productionName.length < 2) {
-      actorSnack(context, 'Add the production name');
+    if (productionName.isNotEmpty && productionName.length < 2) {
+      actorSnack(context, 'Use at least 2 characters for a production name');
       return;
     }
     final yearText = _year.text.trim();

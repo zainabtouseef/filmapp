@@ -1310,7 +1310,7 @@ class _BookingSchema {
     }
     if (lower.contains('crew')) {
       return const _BookingSchema(
-        title: 'Crew service details',
+        title: 'Production service details',
         icon: Icons.groups_2_outlined,
         fields: ['Service', 'Kit required', 'Travel / overtime'],
         fieldHints: [
@@ -1324,7 +1324,7 @@ class _BookingSchema {
       );
     }
     return const _BookingSchema(
-      title: 'Talent details',
+      title: 'Actor details',
       icon: Icons.theater_comedy_outlined,
       fields: ['Role / wardrobe', 'Travel', 'Scene notes'],
       fieldHints: [

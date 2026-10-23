@@ -148,7 +148,7 @@ class PortalPageHeader extends StatelessWidget {
       'marketplace',
       'discover',
       'browse',
-      'talent and resources',
+      'people and resources',
     ])) {
       return const [
         PortalHeroStat('LIVE', 'listings'),

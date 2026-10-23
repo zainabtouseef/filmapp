@@ -22,13 +22,13 @@ class AppStrings {
   static const filterAvailability = 'Available this week';
   static const filterVerifiedOnly = 'Verified only';
 
-  static const featuredTalentTitle = 'Featured Talent';
+  static const featuredTalentTitle = 'Featured People';
   static const viewAll = 'View all';
 
   static const tabAvailableThisWeek = 'Available this week';
   static const tabRisingStars = 'Rising Stars';
   static const tabTopRated = 'Top Rated';
-  static const tabNewTalents = 'New Talents';
+  static const tabNewTalents = 'New Members';
 
   static const shortlistCta = 'Add to Shortlist';
   static const bookingCta = 'Request Booking';

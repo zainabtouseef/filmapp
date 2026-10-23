@@ -85,7 +85,7 @@ class _CR02ServiceProfileScreenState extends State<CR02ServiceProfileScreen> {
             id: 'crew.profile.pricing',
             child: MarketplacePricingPreferencePanel(
               listingTypes: {'crew'},
-              title: 'Crew marketplace pricing',
+              title: 'Service pricing',
             ),
           ),
           const SizedBox(height: 12),
@@ -286,7 +286,7 @@ class _CR02ServiceProfileScreenState extends State<CR02ServiceProfileScreen> {
               ),
               const SizedBox(height: 3),
               Text(
-                'Shown to directors browsing crew requirements.',
+                'Shown to directors browsing production services.',
                 style: AppTextStyles.caption.copyWith(
                   color: colors.textSecondary,
                 ),

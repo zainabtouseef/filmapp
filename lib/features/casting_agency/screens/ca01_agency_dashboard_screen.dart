@@ -242,9 +242,9 @@ class _LiveAgencyDashboard extends StatelessWidget {
             PortalCommandAction(
               icon: Icons.person_add_alt_outlined,
               title: data.roster.isEmpty
-                  ? 'Add represented talent'
+                  ? 'Add represented artist'
                   : 'Roster ready',
-              subtitle: 'Manage represented talent profiles',
+              subtitle: 'Manage represented artist profiles',
               value: '${data.roster.length}',
               onTap: () => Navigator.pushNamed(
                 context,

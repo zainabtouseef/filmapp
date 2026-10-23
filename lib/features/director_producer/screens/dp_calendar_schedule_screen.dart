@@ -265,9 +265,9 @@ class _CallSheet extends StatelessWidget {
                     const SizedBox(height: 12),
                     _CallSheetBlock(
                       icon: Icons.groups_outlined,
-                      title: 'Crew on call',
+                      title: 'Production team on call',
                       body: crew.isEmpty
-                          ? 'No crew assigned yet.'
+                          ? 'No team members assigned yet.'
                           : crew.join(', '),
                     ),
                     const SizedBox(height: 20),

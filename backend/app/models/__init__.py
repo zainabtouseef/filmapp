@@ -41,6 +41,11 @@ from app.models.cineplanner import (
     CineScriptVersion,
     CineShootDay,
 )
+from app.models.cineplanner_access import (
+    CineAssistantMessage,
+    CineMembership,
+    CineSubscriptionPayment,
+)
 from app.models.contracts import (
     Contract,
     ContractAddendum,
@@ -208,6 +213,7 @@ __all__ = [
     "CineAIJob",
     "CineActor",
     "CineActorAvailability",
+    "CineAssistantMessage",
     "CineAuditLog",
     "CineBudgetLine",
     "CineCallSheet",
@@ -217,12 +223,14 @@ __all__ = [
     "CineCrewMember",
     "CineElement",
     "CineLocation",
+    "CineMembership",
     "CineProduction",
     "CineProductionRole",
     "CineScene",
     "CineScheduleEvent",
     "CineScriptVersion",
     "CineShootDay",
+    "CineSubscriptionPayment",
     "City",
     "Contract",
     "ContractAddendum",

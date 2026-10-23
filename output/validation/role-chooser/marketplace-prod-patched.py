@@ -1,0 +1,2252 @@
+from __future__ import annotations
+
+import json
+from decimal import Decimal
+from typing import Any
+
+from flask import Blueprint, Response, jsonify, request
+from flask.typing import ResponseReturnValue
+from sqlalchemy import func, or_, select
+
+from app.api.auth import _current_user, _json_body
+from app.errors import APIError
+from app.extensions import db
+from app.models.base import utc_now
+from app.models.files import FileAsset
+from app.models.identity import Role, User, UserRole
+from app.models.kyc import KycSubmission
+from app.models.marketplace import (
+    City,
+    CreditEntry,
+    ListingMedia,
+    MarketplaceListing,
+    ModelProfile,
+    PortfolioItem,
+    SavedSearch,
+    Shortlist,
+    ShortlistItem,
+    TalentLanguage,
+    TalentProfile,
+    UserProfile,
+)
+from app.models.operations import (
+    EquipmentItem,
+    EquipmentProviderProfile,
+    LocationProperty,
+)
+from app.models.projects import Project, ProjectMember, ProjectRequirement
+from app.models.professional import ProfessionalProfile
+from app.responses import success
+from app.services.local_storage import public_url_for
+from app.services.marketplace_categories import crew_categories, equipment_categories
+from app.services.professional_profiles import CREATIVE_FOCUS_OPTIONS
+
+marketplace_blueprint = Blueprint("marketplace", __name__)
+
+_ROLE_COVERS_KEY = "_cineconnect_role_covers"
+
+
+def _profile_links(profile: UserProfile | None) -> dict[str, Any]:
+    if profile is None or not profile.social_links_json:
+        return {}
+    try:
+        links = json.loads(profile.social_links_json)
+    except (TypeError, ValueError):
+        return {}
+    return links if isinstance(links, dict) else {}
+
+
+TALENT_LISTING_TYPES = {"talent", "actor", "model", "influencer", "singer"}
+TALENT_AVAILABILITY_CATEGORIES = {"actor", "model", "influencer", "singer"}
+PRICING_MODES = {"fixed", "negotiable", "on_request"}
+
+
+def _field_error(field: str, message: str) -> APIError:
+    return APIError(
+        "validation.invalid",
+        "Request validation failed.",
+        status=422,
+        fields={field: [message]},
+    )
+
+
+def _optional_int(value: Any, field: str) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(str(value))
+    except ValueError as exc:
+        raise _field_error(field, "Value must be an integer.") from exc
+
+
+def _json_list(value: str | None) -> list[Any]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _talent_availability_categories(profile: TalentProfile | None) -> list[str]:
+    if profile is None:
+        return ["actor"]
+    values = [
+        str(item).strip().lower()
+        for item in _json_list(profile.availability_categories_json)
+    ]
+    cleaned = [item for item in values if item in TALENT_AVAILABILITY_CATEGORIES]
+    return cleaned or ["actor"]
+
+
+def _parse_talent_availability_categories(value: Any) -> list[str]:
+    if value is None or value == "":
+        return ["actor"]
+    if not isinstance(value, list):
+        raise _field_error(
+            "availability_categories", "Availability categories must be a list."
+        )
+    cleaned: list[str] = []
+    for item in value:
+        category = str(item).strip().lower()
+        if category not in TALENT_AVAILABILITY_CATEGORIES:
+            raise _field_error(
+                "availability_categories",
+                "Use actor, model, influencer, or singer availability categories.",
+            )
+        if category not in cleaned:
+            cleaned.append(category)
+    if not cleaned:
+        raise _field_error(
+            "availability_categories", "Select at least one availability category."
+        )
+    return cleaned
+
+
+def _city_payload(city: City | None) -> dict[str, Any] | None:
+    if city is None:
+        return None
+    return {
+        "public_id": city.public_id,
+        "name": city.name,
+        "province": city.province,
+        "timezone": city.timezone,
+        "country": {
+            "iso2": city.country.iso2,
+            "name": city.country.name,
+            "currency_code": city.country.currency_code,
+        },
+    }
+
+
+def _profile_payload(profile: UserProfile | None) -> dict[str, Any]:
+    if profile is None:
+        return {
+            "bio": None,
+            "city": None,
+            "website_url": None,
+            "social_links": {},
+            "profile_visibility": "private",
+            "rating_average": "0.00",
+            "review_count": 0,
+            "avatar_file": None,
+            "cover_file": None,
+        }
+    return {
+        "bio": profile.bio,
+        "city": _city_payload(profile.city),
+        "website_url": profile.website_url,
+        "social_links": {
+            key: value for key, value in _profile_links(profile).items()
+            if key != _ROLE_COVERS_KEY
+        },
+        "profile_visibility": profile.profile_visibility,
+        "rating_average": f"{Decimal(profile.rating_average):.2f}",
+        "review_count": profile.review_count,
+        "avatar_file": _file_payload(profile.avatar_file),
+        "cover_file": _file_payload(profile.cover_file),
+    }
+
+
+def _talent_payload(profile: TalentProfile | None) -> dict[str, Any] | None:
+    if profile is None:
+        return None
+    return {
+        "public_id": profile.public_id,
+        "screen_name": profile.screen_name,
+        "age_range": profile.age_range,
+        "gender_identity": profile.gender_identity,
+        "height_cm": profile.height_cm,
+        "union_note": profile.union_note,
+        "experience_years": profile.experience_years,
+        "availability_status": profile.availability_status,
+        "day_rate_minor": profile.day_rate_minor,
+        "currency": profile.currency,
+        "resume_file": _file_payload(profile.resume_file),
+        "skills": json.loads(profile.skills_json) if profile.skills_json else [],
+        "accents": json.loads(profile.accents_json) if profile.accents_json else [],
+        "special_abilities": (
+            json.loads(profile.special_abilities_json)
+            if profile.special_abilities_json
+            else []
+        ),
+        "physical_details": (
+            json.loads(profile.physical_details_json)
+            if profile.physical_details_json
+            else {}
+        ),
+        "credits": json.loads(profile.credits_json) if profile.credits_json else [],
+        "training": (
+            json.loads(profile.training_json) if profile.training_json else []
+        ),
+        "representation": (
+            json.loads(profile.representation_json)
+            if profile.representation_json
+            else {}
+        ),
+        "social_links": (
+            json.loads(profile.social_links_json) if profile.social_links_json else {}
+        ),
+        "availability_categories": _talent_availability_categories(profile),
+        "travel_preferences": json.loads(profile.travel_preferences_json)
+        if profile.travel_preferences_json
+        else {},
+        "languages": [
+            {"language": item.language, "proficiency": item.proficiency}
+            for item in profile.languages
+        ],
+    }
+
+
+def _file_payload(file: FileAsset | None) -> dict[str, Any] | None:
+    if file is None:
+        return None
+    public_url = public_url_for(file)
+    return {
+        "public_id": file.public_id,
+        "mime_type": file.mime_type,
+        "size_bytes": file.size_bytes,
+        "visibility": file.visibility,
+        "scan_status": file.scan_status,
+        "processing_status": file.processing_status,
+        "original_name": file.original_name,
+        "download_url": f"/api/v1/files/{file.public_id}/download",
+        "public_url": public_url,
+    }
+
+
+def _listing_media_payload(media: ListingMedia) -> dict[str, Any]:
+    return {
+        "file": _file_payload(media.file),
+        "sort_order": media.sort_order,
+        "is_cover": media.is_cover,
+        "caption": media.caption,
+    }
+
+
+def _portfolio_payload(item: PortfolioItem) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "profile_type": item.profile_type,
+        "profile_id": item.profile_id,
+        "title": item.title,
+        "category": item.category,
+        "file": _file_payload(item.file),
+        "thumbnail_file": _file_payload(item.thumbnail_file),
+        "duration_seconds": item.duration_seconds,
+        "status": item.status,
+        "is_cover": item.is_cover,
+        "sort_order": item.sort_order,
+        "moderation_status": item.moderation_status,
+    }
+
+
+def _credit_payload(item: CreditEntry) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "profile_type": item.profile_type,
+        "profile_id": item.profile_id,
+        "title": item.title,
+        "production_name": item.production_name,
+        "role_label": item.role_label,
+        "year": item.year,
+        "description": item.description,
+        "cover_file": _file_payload(item.cover_file),
+        "sort_order": item.sort_order,
+        "created_at": item.created_at.isoformat(),
+    }
+
+
+def _saved_search_payload(item: SavedSearch) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "name": item.name,
+        "listing_type": item.listing_type,
+        "city": _city_payload(item.city),
+        "query_text": item.query_text,
+        "filters": json.loads(item.filters_json) if item.filters_json else {},
+        "notify_enabled": item.notify_enabled,
+        "created_at": item.created_at.isoformat(),
+    }
+
+
+def _owner_avatar_url(owner_user_id: object) -> str | None:
+    # Listings don't always have their own media attached — falling back to
+    # the owner's profile avatar means a candidate card still shows a real
+    # photo instead of just initials as soon as they've set one, without
+    # requiring them to separately pick listing cover media too.
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == owner_user_id)
+    ).scalar_one_or_none()
+    if profile is None or profile.avatar_file is None:
+        return None
+    return public_url_for(profile.avatar_file)
+
+
+def _money_label(amount_minor: int | None, currency: str = "PKR") -> str:
+    if amount_minor is None:
+        return "Rate on request"
+    whole = round(amount_minor / 100)
+    if whole >= 1_000_000:
+        return f"{currency} {whole / 1_000_000:.1f}M"
+    if whole >= 1_000:
+        return f"{currency} {round(whole / 1_000)}k"
+    return f"{currency} {whole}"
+
+
+def _normalized_pricing_mode(listing: MarketplaceListing) -> str:
+    mode = (listing.pricing_mode or "negotiable").strip().lower()
+    return mode if mode in PRICING_MODES else "negotiable"
+
+
+def _pricing_payload(
+    listing: MarketplaceListing,
+    *,
+    reveal_private_price: bool = False,
+) -> dict[str, Any]:
+    mode = _normalized_pricing_mode(listing)
+    # Talent rates are confidential even if a provider selected fixed pricing.
+    # Only owner-management responses may include configured commercial terms;
+    # booking validation still uses the unchanged stored rate and pricing mode.
+    shows_price = mode != "on_request" and (
+        reveal_private_price
+        or listing.listing_type not in TALENT_LISTING_TYPES
+        or bool(listing.public_price_visible)
+    )
+    payload: dict[str, Any] = {
+        "pricing_mode": mode,
+        "shows_price": shows_price,
+        "allows_bargaining": mode != "fixed",
+        "public_price_visible": bool(listing.public_price_visible),
+        "price_from_minor": listing.price_from_minor if shows_price else None,
+        "price_label": (
+            _money_label(listing.price_from_minor, listing.currency)
+            if shows_price
+            else "Open to offers"
+        ),
+    }
+    if reveal_private_price:
+        payload["configured_price_from_minor"] = listing.price_from_minor
+    return payload
+
+
+def _apply_pricing_mode(
+    listing: MarketplaceListing,
+    payload: dict[str, Any],
+) -> None:
+    if "pricing_mode" not in payload:
+        return
+    mode = str(payload.get("pricing_mode") or "").strip().lower()
+    if mode not in PRICING_MODES:
+        raise _field_error(
+            "pricing_mode",
+            "Use fixed, negotiable, or on_request.",
+        )
+    listing.pricing_mode = mode
+
+
+def _safe_json_dict(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        decoded = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return decoded if isinstance(decoded, dict) else {}
+
+
+def _media_kit_for_listing(listing: MarketplaceListing) -> dict[str, Any] | None:
+    if listing.listing_type not in TALENT_LISTING_TYPES:
+        return None
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == listing.owner_user_id)
+    ).scalar_one_or_none()
+    talent = db.session.execute(
+        select(TalentProfile).where(
+            TalentProfile.public_id == listing.profile_entity_id
+        )
+    ).scalar_one_or_none()
+    model_profile = None
+    if talent is None and listing.listing_type == "model":
+        model_profile = db.session.execute(
+            select(ModelProfile).where(
+                ModelProfile.public_id == listing.profile_entity_id
+            )
+        ).scalar_one_or_none()
+        talent = model_profile.talent_profile if model_profile else None
+    social_links = _safe_json_dict(talent.social_links_json if talent else None)
+    portfolio_profile_type = "model" if model_profile else "talent"
+    portfolio_profile_id = (
+        model_profile.public_id
+        if model_profile
+        else (talent.public_id if talent else "")
+    )
+    portfolio = []
+    if portfolio_profile_id:
+        portfolio = list(
+            db.session.execute(
+                select(PortfolioItem)
+                .where(
+                    PortfolioItem.profile_type == portfolio_profile_type,
+                    PortfolioItem.profile_id == portfolio_profile_id,
+                    PortfolioItem.status == "published",
+                    PortfolioItem.moderation_status == "approved",
+                )
+                .order_by(PortfolioItem.is_cover.desc(), PortfolioItem.sort_order.asc())
+                .limit(12)
+            ).scalars()
+        )
+    reels = [
+        {
+            "title": row.title,
+            "category": row.category,
+            "duration_seconds": row.duration_seconds,
+            "file": _file_payload(row.file),
+            "thumbnail_file": _file_payload(row.thumbnail_file),
+        }
+        for row in portfolio
+        if row.file is not None and row.file.mime_type.startswith("video/")
+    ]
+    if not reels:
+        reels = [
+            {
+                "title": row.title,
+                "category": row.category,
+                "duration_seconds": row.duration_seconds,
+                "file": _file_payload(row.file),
+                "thumbnail_file": _file_payload(row.thumbnail_file),
+            }
+            for row in portfolio[:6]
+            if row.file is not None
+        ]
+    pricing = _pricing_payload(listing)
+    rate_cards = [
+        {
+            "label": "Starting package",
+            "price_label": pricing["price_label"],
+            "scope": (
+                "Price shared through a private offer"
+                if not pricing["shows_price"]
+                else "Booking request starting rate"
+            ),
+            "negotiable": pricing["allows_bargaining"],
+        }
+    ]
+    if pricing["shows_price"] and talent and talent.day_rate_minor is not None:
+        rate_cards.append(
+            {
+                "label": "Day rate",
+                "price_label": _money_label(talent.day_rate_minor, talent.currency),
+                "scope": "Shoot day / campaign production",
+                "negotiable": True,
+            }
+        )
+    if pricing["shows_price"] and model_profile:
+        for rate in model_profile.usage_rates[:6]:
+            rate_cards.append(
+                {
+                    "label": rate.label,
+                    "price_label": _money_label(rate.amount_minor, rate.currency),
+                    "scope": rate.scope or "Usage package",
+                    "negotiable": rate.negotiable,
+                }
+            )
+    platforms = [
+        {"platform": key.title(), "url": str(value)}
+        for key, value in social_links.items()
+        if str(value).strip()
+    ][:6]
+    follower_values = [
+        int(str(value).replace(",", ""))
+        for key, value in social_links.items()
+        if any(token in key.lower() for token in ["followers", "audience", "reach"])
+        and str(value).replace(",", "").isdigit()
+    ]
+    return {
+        "verified": listing.verification_status
+        in {"approved", "verified", "published"},
+        "headline": "Verified media kit",
+        "reels": reels,
+        "metrics": [
+            {
+                "label": "Rating",
+                "value": f"{float(profile.rating_average):.1f}/5"
+                if profile
+                else "Not reviewed yet",
+            },
+            {"label": "Reviews", "value": str(profile.review_count if profile else 0)},
+            {"label": "Portfolio media", "value": str(len(portfolio))},
+            {"label": "Social links", "value": str(len(platforms))},
+            {
+                "label": "Declared audience",
+                "value": _money_label(sum(follower_values) * 100, "").strip()
+                if follower_values
+                else "Not provided",
+            },
+        ],
+        "audience": [
+            {"label": "Top markets", "value": "Not provided yet"},
+            {"label": "Age bands", "value": "Not provided yet"},
+            {"label": "Gender split", "value": "Not provided yet"},
+            {
+                "label": "Niche",
+                "value": ", ".join(platform["platform"] for platform in platforms)
+                or "Not provided yet",
+            },
+        ],
+        "platforms": platforms,
+        "rate_cards": rate_cards,
+        "reviews": {
+            "rating_average": float(profile.rating_average) if profile else 0,
+            "review_count": profile.review_count if profile else 0,
+        },
+    }
+
+
+def _listing_subcategories(listing: MarketplaceListing) -> list[str]:
+    if listing.listing_type == "crew":
+        return crew_categories(listing.title, listing.summary)
+    if listing.listing_type != "equipment":
+        return []
+    provider = db.session.execute(
+        select(EquipmentProviderProfile).where(
+            EquipmentProviderProfile.public_id == listing.profile_entity_id
+        )
+    ).scalar_one_or_none()
+    if provider is None:
+        return []
+    labels = (provider.service_categories or "").split(",")
+    labels.extend(
+        db.session.execute(
+            select(EquipmentItem.category).where(
+                EquipmentItem.provider_profile_id == provider.id,
+                EquipmentItem.status.in_(["available", "published", "active"]),
+            )
+        ).scalars()
+    )
+    return equipment_categories(labels)
+
+
+def _listing_payload(
+    listing: MarketplaceListing,
+    *,
+    reveal_private_price: bool = False,
+) -> dict[str, Any]:
+    pricing = _pricing_payload(
+        listing,
+        reveal_private_price=reveal_private_price,
+    )
+    payload = {
+        "public_id": listing.public_id,
+        "listing_type": listing.listing_type,
+        "profile_entity_id": listing.profile_entity_id,
+        "title": listing.title,
+        "summary": listing.summary,
+        "subcategories": _listing_subcategories(listing),
+        "city": _city_payload(listing.city),
+        "currency": listing.currency,
+        "verification_status": listing.verification_status,
+        "moderation_status": listing.moderation_status,
+        "visibility": listing.visibility,
+        "published_at": listing.published_at.isoformat()
+        if listing.published_at
+        else None,
+        "owner": {
+            "public_id": listing.owner.public_id,
+            "display_name": listing.owner.display_name,
+            "avatar_url": _owner_avatar_url(listing.owner_user_id),
+        },
+        "media": [_listing_media_payload(item) for item in listing.media],
+        **pricing,
+    }
+    media_kit = _media_kit_for_listing(listing)
+    if media_kit is not None:
+        payload["media_kit"] = media_kit
+    role_code = {
+        "actor": "actor_talent", "talent": "actor_talent", "singer": "singer",
+        "model": "model", "influencer": "influencer", "location": "location_owner",
+        "equipment": "equipment_provider", "crew": "crew_service",
+        "agency": "casting_agency", "distribution": "distribution_partner",
+    }.get(listing.listing_type)
+    if listing.listing_type == "crew" and "Writing & Scripts" in payload["subcategories"]:
+        role_code = "writer"
+    required_role = {"singer": "actor_talent", "writer": "crew_service"}.get(role_code, role_code)
+    if role_code and any(
+        assignment.role.code == required_role and assignment.status == "active"
+        for assignment in listing.owner.roles
+    ):
+        # Local import keeps the file serializer reusable by the role-profile API.
+        from app.api.professional_profiles import _read_profile, public_profile_data
+        from app.services.professional_profiles import ROLE_PROFILE_SCHEMAS
+
+        profile = _read_profile(listing.owner_user_id, role_code)
+        if profile is not None:
+            role_data = public_profile_data(profile)
+            payload["professional_sections"] = [
+                {
+                    "title": section["title"],
+                    "rows": [
+                        {"label": field["label"], "value": role_data["fields"][field["key"]]}
+                        for field in section["fields"]
+                        if role_data["fields"].get(field["key"])
+                    ],
+                }
+                for section in ROLE_PROFILE_SCHEMAS[role_code]["sections"]
+                if any(role_data["fields"].get(field["key"]) for field in section["fields"])
+            ]
+            existing_ids = {
+                (entry.get("file") or {}).get("public_id")
+                for entry in payload["media"]
+            }
+            payload["media"].extend(
+                entry for entry in role_data["media"]
+                if (entry.get("file") or {}).get("public_id") not in existing_ids
+            )
+    return payload
+
+
+def _shortlist_item_payload(item: ShortlistItem) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "listing": _listing_payload(item.listing),
+        "candidate_user": {
+            "public_id": item.candidate.public_id,
+            "display_name": item.candidate.display_name,
+        }
+        if item.candidate
+        else None,
+        "rank": item.rank,
+        "notes": item.notes,
+        "status": item.status,
+    }
+
+
+def _shortlist_payload(item: Shortlist) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "project_id": item.project_id,
+        "requirement_id": item.requirement_id,
+        "name": item.name,
+        "items": [_shortlist_item_payload(row) for row in item.items],
+        "created_at": item.created_at.isoformat(),
+    }
+
+
+def _city_by_public_id(public_id: str | None) -> City | None:
+    if not public_id:
+        return None
+    city = db.session.execute(
+        select(City).where(City.public_id == public_id, City.active.is_(True))
+    ).scalar_one_or_none()
+    if city is None:
+        raise _field_error("city_id", "Select a supported active city.")
+    return city
+
+
+def _marketplace_query_from_payload(payload: dict[str, Any]) -> Any:
+    query = select(MarketplaceListing).where(
+        MarketplaceListing.visibility == "public",
+        MarketplaceListing.moderation_status == "approved",
+    )
+    listing_type = str(payload.get("listing_type") or payload.get("type") or "").strip()
+    if listing_type:
+        if listing_type == "actor":
+            query = query.where(
+                MarketplaceListing.listing_type.in_(("actor", "talent"))
+            )
+        else:
+            query = query.where(MarketplaceListing.listing_type == listing_type)
+    city_id = str(payload.get("city_id") or payload.get("city") or "").strip()
+    if city_id:
+        query = query.join(City).where(City.public_id == city_id)
+    search = str(payload.get("q") or payload.get("query_text") or "").strip()
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                MarketplaceListing.title.ilike(pattern),
+                MarketplaceListing.summary.ilike(pattern),
+                MarketplaceListing.city.has(City.name.ilike(pattern)),
+                MarketplaceListing.owner.has(User.display_name.ilike(pattern)),
+            )
+        )
+    return query
+
+
+def _public_listing(public_id: str) -> MarketplaceListing:
+    listing = db.session.execute(
+        select(MarketplaceListing).where(
+            MarketplaceListing.public_id == public_id,
+            MarketplaceListing.visibility == "public",
+            MarketplaceListing.moderation_status == "approved",
+        )
+    ).scalar_one_or_none()
+    if listing is None:
+        raise APIError(
+            "marketplace.not_found", "Marketplace listing was not found.", status=404
+        )
+    return listing
+
+
+def _has_approved_kyc_for_role(user_id: object, role_code: str) -> bool:
+    return (
+        db.session.execute(
+            select(KycSubmission)
+            .join(Role, KycSubmission.role_id == Role.id)
+            .where(
+                KycSubmission.user_id == user_id,
+                Role.code == role_code,
+                KycSubmission.status == "approved",
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
+
+
+def _has_any_provider_kyc(user_id: object) -> bool:
+    return any(
+        _has_approved_kyc_for_role(user_id, code)
+        for code in ("actor_talent", "model", "influencer")
+    )
+
+
+def _talent_profile_for_user(user_id: object) -> TalentProfile:
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user_id)
+    ).scalar_one_or_none()
+    if profile is None:
+        raise APIError(
+            "marketplace.profile_required",
+            "Create a talent profile before using portfolio features.",
+            status=409,
+        )
+    return profile
+
+
+def _model_profile_for_user(user_id: object) -> ModelProfile:
+    profile = db.session.execute(
+        select(ModelProfile).where(ModelProfile.user_id == user_id)
+    ).scalar_one_or_none()
+    if profile is None:
+        raise APIError(
+            "marketplace.profile_required",
+            "Create a model profile before using portfolio features.",
+            status=409,
+        )
+    return profile
+
+
+def _equipment_profile_for_user(user_id: object) -> EquipmentProviderProfile:
+    profile = db.session.execute(
+        select(EquipmentProviderProfile).where(
+            EquipmentProviderProfile.user_id == user_id
+        )
+    ).scalar_one_or_none()
+    if profile is None:
+        raise APIError(
+            "marketplace.profile_required",
+            "Create an equipment provider profile before using portfolio features.",
+            status=409,
+        )
+    return profile
+
+
+def _profile_public_id_for_type(profile_type: str, user: Any) -> str:
+    if profile_type == "model":
+        return _model_profile_for_user(user.id).public_id
+    if profile_type == "equipment":
+        return _equipment_profile_for_user(user.id).public_id
+    if profile_type in ("location", "crew"):
+        # Location owners can have multiple properties, and crew members have
+        # no dedicated profile row at all, so both use a general "owner"
+        # identity keyed off the user itself rather than a profile row.
+        return str(user.public_id)
+    return _talent_profile_for_user(user.id).public_id
+
+
+def _owned_ready_file(public_id: str | None, user_id: object, field: str) -> FileAsset:
+    if not public_id:
+        raise _field_error(field, "File id is required.")
+    file = db.session.execute(
+        select(FileAsset).where(
+            FileAsset.public_id == public_id,
+            FileAsset.owner_user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if file is None:
+        raise _field_error(field, "Select a file owned by the current user.")
+    if file.scan_status != "clean" or file.processing_status != "ready":
+        raise _field_error(field, "File must be clean and ready before publishing.")
+    return file
+
+
+def _owned_profile_file(
+    public_id: str | None, user_id: object, field: str
+) -> FileAsset:
+    if not public_id:
+        raise _field_error(field, "File id is required.")
+    file = db.session.execute(
+        select(FileAsset).where(
+            FileAsset.public_id == public_id,
+            FileAsset.owner_user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if file is None:
+        raise _field_error(field, "Select a file owned by the current user.")
+    if file.scan_status not in {"pending", "clean"}:
+        raise _field_error(field, "File failed safety review. Upload another file.")
+    return file
+
+
+def _portfolio_item_for_user(public_id: str, user_id: object) -> PortfolioItem:
+    item = db.session.execute(
+        select(PortfolioItem).where(
+            PortfolioItem.public_id == public_id,
+            PortfolioItem.owner_user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise APIError(
+            "portfolio.not_found", "Portfolio item was not found.", status=404
+        )
+    return item
+
+
+def _shortlist_for_user(public_id: str, user_id: object) -> Shortlist:
+    shortlist = db.session.execute(
+        select(Shortlist).where(
+            Shortlist.public_id == public_id,
+            Shortlist.created_by == user_id,
+        )
+    ).scalar_one_or_none()
+    if shortlist is None:
+        raise APIError("shortlist.not_found", "Shortlist was not found.", status=404)
+    return shortlist
+
+
+def _shortlist_item_for_user(public_id: str, user_id: object) -> ShortlistItem:
+    item = db.session.execute(
+        select(ShortlistItem)
+        .join(Shortlist, ShortlistItem.shortlist_id == Shortlist.id)
+        .where(
+            ShortlistItem.public_id == public_id,
+            Shortlist.created_by == user_id,
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise APIError(
+            "shortlist_item.not_found",
+            "Shortlist item was not found.",
+            status=404,
+        )
+    return item
+
+
+def _validated_shortlist_scope(
+    user_id: object,
+    *,
+    project_public_id: str | None,
+    requirement_public_id: str | None,
+) -> tuple[str | None, str | None]:
+    if requirement_public_id and not project_public_id:
+        raise _field_error(
+            "project_id", "A project is required for a requirement shortlist."
+        )
+    if not project_public_id:
+        return None, None
+    project = db.session.execute(
+        select(Project)
+        .join(ProjectMember, ProjectMember.project_id == Project.id)
+        .where(
+            Project.public_id == project_public_id,
+            ProjectMember.user_id == user_id,
+            ProjectMember.status == "active",
+        )
+    ).scalar_one_or_none()
+    if project is None:
+        raise _field_error("project_id", "Select a project you can access.")
+    if requirement_public_id:
+        requirement = db.session.execute(
+            select(ProjectRequirement).where(
+                ProjectRequirement.public_id == requirement_public_id,
+                ProjectRequirement.project_id == project.id,
+            )
+        ).scalar_one_or_none()
+        if requirement is None:
+            raise _field_error(
+                "requirement_id", "Select a requirement in this project."
+            )
+    return project.public_id, requirement_public_id
+
+
+def _sync_listing_media(
+    listing: MarketplaceListing,
+    user_id: object,
+    payload: dict[str, Any],
+) -> None:
+    requested_items = payload.get("portfolio_item_ids")
+    requested_files = payload.get("media_file_ids")
+    if requested_items is None and requested_files is None:
+        return
+
+    limit = 25 if listing.listing_type == "location" else 12
+    if requested_items is not None and not isinstance(requested_items, list):
+        raise _field_error("portfolio_item_ids", "Value must be a list.")
+    if requested_files is not None and not isinstance(requested_files, list):
+        raise _field_error("media_file_ids", "Value must be a list.")
+    if len(requested_items or []) + len(requested_files or []) > limit:
+        raise _field_error("media_file_ids", f"Attach up to {limit} media files.")
+
+    media_rows: list[tuple[FileAsset, str | None]] = []
+    if requested_items is not None:
+        if not isinstance(requested_items, list):
+            raise _field_error("portfolio_item_ids", "Value must be a list.")
+        for raw_id in requested_items:
+            item = _portfolio_item_for_user(str(raw_id), user_id)
+            if item.file is None:
+                continue
+            if item.status != "published" or item.moderation_status != "approved":
+                raise _field_error(
+                    "portfolio_item_ids",
+                    "Only approved published portfolio items can be attached.",
+                )
+            if (
+                item.file.scan_status != "clean"
+                or item.file.processing_status != "ready"
+            ):
+                raise _field_error(
+                    "portfolio_item_ids",
+                    "Attached portfolio files must be clean and ready.",
+                )
+            media_rows.append((item.file, item.title))
+    if requested_files is not None:
+        if not isinstance(requested_files, list):
+            raise _field_error("media_file_ids", "Value must be a list.")
+        for raw_id in requested_files:
+            file = _owned_ready_file(str(raw_id), user_id, "media_file_ids")
+            if listing.listing_type == "location" and not file.mime_type.startswith(("image/", "video/")):
+                raise _field_error("media_file_ids", "Location media must be a photo or video.")
+            media_rows.append((file, None))
+
+    listing.media.clear()
+    seen: set[str] = set()
+    for index, (file, caption) in enumerate(media_rows, start=1):
+        if file.public_id in seen:
+            continue
+        seen.add(file.public_id)
+        listing.media.append(
+            ListingMedia(
+                file_id=file.id,
+                sort_order=index,
+                is_cover=index == 1,
+                caption=caption,
+            )
+        )
+
+
+@marketplace_blueprint.get("/cities")
+def cities() -> Response:
+    rows = db.session.execute(
+        select(City).where(City.active.is_(True)).order_by(City.name.asc())
+    ).scalars()
+    return jsonify(success({"cities": [_city_payload(city) for city in rows]}))
+
+
+@marketplace_blueprint.get("/talent/travel-preferences")
+def get_travel_preferences() -> Response:
+    user = _current_user()
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    data = (
+        json.loads(profile.travel_preferences_json)
+        if profile and profile.travel_preferences_json
+        else {"willing_to_travel": False, "radius_km": 0, "city_ids": []}
+    )
+    return jsonify(success(data))
+
+
+@marketplace_blueprint.patch("/talent/travel-preferences")
+def update_travel_preferences() -> Response:
+    user = _current_user()
+    payload = _json_body()
+    willing, radius, city_ids = (
+        payload.get("willing_to_travel"),
+        payload.get("radius_km"),
+        payload.get("city_ids"),
+    )
+    if type(willing) is not bool or type(radius) is not int or not 0 <= radius <= 1000:
+        raise _field_error(
+            "travel_preferences",
+            "Choose a travel preference and a radius between 0 and 1000 km.",
+        )
+    if (
+        not isinstance(city_ids, list)
+        or len(city_ids) > 100
+        or any(not isinstance(value, str) for value in city_ids)
+    ):
+        raise _field_error("city_ids", "Select active cities.")
+    ids = list(dict.fromkeys(city_ids))
+    cities = list(
+        db.session.execute(
+            select(City).where(City.public_id.in_(ids), City.active.is_(True))
+        ).scalars()
+    )
+    if len(cities) != len(ids):
+        raise _field_error("city_ids", "Select active cities.")
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = TalentProfile(user_id=user.id, screen_name=user.display_name)
+        db.session.add(profile)
+    data = {"willing_to_travel": willing, "radius_km": radius, "city_ids": ids}
+    profile.travel_preferences_json = json.dumps(data)
+    db.session.commit()
+    return jsonify(success(data))
+
+
+@marketplace_blueprint.get("/me/profile")
+def my_profile() -> Response:
+    user = _current_user()
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    return jsonify(success({"profile": _profile_payload(profile)}))
+
+
+@marketplace_blueprint.get("/me/role-covers")
+def my_role_covers() -> Response:
+    user = _current_user()
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    stored = _profile_links(profile).get(_ROLE_COVERS_KEY, {})
+    if not isinstance(stored, dict):
+        stored = {}
+    owned_ids = {item.role.code for item in user.roles if item.status == "active"}
+    files = db.session.execute(
+        select(FileAsset).where(
+            FileAsset.owner_user_id == user.id,
+            FileAsset.public_id.in_([value for value in stored.values() if isinstance(value, str)]),
+        )
+    ).scalars().all()
+    by_id = {file.public_id: file for file in files}
+    return jsonify(success({"covers": {
+        code: _file_payload(by_id[file_id])
+        for code, file_id in stored.items()
+        if code in owned_ids and isinstance(file_id, str)
+        and file_id in by_id and public_url_for(by_id[file_id])
+    }}))
+
+
+@marketplace_blueprint.patch("/me/role-covers/<role_code>")
+def update_my_role_cover(role_code: str) -> Response:
+    user = _current_user()
+    if not any(item.status == "active" and item.role.code == role_code for item in user.roles):
+        raise APIError("auth.role_required", "Add this role before editing its cover.", status=403)
+    payload = _json_body()
+    raw_file_id = payload.get("file_id")
+    if raw_file_id is not None and not isinstance(raw_file_id, str):
+        raise _field_error("file_id", "Select a cover image.")
+    file = None
+    if raw_file_id:
+        file = _owned_ready_file(raw_file_id, user.id, "file_id")
+        if not file.mime_type.startswith("image/") or not public_url_for(file):
+            raise _field_error("file_id", "Select a ready, public image.")
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = UserProfile(user_id=user.id, profile_visibility="private")
+        db.session.add(profile)
+    links = _profile_links(profile)
+    covers = links.get(_ROLE_COVERS_KEY, {})
+    covers = dict(covers) if isinstance(covers, dict) else {}
+    if file is None:
+        covers.pop(role_code, None)
+    else:
+        covers[role_code] = file.public_id
+    links[_ROLE_COVERS_KEY] = covers
+    profile.social_links_json = json.dumps(links)
+    db.session.commit()
+    return jsonify(success({"role_code": role_code, "cover": _file_payload(file)}))
+
+
+@marketplace_blueprint.patch("/me/profile")
+def update_my_profile() -> Response:
+    user = _current_user()
+    payload = _json_body()
+    city = _city_by_public_id(str(payload.get("city_id", "")).strip() or None)
+    visibility = str(payload.get("profile_visibility", "private")).strip()
+    if visibility not in {"private", "public"}:
+        raise _field_error(
+            "profile_visibility", "Visibility must be private or public."
+        )
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = UserProfile(user_id=user.id, profile_visibility=visibility)
+        db.session.add(profile)
+    profile.bio = str(payload.get("bio", "")).strip()[:2000] or None
+    profile.city_id = city.id if city else None
+    profile.website_url = str(payload.get("website_url", "")).strip()[:255] or None
+    profile.profile_visibility = visibility
+    if "social_links" in payload:
+        social_links = payload.get("social_links")
+        if not isinstance(social_links, dict):
+            raise _field_error("social_links", "Social links must be an object.")
+        if len(social_links) > 16:
+            raise _field_error(
+                "social_links", "Social links supports up to 16 entries."
+            )
+        existing_covers = _profile_links(profile).get(_ROLE_COVERS_KEY)
+        social_links.pop(_ROLE_COVERS_KEY, None)
+        if existing_covers:
+            social_links[_ROLE_COVERS_KEY] = existing_covers
+        profile.social_links_json = json.dumps(social_links) if social_links else None
+    if "avatar_file_id" in payload:
+        raw_avatar_id = str(payload.get("avatar_file_id") or "").strip()
+        profile.avatar_file_id = (
+            _owned_profile_file(raw_avatar_id, user.id, "avatar_file_id").id
+            if raw_avatar_id
+            else None
+        )
+    if "cover_file_id" in payload:
+        raw_cover_id = str(payload.get("cover_file_id") or "").strip()
+        profile.cover_file_id = (
+            _owned_profile_file(raw_cover_id, user.id, "cover_file_id").id
+            if raw_cover_id
+            else None
+        )
+    db.session.commit()
+    return jsonify(success({"profile": _profile_payload(profile)}))
+
+
+@marketplace_blueprint.get("/talent/profile")
+def get_talent_profile() -> Response:
+    user = _current_user()
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    return jsonify(success({"talent_profile": _talent_payload(profile)}))
+
+
+@marketplace_blueprint.patch("/talent/profile")
+def update_talent_profile() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    screen_name = str(payload.get("screen_name", "")).strip()
+    if len(screen_name) < 2:
+        raise _field_error("screen_name", "Screen name must contain 2+ characters.")
+    currency = None
+    if "currency" in payload:
+        currency = str(payload.get("currency", "")).strip().upper()
+        if len(currency) != 3:
+            raise _field_error("currency", "Currency must be a 3-letter ISO code.")
+    day_rate_minor = None
+    if "day_rate_minor" in payload:
+        day_rate_minor = _optional_int(payload.get("day_rate_minor"), "day_rate_minor")
+        if day_rate_minor is not None and day_rate_minor < 0:
+            raise _field_error("day_rate_minor", "Day rate cannot be negative.")
+
+    profile = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = TalentProfile(user_id=user.id, screen_name=screen_name)
+        db.session.add(profile)
+    profile.screen_name = screen_name
+    if "age_range" in payload:
+        profile.age_range = str(payload.get("age_range", "")).strip()[:32] or None
+    if "gender_identity" in payload:
+        profile.gender_identity = (
+            str(payload.get("gender_identity", "")).strip()[:64] or None
+        )
+    if "height_cm" in payload:
+        profile.height_cm = _optional_int(payload.get("height_cm"), "height_cm")
+    if "union_note" in payload:
+        profile.union_note = str(payload.get("union_note", "")).strip()[:255] or None
+    if "experience_years" in payload:
+        profile.experience_years = _optional_int(
+            payload.get("experience_years"), "experience_years"
+        )
+    if "availability_status" in payload:
+        profile.availability_status = str(
+            payload.get("availability_status", "")
+        ).strip()
+    if "availability_categories" in payload:
+        profile.availability_categories_json = json.dumps(
+            _parse_talent_availability_categories(
+                payload.get("availability_categories")
+            )
+        )
+    if "day_rate_minor" in payload:
+        profile.day_rate_minor = day_rate_minor
+    if currency is not None:
+        profile.currency = currency
+    if "resume_file_id" in payload:
+        raw_resume_id = str(payload.get("resume_file_id") or "").strip()
+        profile.resume_file_id = (
+            _owned_profile_file(raw_resume_id, user.id, "resume_file_id").id
+            if raw_resume_id
+            else None
+        )
+    structured_fields = {
+        "skills": ("skills_json", list, 64),
+        "accents": ("accents_json", list, 32),
+        "special_abilities": ("special_abilities_json", list, 64),
+        "physical_details": ("physical_details_json", dict, 32),
+        "credits": ("credits_json", list, 50),
+        "training": ("training_json", list, 50),
+        "representation": ("representation_json", dict, 16),
+        "social_links": ("social_links_json", dict, 16),
+    }
+    for field, (attribute, expected_type, maximum) in structured_fields.items():
+        if field not in payload:
+            continue
+        value = payload.get(field)
+        if not isinstance(value, expected_type):
+            type_label = "list" if expected_type is list else "object"
+            raise _field_error(
+                field, f"{field.replace('_', ' ').title()} must be a {type_label}."
+            )
+        if len(value) > maximum:
+            raise _field_error(
+                field,
+                f"{field.replace('_', ' ').title()} supports up to {maximum} entries.",
+            )
+        setattr(profile, attribute, json.dumps(value))
+    db.session.flush()
+
+    if "languages" in payload:
+        profile.languages.clear()
+        for item in payload.get("languages") or []:
+            if not isinstance(item, dict):
+                continue
+            language = str(item.get("language", "")).strip()
+            proficiency = str(item.get("proficiency", "conversational")).strip()
+            if language:
+                db.session.add(
+                    TalentLanguage(
+                        talent_profile_id=profile.id,
+                        language=language[:64],
+                        proficiency=proficiency[:32],
+                    )
+                )
+    db.session.commit()
+    return jsonify(success({"talent_profile": _talent_payload(profile)}))
+
+
+_PORTFOLIO_PROFILE_TYPES = {"talent", "model", "location", "equipment", "crew"}
+
+
+@marketplace_blueprint.get("/portfolio")
+def portfolio_items() -> Response:
+    user = _current_user()
+    profile_type = request.args.get("profile_type", "talent")
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported portfolio profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
+    rows = db.session.execute(
+        select(PortfolioItem)
+        .where(
+            PortfolioItem.owner_user_id == user.id,
+            PortfolioItem.profile_type == profile_type,
+            PortfolioItem.profile_id == profile_id,
+        )
+        .order_by(PortfolioItem.sort_order.asc(), PortfolioItem.created_at.desc())
+    ).scalars()
+    return jsonify(success({"items": [_portfolio_payload(item) for item in rows]}))
+
+
+@marketplace_blueprint.post("/portfolio")
+def create_portfolio_item() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    profile_type = str(payload.get("profile_type", "talent")).strip()
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported portfolio profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
+    title = str(payload.get("title", "")).strip()
+    if len(title) < 2:
+        raise _field_error("title", "Portfolio title is required.")
+    category = str(payload.get("category", "showreel")).strip()[:64] or "showreel"
+    file = _owned_ready_file(
+        str(payload.get("file_id", "")).strip(), user.id, "file_id"
+    )
+    thumbnail_file = None
+    if str(payload.get("thumbnail_file_id", "")).strip():
+        thumbnail_file = _owned_ready_file(
+            str(payload.get("thumbnail_file_id", "")).strip(),
+            user.id,
+            "thumbnail_file_id",
+        )
+    status = str(payload.get("status", "published")).strip()
+    if status not in {"draft", "published"}:
+        raise _field_error("status", "Status must be draft or published.")
+    media_kind = (
+        "image"
+        if file.mime_type.startswith("image/")
+        else "video"
+        if file.mime_type.startswith("video/")
+        else None
+    )
+    if media_kind is None:
+        raise _field_error("file_id", "Portfolio items must be an image or video file.")
+    existing_kind_count = db.session.execute(
+        select(func.count())
+        .select_from(PortfolioItem)
+        .join(FileAsset, PortfolioItem.file_id == FileAsset.id)
+        .where(
+            PortfolioItem.owner_user_id == user.id,
+            PortfolioItem.profile_type == profile_type,
+            PortfolioItem.profile_id == profile_id,
+            FileAsset.mime_type.like(f"{media_kind}/%"),
+        )
+    ).scalar_one()
+    max_per_kind = 25 if profile_type == "location" else 3
+    if profile_type == "location":
+        existing_kind_count = db.session.execute(
+            select(func.count()).select_from(PortfolioItem).where(
+                PortfolioItem.owner_user_id == user.id,
+                PortfolioItem.profile_type == profile_type,
+                PortfolioItem.profile_id == profile_id,
+            )
+        ).scalar_one()
+    if existing_kind_count >= max_per_kind:
+        raise _field_error(
+            "file_id",
+            f"You already have {max_per_kind} media files. Remove one to add another.",
+        )
+    item = PortfolioItem(
+        owner_user_id=user.id,
+        profile_type=profile_type,
+        profile_id=profile_id,
+        title=title[:180],
+        category=category,
+        file_id=file.id,
+        thumbnail_file_id=thumbnail_file.id if thumbnail_file else None,
+        duration_seconds=_optional_int(
+            payload.get("duration_seconds"), "duration_seconds"
+        ),
+        status=status,
+        is_cover=bool(payload.get("is_cover", False)),
+        sort_order=_optional_int(payload.get("sort_order"), "sort_order") or 100,
+        moderation_status="approved",
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(success({"item": _portfolio_payload(item)})), 201
+
+
+@marketplace_blueprint.patch("/portfolio/<public_id>")
+def update_portfolio_item(public_id: str) -> Response:
+    user = _current_user()
+    payload = _json_body()
+    item = _portfolio_item_for_user(public_id, user.id)
+    if "title" in payload:
+        title = str(payload.get("title", "")).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Portfolio title is required.")
+        item.title = title[:180]
+    if "category" in payload:
+        item.category = str(payload.get("category", "showreel")).strip()[:64]
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip()
+        if status not in {"draft", "published"}:
+            raise _field_error("status", "Status must be draft or published.")
+        item.status = status
+    if "is_cover" in payload:
+        if not isinstance(payload["is_cover"], bool):
+            raise _field_error("is_cover", "Choose on or off.")
+        item.is_cover = payload["is_cover"]
+    if "sort_order" in payload:
+        item.sort_order = _optional_int(payload.get("sort_order"), "sort_order") or 100
+    if "file_id" in payload:
+        item.file_id = _owned_ready_file(
+            str(payload.get("file_id", "")).strip(), user.id, "file_id"
+        ).id
+    if item.profile_type == "equipment" and payload.get("is_cover") is True:
+        selected_file = db.session.get(FileAsset, item.file_id)
+        if selected_file is None or not selected_file.mime_type.startswith("image/"):
+            raise _field_error("is_cover", "Choose a photo for the marketplace cover.")
+        if item.status != "published" or item.moderation_status != "approved":
+            raise _field_error("is_cover", "Publish an approved photo first.")
+        photos = (
+            db.session.execute(
+                select(PortfolioItem)
+                .where(
+                    PortfolioItem.owner_user_id == user.id,
+                    PortfolioItem.profile_type == "equipment",
+                    PortfolioItem.profile_id == item.profile_id,
+                    PortfolioItem.status == "published",
+                    PortfolioItem.moderation_status == "approved",
+                )
+                .order_by(PortfolioItem.sort_order.asc())
+            )
+            .scalars()
+            .all()
+        )
+        photos = [
+            photo
+            for photo in photos
+            if photo.file is not None and photo.file.mime_type.startswith("image/")
+        ]
+        for photo in photos:
+            photo.is_cover = photo.id == item.id
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "equipment",
+                MarketplaceListing.profile_entity_id == item.profile_id,
+            )
+        ).scalar_one_or_none()
+        if listing is not None:
+            existing = sorted(listing.media, key=lambda media: media.sort_order)
+            selected = next(
+                (media for media in existing if media.file_id == item.file_id), None
+            )
+            if selected is None:
+                if len(existing) >= 12:
+                    raise _field_error(
+                        "is_cover",
+                        "Remove a listing photo before choosing a new cover.",
+                    )
+                selected = ListingMedia(
+                    file_id=item.file_id,
+                    caption=item.title,
+                    sort_order=0,
+                    is_cover=True,
+                )
+                listing.media.append(selected)
+            for index, media in enumerate(
+                [selected, *[media for media in existing if media is not selected]],
+                start=1,
+            ):
+                media.sort_order = index
+                media.is_cover = media is selected
+    db.session.commit()
+    return jsonify(success({"item": _portfolio_payload(item)}))
+
+
+@marketplace_blueprint.delete("/portfolio/<public_id>")
+def delete_portfolio_item(public_id: str) -> Response:
+    user = _current_user()
+    item = _portfolio_item_for_user(public_id, user.id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify(success({"deleted": True}))
+
+
+_CREDIT_CAP = 20
+
+
+def _credit_entry_for_user(public_id: str, user_id: object) -> CreditEntry:
+    item = db.session.execute(
+        select(CreditEntry).where(
+            CreditEntry.public_id == public_id,
+            CreditEntry.owner_user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise APIError("credits.not_found", "Credit entry was not found.", status=404)
+    return item
+
+
+@marketplace_blueprint.get("/credits")
+def credit_entries() -> Response:
+    user = _current_user()
+    profile_type = request.args.get("profile_type", "talent")
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported credits profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
+    rows = db.session.execute(
+        select(CreditEntry)
+        .where(
+            CreditEntry.owner_user_id == user.id,
+            CreditEntry.profile_type == profile_type,
+            CreditEntry.profile_id == profile_id,
+        )
+        .order_by(CreditEntry.sort_order.asc(), CreditEntry.created_at.desc())
+    ).scalars()
+    return jsonify(success({"items": [_credit_payload(item) for item in rows]}))
+
+
+@marketplace_blueprint.post("/credits")
+def create_credit_entry() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    profile_type = str(payload.get("profile_type", "talent")).strip()
+    if profile_type not in _PORTFOLIO_PROFILE_TYPES:
+        raise _field_error("profile_type", "Unsupported credits profile type.")
+    profile_id = _profile_public_id_for_type(profile_type, user)
+    title = str(payload.get("title", "")).strip()
+    if len(title) < 2:
+        raise _field_error("title", "Credit title is required.")
+    production_name = str(payload.get("production_name", "")).strip()
+    if production_name and len(production_name) < 2:
+        raise _field_error("production_name", "Use at least 2 characters for a production name.")
+    cover_file = None
+    raw_cover_id = str(payload.get("cover_file_id", "")).strip()
+    if raw_cover_id:
+        cover_file = _owned_ready_file(raw_cover_id, user.id, "cover_file_id")
+        if not cover_file.mime_type.startswith("image/"):
+            raise _field_error("cover_file_id", "Cover must be an image file.")
+    existing_count = db.session.execute(
+        select(func.count())
+        .select_from(CreditEntry)
+        .where(
+            CreditEntry.owner_user_id == user.id,
+            CreditEntry.profile_type == profile_type,
+            CreditEntry.profile_id == profile_id,
+        )
+    ).scalar_one()
+    if existing_count >= _CREDIT_CAP:
+        raise _field_error(
+            "title",
+            f"You already have {_CREDIT_CAP} credits. Remove one to add another.",
+        )
+    item = CreditEntry(
+        owner_user_id=user.id,
+        profile_type=profile_type,
+        profile_id=profile_id,
+        title=title[:180],
+        production_name=production_name[:180],
+        role_label=str(payload.get("role_label", "")).strip()[:180] or None,
+        year=_optional_int(payload.get("year"), "year"),
+        description=str(payload.get("description", "")).strip()[:2000] or None,
+        cover_file_id=cover_file.id if cover_file else None,
+        sort_order=_optional_int(payload.get("sort_order"), "sort_order") or 100,
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(success({"item": _credit_payload(item)})), 201
+
+
+@marketplace_blueprint.patch("/credits/<public_id>")
+def update_credit_entry(public_id: str) -> Response:
+    user = _current_user()
+    payload = _json_body()
+    item = _credit_entry_for_user(public_id, user.id)
+    if "title" in payload:
+        title = str(payload.get("title", "")).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Credit title is required.")
+        item.title = title[:180]
+    if "production_name" in payload:
+        production_name = str(payload.get("production_name", "")).strip()
+        if production_name and len(production_name) < 2:
+            raise _field_error("production_name", "Use at least 2 characters for a production name.")
+        item.production_name = production_name[:180]
+    if "role_label" in payload:
+        item.role_label = str(payload.get("role_label", "")).strip()[:180] or None
+    if "year" in payload:
+        item.year = _optional_int(payload.get("year"), "year")
+    if "description" in payload:
+        item.description = str(payload.get("description", "")).strip()[:2000] or None
+    if "sort_order" in payload:
+        item.sort_order = _optional_int(payload.get("sort_order"), "sort_order") or 100
+    if "cover_file_id" in payload:
+        raw_cover_id = str(payload.get("cover_file_id", "")).strip()
+        if raw_cover_id:
+            cover_file = _owned_ready_file(raw_cover_id, user.id, "cover_file_id")
+            if not cover_file.mime_type.startswith("image/"):
+                raise _field_error("cover_file_id", "Cover must be an image file.")
+            item.cover_file_id = cover_file.id
+        else:
+            item.cover_file_id = None
+    db.session.commit()
+    return jsonify(success({"item": _credit_payload(item)}))
+
+
+@marketplace_blueprint.delete("/credits/<public_id>")
+def delete_credit_entry(public_id: str) -> Response:
+    user = _current_user()
+    item = _credit_entry_for_user(public_id, user.id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify(success({"deleted": True}))
+
+
+@marketplace_blueprint.get("/saved-searches")
+def saved_searches() -> Response:
+    user = _current_user()
+    rows = db.session.execute(
+        select(SavedSearch)
+        .where(SavedSearch.owner_user_id == user.id)
+        .order_by(SavedSearch.created_at.desc())
+    ).scalars()
+    return jsonify(
+        success({"saved_searches": [_saved_search_payload(row) for row in rows]})
+    )
+
+
+@marketplace_blueprint.post("/saved-searches")
+def create_saved_search() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    name = str(payload.get("name", "")).strip()
+    if len(name) < 2:
+        raise _field_error("name", "Saved search name is required.")
+    city = _city_by_public_id(str(payload.get("city_id", "")).strip() or None)
+    listing_type = str(payload.get("listing_type", "")).strip() or None
+    supported_listing_types = {
+        "actor",
+        "model",
+        "influencer",
+        "singer",
+        "location",
+        "equipment",
+        "agency",
+        "distribution",
+        "talent",
+    }
+    if listing_type and listing_type not in supported_listing_types:
+        raise _field_error("listing_type", "Unsupported saved-search listing type.")
+    filters = payload.get("filters") or {}
+    if not isinstance(filters, dict):
+        raise _field_error("filters", "Filters must be an object.")
+    item = SavedSearch(
+        owner_user_id=user.id,
+        name=name[:120],
+        listing_type=listing_type,
+        city_id=city.id if city else None,
+        query_text=str(payload.get("query_text", "")).strip()[:255] or None,
+        filters_json=json.dumps(filters, sort_keys=True),
+        notify_enabled=bool(payload.get("notify_enabled", False)),
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(success({"saved_search": _saved_search_payload(item)})), 201
+
+
+@marketplace_blueprint.delete("/saved-searches/<public_id>")
+def delete_saved_search(public_id: str) -> Response:
+    user = _current_user()
+    item = db.session.execute(
+        select(SavedSearch).where(
+            SavedSearch.public_id == public_id,
+            SavedSearch.owner_user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise APIError(
+            "saved_search.not_found", "Saved search was not found.", status=404
+        )
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify(success({"deleted": True}))
+
+
+@marketplace_blueprint.get("/shortlists")
+def shortlists() -> Response:
+    user = _current_user()
+    rows = db.session.execute(
+        select(Shortlist)
+        .where(Shortlist.created_by == user.id)
+        .order_by(Shortlist.created_at.desc())
+    ).scalars()
+    return jsonify(success({"shortlists": [_shortlist_payload(row) for row in rows]}))
+
+
+@marketplace_blueprint.post("/shortlists")
+def create_shortlist() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    name = str(payload.get("name", "")).strip()
+    if len(name) < 2:
+        raise _field_error("name", "Shortlist name is required.")
+    project_id, requirement_id = _validated_shortlist_scope(
+        user.id,
+        project_public_id=str(payload.get("project_id", "")).strip()[:40] or None,
+        requirement_public_id=str(payload.get("requirement_id", "")).strip()[:40]
+        or None,
+    )
+    item = Shortlist(
+        created_by=user.id,
+        name=name[:160],
+        project_id=project_id,
+        requirement_id=requirement_id,
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(success({"shortlist": _shortlist_payload(item)})), 201
+
+
+@marketplace_blueprint.post("/shortlists/<public_id>/items")
+def add_shortlist_item(public_id: str) -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    shortlist = _shortlist_for_user(public_id, user.id)
+    listing = _public_listing(str(payload.get("listing_id", "")).strip())
+    existing = db.session.execute(
+        select(ShortlistItem).where(
+            ShortlistItem.shortlist_id == shortlist.id,
+            ShortlistItem.listing_id == listing.id,
+        )
+    ).scalar_one_or_none()
+    rank = _optional_int(payload.get("rank"), "rank")
+    if existing is None:
+        existing = ShortlistItem(
+            shortlist_id=shortlist.id,
+            listing_id=listing.id,
+            candidate_user_id=listing.owner_user_id,
+            rank=rank or len(shortlist.items) + 1,
+            status=str(payload.get("status", "active")).strip() or "active",
+        )
+        db.session.add(existing)
+        status_code = 201
+    else:
+        if rank is not None:
+            existing.rank = rank
+        status_code = 200
+    if "notes" in payload:
+        existing.notes = str(payload.get("notes", "")).strip()[:2000] or None
+    db.session.commit()
+    return jsonify(success({"item": _shortlist_item_payload(existing)})), status_code
+
+
+@marketplace_blueprint.patch("/shortlist-items/<public_id>")
+def update_shortlist_item(public_id: str) -> Response:
+    user = _current_user()
+    payload = _json_body()
+    item = _shortlist_item_for_user(public_id, user.id)
+    if "rank" in payload:
+        item.rank = _optional_int(payload.get("rank"), "rank") or item.rank
+    if "notes" in payload:
+        item.notes = str(payload.get("notes", "")).strip()[:2000] or None
+    if "status" in payload:
+        status = str(payload.get("status", "")).strip()
+        if status not in {"active", "selected", "rejected", "archived"}:
+            raise _field_error("status", "Unsupported shortlist item status.")
+        item.status = status
+    db.session.commit()
+    return jsonify(success({"item": _shortlist_item_payload(item)}))
+
+
+@marketplace_blueprint.delete("/shortlist-items/<public_id>")
+def delete_shortlist_item(public_id: str) -> Response:
+    user = _current_user()
+    item = _shortlist_item_for_user(public_id, user.id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify(success({"deleted": True}))
+
+
+@marketplace_blueprint.post("/marketplace/listings")
+def publish_listing() -> ResponseReturnValue:
+    user = _current_user()
+    payload = _json_body()
+    listing_type = str(payload.get("listing_type", "")).strip()
+    if listing_type not in TALENT_LISTING_TYPES | {"location", "equipment", "crew"}:
+        raise _field_error(
+            "listing_type",
+            "Only actor, model, influencer, singer, talent, crew, location and equipment "
+            "listings can be published.",
+        )
+    if listing_type == "location":
+        property_id = str(
+            payload.get("profile_entity_id") or payload.get("property_id") or ""
+        ).strip()
+        location = db.session.execute(
+            select(LocationProperty).where(
+                LocationProperty.public_id == property_id,
+                LocationProperty.owner_user_id == user.id,
+            )
+        ).scalar_one_or_none()
+        if location is None:
+            raise APIError(
+                "marketplace.profile_required",
+                "Create or select a location property before publishing.",
+                status=409,
+            )
+        title = str(payload.get("title") or location.name).strip()
+        summary = str(
+            payload.get("summary")
+            or location.description
+            or (
+                f"{location.name} is available for film and commercial "
+                "productions in "
+                f"{location.area_name or location.public_address or 'Pakistan'}."
+            )
+        ).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Listing title is required.")
+        if len(summary) < 10:
+            raise _field_error(
+                "summary", "Listing summary must contain 10+ characters."
+            )
+        requested_city = str(payload.get("city_id", "")).strip()
+        city = _city_by_public_id(requested_city) if requested_city else location.city
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "location",
+                MarketplaceListing.profile_entity_id == location.public_id,
+            )
+        ).scalar_one_or_none()
+        if listing is None:
+            listing = MarketplaceListing(
+                owner_user_id=user.id,
+                listing_type="location",
+                profile_entity_id=location.public_id,
+                verification_status="unverified",
+                moderation_status="approved",
+                visibility="public",
+            )
+            db.session.add(listing)
+        enabled_prices = [
+            price.amount_minor for price in location.pricing if price.enabled
+        ]
+        listing.title = title[:180]
+        listing.summary = summary[:2000]
+        listing.city_id = city.id if city else location.city_id
+        listing.price_from_minor = min(enabled_prices) if enabled_prices else None
+        listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        _apply_pricing_mode(listing, payload)
+        listing.published_at = listing.published_at or utc_now()
+        location.status = "published"
+        db.session.flush()
+        _sync_listing_media(listing, user.id, payload)
+        db.session.commit()
+        return jsonify(success({"listing": _listing_payload(listing)})), 201
+    if listing_type == "equipment":
+        profile = _equipment_profile_for_user(user.id)
+        if profile.verification_status not in {"approved", "verified", "active"}:
+            raise APIError(
+                "marketplace.kyc_required",
+                "Verified equipment-provider status is required before publishing.",
+                status=403,
+            )
+        title = str(payload.get("title") or profile.name).strip()
+        summary = str(
+            payload.get("summary")
+            or profile.bio
+            or profile.coverage
+            or "Production equipment and camera services."
+        ).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Listing title is required.")
+        if len(summary) < 10:
+            raise _field_error(
+                "summary", "Listing summary must contain 10+ characters."
+            )
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "equipment",
+                MarketplaceListing.profile_entity_id == profile.public_id,
+            )
+        ).scalar_one_or_none()
+        if listing is None:
+            listing = MarketplaceListing(
+                owner_user_id=user.id,
+                listing_type="equipment",
+                profile_entity_id=profile.public_id,
+                verification_status=profile.verification_status,
+                moderation_status="approved",
+                visibility="public",
+            )
+            db.session.add(listing)
+        available_rates = [
+            rate
+            for rate in db.session.execute(
+                select(EquipmentItem.day_rate_minor).where(
+                    EquipmentItem.provider_profile_id == profile.id,
+                    EquipmentItem.status.in_({"available", "published", "active"}),
+                    EquipmentItem.day_rate_minor.is_not(None),
+                )
+            ).scalars()
+            if rate is not None
+        ]
+        listing.title = title[:180]
+        listing.summary = summary[:2000]
+        listing.city_id = profile.city_id
+        listing.price_from_minor = min(available_rates) if available_rates else None
+        listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        _apply_pricing_mode(listing, payload)
+        listing.published_at = listing.published_at or utc_now()
+        db.session.flush()
+        _sync_listing_media(listing, user.id, payload)
+        if not listing.media:
+            cover = db.session.execute(
+                select(PortfolioItem).where(
+                    PortfolioItem.owner_user_id == user.id,
+                    PortfolioItem.profile_type == "equipment",
+                    PortfolioItem.profile_id == profile.public_id,
+                    PortfolioItem.is_cover.is_(True),
+                    PortfolioItem.status == "published",
+                    PortfolioItem.moderation_status == "approved",
+                )
+            ).scalar_one_or_none()
+            if cover is not None:
+                _sync_listing_media(
+                    listing, user.id, {"portfolio_item_ids": [cover.public_id]}
+                )
+        db.session.commit()
+        return jsonify(success({"listing": _listing_payload(listing)})), 201
+    if listing_type == "crew":
+        has_crew_role = any(
+            row.status == "active" and row.role.code == "crew_service"
+            for row in user.roles
+        )
+        if not has_crew_role:
+            raise APIError(
+                "marketplace.role_required",
+                "A crew-service role is required to publish a crew listing.",
+                status=403,
+            )
+        if not _has_approved_kyc_for_role(user.id, "crew_service"):
+            raise APIError(
+                "marketplace.kyc_required",
+                "Approved crew-provider KYC is required before publishing.",
+                status=403,
+            )
+        title = str(payload.get("title") or user.display_name).strip()
+        summary = str(payload.get("summary", "")).strip()
+        if len(title) < 2:
+            raise _field_error("title", "Listing title is required.")
+        if len(summary) < 10:
+            raise _field_error(
+                "summary", "Listing summary must contain 10+ characters."
+            )
+        crew_user_profile = db.session.execute(
+            select(UserProfile).where(UserProfile.user_id == user.id)
+        ).scalar_one_or_none()
+        requested_city = str(payload.get("city_id", "")).strip()
+        city = _city_by_public_id(requested_city) if requested_city else None
+        listing = db.session.execute(
+            select(MarketplaceListing).where(
+                MarketplaceListing.owner_user_id == user.id,
+                MarketplaceListing.listing_type == "crew",
+                MarketplaceListing.profile_entity_id == user.public_id,
+            )
+        ).scalar_one_or_none()
+        if listing is None:
+            listing = MarketplaceListing(
+                owner_user_id=user.id,
+                listing_type="crew",
+                profile_entity_id=user.public_id,
+                verification_status="approved",
+                moderation_status="approved",
+                visibility="public",
+            )
+            db.session.add(listing)
+        day_rate = _optional_int(payload.get("price_from_minor"), "price_from_minor")
+        if day_rate is not None and day_rate < 0:
+            raise _field_error("price_from_minor", "Rate cannot be negative.")
+        listing.title = title[:180]
+        listing.summary = summary[:2000]
+        listing.city_id = (
+            city.id
+            if city
+            else (crew_user_profile.city_id if crew_user_profile else None)
+        )
+        listing.price_from_minor = day_rate
+        listing.currency = str(payload.get("currency", "PKR")).strip().upper()[:3]
+        _apply_pricing_mode(listing, payload)
+        listing.published_at = listing.published_at or utc_now()
+        db.session.flush()
+        _sync_listing_media(listing, user.id, payload)
+        db.session.commit()
+        return jsonify(success({"listing": _listing_payload(listing)})), 201
+    if not _has_any_provider_kyc(user.id):
+        raise APIError(
+            "marketplace.kyc_required",
+            "Approved provider KYC is required before publishing actor, model, "
+            "influencer, or singer listings.",
+            status=403,
+        )
+    talent = db.session.execute(
+        select(TalentProfile).where(TalentProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if talent is None:
+        raise APIError(
+            "marketplace.profile_required",
+            "Create a talent profile before publishing.",
+            status=409,
+        )
+    selected_categories = _talent_availability_categories(talent)
+    normalized_listing_type = "actor" if listing_type == "talent" else listing_type
+    if normalized_listing_type not in selected_categories:
+        raise _field_error(
+            "listing_type",
+            "Enable this availability category on your profile before publishing it.",
+        )
+    title = str(payload.get("title") or talent.screen_name).strip()
+    summary = str(payload.get("summary", "")).strip()
+    if len(title) < 2:
+        raise _field_error("title", "Listing title is required.")
+    if len(summary) < 10:
+        raise _field_error("summary", "Listing summary must contain 10+ characters.")
+    city = _city_by_public_id(str(payload.get("city_id", "")).strip() or None)
+    listing = db.session.execute(
+        select(MarketplaceListing).where(
+            MarketplaceListing.owner_user_id == user.id,
+            MarketplaceListing.listing_type == listing_type,
+            MarketplaceListing.profile_entity_id == talent.public_id,
+        )
+    ).scalar_one_or_none()
+    if listing is None:
+        listing = MarketplaceListing(
+            owner_user_id=user.id,
+            listing_type=listing_type,
+            profile_entity_id=talent.public_id,
+            verification_status="approved",
+            moderation_status="approved",
+            visibility="public",
+        )
+        db.session.add(listing)
+    listing.title = title[:180]
+    listing.summary = summary[:2000]
+    listing.city_id = city.id if city else None
+    listing.price_from_minor = talent.day_rate_minor
+    listing.currency = talent.currency
+    _apply_pricing_mode(listing, payload)
+    listing.published_at = listing.published_at or utc_now()
+    db.session.flush()
+    _sync_listing_media(listing, user.id, payload)
+    db.session.commit()
+    return jsonify(success({"listing": _listing_payload(listing)})), 201
+
+
+@marketplace_blueprint.get("/marketplace/creative-leaders")
+def creative_leaders() -> Response:
+    """Public, non-bookable profiles with a declared Director/Producer focus."""
+    profiles = db.session.execute(
+        select(ProfessionalProfile, User)
+        .join(User, ProfessionalProfile.user_id == User.id)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(
+            ProfessionalProfile.role_code == "director_producer",
+            User.status == "active",
+            UserRole.status == "active",
+            Role.code == "director_producer",
+            Role.is_active.is_(True),
+        )
+        .order_by(User.display_name, User.id)
+    ).all()
+    leaders: list[dict[str, Any]] = []
+    for profile, user in profiles:
+        try:
+            fields = json.loads(profile.fields_json)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(fields, dict) or fields.get("focus") not in CREATIVE_FOCUS_OPTIONS:
+            continue
+        verified = db.session.scalar(
+            select(KycSubmission.id)
+            .join(Role, Role.id == KycSubmission.role_id)
+            .where(
+                KycSubmission.user_id == user.id,
+                KycSubmission.status == "approved",
+                Role.code == "director_producer",
+            )
+            .limit(1)
+        ) is not None
+        leaders.append({
+            "user_id": user.public_id,
+            "username": user.username,
+            "name": user.display_name,
+            "focus": fields["focus"],
+            "headline": str(fields.get("headline") or "").strip()[:180],
+            "avatar_url": _owner_avatar_url(user.id),
+            "profile_path": f"/profile/public/{user.username}/director_producer",
+            "verified": verified,
+            "bookable": False,
+        })
+    return jsonify(success({"leaders": leaders}))
+
+
+@marketplace_blueprint.get("/marketplace/listings")
+def marketplace_listings() -> Response:
+    query = _marketplace_query_from_payload(
+        {
+            "type": request.args.get("type"),
+            "city": request.args.get("city"),
+            "q": request.args.get("q"),
+        }
+    )
+    try:
+        page = max(int(request.args.get("page", 1) or 1), 1)
+        per_page = min(max(int(request.args.get("per_page", 24) or 24), 1), 50)
+    except ValueError:
+        raise _field_error("page", "Pagination values must be integers.") from None
+    total = db.session.execute(
+        select(func.count()).select_from(query.subquery())
+    ).scalar_one()
+    listings = list(
+        db.session.execute(
+            query.order_by(MarketplaceListing.published_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+        ).scalars()
+    )
+    return jsonify(
+        success(
+            {
+                "listings": [_listing_payload(item) for item in listings],
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": total,
+                    "has_more": page * per_page < total,
+                },
+            }
+        )
+    )
+
+
+@marketplace_blueprint.get("/marketplace/listings/<public_id>")
+def marketplace_listing_detail(public_id: str) -> Response:
+    listing = db.session.execute(
+        select(MarketplaceListing)
+        .where(
+            (
+                (MarketplaceListing.public_id == public_id)
+                | (MarketplaceListing.profile_entity_id == public_id)
+            ),
+            MarketplaceListing.visibility == "public",
+            MarketplaceListing.moderation_status == "approved",
+        )
+        .order_by(MarketplaceListing.published_at.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    if listing is None:
+        raise APIError(
+            "marketplace.not_found", "Marketplace listing was not found.", status=404
+        )
+    return jsonify(success({"listing": _listing_payload(listing)}))
+
+
+@marketplace_blueprint.get("/marketplace/my-listings")
+def my_marketplace_listings() -> Response:
+    user = _current_user()
+    query = select(MarketplaceListing).where(
+        MarketplaceListing.owner_user_id == user.id,
+    )
+    listing_type = str(request.args.get("type") or "").strip().lower()
+    if listing_type:
+        listing_types = (
+            {"actor", "talent"} if listing_type == "actor" else {listing_type}
+        )
+        query = query.where(MarketplaceListing.listing_type.in_(listing_types))
+    rows = list(
+        db.session.execute(
+            query.order_by(MarketplaceListing.updated_at.desc()).limit(100)
+        ).scalars()
+    )
+    return jsonify(
+        success(
+            {
+                "listings": [
+                    _listing_payload(item, reveal_private_price=True) for item in rows
+                ]
+            }
+        )
+    )
+
+
+@marketplace_blueprint.patch("/marketplace/listings/<public_id>/pricing")
+def update_marketplace_listing_pricing(public_id: str) -> Response:
+    user = _current_user()
+    listing = db.session.execute(
+        select(MarketplaceListing).where(
+            MarketplaceListing.public_id == public_id,
+            MarketplaceListing.owner_user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if listing is None:
+        raise APIError(
+            "marketplace.not_found",
+            "Marketplace listing was not found.",
+            status=404,
+        )
+    payload = _json_body()
+    _apply_pricing_mode(listing, payload)
+    if "public_price_visible" in payload:
+        visible = payload["public_price_visible"]
+        if not isinstance(visible, bool):
+            raise _field_error("public_price_visible", "Choose on or off.")
+        listing.public_price_visible = visible
+    if "price_from_minor" in payload:
+        amount = _optional_int(payload.get("price_from_minor"), "price_from_minor")
+        if amount is not None and amount <= 0:
+            raise _field_error("price_from_minor", "Rate must be positive.")
+        listing.price_from_minor = amount
+    if "currency" in payload:
+        currency = str(payload.get("currency") or "").strip().upper()
+        if len(currency) != 3:
+            raise _field_error("currency", "Currency must be a 3-letter ISO code.")
+        listing.currency = currency
+    mode = _normalized_pricing_mode(listing)
+    if mode in {"fixed", "negotiable"} and listing.price_from_minor is None:
+        raise _field_error(
+            "price_from_minor",
+            "Add a price before making it public.",
+        )
+    db.session.commit()
+    return jsonify(
+        success({"listing": _listing_payload(listing, reveal_private_price=True)})
+    )
+
+
+@marketplace_blueprint.post("/marketplace/result-count")
+def marketplace_result_count() -> Response:
+    payload = _json_body()
+    count = db.session.execute(
+        select(func.count()).select_from(
+            _marketplace_query_from_payload(payload).subquery()
+        )
+    ).scalar_one()
+    return jsonify(success({"count": count}))
+
+
+@marketplace_blueprint.get("/marketplace/facets")
+def marketplace_facets() -> Response:
+    listing_counts = db.session.execute(
+        select(MarketplaceListing.listing_type, func.count(MarketplaceListing.id))
+        .where(
+            MarketplaceListing.visibility == "public",
+            MarketplaceListing.moderation_status == "approved",
+        )
+        .group_by(MarketplaceListing.listing_type)
+    ).all()
+    cities = db.session.execute(
+        select(City).where(City.active.is_(True)).order_by(City.name.asc())
+    ).scalars()
+    return jsonify(
+        success(
+            {
+                "listing_types": [
+                    {"type": item[0], "count": item[1]} for item in listing_counts
+                ],
+                "cities": [_city_payload(city) for city in cities],
+            }
+        )
+    )

@@ -37,6 +37,8 @@ String brandDate(DateTime? value, {String fallback = 'No deadline'}) {
 
 String readableBrandStatus(String value) {
   if (value.isEmpty) return 'Unknown';
+  if (value == 'crew' || value == 'service') return 'Production Services';
+  if (value == 'talent') return 'Actors';
   return value
       .split('_')
       .where((part) => part.isNotEmpty)

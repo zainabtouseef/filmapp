@@ -310,7 +310,7 @@ class _AT15ApplicationDetailScreenState
     }
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['mp4'],
+      allowedExtensions: const ['mp4', 'mov'],
       withData: true,
     );
     final file = result?.files.single;

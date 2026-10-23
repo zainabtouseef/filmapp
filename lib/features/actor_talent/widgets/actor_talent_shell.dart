@@ -221,7 +221,7 @@ class ActorTalentShell extends StatefulWidget {
     required this.screenId,
     required this.child,
     this.showPageHeading = true,
-    this.portalLabel = 'Actor / Talent Portal',
+    this.portalLabel = 'Actor Portal',
     this.menuTitle = 'Actor portal screens',
     this.navRoutes = ActorTalentRoutes.primaryNav,
     this.navDestinations = _actorBottomDestinations,
@@ -230,9 +230,9 @@ class ActorTalentShell extends StatefulWidget {
     this.fullWalkthroughTourId,
     this.bottomIndexOverrides = _actorBottomIndexOverrides,
     this.workspaceLayout = false,
-    this.workspaceTitle = 'Talent Workspace',
-    this.workspaceSectionLabel = 'ACTOR / TALENT',
-    this.workspaceBadgeLabel = 'Talent',
+    this.workspaceTitle = 'Actor Workspace',
+    this.workspaceSectionLabel = 'ACTOR',
+    this.workspaceBadgeLabel = 'Actor',
     this.workspaceStatusSubtitle = 'Profile, offers, bookings and earnings',
     this.workspaceSearchHint = 'Search offers and auditions...',
     this.workspaceSearchRoute = ActorTalentRoutes.opportunities,
@@ -386,6 +386,11 @@ class _ActorTalentShellState extends State<ActorTalentShell> {
                   label: item.label,
                   icon: item.icon,
                 ),
+              const FloatingPortalMenuItem(
+                route: CoreRoutes.profileRoles,
+                label: 'Manage roles',
+                icon: Icons.switch_account_outlined,
+              ),
             ],
             statusTitle: widget.portalLabel,
             statusSubtitle: 'Portal systems operational',
@@ -519,6 +524,11 @@ class _ActorWorkspaceScaffold extends StatelessWidget {
               label: item.label,
               icon: item.icon,
             ),
+          const FloatingPortalMenuItem(
+            route: CoreRoutes.profileRoles,
+            label: 'Manage roles',
+            icon: Icons.switch_account_outlined,
+          ),
         ],
         statusTitle: workspaceTitle,
         statusSubtitle: workspaceStatusSubtitle,
@@ -579,7 +589,7 @@ class _ActorRouteHeading extends StatelessWidget {
 
   String get _eyebrow {
     return switch (route) {
-      ActorTalentRoutes.dashboard => 'Talent workspace · overview',
+      ActorTalentRoutes.dashboard => 'Actor workspace · overview',
       ActorTalentRoutes.profile => 'Public identity · casting profile',
       ActorTalentRoutes.portfolio => 'Media library · director-facing view',
       ActorTalentRoutes.calendar => 'Availability · booking conflicts',
@@ -596,7 +606,7 @@ class _ActorRouteHeading extends StatelessWidget {
       ActorTalentRoutes.earnings => 'Payments · receipts · payout security',
       ActorTalentRoutes.reputation => 'Reviews · trust signals',
       ActorTalentRoutes.safety => 'Privacy · boundaries · support',
-      _ => 'Actor / Talent workspace',
+      _ => 'Actor workspace',
     };
   }
 }
@@ -883,7 +893,7 @@ class _ActorAvatarButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Tooltip(
-      message: 'Talent profile',
+      message: 'Actor profile',
       child: InkWell(
         borderRadius: BorderRadius.circular(19),
         onTap: onTap,

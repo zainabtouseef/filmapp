@@ -86,7 +86,7 @@ class AgencyTalentDto {
   factory AgencyTalentDto.fromJson(Map<String, dynamic> json) {
     return AgencyTalentDto(
       talentProfileId: json['talent_profile_id'] as String? ?? '',
-      screenName: json['screen_name'] as String? ?? 'Talent',
+      screenName: json['screen_name'] as String? ?? 'Actor',
       representationType:
           json['representation_type'] as String? ?? 'non_exclusive',
       commissionBps: json['commission_bps'] as int? ?? 0,

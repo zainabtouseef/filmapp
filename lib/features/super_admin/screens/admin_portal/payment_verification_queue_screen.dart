@@ -118,6 +118,22 @@ class _PaymentVerificationQueueScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.movie_filter_outlined),
+              label: const Text('Review CinePlanner subscriptions'),
+              onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => Dialog(
+                      child: SizedBox(
+                          width: 840,
+                          height: 660,
+                          child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: CinePlannerSubscriptionReviewPanel(
+                                  client: AuthScope.of(context).apiClient))))),
+            )),
         _ResponsiveGrid(
           minTileWidth: 190,
           childAspectRatio: 2.6,

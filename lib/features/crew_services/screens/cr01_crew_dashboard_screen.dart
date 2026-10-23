@@ -93,7 +93,7 @@ class _CR01CrewDashboardScreenState extends State<CR01CrewDashboardScreen> {
         .toList();
     final bookingIds = bookings.map((booking) => booking.publicId).toSet();
     return _CrewDashboardData(
-      name: user?.displayName ?? 'Crew Provider',
+      name: user?.displayName ?? 'Service Professional',
       profile: profile,
       bookings: bookings,
       availability: values[2] as List<AvailabilityEntry>,
@@ -118,7 +118,7 @@ class _CR01CrewDashboardScreenState extends State<CR01CrewDashboardScreen> {
     if (future == null) {
       return const CoreEmptyState(
         icon: Icons.cloud_sync_outlined,
-        title: 'Sign in to load crew operations',
+        title: 'Sign in to load your work dashboard',
         message:
             'Profile, availability, requests, contracts and earnings come from your live account.',
       );
@@ -137,7 +137,7 @@ class _CR01CrewDashboardScreenState extends State<CR01CrewDashboardScreen> {
         if (snapshot.hasError) {
           return CoreEmptyState(
             icon: Icons.cloud_off_outlined,
-            title: 'Crew workspace unavailable',
+            title: 'Workspace unavailable',
             message:
                 'The live workspace could not be loaded: ${snapshot.error}',
             actionLabel: 'Try again',
@@ -186,7 +186,7 @@ class _CrewDashboardBody extends StatelessWidget {
         TourTarget(
           id: 'crew.dashboard.commandCentre',
           child: PortalCommandCenter(
-            eyebrow: 'Crew operations',
+            eyebrow: 'Service activity',
             title: 'Production Command Centre',
             subtitle: 'Confirmed work, incoming requests and contracts.',
             icon: Icons.movie_creation_outlined,
@@ -201,7 +201,7 @@ class _CrewDashboardBody extends StatelessWidget {
                     icon: Icons.movie_filter_outlined,
                     title: 'Ready for the next production',
                     message:
-                        'Open projects and direct crew requests will appear here.',
+                        'Open projects and direct requests will appear here.',
                   )
                 : Column(
                     children: [

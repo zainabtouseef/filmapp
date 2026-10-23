@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/core_ui/core_routes.dart';
 import '../../../core/core_ui/widgets/core_widgets.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/open_url.dart';
@@ -147,6 +148,13 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
                     color: context.appColors.textSecondary,
                     height: 1.35,
                   ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, CoreRoutes.profileRoles),
+                  icon: const Icon(Icons.switch_account_outlined),
+                  label: const Text('Manage roles and cover photos'),
                 ),
                 if (loadingRemote) ...[
                   const SizedBox(height: 12),
@@ -1178,7 +1186,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
       setState(() {
         error = exception.message;
         remoteStatus = exception.code == 'marketplace.kyc_required'
-            ? 'Approved Actor / Talent KYC is required before public listing.'
+            ? 'Approved actor verification is required before public listing.'
             : 'Listing was not published. Check the details and try again.';
       });
     } catch (_) {
@@ -1285,7 +1293,7 @@ class _AT02ProfileBuilderScreenState extends State<AT02ProfileBuilderScreen> {
     ];
     final summary = parts.join('\n');
     if (summary.trim().length >= 10) return summary;
-    return 'Available actor/talent profile for CineConnect productions.';
+    return 'Available actor profile for CineConnect productions.';
   }
 
   List<String> _availabilityCategoriesForBackend() {
@@ -1436,7 +1444,7 @@ class _ProfileSummary extends StatelessWidget {
               children: [
                 TalentProfileShowcase(
                   name: profileName,
-                  role: 'Actor · Talent',
+                  role: 'Actor',
                   city: profileCity,
                   summary: pitch,
                   portraitUrl: avatarUrl,
@@ -1462,7 +1470,7 @@ class _ProfileSummary extends StatelessWidget {
         children: [
           TalentProfileShowcase(
             name: profileName,
-            role: 'Actor · Talent',
+            role: 'Actor',
             city: profileCity,
             summary: pitch,
             portraitUrl: avatarUrl,

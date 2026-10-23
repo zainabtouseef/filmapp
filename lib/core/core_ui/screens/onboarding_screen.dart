@@ -21,7 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.verified_user_outlined,
       title: 'Find Verified Industry Professionals',
       description:
-          'Discover actors, models, locations, crew, media teams and production services in one trusted place.',
+          'Discover actors, models, locations, production professionals and equipment providers in one trusted place.',
     ),
     _OnboardingSlide(
       icon: Icons.swap_horiz_rounded,

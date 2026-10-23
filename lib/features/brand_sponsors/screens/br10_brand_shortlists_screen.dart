@@ -163,7 +163,7 @@ class _BR10BrandShortlistsScreenState extends State<BR10BrandShortlistsScreen> {
             icon: Icons.favorite_border_rounded,
             title: 'No shortlist items yet',
             message:
-                'Open Discover, select a working project, then shortlist talent, crew, locations or equipment.',
+                'Open Discover, select a working project, then shortlist actors, production professionals, locations or equipment.',
           )
         else
           TourTarget(

@@ -1,0 +1,1115 @@
+{
+  "release": "2026.10.14-audit2",
+  "domain": "https://cine.nalexustechnologies.com",
+  "date": "2026-10-14",
+  "findings": [
+    {
+      "id": "F01",
+      "severity": "High",
+      "title": "Signup phone OTP is a local length check",
+      "area": "Authentication",
+      "kind": "Simulated verification",
+      "observed": "After real registration, Verify Your Phone claims a code was sent. _verifyOtp only checks that trimmed input has six characters; it makes no verification request. Resend only restarts a timer. A local backend check issued an access token on registration without an OTP challenge.",
+      "impact": "The phone-verification ceremony does not establish ownership of a phone number. Registration itself is backend-connected; the displayed verification step is not.",
+      "fix": "Implement a server-owned challenge, provider delivery, expiry, attempt limits and phone_verified_at transition, or remove the unsupported verification step.",
+      "accept": "Wrong, expired and reused codes fail; resend contacts the challenge API; no verified-phone state is shown before a successful server response.",
+      "evidence": [
+        [
+          "lib/core/core_ui/screens/auth_screens.dart",
+          226,
+          269
+        ],
+        [
+          "lib/core/core_ui/screens/auth_screens.dart",
+          430,
+          453
+        ],
+        [
+          "backend/app/api/auth.py",
+          208,
+          275
+        ]
+      ],
+      "status": "CAPABILITY LIMITED",
+      "resolution": "Removed the fake OTP and resend steps. Signup saves the phone number without claiming ownership verification. SMS OTP remains unavailable because no SMS provider is configured.",
+      "validation": "auth_screens.dart; api/auth.py; registration regression"
+    },
+    {
+      "id": "F02",
+      "severity": "High",
+      "title": "File worker declares files clean without scanning",
+      "area": "Uploads and verification",
+      "kind": "Backend simulation",
+      "observed": "scan_completed_file calls mark_file_scan_clean, which changes pending rows to clean/ready without reading the object or invoking a malware scanner. In an isolated database, a FileAsset referring to a nonexistent object became clean and ready.",
+      "impact": "Upload status can imply security scanning that has not occurred. The upload API does require received bytes before completion; this finding concerns the later worker stage.",
+      "fix": "Verify the stored object and digest, invoke the selected scanner, implement failure/quarantine states, and publish ready only after required processing succeeds.",
+      "accept": "Missing, mismatched and scanner-rejected objects never become ready; clean results include a real scanner result and retry behavior.",
+      "evidence": [
+        [
+          "backend/app/services/file_processing.py",
+          11,
+          43
+        ],
+        [
+          "backend/app/tasks/files.py",
+          10,
+          17
+        ],
+        [
+          "backend/app/api/verification.py",
+          398,
+          452
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Installed ClamAV on loopback. Workers verify stored length and SHA-256, scan real bytes, quarantine infections and retry scanner failures. Public media now passes the API scan gate. Rescanned all existing records.",
+      "validation": "services/file_processing.py; api/verification.py; live clean/EICAR checks"
+    },
+    {
+      "id": "F03",
+      "severity": "High",
+      "title": "Test payout accounts are accepted as verified in production mode",
+      "area": "Equipment, location and payments",
+      "kind": "Backend-connected sandbox",
+      "observed": "Both earnings screens offer Add test payout account. The controller submits provider=sandbox and a constant sandbox token. The API accepts sandbox and assigns verified without an APP_ENV guard. The isolated production-mode endpoint check returned HTTP 201 with status verified.",
+      "impact": "A verified payout record can represent a fixture rather than a verified bank or wallet destination. This check did not transfer money or modify production.",
+      "fix": "Remove test-account entry points from real portal flows and reject sandbox payout providers server-side in production. Route users to the real pending-verification account form.",
+      "accept": "Production rejects sandbox payout creation; real account identifiers remain pending until the intended verification process completes.",
+      "evidence": [
+        [
+          "lib/core/payments/payments_controller.dart",
+          73,
+          81
+        ],
+        [
+          "lib/features/location_owner/screens/lo09_earnings_deposits_screen.dart",
+          233,
+          243
+        ],
+        [
+          "lib/features/media_equipment/screens/me10_earnings_ratings_screen.dart",
+          273,
+          279
+        ],
+        [
+          "backend/app/api/payments.py",
+          503,
+          535
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Production rejects sandbox payout accounts. Removed test-account creation buttons and replaced them with real account management. Submitted bank accounts remain pending manual verification.",
+      "validation": "api/payments.py; lo09/me10 screens; production payout regression"
+    },
+    {
+      "id": "F04",
+      "severity": "High",
+      "title": "Reachable legacy dashboard displays fixed talent business data",
+      "area": "Shared legacy dashboard",
+      "kind": "Runtime hardcoded records",
+      "observed": "/portal/dashboard resolves to DashboardScreen and is available to active signed-in accounts through the shared-account guard. Its featured card and carousel use TalentData constants: fixed names, PKR 10,000-15,000 rates, 4.5-4.9 ratings, and default verified/available flags. It also uses a bundled current-user avatar and fixed showreel duration.",
+      "impact": "An authenticated route mixes real dashboard KPIs with fabricated discovery records, creating an inconsistent source of truth.",
+      "fix": "Retire the route or redirect it to the shared live marketplace. If retained, replace every TalentData business value with API results and explicit empty/error states.",
+      "accept": "Changing or deleting server listings changes this page; offline errors never reveal fixture talent, prices, verification or availability.",
+      "evidence": [
+        [
+          "lib/core/core_ui/core_routes.dart",
+          103,
+          103
+        ],
+        [
+          "lib/core/core_ui/core_routes.dart",
+          406,
+          407
+        ],
+        [
+          "lib/core/auth/portal_access_guard.dart",
+          37,
+          53
+        ],
+        [
+          "lib/screens/dashboard_screen.dart",
+          59,
+          95
+        ],
+        [
+          "lib/models/talent.dart",
+          16,
+          75
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "The legacy dashboard route now opens the API-backed marketplace. Removed the fixed talent fixture catalogue from the reachable dashboard path.",
+      "validation": "core_routes.dart; dashboard_screen.dart; models/talent.dart"
+    },
+    {
+      "id": "F05",
+      "severity": "High",
+      "title": "Booking review terms are omitted from submitted API data",
+      "area": "Director and public-buyer booking",
+      "kind": "Partial backend connection",
+      "observed": "The review step displays payment percentages, deliverables, usage rights, expiry and category-specific inputs. _send passes project/listing/requirement IDs, dates, fee, currency and _conditions only. The repository create/send bodies have no fields for the other reviewed terms.",
+      "impact": "The request is really sent, but users can reasonably expect terms visible in review to be saved. The backend schedule generator also defaults to one Full booking payment milestone.",
+      "fix": "Define a versioned booking-terms payload and persist all advertised terms. Carry the agreed payment schedule into contracts and schedules, or remove fields that are not supported.",
+      "accept": "Enter distinctive values in every review field, send, reload from the API, and verify exact persistence and downstream contract/payment behavior.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_booking_request_form_screen.dart",
+          345,
+          357
+        ],
+        [
+          "lib/features/director_producer/screens/dp_booking_request_form_screen.dart",
+          405,
+          414
+        ],
+        [
+          "lib/core/bookings/bookings_repository.dart",
+          37,
+          80
+        ],
+        [
+          "backend/app/services/payments.py",
+          28,
+          49
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Booking requests persist deliverables, usage rights, conditions, category fields and payment percentages. Accepted terms appear in contract snapshots and clauses; agreed percentages generate payment milestones.",
+      "validation": "booking_terms.py; bookings.py; contracts.py; counter/contract regression"
+    },
+    {
+      "id": "F06",
+      "severity": "High",
+      "title": "KYC identity and bank inputs are not submitted",
+      "area": "KYC onboarding",
+      "kind": "Partial backend connection",
+      "observed": "The form collects document number/expiry, account title, bank name, IBAN/account number and receiving name. Submission sends only roleCode and four document-type/file-ID entries. No field values or payout-account creation call appear in this submit path.",
+      "impact": "Document uploads and the KYC submission are real, but the additional personal and bank inputs are discarded. The ownership checkbox only gates the local submit action.",
+      "fix": "Persist supported identity metadata in the KYC contract and submit banking through the protected payout-account API. Remove unused collection fields and prefilled HBL if banking belongs in Settings.",
+      "accept": "A completed submission can be reopened with the supplied metadata; a banking step creates or updates a real pending account, without losing entered values.",
+      "evidence": [
+        [
+          "lib/core/core_ui/screens/verification_screens.dart",
+          43,
+          49
+        ],
+        [
+          "lib/core/core_ui/screens/verification_screens.dart",
+          230,
+          252
+        ],
+        [
+          "lib/core/core_ui/screens/verification_screens.dart",
+          392,
+          400
+        ],
+        [
+          "lib/core/core_ui/screens/verification_screens.dart",
+          527,
+          557
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "KYC submits encrypted identity numbers, expiry dates and real owned file IDs. Bank name, receiving name, account identifier and ownership confirmation are stored in payout accounts. Submission requires clean required documents.",
+      "validation": "verification_screens.dart; verification.py; payments.py; KYC regression"
+    },
+    {
+      "id": "F07",
+      "severity": "High",
+      "title": "Push delivery is recorded as delivered without provider delivery",
+      "area": "Notifications backend",
+      "kind": "Backend simulation",
+      "observed": "notify_user creates a genuine in-app notification, then, when an enabled PushDevice exists, creates a push delivery with provider=sandbox and status=delivered. This service does not send to a push provider. The local check reproduced that delivered row.",
+      "impact": "Delivery history overstates what reached an external device. In-app notification persistence is connected and should be retained.",
+      "fix": "Add the chosen push-provider transport and record queued/sent/failed/confirmed states truthfully. Sandbox runs must remain clearly separated.",
+      "accept": "A provider outage records failure or retry; a successful send has a real provider reference; sandbox records are never reported as production device delivery.",
+      "evidence": [
+        [
+          "backend/app/services/notifications.py",
+          32,
+          60
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Replaced simulated push delivery with encrypted Web Push subscriptions and a queued sender. Provider acceptance is recorded as sent; delivered requires a signed browser display receipt. Relabelled one historical simulated delivery as unverified.",
+      "validation": "web_push.py; notifications.py; push receipt regression; live metadata repair"
+    },
+    {
+      "id": "F08",
+      "severity": "High",
+      "title": "Live public payment configuration still reports sandbox",
+      "area": "Deployed public API",
+      "kind": "Live observed simulation mode",
+      "observed": "A read-only GET to the configured live /app/public-config returned HTTP 200 with mode=sandbox and the notice Demo payment only - no money is moved. The local backend supports bank-transfer proof review and ledger accounting; a card processor integration was not demonstrated by this audit.",
+      "impact": "A working API connection does not establish that the deployed payment system moves or settles money. Current public configuration expressly advertises a demo mode.",
+      "fix": "Choose and configure the intended real operating model, and keep proof-review bookkeeping distinct from gateway settlement. Recheck public configuration after deployment changes.",
+      "accept": "Public configuration and UI describe the actual payment model; approved gateway or manual-transfer journeys have evidence appropriate to that model.",
+      "evidence": [
+        [
+          "lib/core/network/api_config.dart",
+          4,
+          7
+        ],
+        [
+          "backend/app/api/app.py",
+          97,
+          111
+        ],
+        [
+          "backend/app/api/payments.py",
+          41,
+          49
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "The live API now runs with APP_ENV=production and manual_bank_transfer payment mode. Public origins use the actual HTTPS domain. Production guards reject sandbox financial inputs.",
+      "validation": "private production configuration; live public-config and health checks"
+    },
+    {
+      "id": "F09",
+      "severity": "Medium",
+      "title": "Booking Save draft shows success without saving",
+      "area": "Director and public-buyer booking",
+      "kind": "Message-only action",
+      "observed": "_saveDraft only calls dpSnack with Campaign booking draft staged or Draft saved to the project title. It does not call a controller, repository or local persistence store.",
+      "impact": "Users can leave the form believing a booking draft exists; the action does not persist it.",
+      "fix": "Save to a backend draft endpoint, or implement explicit device storage and label it as a device draft.",
+      "accept": "Save, navigate away, restart, and restore the same booking inputs from the declared storage location.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_booking_request_form_screen.dart",
+          374,
+          380
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Save draft creates or updates a server booking. Reopening a listing restores its draft and selected project, dates and terms. Failed sends retain the saved draft ID for retry.",
+      "validation": "bookings_controller.dart; dp_booking_request_form_screen.dart; draft regression"
+    },
+    {
+      "id": "F10",
+      "severity": "Medium",
+      "title": "Negotiation counter amount starts at fixed PKR 275,000",
+      "area": "Director negotiation",
+      "kind": "Hardcoded business default",
+      "observed": "The counter-rate controller starts with 275000 and is not initialized from the loaded current offer. _sendCounter parses that controller and sends it to the real offers API.",
+      "impact": "Submitting an untouched counter can replace the negotiated amount with an unrelated fixed default.",
+      "fix": "Initialize from the current offer or require an explicit blank input; distinguish suggested values from agreed values.",
+      "accept": "Open negotiations with different amounts and confirm the counter starts with the corresponding current amount or requires input.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_negotiation_thread_screen.dart",
+          35,
+          38
+        ],
+        [
+          "lib/features/director_producer/screens/dp_negotiation_thread_screen.dart",
+          112,
+          128
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Counter-offer amount initializes from the current server offer instead of PKR 275,000.",
+      "validation": "dp_negotiation_thread_screen.dart; Flutter suite"
+    },
+    {
+      "id": "F11",
+      "severity": "Medium",
+      "title": "Editable negotiation payment schedule is never sent",
+      "area": "Director negotiation",
+      "kind": "Local-only field",
+      "observed": "The screen creates a Payment schedule controller containing 30% / 40% / 30%. It is displayed in an editable field, but _sendCounter sends only fee, currency and a fixed message; the schedule value has no persistence use.",
+      "impact": "Users can edit a financial term that does not alter the backend offer.",
+      "fix": "Include a validated structured schedule in offer terms, or remove the editable field until supported.",
+      "accept": "A changed schedule is present in the returned offer after reload and remains consistent with the later payment schedule.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_negotiation_thread_screen.dart",
+          37,
+          38
+        ],
+        [
+          "lib/features/director_producer/screens/dp_negotiation_thread_screen.dart",
+          112,
+          128
+        ],
+        [
+          "lib/features/director_producer/screens/dp_negotiation_thread_screen.dart",
+          447,
+          456
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Counter-offers send their edited payment schedule. The API validates positive portions totalling 100 and carries the accepted schedule into contracts and milestones.",
+      "validation": "bookings_repository.dart; booking_terms.py; counter/contract regression"
+    },
+    {
+      "id": "F12",
+      "severity": "Medium",
+      "title": "Influencer packages prefill fixed commercial prices",
+      "area": "Influencer packages",
+      "kind": "Hardcoded editable fallback",
+      "observed": "When saved packages are absent, the form inserts Reel Starter at 75000, Launch Push at 150000 and Brand Ambassador at 300000 with fixed deliverables. Save writes those values into the live talent profile representation.",
+      "impact": "These are defaults rather than fetched rates, and can become real commercial data after a save. They are not evidence of disconnected package persistence.",
+      "fix": "Use empty initial values or visibly labelled optional templates; require the creator to confirm each commercial price.",
+      "accept": "A new creator sees no implied agreed prices; saved and reloaded packages match deliberate user input.",
+      "evidence": [
+        [
+          "lib/features/influencer/screens/influencer_portal_screen.dart",
+          694,
+          707
+        ],
+        [
+          "lib/features/influencer/screens/influencer_portal_screen.dart",
+          720,
+          735
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Removed fixed influencer package prices. New commercial packages start with empty pricing inputs and use submitted backend values.",
+      "validation": "influencer_portal_screen.dart; Flutter suite"
+    },
+    {
+      "id": "F13",
+      "severity": "Medium",
+      "title": "Business notifications do not consult stored channel preferences",
+      "area": "Notification preferences",
+      "kind": "Persisted setting without dispatch enforcement",
+      "observed": "Settings reads and writes email/SMS/push preferences through /me/settings. notify_user does not consult NotificationPreference before creating delivery rows. The local check set push_enabled=false and still produced a push delivery row.",
+      "impact": "The preference is stored, but this dispatch service does not enforce it. Email/SMS toggles also do not establish that those business-notification transports exist; password-reset email is a separate SMTP service.",
+      "fix": "Apply channel preferences in a central dispatch policy, implement intended transports and expose channel capability accurately.",
+      "accept": "Disabled channels create no send attempts; enabled channels have provider-backed delivery or an honest unavailable state.",
+      "evidence": [
+        [
+          "backend/app/api/auth.py",
+          137,
+          147
+        ],
+        [
+          "backend/app/api/auth.py",
+          579,
+          607
+        ],
+        [
+          "backend/app/services/notifications.py",
+          14,
+          60
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Notification creation and delivery consult stored push preferences and enabled devices. Opt-out prevents queueing and cancels pending sends. In-app booking/security records remain available.",
+      "validation": "services/notifications.py; services/web_push.py; opt-out regression"
+    },
+    {
+      "id": "F14",
+      "severity": "Medium",
+      "title": "Language selection saves a locale but does not localize the UI",
+      "area": "Account settings",
+      "kind": "Partial backend connection",
+      "observed": "English, Urdu and Roman Urdu choices map to locale values and are saved to the backend. MaterialApp has no locale, supportedLocales or localization delegates, and screen copy remains embedded English strings.",
+      "impact": "A successful Settings save does not cause the selected app language to appear.",
+      "fix": "Wire the saved locale into the app and add translations/direction support, or describe the preference as profile metadata until localization is implemented.",
+      "accept": "Select Urdu, restart, and verify translated navigation, validation and right-to-left layout using the persisted locale.",
+      "evidence": [
+        [
+          "lib/core/core_settings/screens/settings_account_screen.dart",
+          453,
+          474
+        ],
+        [
+          "lib/main.dart",
+          135,
+          143
+        ]
+      ],
+      "status": "CAPABILITY LIMITED",
+      "resolution": "Removed unsupported language choices from Settings. The shipped interface is explicitly English-only; full Urdu translations have not been implemented. Existing locale metadata is retained for compatibility.",
+      "validation": "settings_account_screen.dart"
+    },
+    {
+      "id": "F15",
+      "severity": "Medium",
+      "title": "Maintenance and forced-update controls return constants",
+      "area": "App bootstrap",
+      "kind": "Static data returned by backend",
+      "observed": "Splash does fetch /app/bootstrap, but the backend always returns maintenance.enabled=false and force_update.required=false with null message/store URL. supported_roles is also a source constant list rather than the database role query used by /roles.",
+      "impact": "The UI is API-connected, but the operational controls cannot change through runtime configuration or administration in this implementation.",
+      "fix": "Provide server-managed release/maintenance configuration with version/platform criteria and pass the configured message and store URL to the UI.",
+      "accept": "Changing maintenance or minimum version changes bootstrap and routing without rebuilding the API; platform-specific store destinations are honored.",
+      "evidence": [
+        [
+          "backend/app/api/app.py",
+          84,
+          94
+        ],
+        [
+          "lib/core/core_ui/screens/splash_screen.dart",
+          136,
+          153
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Maintenance and forced-update configuration is stored in the database and administered through authenticated Super Admin endpoints and a Settings panel. Bootstrap reads the persisted values.",
+      "validation": "app_settings.py; api/app.py; runtime_settings_panel.dart; admin regression"
+    },
+    {
+      "id": "F16",
+      "severity": "Medium",
+      "title": "Maintenance page promises a fixed return time",
+      "area": "Utility screens",
+      "kind": "Hardcoded operational claim",
+      "observed": "MaintenanceModeScreen always displays Estimated return: Today, 8:30 PM PKT. It receives no outage time or estimate from bootstrap.",
+      "impact": "The estimate can be wrong on any day or incident, even if maintenance routing later becomes functional.",
+      "fix": "Render a server-provided timestamp and timezone, or omit the estimate when none exists.",
+      "accept": "Different incidents show their configured estimate; unknown estimates do not produce a fixed promise.",
+      "evidence": [
+        [
+          "lib/core/core_ui/screens/utility_screens.dart",
+          191,
+          217
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "The maintenance screen reads the configured message and optional timezone-qualified return estimate. Removed the fixed return time and version promise.",
+      "validation": "runtime_status_screen.dart; runtime settings validation"
+    },
+    {
+      "id": "F17",
+      "severity": "Medium",
+      "title": "Signup phone, city and referral inputs are dropped",
+      "area": "Authentication",
+      "kind": "Local-only collected fields",
+      "observed": "The signup form requires phone and offers city/referral inputs. _createAccount sends email, password, displayName and initialRole only. AuthRepository registration adds terms_version but no phone, city or referral.",
+      "impact": "These inputs do not reach the account/profile API through signup, despite appearing as collected information.",
+      "fix": "Extend the registration/profile/referral contracts or remove unsupported inputs. Bind phone persistence to the real verification flow.",
+      "accept": "A completed signup reloads the supplied supported fields from /me and /me/profile; referral handling has an observable server result.",
+      "evidence": [
+        [
+          "lib/core/core_ui/screens/auth_screens.dart",
+          169,
+          177
+        ],
+        [
+          "lib/core/core_ui/screens/auth_screens.dart",
+          226,
+          235
+        ],
+        [
+          "lib/core/auth/auth_repository.dart",
+          25,
+          43
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Registration sends and stores phone, active city ID and referral code. Phone remains unverified until a real verification process exists.",
+      "validation": "auth_repository.dart; api/auth.py; registration persistence regression"
+    },
+    {
+      "id": "F18",
+      "severity": "Low",
+      "title": "Role selection silently falls back to a fixed catalogue",
+      "area": "Role selection",
+      "kind": "Hardcoded fallback reference data",
+      "observed": "Role selection catches API failure and returns 13 SharedMockData roles; its loading state also defaults to that list. Live /roles returned 17 roles during this audit. Backend /roles itself falls back to 11 source roles when no active database rows exist.",
+      "impact": "An unavailable or empty catalogue can look like a successful role load and offer a stale set of roles. Role descriptions are frontend copy by design.",
+      "fix": "Show retry/error states, or label a versioned cached catalogue and validate selected role codes with the server.",
+      "accept": "API failures are visible; supported roles agree across bootstrap, role selection and registration.",
+      "evidence": [
+        [
+          "lib/core/core_ui/screens/role_selection_screen.dart",
+          30,
+          48
+        ],
+        [
+          "lib/core/core_ui/screens/role_selection_screen.dart",
+          67,
+          70
+        ],
+        [
+          "backend/app/api/app.py",
+          115,
+          130
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Role selection uses the active database catalogue, with loading/error/retry states and no silent mock fallback. Internal roles are excluded from public catalogues.",
+      "validation": "role_selection_screen.dart; api/app.py; catalogue regression"
+    },
+    {
+      "id": "F19",
+      "severity": "Low",
+      "title": "Signup city choices come from five hardcoded names",
+      "area": "Signup reference data",
+      "kind": "Static option catalogue",
+      "observed": "Signup uses Lahore, Karachi, Islamabad, Rawalpindi and Multan from SharedMockData. The real /cities API exists and currently returns six city records, but signup does not use it.",
+      "impact": "The options can drift from the backend; this is separate from the fact that the selected signup city is not submitted (F17).",
+      "fix": "Load city IDs and labels from /cities and use the supported profile/registration city field.",
+      "accept": "Adding or disabling a city server-side changes signup without a client release.",
+      "evidence": [
+        [
+          "lib/core/core_ui/mock_data/shared_mock_data.dart",
+          87,
+          93
+        ],
+        [
+          "lib/core/core_ui/screens/auth_screens.dart",
+          365,
+          369
+        ],
+        [
+          "lib/core/auth/auth_repository.dart",
+          234,
+          240
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Signup city selection loads active city IDs from the API. Removed the five-name fallback. Invalid city IDs fail server validation.",
+      "validation": "auth_screens.dart; api/auth.py; registration regression"
+    },
+    {
+      "id": "F20",
+      "severity": "Low",
+      "title": "Role-specific KYC document instructions are client constants",
+      "area": "KYC reference data",
+      "kind": "Static policy catalogue",
+      "observed": "SharedMockData.roleDocuments selects requirements by role-name substring, and KYC renders that local list. Submission uses generic role_proof rather than a server-fetched requirements schema.",
+      "impact": "Requirements and optional/required wording cannot be centrally updated through the current KYC form contract.",
+      "fix": "Define role-coded document requirements on the backend and render the schema; retain ordinary instructional wording locally as appropriate.",
+      "accept": "Changing a role requirement on the server updates required inputs and validation consistently.",
+      "evidence": [
+        [
+          "lib/core/core_ui/mock_data/shared_mock_data.dart",
+          283,
+          309
+        ],
+        [
+          "lib/core/core_ui/screens/verification_screens.dart",
+          468,
+          476
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "KYC instructions are loaded from a role requirements API. Super Admin can persist labels and required flags for the four supported document types. Server submission enforces those requirements.",
+      "validation": "api/verification.py; AppSetting; verification_screens.dart"
+    },
+    {
+      "id": "F21",
+      "severity": "Medium",
+      "title": "PDF and CSV saving is web-only",
+      "area": "Shared exports and CinePlanner",
+      "kind": "Platform implementation gap",
+      "observed": "The contract, receipt and CinePlanner paths fetch real backend documents. Conditional exports select save_download_stub and csv_download_stub on non-web targets; both return false. There is no native save/share implementation on those paths.",
+      "impact": "A native user may fetch a document but cannot save it through these controls. This is a client delivery gap, not a missing document endpoint.",
+      "fix": "Implement platform-appropriate file saving or sharing, with permissions and failure states.",
+      "accept": "On Android and iOS, fetched contract/receipt/report files can be opened or saved and contain the server-generated bytes.",
+      "evidence": [
+        [
+          "lib/core/network/save_download.dart",
+          1,
+          2
+        ],
+        [
+          "lib/core/network/save_download_stub.dart",
+          1,
+          2
+        ],
+        [
+          "lib/core/analytics/csv_download_stub.dart",
+          1,
+          5
+        ],
+        [
+          "lib/core/core_contract/screens/contract_viewer_screen.dart",
+          175,
+          188
+        ]
+      ],
+      "status": "IMPLEMENTED - DEVICE CHECK PENDING",
+      "resolution": "Native saves use the platform file picker and write actual bytes to the selected destination. PDF/CSV callers await the result. Desktop byte writing and cancellation pass tests; physical Android/iOS save dialogs were not exercised.",
+      "validation": "save_download_stub.dart; csv_download_stub.dart; native_download_test.dart"
+    },
+    {
+      "id": "F22",
+      "severity": "Low",
+      "title": "Distribution statements have no export action",
+      "area": "Distribution reporting",
+      "kind": "Explicit unsupported feature",
+      "observed": "Performance data is read from backend reports, but Revenue support states that exports are disabled until a real statement export endpoint exists. No distribution-specific statement export route was found in the route catalogue.",
+      "impact": "The reporting page is connected; downloadable statements remain unavailable and are honestly labelled.",
+      "fix": "Add an authorized distribution-statement export contract and connect the download action, or retain the explicit unavailable state.",
+      "accept": "Export returns a real statement for the selected report scope with ownership checks and matching totals.",
+      "evidence": [
+        [
+          "lib/features/distribution_partner/screens/ds04_performance_reporting_screen.dart",
+          329,
+          339
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Distribution statements now export authenticated CSV data from owned backend reports. Export supports a project filter and escapes spreadsheet formula prefixes.",
+      "validation": "api/specialist.py; ds04 screen; CSV ownership/formula regression"
+    },
+    {
+      "id": "F23",
+      "severity": "Low",
+      "title": "Talent travel preferences remain an explicit gap",
+      "area": "Actor availability",
+      "kind": "Explicit unsupported feature",
+      "observed": "Travel Limits shows a needs live profile fields empty state instead of editable city/radius settings. The availability calendar and secured-booking count are separate live-backed data.",
+      "impact": "Travel preferences cannot be managed on this surface; no fake travel values are displayed.",
+      "fix": "Define and persist the intended travel-preference fields, or keep the gap visible without promising a completed workflow.",
+      "accept": "Travel limits save and reload from the profile and are applied to the intended availability/discovery rules.",
+      "evidence": [
+        [
+          "lib/features/actor_talent/screens/at04_availability_calendar_screen.dart",
+          158,
+          176
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Talent travel willingness, radius and active city IDs have persistent API storage and an editor on the availability page. Talent profile payloads include the preferences.",
+      "validation": "api/marketplace.py; TravelPreferencesPanel; persistence regression"
+    },
+    {
+      "id": "F24",
+      "severity": "Low",
+      "title": "Several Settings controls are fixed or unavailable",
+      "area": "Account settings",
+      "kind": "Disabled capabilities and policy indicators",
+      "observed": "WhatsApp consent, portfolio watermarking, biometric login and two-factor enrollment have null callbacks and explanatory subtitles. Hide-phone and hide-location indicators are fixed policy values; discovery directs users to role-profile visibility.",
+      "impact": "These controls are not independent editable backend settings on this page. The explanatory copy avoids claiming they were saved.",
+      "fix": "Keep policy indicators distinct from settings; connect each optional feature only when its backing capability exists.",
+      "accept": "Unavailable controls remain visibly unavailable; implemented controls persist, reload and enforce their selected behavior.",
+      "evidence": [
+        [
+          "lib/core/core_settings/screens/settings_account_screen.dart",
+          354,
+          412
+        ]
+      ],
+      "status": "CAPABILITY LIMITED",
+      "resolution": "Settings now reflect real push capability and browser subscription state, provider availability and stored preferences. Unsupported SMS, WhatsApp, watermark, biometric and two-factor controls are disabled with explanations; profile visibility links to role management.",
+      "validation": "settings_account_screen.dart; bootstrap capability flags"
+    },
+    {
+      "id": "F25",
+      "severity": "Low",
+      "title": "Contract QR verification is unavailable",
+      "area": "Shared contracts",
+      "kind": "Explicit unsupported feature",
+      "observed": "The QR verification control only displays a message that a signed verification service is not enabled. Contract reads, signature submission and PDF generation use real APIs elsewhere.",
+      "impact": "There is no completed QR validation journey through this control.",
+      "fix": "Add signed verification URLs and a server validation response, or retain a clearly unavailable control.",
+      "accept": "A generated QR resolves to a verifiable contract state; tampered and revoked references fail appropriately.",
+      "evidence": [
+        [
+          "lib/core/core_contract/screens/contract_viewer_screen.dart",
+          343,
+          351
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Participants can obtain a QR code and signed verification URL. Public verification checks the current contract content hash and version, returns minimal status data and rejects tampered links.",
+      "validation": "api/contracts.py; contract_verification.html; QR/tamper regression"
+    },
+    {
+      "id": "F26",
+      "severity": "Info",
+      "title": "Smart match scores are computed locally over API candidates",
+      "area": "Director smart match",
+      "kind": "Local computation, live input",
+      "observed": "The sheet loads directorDiscovery results, then computes scores in Dart with fixed weights for city, category, availability, verification, budget, brief words and history. Scores are clamped to 1-99. It does not call a backend matching/model endpoint for ranking.",
+      "impact": "This is deterministic client ranking, not hardcoded talent records. The current visible label is Smart match; the class/file AI naming should not be read as proof of a model service.",
+      "fix": "Document and version the scoring policy; move ranking server-side only if central consistency or richer matching is required.",
+      "accept": "Identical inputs produce documented scores, and product claims describe the actual matching method.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_ai_casting_match_sheet.dart",
+          184,
+          196
+        ],
+        [
+          "lib/features/director_producer/screens/dp_ai_casting_match_sheet.dart",
+          412,
+          440
+        ],
+        [
+          "lib/features/director_producer/screens/dp_ai_casting_match_sheet.dart",
+          485,
+          518
+        ]
+      ],
+      "status": "RETAINED DESIGN",
+      "resolution": "Smart-match scores remain deterministic client computations over API candidates. They are ranking calculations, not fabricated persisted marketplace records.",
+      "validation": "Original audit classification retained; API candidate source preserved"
+    },
+    {
+      "id": "F27",
+      "severity": "Info",
+      "title": "Contract wizard clause choices are static but saved through APIs",
+      "area": "Director contracts",
+      "kind": "Static templates, backend persistence",
+      "observed": "Shoot type, usage, cancellation and overtime clause choices are defined in Dart. Generate creates a real contract and submits the selected clause pack as an addendum for review.",
+      "impact": "The selectable catalogue requires a client release to change. Selected clauses are not merely local display content.",
+      "fix": "Use a versioned server clause catalogue if central policy management is needed; preserve the existing review and persistence boundary.",
+      "accept": "Selected clause content is present in the server addendum and policy versions remain traceable.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_contract_center_screen.dart",
+          395,
+          438
+        ],
+        [
+          "lib/features/director_producer/screens/dp_contract_center_screen.dart",
+          1006,
+          1080
+        ]
+      ],
+      "status": "RETAINED DESIGN",
+      "resolution": "Clause choices remain static UI options whose selections are saved through contract APIs. New agreed booking terms are also copied into server contract clauses.",
+      "validation": "Contract wizard and contract API persistence retained"
+    },
+    {
+      "id": "F28",
+      "severity": "Info",
+      "title": "Brand demo journey has account-specific hardcoded selectors",
+      "area": "Brand portal",
+      "kind": "Demo-account presentation logic",
+      "observed": "The journey is enabled for one fixed demo email and prefers DEMO-BRAND-PRJ-001 or Nova Cola Winter Stories. It selects from fetched projects and uses actual passed counts; it does not fabricate a project object.",
+      "impact": "The demo presentation is coupled to a particular account, ID and title. Normal accounts are unaffected by this conditional card.",
+      "fix": "Move demo/presentation flags into explicit account metadata if the journey must be portable; retain API-backed project values.",
+      "accept": "Account-specific behavior is intentional and testable; a missing preferred project does not introduce synthetic business records.",
+      "evidence": [
+        [
+          "lib/features/brand_sponsors/widgets/brand_demo_journey.dart",
+          11,
+          30
+        ],
+        [
+          "lib/features/brand_sponsors/screens/br01_brand_dashboard_screen.dart",
+          172,
+          174
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Removed account-specific demo selectors. The brand project journey uses the authenticated brand account, its real projects and backend counts.",
+      "validation": "brand_project_journey.dart; brand portal screens"
+    },
+    {
+      "id": "F29",
+      "severity": "Info",
+      "title": "Unused fixture business records and a synthetic upload helper remain",
+      "area": "Shared core",
+      "kind": "Dormant fixture code",
+      "observed": "SharedMockData still defines notifications, chatMessages, clauses, milestones and ledgerRows. No lib consumer references these members. completeDemoUpload generates bytes from a filename, but no lib call site invokes it.",
+      "impact": "These definitions are cleanup candidates, not confirmed runtime fake notifications/contracts/ledger rows. Active roles/cities/document instructions from the same file are covered separately.",
+      "fix": "Move unused fixtures into tests or remove them, and keep synthetic upload helpers outside runtime APIs.",
+      "accept": "Runtime code has no dependency on fixture business records; test fixtures remain clearly isolated.",
+      "evidence": [
+        [
+          "lib/core/core_ui/mock_data/shared_mock_data.dart",
+          95,
+          108
+        ],
+        [
+          "lib/core/core_ui/mock_data/shared_mock_data.dart",
+          198,
+          240
+        ],
+        [
+          "lib/core/auth/auth_controller.dart",
+          234,
+          251
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Deleted unused shared mock business records and the synthetic demo-upload helper. Real uploads require selected bytes and server completion.",
+      "validation": "shared_mock_data.dart removed; AuthController helper removed"
+    },
+    {
+      "id": "F30",
+      "severity": "Info",
+      "title": "About release label is a fixed 2026.09 string",
+      "area": "Shared About dialog",
+      "kind": "Static release metadata",
+      "observed": "The About dialog renders cineConnectReleaseLabel = CineConnect - 2026.09 rather than build/package metadata or a backend release descriptor.",
+      "impact": "The displayed version can drift from the installed build. It is ordinary static metadata, not a backend workflow failure.",
+      "fix": "Populate the label from version/build information and, if useful, show an API release identifier separately.",
+      "accept": "Installed build and About version match the intended release.",
+      "evidence": [
+        [
+          "lib/shared/widgets/cine_about_button.dart",
+          7,
+          7
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "About reads a compile-time release label supplied during deployment. Bootstrap also reports the configured backend release version.",
+      "validation": "cine_about_button.dart; CINECONNECT_RELEASE; RELEASE_VERSION"
+    },
+    {
+      "id": "F31",
+      "severity": "Info",
+      "title": "Device drafts, tours and discovery preferences are intentionally local",
+      "area": "Client preferences",
+      "kind": "Deliberate device storage",
+      "observed": "ProjectDraftStore persists create-project drafts in FlutterSecureStorage and the wizard explicitly says Submit saves online. Tours and marketplace preferences also use device storage.",
+      "impact": "These features do not synchronize across devices. Unlike booking Save draft (F09), the create-project draft has real local persistence.",
+      "fix": "Keep device-local wording; add backend synchronization only if cross-device behavior is a requirement.",
+      "accept": "Device-local settings survive restart and are not advertised as account-wide server data.",
+      "evidence": [
+        [
+          "lib/features/director_producer/data/project_draft_store.dart",
+          9,
+          32
+        ],
+        [
+          "lib/features/director_producer/screens/dp_create_project_wizard_screen.dart",
+          264,
+          282
+        ],
+        [
+          "lib/core/tour/tour_preferences_store.dart",
+          7,
+          25
+        ],
+        [
+          "lib/shared/marketplace/marketplace_preferences.dart",
+          1,
+          25
+        ]
+      ],
+      "status": "RETAINED DESIGN",
+      "resolution": "Tours, device draft conveniences and discovery preferences remain local by design. Business booking drafts are now saved to the server separately.",
+      "validation": "Local preference scope retained; F09 supplies server booking drafts"
+    },
+    {
+      "id": "F32",
+      "severity": "Info",
+      "title": "Selfie capture does not establish automated liveness verification",
+      "area": "KYC camera",
+      "kind": "Capture-only capability",
+      "observed": "LiveSelfieCaptureScreen uses camera capture and the selected image is uploaded as selfie_liveness evidence. No automated biometric/liveness provider integration was found on this path; verification is submitted for admin review.",
+      "impact": "A camera capture is real, but the document type alone does not prove anti-spoof or automated identity verification.",
+      "fix": "Describe the step as selfie capture for review unless a validated liveness service is integrated.",
+      "accept": "Product claims match manual-review or provider-backed capabilities and their actual evidence.",
+      "evidence": [
+        [
+          "lib/core/core_ui/screens/live_selfie_capture_screen.dart",
+          1,
+          65
+        ],
+        [
+          "lib/core/core_ui/screens/verification_screens.dart",
+          243,
+          245
+        ]
+      ],
+      "status": "CAPABILITY LIMITED",
+      "resolution": "Selfie capture is described as manual identity review. The app no longer claims that a camera capture establishes automated liveness.",
+      "validation": "verification_screens.dart; bootstrap liveness=manual_review"
+    },
+    {
+      "id": "F33",
+      "severity": "Info",
+      "title": "Influencer social metrics are user-entered profile data",
+      "area": "Influencer media kit",
+      "kind": "Backend persistence, no social-provider sync",
+      "observed": "The media kit constructs social_links from entered handles, follower counts and engagement values and saves the talent profile. No Instagram/TikTok statistics connector or OAuth workflow was found in the runtime path.",
+      "impact": "The values are connected to the app backend, but should be treated as self-reported rather than live social-platform measurements.",
+      "fix": "Label self-reported metrics; add an authorized provider workflow only if verified live statistics are required.",
+      "accept": "Users can distinguish self-reported numbers from independently synchronized metrics.",
+      "evidence": [
+        [
+          "lib/features/influencer/screens/influencer_portal_screen.dart",
+          529,
+          545
+        ],
+        [
+          "lib/features/influencer/screens/influencer_portal_screen.dart",
+          460,
+          490
+        ]
+      ],
+      "status": "CAPABILITY LIMITED",
+      "resolution": "Influencer social handles, reach and metrics are labelled self-reported profile data. No external social-account verification or metric synchronisation is claimed.",
+      "validation": "influencer_portal_screen.dart; bootstrap social_metrics=self_reported"
+    },
+    {
+      "id": "F34",
+      "severity": "Low",
+      "title": "Push-device registration API has no runtime caller",
+      "area": "Client push setup",
+      "kind": "Unconnected startup capability",
+      "observed": "The trust-safety repository/controller expose registerPushDevice, but source-wide references show no caller outside those definitions. No Firebase messaging dependency or token-acquisition/registration startup path was found.",
+      "impact": "A push endpoint existing on the backend does not mean this client registers its device for real push delivery. This complements the sandbox transport finding F07.",
+      "fix": "Connect permission, token acquisition/rotation, register/unregister and notification-open handling for supported platforms.",
+      "accept": "A newly authorized device appears in the backend with a valid provider token and is updated or disabled when needed.",
+      "evidence": [
+        [
+          "lib/core/trust_safety/trust_safety_controller.dart",
+          241,
+          243
+        ],
+        [
+          "lib/core/trust_safety/trust_safety_repository.dart",
+          273,
+          275
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "Settings registers and disables actual browser subscriptions through /push-devices. Logout unsubscribes the browser; reusing a subscription for another account disables the prior account device. Native push is unavailable without a provider.",
+      "validation": "browser_push*.dart; cineconnect_push*.js; shared-browser regression"
+    },
+    {
+      "id": "F35",
+      "severity": "Info",
+      "title": "Create-project Team values are descriptive references, not invitations",
+      "area": "Project wizard",
+      "kind": "Partial structured data model",
+      "observed": "The Team step asks for names for quick reference. Creation folds team names and extra cities into description, selects only the first structured city and saves the maximum budget as estimated budget. This step does not create project memberships.",
+      "impact": "These values are saved as text, not discarded; they do not grant access or represent structured multi-city/team relationships. The later project member invitation flow is a separate real API.",
+      "fix": "Keep reference-only wording, or use structured city/team relations and real invitations if the wizard is meant to create them.",
+      "accept": "The UI accurately distinguishes references from invited members and structured planning fields.",
+      "evidence": [
+        [
+          "lib/features/director_producer/screens/dp_create_project_wizard_screen.dart",
+          788,
+          798
+        ],
+        [
+          "lib/features/director_producer/screens/dp_create_project_wizard_screen.dart",
+          1375,
+          1401
+        ]
+      ],
+      "status": "RETAINED DESIGN",
+      "resolution": "Create-project Team values remain descriptive references. They do not send invitations or grant project membership; actual membership workflows remain separate.",
+      "validation": "Original audit classification retained; no unsolicited invitations"
+    },
+    {
+      "id": "F36",
+      "severity": "Low",
+      "title": "Public payment notice stays a demo string in other payment modes",
+      "area": "Backend public configuration",
+      "kind": "Hardcoded backend copy",
+      "observed": "public_config reads PAYMENT_MODE dynamically but always returns Demo payment only - no money is moved. The isolated check set manual_bank_transfer and still received that demo notice.",
+      "impact": "A future real/manual configuration could still display a misleading demo notice. The current live sandbox response is consistent with the current notice.",
+      "fix": "Return capability/mode-specific messaging from the server and keep it aligned with approved payment behavior.",
+      "accept": "Sandbox, manual-transfer and real-gateway modes each expose accurate, tested public wording.",
+      "evidence": [
+        [
+          "backend/app/api/app.py",
+          97,
+          111
+        ]
+      ],
+      "status": "FIXED",
+      "resolution": "The payment notice follows runtime mode. Production explains external bank transfers and proof reconciliation; the demo wording is limited to sandbox mode.",
+      "validation": "api/app.py; live public payment configuration"
+    }
+  ],
+  "additional_findings": [
+    {
+      "id": "F37",
+      "severity": "Critical",
+      "title": "Public registration and role-add could grant internal staff roles",
+      "status": "FIXED",
+      "resolution": "Blocked self-assignment of super_admin, finance_admin, reviewer and support_agent. Disabled roles cannot be reactivated by their holder. Public catalogues exclude internal roles. Existing 16 staff accounts were preserved; no internal initial-registration events were found.",
+      "validation": "Four-role regression cases; live registration returns 403"
+    },
+    {
+      "id": "F38",
+      "severity": "High",
+      "title": "Historical demo file records had no stored bytes",
+      "status": "DATA GAP FLAGGED",
+      "resolution": "237 real files passed ClamAV. The other 239 records are historical demo references without stored objects; their scan and processing statuses now say missing. Records were preserved. Missing bytes require originals to be uploaded again.",
+      "validation": "Production-copy rehearsal and production rescan; file counts preserved"
+    },
+    {
+      "id": "F39",
+      "severity": "High",
+      "title": "Revoked sessions and suspended accounts retained access",
+      "status": "FIXED",
+      "resolution": "Access requests now check the persisted session and active account status. Logout, remote-session revocation and revoke-others invalidate access immediately; suspended accounts cannot log in or refresh.",
+      "validation": "test_user_settings.py; test_admin_workflows.py; auth.py; security.py"
+    },
+    {
+      "id": "F40",
+      "severity": "Medium",
+      "title": "Repeated role permission saves failed and new role status was ignored",
+      "status": "FIXED",
+      "resolution": "Permission updates preserve existing associations and apply only the difference. New and existing role assignments both validate and honor active/suspended status.",
+      "validation": "test_admin_workflows.py; admin_control.py"
+    },
+    {
+      "id": "F41",
+      "severity": "Medium",
+      "title": "Invalid CinePlanner edits reached database errors",
+      "status": "FIXED",
+      "resolution": "Production updates validate dates, text lengths, currency, JSON settings and numeric bounds before persistence. Invalid fields return controlled 422 responses without changing saved values.",
+      "validation": "test_cineplanner_edits.py; cineplanner.py"
+    },
+    {
+      "id": "F42",
+      "severity": "High",
+      "title": "Unpublished discovery profiles were accessible",
+      "status": "FIXED",
+      "resolution": "Discovery lists and detail lookups require a public, approved marketplace listing. Direct profile IDs cannot bypass visibility and moderation restrictions; private addresses remain absent from discovery.",
+      "validation": "test_director_discovery.py; director.py"
+    },
+    {
+      "id": "F43",
+      "severity": "High",
+      "title": "Public buyer restrictions could be bypassed using a category alias",
+      "status": "FIXED",
+      "resolution": "Discovery rechecks the resolved item category against buyer permissions after resolving its listing ID, preventing an allowed category path from exposing restricted categories.",
+      "validation": "test_director_discovery.py; director.py"
+    },
+    {
+      "id": "F44",
+      "severity": "High",
+      "title": "Private form values were discarded as encrypted placeholders",
+      "status": "FIXED",
+      "resolution": "Nine private-field columns now store authenticated ciphertext with adequate capacity. Addresses, serials, billing/contact details, licence numbers and check-in coordinates persist. Owner forms reload private values; public serializers omit them. Eighteen historical placeholder values require owner re-entry.",
+      "validation": "test_private_workflow_fields.py; private_field_models_test.dart; migration 9f84c2e7a6b1; live aggregate counts"
+    },
+    {
+      "id": "F45",
+      "severity": "High",
+      "title": "Saving availability categories failed on valid JSON lists",
+      "status": "FIXED",
+      "resolution": "Talent availability categories now accept validated JSON lists, deduplicate selections and preserve saved selections on invalid input. Optional number/date parsers return controlled validation errors for malformed JSON objects and arrays.",
+      "validation": "test_profile_publishing_workflows.py; marketplace.py; projects.py; bookings.py"
+    },
+    {
+      "id": "F46",
+      "severity": "High",
+      "title": "Crew publication checked talent KYC instead of crew KYC",
+      "status": "FIXED",
+      "resolution": "Crew listings now require an active crew role and approved crew-service KYC. Talent KYC alone cannot authorize crew publication; verified crew providers can publish and update the same listing.",
+      "validation": "test_profile_publishing_workflows.py; marketplace.py"
+    }
+  ],
+  "validation": {
+    "flutter_tests": 920,
+    "backend_tests": 391,
+    "backend_coverage_percent": 85.75455741401993,
+    "coverage_target_percent": 85,
+    "javascript_tests": 1,
+    "analysis": "clean",
+    "ruff": "passed",
+    "mypy": "passed"
+  },
+  "limits": [
+    "SMS and SMTP email are not configured. SMS verification and email recovery delivery remain unavailable.",
+    "Native push requires a provider. Browser push is implemented and configured, but a real browser permission/subscription/display test is still pending.",
+    "Physical Android/iOS file-save dialogs have not been exercised.",
+    "Automated liveness, verified social metrics, Urdu translations, biometrics, two-factor authentication, WhatsApp delivery and portfolio watermarking are not implemented.",
+    "239 historical demo file references have no source bytes. Their records are preserved and marked missing.",
+    "Eighteen historical private-field values were replaced by placeholder text by the former code. Their original contents were never saved and require owner re-entry.",
+    "Passing automated tests and coverage checks do not establish that every possible application path is defect-free. Browser visual verification remains pending because no browser is connected."
+  ],
+  "source_commit": "59c4791e67aa9609c72d1f5bcff5ea696f10bfcd"
+}

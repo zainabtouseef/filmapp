@@ -86,8 +86,8 @@ _RoleGroup _groupForRoute(String route) {
   if (route.startsWith('/talent')) {
     return const _RoleGroup(
       id: 'talent',
-      label: 'Talent Portal',
-      shortLabel: 'Talent',
+      label: 'Actor Portal',
+      shortLabel: 'Actor',
       homeRoute: RolePortalRoutes.talentHome,
       icon: Icons.theater_comedy_outlined,
     );
@@ -122,8 +122,8 @@ _RoleGroup _groupForRoute(String route) {
   if (route.startsWith('/crew')) {
     return const _RoleGroup(
       id: 'crew',
-      label: 'Crew Services',
-      shortLabel: 'Crew',
+      label: 'Production Services',
+      shortLabel: 'Services',
       homeRoute: RolePortalRoutes.crewHome,
       icon: Icons.groups_2_outlined,
     );

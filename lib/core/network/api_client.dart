@@ -148,9 +148,13 @@ class ApiClient {
     }
     late final http.StreamedResponse streamed;
     try {
+      // BrowserClient buffers streamed request bytes before starting fetch.
+      // A large video can spend more than a minute in that preparation step
+      // alone, so the old 60-second limit abandoned uploads that the server
+      // later received successfully.
       final responseFuture =
-          _http.send(request).timeout(const Duration(seconds: 60));
-      const chunkSize = 64 * 1024;
+          _http.send(request).timeout(const Duration(minutes: 10));
+      const chunkSize = 1024 * 1024;
       var sentBytes = 0;
       while (sentBytes < bytes.length) {
         final next = (sentBytes + chunkSize).clamp(0, bytes.length);
@@ -169,7 +173,7 @@ class ApiClient {
     } on TimeoutException {
       throw const ApiException(
         code: 'network.timeout',
-        message: 'Upload timed out. Please try a smaller image or retry.',
+        message: 'The upload took too long. Check your connection and retry.',
       );
     }
 

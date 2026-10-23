@@ -602,7 +602,15 @@ class _DisputeEvidenceDialogState extends State<_DisputeEvidenceDialog> {
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'mp4'],
+      allowedExtensions: const [
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+        'pdf',
+        'mp4',
+        'mov'
+      ],
       withData: true,
     );
     if (result != null) setState(() => _file = result.files.single);
@@ -663,6 +671,7 @@ class _DisputeEvidenceDialogState extends State<_DisputeEvidenceDialog> {
       'webp' => 'image/webp',
       'pdf' => 'application/pdf',
       'mp4' => 'video/mp4',
+      'mov' => 'video/quicktime',
       _ => 'image/jpeg',
     };
   }
@@ -806,7 +815,7 @@ class _SafetySupportDialog extends StatefulWidget {
 
 class _SafetySupportDialogState extends State<_SafetySupportDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _subject = TextEditingController(text: 'Talent safety concern');
+  final _subject = TextEditingController(text: 'Profile safety concern');
   final _message = TextEditingController();
   bool _submitting = false;
   String? _error;

@@ -18,16 +18,24 @@ import '../../features/super_admin/routes/super_admin_routes.dart';
 class RoleMapper {
   RoleMapper._();
 
+  // Role codes remain stable. Keep legacy names as input aliases while
+  // presenting the concise names in account screens.
+  static String displayLabelForName(String label) => switch (label) {
+        'Actor / Talent' || 'Talent' => 'Actor',
+        'Crew / Services' || 'Crew' => 'Production Services',
+        _ => label,
+      };
+
   static String codeForLabel(String label) {
     return switch (label) {
       'Director / Producer' => 'director_producer',
-      'Actor / Talent' => 'actor_talent',
+      'Actor / Talent' || 'Actor' => 'actor_talent',
       'Model' => 'model',
       'Influencer' => 'influencer',
       'General Public' => 'general_public',
       'Location Owner' => 'location_owner',
       'Media / Equipment Provider' => 'equipment_provider',
-      'Crew / Services' => 'crew_service',
+      'Crew / Services' || 'Crew' || 'Production Services' => 'crew_service',
       'Casting Agency' => 'casting_agency',
       'Brand / Sponsor' => 'brand_sponsor',
       'Legal Partner' => 'legal_partner',

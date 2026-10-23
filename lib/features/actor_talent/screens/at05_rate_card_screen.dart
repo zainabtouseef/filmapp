@@ -126,7 +126,7 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'This is the only Actor/Talent rate field currently backed by the server profile.',
+                        'This is the only actor rate field currently backed by the server profile.',
                         style: AppTextStyles.body.copyWith(
                           color: context.appColors.textSecondary,
                           height: 1.35,
@@ -153,7 +153,7 @@ class _AT05RateCardScreenState extends State<AT05RateCardScreen> {
                     icon: Icons.lock_outline_rounded,
                     title: 'Sign in to manage rates',
                     message:
-                        'The published day rate is saved to your live talent profile.',
+                        'The published day rate is saved to your live actor profile.',
                   ),
           ),
         ),

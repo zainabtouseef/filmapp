@@ -131,7 +131,7 @@ class Booking {
       requirementId: json['requirement_id'] as String?,
       requirementTitle: json['requirement_title'] as String?,
       listingId: json['listing_id'] as String? ?? '',
-      listingTitle: json['listing_title'] as String? ?? 'Talent booking',
+      listingTitle: json['listing_title'] as String? ?? 'Actor booking',
       pricingMode: json['pricing_mode'] as String? ?? 'negotiable',
       allowsBargaining: json['allows_bargaining'] as bool? ?? true,
       category: json['category'] as String? ?? 'talent',

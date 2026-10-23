@@ -35,7 +35,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     return CineRole(
       icon: RoleMapper.iconForCode(role.code),
       name: role.name,
-      description: 'Open your ${role.name} workspace.',
+      description:
+          'Open your ${RoleMapper.displayLabelForName(role.name)} workspace.',
     );
   }
 
@@ -176,7 +177,7 @@ class RoleCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    role.name,
+                    RoleMapper.displayLabelForName(role.name),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.label.copyWith(

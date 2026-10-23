@@ -32,7 +32,7 @@ const agencyMenuEntries = <ActorShellMenuEntry>[
   (
     route: CastingAgencyRoutes.roster,
     screenId: 'CA-02',
-    label: 'Talent Roster Manager',
+    label: 'Artist Roster',
     icon: Icons.people_alt_outlined,
   ),
   (

@@ -113,7 +113,7 @@ class _AT01TalentDashboardScreenState extends State<AT01TalentDashboardScreen> {
         TourTarget(
           id: 'actor.dashboard.snapshot',
           child: ActorSectionCard(
-            title: 'Talent Snapshot',
+            title: 'Actor Snapshot',
             icon: Icons.auto_awesome_outlined,
             actionText: 'Edit profile',
             onActionTap: () =>
@@ -222,7 +222,7 @@ class _TalentHeroCard extends StatelessWidget {
     final talent = snapshot.talentProfile;
     final name = talent.screenName?.trim().isNotEmpty == true
         ? talent.screenName!.trim()
-        : 'Talent';
+        : 'Actor';
     final completeness = _profileCompleteness(talent, snapshot.userProfile);
 
     final auditions = (casting?.applications ?? const [])
@@ -277,7 +277,7 @@ class _TalentHeroCard extends StatelessWidget {
     return PortalHeroCard(
       initials: _initialsFor(name),
       name: name,
-      badgeLabel: 'Verified talent',
+      badgeLabel: 'Verified actor',
       stats: [
         PortalHeroStat(value: '$completeness%', label: 'Profile complete'),
         PortalHeroStat(
@@ -631,7 +631,7 @@ class _TalentSnapshotContent extends StatelessWidget {
     if (future == null) {
       return const CoreEmptyState(
         icon: Icons.lock_outline_rounded,
-        title: 'Sign in to load your talent snapshot',
+        title: 'Sign in to load your actor snapshot',
         message:
             'Identity, profile completeness, and reputation are fetched from the server.',
       );
@@ -685,7 +685,7 @@ class _IdentityCard extends StatelessWidget {
           child: ActorMediaFrame(
             imageUrl: snapshot.userProfile.avatarFile?.publicUrl ?? '',
             title: stageName,
-            badge: 'Talent',
+            badge: 'Actor',
             fallbackIcon: Icons.person_outline_rounded,
             aspectRatio: 1,
             compact: true,
@@ -986,7 +986,7 @@ class _TalentCommandCenter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PortalCommandCenter(
-      eyebrow: 'Talent operations',
+      eyebrow: 'Actor activity',
       title: 'Work Command Centre',
       subtitle: 'Offers, profile controls and availability in one place.',
       icon: Icons.theater_comedy_outlined,

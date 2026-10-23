@@ -147,7 +147,7 @@ const _dpFullWalkthroughChapters = <_DpTourChapter>[
       ),
       _DpTourTopic(
         'Define production requirements',
-        'Add the talent roles, crew services, equipment, and locations needed before searching for providers.',
+        'Add the acting roles, production services, equipment, and locations needed before searching for providers.',
         targetId: 'dp.projects.firstCard',
       ),
       _DpTourTopic(
@@ -172,7 +172,7 @@ const _dpFullWalkthroughChapters = <_DpTourChapter>[
     topics: [
       _DpTourTopic(
         'Discover production providers',
-        'Search talent, crew, equipment, and locations while keeping the active project and requirement in context.',
+        'Search actors, production services, equipment, and locations while keeping the active project and requirement in context.',
         targetId: 'dp.marketplace.search',
       ),
       _DpTourTopic(

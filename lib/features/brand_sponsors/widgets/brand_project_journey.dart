@@ -56,8 +56,8 @@ class BrandProjectJourneyCard extends StatelessWidget {
       ),
       _JourneyStage(
         number: '03',
-        title: 'Talent & vendors',
-        detail: 'Actor · model · crew · location · equipment',
+        title: 'People & vendors',
+        detail: 'Actor · model · production services · location · equipment',
         icon: Icons.travel_explore_outlined,
         route: BrandSponsorRoutes.marketplace,
         complete: shortlistCount > 0,

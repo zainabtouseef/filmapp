@@ -19,6 +19,63 @@ class CinePlannerController extends ChangeNotifier {
   String? selectedProductionId;
   bool loading = false;
   String? errorMessage;
+  Timer? _poller;
+  bool _polling = false;
+  bool _disposed = false;
+
+  void _watchJobs() {
+    final hasPending = (snapshot?['jobs'] as List? ?? const [])
+        .any((j) => ['queued', 'processing'].contains(j['status']));
+    if (!hasPending) {
+      _poller?.cancel();
+      _poller = null;
+      return;
+    }
+    if (_disposed || _poller != null) return;
+    _poller = Timer.periodic(const Duration(seconds: 4), (_) => _pollJobs());
+  }
+
+  Future<void> _pollJobs() async {
+    if (_polling || _disposed) return;
+    final id = selectedProductionId;
+    final jobs = (snapshot?['jobs'] as List? ?? const []);
+    final pending = jobs
+        .where((j) => ['queued', 'processing'].contains(j['status']))
+        .toList();
+    if (id == null || pending.isEmpty) return;
+    _polling = true;
+    try {
+      for (final item in pending) {
+        final job = await repository.job(id, item['public_id'] as String);
+        if (_disposed || id != selectedProductionId) return;
+        snapshot = {
+          ...snapshot!,
+          'jobs': jobs
+              .map((j) => j['public_id'] == job['public_id'] ? job : j)
+              .toList()
+        };
+        notifyListeners();
+        if (['completed', 'failed'].contains(job['status'])) {
+          final fresh = await repository.production(id);
+          if (!_disposed && id == selectedProductionId) {
+            snapshot = fresh;
+            notifyListeners();
+          }
+        }
+      }
+    } catch (_) {
+      // A transient network failure must not stop a server-side analysis.
+    } finally {
+      _polling = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _poller?.cancel();
+    super.dispose();
+  }
 
   Future<void> loadProductions({bool selectFirst = true}) async {
     loading = true;
@@ -37,19 +94,25 @@ class CinePlannerController extends ChangeNotifier {
         snapshot = null;
       }
       if (selectedProductionId != null) {
-        snapshot = await repository.production(selectedProductionId!);
+        final id = selectedProductionId!;
+        final fresh = await repository.production(id);
+        if (!_disposed && selectedProductionId == id) snapshot = fresh;
       }
     } catch (error) {
       errorMessage = '$error';
       rethrow;
     } finally {
       loading = false;
-      notifyListeners();
+      if (!_disposed) {
+        _watchJobs();
+        notifyListeners();
+      }
     }
   }
 
   Future<void> selectProduction(String publicId) async {
     selectedProductionId = publicId;
+    snapshot = null;
     await refresh();
   }
 
@@ -60,13 +123,17 @@ class CinePlannerController extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
     try {
-      snapshot = await repository.production(id);
+      final fresh = await repository.production(id);
+      if (!_disposed && selectedProductionId == id) snapshot = fresh;
     } catch (error) {
       errorMessage = '$error';
       rethrow;
     } finally {
       loading = false;
-      notifyListeners();
+      if (!_disposed) {
+        _watchJobs();
+        notifyListeners();
+      }
     }
   }
 

@@ -49,7 +49,7 @@ class ActorTalentRoutes {
 
   static String titleFor(String route) {
     return switch (route) {
-      dashboard => 'Talent Workspace',
+      dashboard => 'Actor Workspace',
       profile => 'Casting Profile',
       portfolio => 'Portfolio',
       calendar => 'Availability',
@@ -66,7 +66,7 @@ class ActorTalentRoutes {
       earnings => 'Earnings',
       reputation => 'Reviews',
       safety => 'Safety & Support',
-      _ => 'Actor / Talent',
+      _ => 'Actor',
     };
   }
 

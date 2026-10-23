@@ -222,7 +222,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               rows: users.map((user) {
                 final roleNames = user.roles.isEmpty
                     ? 'No active role'
-                    : user.roles.map((item) => item.name).join(', ');
+                    : user.roles
+                        .map((item) => RoleMapper.displayLabelForName(item.name))
+                        .join(', ');
                 return [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,7 +274,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _userDrawer(BuildContext context, AdminUserRecordDto user) {
     final roleNames = user.roles.isEmpty
         ? 'No role assigned'
-        : user.roles.map((item) => item.name).join(', ');
+        : user.roles
+            .map((item) => RoleMapper.displayLabelForName(item.name))
+            .join(', ');
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

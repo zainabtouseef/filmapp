@@ -1,0 +1,37 @@
+[
+  {
+    "path": "/var/backups",
+    "mode": "0o755",
+    "nobody_can_read": true
+  },
+  {
+    "path": "/var/backups/cineconnect",
+    "mode": "0o775",
+    "nobody_can_read": true
+  },
+  {
+    "path": "/var/backups/cineconnect/cineconnect-20261014-020001.sql.gz",
+    "mode": "0o644",
+    "nobody_can_read": true
+  },
+  {
+    "path": "/var/backups/cineconnect/v48-b66a4de-runtime.env",
+    "mode": "0o600",
+    "nobody_can_read": false
+  },
+  {
+    "path": "/var/backups/cineconnect/v48-b66a4de-api-inspect.json",
+    "mode": "0o600",
+    "nobody_can_read": false
+  },
+  {
+    "path": "/root/.cineconnect_backup.env",
+    "mode": "0o600",
+    "nobody_can_read": false
+  },
+  {
+    "path": "/var/www/cineconnect/secrets/production-20261014-audit2.env",
+    "mode": "0o600",
+    "nobody_can_read": false
+  }
+]

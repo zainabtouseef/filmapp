@@ -42,6 +42,7 @@ class DirectorProducerPortalScreen extends StatelessWidget {
   /// serif title), so the shell's generic centered heading would just
   /// duplicate it.
   static const _ownHeaderRoutes = {
+    DirectorProducerRoutes.cinePlanner,
     DirectorProducerRoutes.console,
     DirectorProducerRoutes.home,
     DirectorProducerRoutes.projects,

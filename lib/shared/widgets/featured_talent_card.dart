@@ -799,7 +799,7 @@ class _LightVerifiedTalentBadge extends StatelessWidget {
           ),
           SizedBox(width: compact ? 7 : 10),
           Text(
-            'VERIFIED TALENT',
+            'VERIFIED ACTOR',
             style: AppTextStyles.micro.copyWith(
               color: colors.goldDark,
               fontSize: compact ? 11 : 14,
@@ -1820,7 +1820,7 @@ class VerifiedTalentBadge extends StatelessWidget {
           ),
           SizedBox(width: compact ? 7 : 10),
           Text(
-            'VERIFIED TALENT',
+            'VERIFIED ACTOR',
             style: AppTextStyles.micro.copyWith(
               color: _TalentPalette.goldLight,
               fontSize: compact ? 11 : 14,

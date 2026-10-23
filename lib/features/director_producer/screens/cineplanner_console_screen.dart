@@ -15,6 +15,8 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/uploads/upload_repository.dart';
 import '../../../shared/cards/cine_card_system.dart';
+import 'cineplanner_chat_panel.dart';
+import 'cineplanner_plan_panel.dart';
 
 class CinePlannerConsoleScreen extends StatefulWidget {
   const CinePlannerConsoleScreen({super.key});
@@ -40,7 +42,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     _CineModule('Stunts', Icons.sports_martial_arts_outlined),
     _CineModule('VFX / SFX', Icons.auto_awesome_motion_outlined),
     _CineModule('Equipment', Icons.videocam_outlined),
-    _CineModule('Crew', Icons.badge_outlined),
+    _CineModule('Production Team', Icons.badge_outlined),
     _CineModule('Scheduling', Icons.calendar_month_outlined),
     _CineModule('Timetable', Icons.view_timeline_outlined),
     _CineModule('Budget', Icons.account_balance_wallet_outlined),
@@ -48,6 +50,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     _CineModule('Reports', Icons.analytics_outlined),
     _CineModule('AI Assistant', Icons.auto_awesome_outlined),
     _CineModule('Settings', Icons.tune_outlined),
+    _CineModule('Complete plan', Icons.workspace_premium_outlined),
   ];
 
   String _selectedModule = 'Dashboard';
@@ -84,15 +87,10 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
               onRetry: () => controller.loadProductions(),
             );
           }
-          if (controller.productions.isEmpty) {
-            return _CineOnboarding(
-              onCreate: (title, file) =>
-                  _createProjectAndUpload(controller, title, file),
-            );
-          }
-          final snapshot = controller.snapshot;
-          if (snapshot == null) return const _CineLoadingState();
-          return _console(controller, snapshot);
+          final snapshot = controller.snapshot ?? <String, dynamic>{};
+          return LayoutBuilder(
+              builder: (context, constraints) =>
+                  _console(controller, snapshot, constraints.maxWidth));
         },
       ),
     );
@@ -101,9 +99,10 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
   Widget _console(
     CinePlannerController controller,
     Map<String, dynamic> snapshot,
+    double availableWidth,
   ) {
     final viewport = MediaQuery.sizeOf(context);
-    final wide = viewport.width >= 1100;
+    final wide = availableWidth >= 850;
     final compactPanelHeight =
         (viewport.height * .82).clamp(620.0, 820.0).toDouble();
     final commandBar = _CineCommandBar(
@@ -112,7 +111,9 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
       onSelected: (value) {
         if (value != null) controller.selectProduction(value);
       },
-      onUpload: () => _uploadScreenplay(controller),
+      onUpload: () => controller.selectedProductionId == null
+          ? _showNewProjectDialog(controller)
+          : _uploadScreenplay(controller),
       onCreateProject: () => _showNewProjectDialog(controller),
       onRefresh: () => controller.loadProductions(selectFirst: false),
       onCommandPalette: () => _showCommandPalette(controller),
@@ -159,7 +160,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SizedBox(
-                          width: 188,
+                          width: 194,
                           child: _CineSidebar(
                             modules: _modules,
                             selected: _selectedModule,
@@ -170,7 +171,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _CinePanel(
-                            child: _moduleContent(controller, snapshot),
+                            child: _workspaceContent(controller, snapshot),
                           ),
                         ),
                       ],
@@ -189,7 +190,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
                   SizedBox(
                     height: compactPanelHeight,
                     child: _CinePanel(
-                      child: _moduleContent(controller, snapshot),
+                      child: _workspaceContent(controller, snapshot),
                     ),
                   ),
                 ],
@@ -249,6 +250,92 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     } else {
       setState(() => _selectedModule = selection);
     }
+  }
+
+  Widget _workspaceContent(
+      CinePlannerController controller, Map<String, dynamic> snapshot) {
+    if (_selectedModule == 'Complete plan') {
+      return CinePlannerPlanPanel(controller: controller);
+    }
+    if (controller.selectedProductionId == null) {
+      return ListView(children: [
+        _ModuleHeader(
+            eyebrow: 'YOUR PRODUCTION WORKSPACE',
+            title: _selectedModule == 'Dashboard'
+                ? 'From screenplay to shoot day'
+                : _selectedModule,
+            subtitle:
+                'Every part of your production, in one connected plan. Explore the sections on the left, then add a screenplay to begin.'),
+        const SizedBox(height: 20),
+        _CineOnboarding(
+            onCreate: (title, file) =>
+                _createProjectAndUpload(controller, title, file)),
+        const SizedBox(height: 20),
+        const Text('Your complete breakdown',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _modules
+                .where((m) => !['Dashboard', 'Settings', 'Complete plan']
+                    .contains(m.label))
+                .map((m) => ActionChip(
+                    avatar: Icon(m.icon, size: 18),
+                    label: Text(m.label),
+                    onPressed: () => setState(() => _selectedModule = m.label)))
+                .toList()),
+      ]);
+    }
+    final access = snapshot['access'] as Map<String, dynamic>?;
+    final preview = access != null && access['full_access'] != true;
+    final allowed = [
+      'Dashboard',
+      'Screenplay',
+      'Scenes',
+      'Characters',
+      'Locations',
+      'Props',
+      'Wardrobe'
+    ];
+    if (preview && !allowed.contains(_selectedModule)) {
+      return CinePlannerUnlockCard(
+          section: _selectedModule,
+          onOpen: () => setState(() => _selectedModule = 'Complete plan'));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (preview) ...[
+        Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+                color: context.appColors.goldGlow,
+                borderRadius: BorderRadius.circular(14)),
+            child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 10,
+                children: [
+                  const Text('Free preview · See the opening of your breakdown',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  FilledButton(
+                      onPressed: () =>
+                          setState(() => _selectedModule = 'Complete plan'),
+                      child: const Text(r'Unlock complete · $20/month')),
+                ])),
+        const SizedBox(height: 14),
+      ],
+      Expanded(child: _moduleContent(controller, snapshot)),
+    ]);
+  }
+
+  bool _canEdit(CinePlannerController controller) {
+    final access = controller.snapshot?['access'] as Map<String, dynamic>?;
+    if (access != null && access['full_access'] != true) {
+      setState(() => _selectedModule = 'Complete plan');
+      return false;
+    }
+    return true;
   }
 
   Widget _moduleContent(
@@ -315,7 +402,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
       'Stunts' => _elements(controller, snapshot, const {'stunts'}),
       'VFX / SFX' => _elements(controller, snapshot, const {'vfx', 'sfx'}),
       'Equipment' => _elements(controller, snapshot, const {'equipment'}),
-      'Crew' => _CineCrew(
+      'Production Team' => _CineCrew(
           snapshot: snapshot,
           onAdd: () => _addCrew(controller),
         ),
@@ -358,7 +445,8 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
           productionId: controller.selectedProductionId!,
           controller: controller,
         ),
-      'AI Assistant' => _CineAssistant(
+      'AI Assistant' => CinePlannerChatPanel(
+          key: ValueKey(controller.selectedProductionId),
           productionId: controller.selectedProductionId!,
           controller: controller,
         ),
@@ -381,6 +469,9 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
   }
 
   Future<void> _uploadScreenplay(CinePlannerController controller) async {
+    if (controller.selectedProductionId == null) {
+      return _showNewProjectDialog(controller);
+    }
     final file = await _pickPdf();
     if (file == null) return;
     await _processScreenplay(controller, file);
@@ -433,26 +524,13 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
           progress.value.progress,
         ),
       );
-      final job = upload['job'] as Map<String, dynamic>;
-      final finalJob = await controller.waitForJob(
-        job['public_id'] as String,
-        onProgress: (value) => progress.value = _ProcessingProgress(
-          _stageLabel(value['current_stage'] as String? ?? 'processing'),
-          ((value['progress_percent'] as num?)?.toDouble() ?? 0) / 100,
-        ),
-      );
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      if (finalJob['status'] == 'completed') {
-        _notice('CinePlanner is ready for review.');
-        setState(() => _selectedModule = 'Screenplay');
-      } else {
-        final error = finalJob['error'] as Map<String, dynamic>?;
-        _notice(
-          error?['message'] as String? ?? 'Screenplay analysis failed.',
-          error: true,
-        );
-      }
+      final job = upload['job'] as Map<String, dynamic>;
+      _notice(job['status'] == 'failed'
+          ? 'Analysis could not start. Open Screenplay to retry.'
+          : 'Analysis is running in the background. You can keep working.');
+      setState(() => _selectedModule = 'Screenplay');
     } catch (error) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
@@ -551,24 +629,12 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     await _createProjectAndUpload(controller, input.title, input.file);
   }
 
-  String _stageLabel(String stage) => switch (stage) {
-        'file_uploaded' => 'File uploaded',
-        'script_detected' => 'Script detected',
-        'scenes_extracted' => 'Scenes extracted',
-        'characters_extracted' => 'Characters extracted',
-        'locations_extracted' => 'Locations extracted',
-        'production_elements_extracted' => 'Production elements extracted',
-        'continuity_analyzed' => 'Continuity analyzed',
-        'saving_breakdown' => 'Schedule prepared',
-        'cineplanner_ready' => 'CinePlanner ready',
-        _ => 'Processing screenplay',
-      };
-
   Future<void> _runMutation(
     CinePlannerController controller,
     Future<void> Function() operation, {
     required String successMessage,
   }) async {
+    if (!_canEdit(controller)) return;
     try {
       await controller.mutate(operation);
       if (mounted) _notice(successMessage);
@@ -581,6 +647,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     Map<String, dynamic> item,
   ) async {
+    if (!_canEdit(controller)) return;
     final result = await _textEditDialog(
       title: 'Edit scene ${item['scene_number']}',
       fields: {
@@ -608,6 +675,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     Map<String, dynamic> item,
   ) async {
+    if (!_canEdit(controller)) return;
     final result = await _textEditDialog(
       title: 'Edit ${item['name']}',
       fields: {
@@ -692,6 +760,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     Map<String, dynamic> snapshot,
   ) async {
+    if (!_canEdit(controller)) return;
     final extracted = (snapshot['locations'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
     final result = await _textEditDialog(
@@ -729,6 +798,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     String category,
   ) async {
+    if (!_canEdit(controller)) return;
     final result = await _textEditDialog(
       title: 'Add ${category.toUpperCase()} item',
       fields: const {
@@ -763,6 +833,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
     CinePlannerController controller,
     Map<String, dynamic> item,
   ) async {
+    if (!_canEdit(controller)) return;
     final result = await _textEditDialog(
       title: 'Edit ${item['name']}',
       fields: {
@@ -816,7 +887,7 @@ class _CinePlannerConsoleScreenState extends State<CinePlannerConsoleScreen> {
           'daily_rate_minor': int.tryParse(result['daily_rate_minor'] ?? ''),
         },
       ),
-      successMessage: 'Crew member added.',
+      successMessage: 'Team member added.',
     );
   }
 
@@ -1225,7 +1296,7 @@ class _CineCommandBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 760;
+          final compact = constraints.maxWidth < 1200;
           final selector = DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: selectedId,
@@ -1274,16 +1345,55 @@ class _CineCommandBar extends StatelessWidget {
               ),
             ],
           );
+          if (compact && constraints.maxWidth >= 700) {
+            return Column(children: [
+              Row(children: [
+                const _CineBrand(),
+                const SizedBox(width: 12),
+                Expanded(
+                    child:
+                        Align(alignment: Alignment.centerRight, child: actions))
+              ]),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: selector),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: TextField(
+                        onChanged: onModuleSearch,
+                        decoration: const InputDecoration(
+                            hintText: 'Search the current module',
+                            prefixIcon: Icon(Icons.search),
+                            isDense: true)))
+              ]),
+            ]);
+          }
           if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: _CineBrand(),
-                ),
+                Row(children: [
+                  const Expanded(child: _CineBrand()),
+                  IconButton(
+                      onPressed: onCommandPalette,
+                      tooltip: 'Command palette',
+                      icon: const Icon(Icons.terminal_rounded)),
+                  IconButton(
+                      onPressed: onRefresh,
+                      tooltip: 'Refresh production data',
+                      icon: const Icon(Icons.refresh_rounded))
+                ]),
                 const SizedBox(height: 8),
-                Align(alignment: Alignment.centerRight, child: actions),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  FilledButton.icon(
+                      onPressed: onUpload,
+                      icon: const Icon(Icons.upload_file_rounded),
+                      label: const Text('Upload script')),
+                  OutlinedButton.icon(
+                      onPressed: onCreateProject,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('New project'))
+                ]),
                 const SizedBox(height: 10),
                 selector,
                 const SizedBox(height: 10),
@@ -1302,7 +1412,7 @@ class _CineCommandBar extends StatelessWidget {
             children: [
               const _CineBrand(),
               const SizedBox(width: 16),
-              SizedBox(width: 270, child: selector),
+              SizedBox(width: 240, child: selector),
               const SizedBox(width: 10),
               Expanded(
                 child: TextField(
@@ -1394,7 +1504,7 @@ class _CineSidebar extends StatelessWidget {
           final active = item.label == selected;
           return Container(
             key: ValueKey('cineplanner-module-${item.label}'),
-            height: 38,
+            height: 44,
             margin: const EdgeInsets.only(bottom: 2),
             decoration: BoxDecoration(
               color: active
@@ -1533,15 +1643,13 @@ class _CineOnboardingState extends State<_CineOnboarding> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 660),
+          constraints: const BoxConstraints(maxWidth: 980),
           child: _CinePanel(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _CineBrand(),
-                const SizedBox(height: 18),
                 Text(
                   'Create your first project plan',
                   style: AppTextStyles.sectionHeaderStyle.copyWith(
@@ -2056,7 +2164,7 @@ class _CineReadinessSummary extends StatelessWidget {
       'Scenes extracted': (dashboard['total_scenes'] as num? ?? 0) > 0,
       'Shoot days scheduled':
           (dashboard['scheduled_shoot_days'] as num? ?? 0) > 0,
-      'Crew assigned': crew.isNotEmpty,
+      'Production team assigned': crew.isNotEmpty,
       'Budget estimated':
           (dashboard['estimated_budget_minor'] as num? ?? 0) > 0,
     };
@@ -2141,10 +2249,12 @@ class _CineScreenplay extends StatelessWidget {
               label: const Text('Upload script'),
             ),
             FilledButton.icon(
-              onPressed: scripts.isNotEmpty &&
-                      scripts.first['analysis_status'] == 'review'
-                  ? onApprove
-                  : null,
+              onPressed:
+                  (snapshot['access'] as Map?)?['full_access'] != false &&
+                          scripts.isNotEmpty &&
+                          scripts.first['analysis_status'] == 'review'
+                      ? onApprove
+                      : null,
               icon: const Icon(Icons.verified_outlined),
               label: const Text('Approve breakdown'),
             ),
@@ -2152,6 +2262,36 @@ class _CineScreenplay extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         if (jobs.isNotEmpty) _JobStatus(job: jobs.first),
+        if (jobs.isNotEmpty && jobs.first['status'] == 'failed')
+          Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        '${(jobs.first['error'] as Map?)?['message'] ?? 'Analysis was interrupted. Completed sections are saved.'}'),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                        onPressed: () async {
+                          final controller = CinePlannerScope.of(context);
+                          try {
+                            await controller.repository.retryJob(
+                                controller.selectedProductionId!,
+                                jobs.first['public_id'] as String);
+                            await controller.refresh();
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(e is ApiException
+                                          ? e.message
+                                          : '$e')));
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Resume analysis')),
+                  ])),
         const SizedBox(height: 12),
         if (scripts.isEmpty)
           const _EmptyState(
@@ -2653,7 +2793,7 @@ class _CineCrew extends StatelessWidget {
     final rows = (snapshot['crew'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
     return _TableModule(
-      title: 'Crew',
+      title: 'Production Team',
       subtitle: 'Department staffing and availability',
       emptyTitle: 'No crew members added',
       actions: [
@@ -3337,136 +3477,6 @@ class _JsonRows extends StatelessWidget {
   }
 }
 
-class _CineAssistant extends StatefulWidget {
-  final String productionId;
-  final CinePlannerController controller;
-
-  const _CineAssistant({
-    required this.productionId,
-    required this.controller,
-  });
-
-  @override
-  State<_CineAssistant> createState() => _CineAssistantState();
-}
-
-class _CineAssistantState extends State<_CineAssistant> {
-  final _question = TextEditingController();
-  final List<(String, String)> _messages = [];
-  bool _asking = false;
-
-  @override
-  void dispose() {
-    _question.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      children: [
-        const _ModuleHeader(
-          eyebrow: 'Safe production intelligence',
-          title: 'Ask CinePlanner',
-          subtitle:
-              'The assistant sees a scoped production snapshot, never direct database access.',
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: _messages.isEmpty
-              ? const _EmptyState(
-                  icon: Icons.auto_awesome_outlined,
-                  title: 'Ask a production question',
-                  message:
-                      'Try “Which scenes require the hospital?” or “Show night exteriors.”',
-                )
-              : ListView(
-                  children: _messages
-                      .map(
-                        (message) => Align(
-                          alignment: message.$1 == 'You'
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 680),
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.fromLTRB(13, 10, 13, 10),
-                            decoration: BoxDecoration(
-                              color: message.$1 == 'You'
-                                  ? colors.goldGlow.withValues(alpha: 0.75)
-                                  : colors.softSurface,
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border(
-                                left: BorderSide(
-                                  color: message.$1 == 'You'
-                                      ? colors.goldMid
-                                      : colors.holographicTeal,
-                                  width: 3,
-                                ),
-                                top: BorderSide(color: colors.borderMuted),
-                                right: BorderSide(color: colors.borderMuted),
-                                bottom: BorderSide(color: colors.borderMuted),
-                              ),
-                            ),
-                            child: Text(
-                              message.$2,
-                              style: AppTextStyles.body.copyWith(
-                                color: colors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _question,
-          onSubmitted: (_) => _ask(),
-          decoration: InputDecoration(
-            hintText: 'Ask about scenes, cast, locations, costs or conflicts…',
-            prefixIcon: const Icon(Icons.auto_awesome_outlined),
-            suffixIcon: IconButton(
-              onPressed: _asking ? null : _ask,
-              icon: _asking
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send_rounded),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _ask() async {
-    final question = _question.text.trim();
-    if (question.length < 3) return;
-    setState(() {
-      _asking = true;
-      _messages.add(('You', question));
-      _question.clear();
-    });
-    try {
-      final result = await widget.controller.repository.ask(
-        productionId: widget.productionId,
-        question: question,
-      );
-      if (mounted) {
-        setState(() => _messages.add(('CinePlanner', '${result['answer']}')));
-      }
-    } catch (error) {
-      if (mounted) setState(() => _messages.add(('CinePlanner', '$error')));
-    } finally {
-      if (mounted) setState(() => _asking = false);
-    }
-  }
-}
-
 class _CineSettings extends StatelessWidget {
   final Map<String, dynamic> snapshot;
 
@@ -3533,7 +3543,7 @@ class _CineSettings extends StatelessWidget {
   }
 }
 
-class _TableModule extends StatelessWidget {
+class _TableModule extends StatefulWidget {
   final String title;
   final String subtitle;
   final String emptyTitle;
@@ -3551,7 +3561,30 @@ class _TableModule extends StatelessWidget {
   });
 
   @override
+  State<_TableModule> createState() => _TableModuleState();
+}
+
+class _TableModuleState extends State<_TableModule> {
+  int _page = 0;
+  static const _pageSize = 20;
+  @override
+  void didUpdateWidget(covariant _TableModule oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.title != widget.title ||
+        oldWidget.subtitle != widget.subtitle) {
+      _page = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final title = widget.title,
+        subtitle = widget.subtitle,
+        emptyTitle = widget.emptyTitle;
+    final columns = widget.columns, actions = widget.actions;
+    final rows = widget.rows;
+    final start = (_page * _pageSize).clamp(0, rows.length);
+    final end = (start + _pageSize).clamp(0, rows.length);
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -3577,10 +3610,28 @@ class _TableModule extends StatelessWidget {
                 showCheckboxColumn: false,
                 showBottomBorder: true,
                 columns: columns,
-                rows: rows,
+                rows: rows.sublist(start, end),
               ),
             ),
           ),
+        if (rows.length > _pageSize)
+          Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(children: [
+                Text('${start + 1}–$end of ${rows.length}'),
+                const Spacer(),
+                IconButton(
+                    onPressed:
+                        _page == 0 ? null : () => setState(() => _page--),
+                    tooltip: 'Previous page',
+                    icon: const Icon(Icons.chevron_left)),
+                IconButton(
+                    onPressed: end >= rows.length
+                        ? null
+                        : () => setState(() => _page++),
+                    tooltip: 'Next page',
+                    icon: const Icon(Icons.chevron_right))
+              ])),
       ],
     );
   }
@@ -3609,7 +3660,7 @@ class _ModuleHeader extends StatelessWidget {
       runSpacing: 10,
       children: [
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 660),
+          constraints: const BoxConstraints(maxWidth: 980),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3869,6 +3920,13 @@ class _JobStatus extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             LinearProgressIndicator(value: progress / 100),
+            const SizedBox(height: 8),
+            Text(
+                '${progress.round()}% · ${(job['coverage'] as Map?)?['total_pages'] ?? '—'} pages · ${(job['coverage'] as Map?)?['completed_sections'] ?? 0}/${(job['coverage'] as Map?)?['total_sections'] ?? '—'} sections'),
+            if (['queued', 'processing'].contains(job['status']))
+              const Text(
+                  'Analysis continues on the server. You can leave this screen and return later.',
+                  style: TextStyle(fontSize: 12)),
           ],
         ),
       ),

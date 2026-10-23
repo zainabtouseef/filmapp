@@ -61,7 +61,7 @@ class AuthUser {
         .toList();
     return AuthUser(
       publicId: json['public_id'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String? ?? '',
       displayName: json['display_name'] as String,
       status: json['status'] as String,
       roles: roles,

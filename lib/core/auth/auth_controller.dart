@@ -14,6 +14,7 @@ import '../uploads/upload_repository.dart';
 import '../verification/verification_models.dart';
 import 'auth_models.dart';
 import 'auth_repository.dart';
+import 'demo_account_models.dart';
 import 'role_mapper.dart';
 import 'token_store.dart';
 
@@ -93,6 +94,13 @@ class AuthController extends ChangeNotifier {
   }
 
   String get initialAuthenticatedRoute {
+    final available = _user?.roles
+            .where((role) =>
+                role.status == 'active' &&
+                RoleMapper.portalRouteForCode(role.code) != null)
+            .length ??
+        0;
+    if (available > 1) return '/profile/roles';
     final roleCode = _user?.primaryRole?.code;
     return RoleMapper.portalRouteForCode(roleCode ?? '') ?? '/portal/dashboard';
   }
@@ -142,6 +150,24 @@ class AuthController extends ChangeNotifier {
   Future<void> login({required String email, required String password}) async {
     final session = await _repository.login(email: email, password: password);
     await _acceptSession(session);
+  }
+
+  Future<DemoAccountDirectory> demoAccounts(String accessKey) =>
+      _repository.demoAccounts(accessKey);
+
+  Future<bool> demoLogin({
+    required String accessKey,
+    required String userId,
+    required String roleCode,
+  }) async {
+    await initialize();
+    final session = await _repository.demoLogin(
+      accessKey: accessKey,
+      userId: userId,
+      roleCode: roleCode,
+    );
+    if (isAuthenticated) await logout();
+    return _acceptSession(session);
   }
 
   Future<void> register({
@@ -203,6 +229,11 @@ class AuthController extends ChangeNotifier {
 
   Future<void> setPrimaryRole(String roleCode) async {
     _user = await _repository.setPrimaryRole(roleCode);
+    notifyListeners();
+  }
+
+  Future<void> addRole(String roleCode) async {
+    _user = await _repository.addRole(roleCode);
     notifyListeners();
   }
 
@@ -645,10 +676,11 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _acceptSession(AuthSession session) async {
+  Future<bool> _acceptSession(AuthSession session) async {
     _user = session.user;
     _refreshToken = session.tokens.refreshToken;
     _client.accessToken = session.tokens.accessToken;
+    var persisted = false;
     try {
       await _tokenStore
           .save(
@@ -656,6 +688,7 @@ class AuthController extends ChangeNotifier {
             refreshToken: session.tokens.refreshToken,
           )
           .timeout(_storageTimeout);
+      persisted = true;
     } catch (_) {
       // Keep the valid in-memory session usable even when persistence is
       // unavailable; the user can sign in again after a browser restart.
@@ -663,6 +696,7 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
     // Fire-and-forget: don't hold up login/register/session-restore on this.
     unawaited(refreshKycStatus());
+    return persisted;
   }
 
   void _resetSessionState() {

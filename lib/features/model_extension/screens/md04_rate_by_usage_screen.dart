@@ -48,7 +48,7 @@ class _MD04RateByUsageScreenState extends State<MD04RateByUsageScreen> {
               ActorInfoRow(
                 icon: Icons.link_outlined,
                 label: 'Extends',
-                value: 'Talent base rate card',
+                value: 'Base rate card',
               ),
               ActorInfoRow(
                 icon: Icons.description_outlined,

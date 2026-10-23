@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">CineConnect app icon</title>
+  <desc id="desc">A warm gold C shaped like a cinematic frame surrounds a play symbol on a deep charcoal field.</desc>
+  <defs>
+    <radialGradient id="background" cx="50%" cy="43%" r="75%">
+      <stop offset="0" stop-color="#171719"/>
+      <stop offset="1" stop-color="#070708"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="18%" y1="8%" x2="88%" y2="92%">
+      <stop offset="0" stop-color="#F3DE9F"/>
+      <stop offset="0.46" stop-color="#D6B45D"/>
+      <stop offset="1" stop-color="#A87A21"/>
+    </linearGradient>
+  </defs>
+  <rect id="app-background" width="1024" height="1024" fill="url(#background)"/>
+  <g id="brand-mark">
+    <path d="M 736 298 C 678 241 598 211 512 211 C 346 211 211 346 211 512 C 211 678 346 813 512 813 C 598 813 678 783 736 726"
+          fill="none" stroke="url(#gold)" stroke-width="112" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 444 389 Q 444 374 458 383 L 638 496 Q 662 512 638 528 L 458 641 Q 444 650 444 635 Z"
+          fill="#F8F3E9"/>
+    <circle cx="736" cy="298" r="15" fill="#F8F3E9"/>
+    <circle cx="736" cy="726" r="15" fill="#F8F3E9"/>
+  </g>
+</svg>

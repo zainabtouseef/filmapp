@@ -1,0 +1,2922 @@
+{
+  "checked_at": "2026-10-14T15:43:50.281628+00:00",
+  "config_flags": {
+    "SENTRY_DSN": false,
+    "SMTP_HOST": false,
+    "SMTP_FROM": false,
+    "VAPID_PUBLIC_KEY": true,
+    "VAPID_PRIVATE_KEY_FILE": true,
+    "OPENAI_API_KEY": true,
+    "CINEPLANNER_AI_ENABLED": true,
+    "FIELD_ENCRYPTION_KEY": true
+  },
+  "config_values": {
+    "APP_ENV": "production",
+    "PAYMENTS_MODE": null,
+    "PAYMENT_MODE": "manual_bank_transfer",
+    "SMS_ENABLED": null,
+    "RATELIMIT_DEFAULT": "300 per minute",
+    "ACCESS_TOKEN_MINUTES": 15,
+    "REFRESH_TOKEN_DAYS": 30
+  },
+  "secret_length_checks": {
+    "SECRET_KEY": true,
+    "JWT_SECRET_KEY": true
+  },
+  "migration": "9f84c2e7a6b1",
+  "table_counts": {
+    "users": 240,
+    "files": 476,
+    "bookings": 42,
+    "contracts": 12,
+    "payout_accounts": 10,
+    "projects": 64,
+    "marketplace_listings": 149,
+    "notifications": 68,
+    "user_sessions": 303
+  },
+  "user_statuses": [
+    [
+      "active",
+      240
+    ]
+  ],
+  "files": [
+    [
+      "public",
+      "clean",
+      "ready",
+      207
+    ],
+    [
+      "private",
+      "missing",
+      "missing",
+      239
+    ],
+    [
+      "authorized",
+      "clean",
+      "ready",
+      30
+    ]
+  ],
+  "roles": [
+    [
+      "legal_partner",
+      14
+    ],
+    [
+      "equipment_provider",
+      14
+    ],
+    [
+      "crew_service",
+      13
+    ],
+    [
+      "director_producer",
+      32
+    ],
+    [
+      "super_admin",
+      6
+    ],
+    [
+      "model",
+      13
+    ],
+    [
+      "finance_admin",
+      5
+    ],
+    [
+      "insurance_partner",
+      15
+    ],
+    [
+      "general_public",
+      4
+    ],
+    [
+      "actor_talent",
+      23
+    ],
+    [
+      "distribution_partner",
+      13
+    ],
+    [
+      "location_owner",
+      15
+    ],
+    [
+      "casting_agency",
+      13
+    ],
+    [
+      "brand_sponsor",
+      13
+    ],
+    [
+      "reviewer",
+      4
+    ],
+    [
+      "influencer",
+      13
+    ],
+    [
+      "support_agent",
+      4
+    ]
+  ],
+  "db_transport": [
+    "Ssl_cipher",
+    "TLS_AES_256_GCM_SHA384"
+  ],
+  "db_privilege_types": [
+    "USAGE"
+  ],
+  "routes": [
+    {
+      "path": "/static/<path:filename>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "static"
+    },
+    {
+      "path": "/api/v1/admin/control/bookings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_bookings"
+    },
+    {
+      "path": "/api/v1/admin/control/bookings/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_booking_detail"
+    },
+    {
+      "path": "/api/v1/admin/control/bookings/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.admin_control.admin_update_booking"
+    },
+    {
+      "path": "/api/v1/admin/control/users",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_users"
+    },
+    {
+      "path": "/api/v1/admin/control/users/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.admin_control.admin_update_user"
+    },
+    {
+      "path": "/api/v1/admin/control/listings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_listings"
+    },
+    {
+      "path": "/api/v1/admin/control/listings/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.admin_control.admin_update_listing"
+    },
+    {
+      "path": "/api/v1/admin/control/contract-templates",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_contract_templates"
+    },
+    {
+      "path": "/api/v1/admin/control/contract-templates",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.admin_control.admin_create_contract_template"
+    },
+    {
+      "path": "/api/v1/admin/control/contract-templates/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.admin_control.admin_update_contract_template"
+    },
+    {
+      "path": "/api/v1/admin/control/fee-rules",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_fee_rules"
+    },
+    {
+      "path": "/api/v1/admin/control/fee-rules",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.admin_control.admin_create_fee_rule"
+    },
+    {
+      "path": "/api/v1/admin/control/fee-rules/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.admin_control.admin_update_fee_rule"
+    },
+    {
+      "path": "/api/v1/admin/control/roles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_roles"
+    },
+    {
+      "path": "/api/v1/admin/control/roles/<code>/permissions",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.admin_control.admin_update_role_permissions"
+    },
+    {
+      "path": "/api/v1/admin/control/audit-events",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.admin_control.admin_audit_events"
+    },
+    {
+      "path": "/api/v1/health/live",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.health.live"
+    },
+    {
+      "path": "/api/v1/health/ready",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.health.ready"
+    },
+    {
+      "path": "/api/v1/admin/app-settings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.app.get_app_settings"
+    },
+    {
+      "path": "/api/v1/admin/app-settings",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.app.update_app_settings"
+    },
+    {
+      "path": "/api/v1/app/bootstrap",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.app.bootstrap"
+    },
+    {
+      "path": "/api/v1/app/public-config",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.app.public_config"
+    },
+    {
+      "path": "/api/v1/roles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.app.roles"
+    },
+    {
+      "path": "/api/v1/openapi.yaml",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.app.openapi"
+    },
+    {
+      "path": "/api/v1/auth/register",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.register"
+    },
+    {
+      "path": "/api/v1/auth/login",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.login"
+    },
+    {
+      "path": "/api/v1/auth/refresh",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.refresh"
+    },
+    {
+      "path": "/api/v1/auth/logout",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.logout"
+    },
+    {
+      "path": "/api/v1/auth/password/forgot",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.forgot_password"
+    },
+    {
+      "path": "/api/v1/auth/password/reset",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.reset_password"
+    },
+    {
+      "path": "/api/v1/me",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.auth.me"
+    },
+    {
+      "path": "/api/v1/me",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.auth.update_me"
+    },
+    {
+      "path": "/api/v1/me/sessions",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.auth.my_sessions"
+    },
+    {
+      "path": "/api/v1/me/sessions/<session_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.auth.revoke_my_session"
+    },
+    {
+      "path": "/api/v1/me/sessions/revoke-others",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.revoke_other_sessions"
+    },
+    {
+      "path": "/api/v1/me/roles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.auth.my_roles"
+    },
+    {
+      "path": "/api/v1/me/settings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.auth.my_settings"
+    },
+    {
+      "path": "/api/v1/me/settings",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.auth.update_my_settings"
+    },
+    {
+      "path": "/api/v1/me/roles",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.auth.add_role"
+    },
+    {
+      "path": "/api/v1/me/primary-role",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.auth.set_primary_role"
+    },
+    {
+      "path": "/api/v1/kyc/requirements/<role_code>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.get_kyc_requirements"
+    },
+    {
+      "path": "/api/v1/admin/kyc/requirements/<role_code>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.verification.update_kyc_requirements"
+    },
+    {
+      "path": "/api/v1/uploads/presign",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.presign_upload"
+    },
+    {
+      "path": "/api/v1/uploads/<public_id>/binary",
+      "methods": [
+        "PUT"
+      ],
+      "endpoint": "api_v1.verification.upload_binary"
+    },
+    {
+      "path": "/api/v1/uploads/<public_id>/complete",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.complete_upload"
+    },
+    {
+      "path": "/api/v1/files/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.file_status"
+    },
+    {
+      "path": "/api/v1/files/<public_id>/download-link",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.file_download_link"
+    },
+    {
+      "path": "/api/v1/files/<public_id>/download",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.download_file"
+    },
+    {
+      "path": "/api/v1/media/<path:storage_key>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.public_media"
+    },
+    {
+      "path": "/api/v1/kyc/submissions",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.create_kyc_submission"
+    },
+    {
+      "path": "/api/v1/kyc/submissions/<public_id>/submit",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.submit_kyc"
+    },
+    {
+      "path": "/api/v1/me/kyc",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.my_kyc"
+    },
+    {
+      "path": "/api/v1/kyc/submissions/<public_id>/resubmit",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.resubmit_kyc"
+    },
+    {
+      "path": "/api/v1/admin/kyc/submissions",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.admin_kyc_queue"
+    },
+    {
+      "path": "/api/v1/admin/kyc/submissions/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.verification.admin_kyc_detail"
+    },
+    {
+      "path": "/api/v1/admin/kyc/submissions/<public_id>/decision",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.verification.admin_kyc_decision"
+    },
+    {
+      "path": "/api/v1/cities",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.cities"
+    },
+    {
+      "path": "/api/v1/talent/travel-preferences",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.get_travel_preferences"
+    },
+    {
+      "path": "/api/v1/talent/travel-preferences",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_travel_preferences"
+    },
+    {
+      "path": "/api/v1/me/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.my_profile"
+    },
+    {
+      "path": "/api/v1/me/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_my_profile"
+    },
+    {
+      "path": "/api/v1/talent/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.get_talent_profile"
+    },
+    {
+      "path": "/api/v1/talent/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_talent_profile"
+    },
+    {
+      "path": "/api/v1/portfolio",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.portfolio_items"
+    },
+    {
+      "path": "/api/v1/portfolio",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.create_portfolio_item"
+    },
+    {
+      "path": "/api/v1/portfolio/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_portfolio_item"
+    },
+    {
+      "path": "/api/v1/portfolio/<public_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.marketplace.delete_portfolio_item"
+    },
+    {
+      "path": "/api/v1/credits",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.credit_entries"
+    },
+    {
+      "path": "/api/v1/credits",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.create_credit_entry"
+    },
+    {
+      "path": "/api/v1/credits/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_credit_entry"
+    },
+    {
+      "path": "/api/v1/credits/<public_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.marketplace.delete_credit_entry"
+    },
+    {
+      "path": "/api/v1/saved-searches",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.saved_searches"
+    },
+    {
+      "path": "/api/v1/saved-searches",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.create_saved_search"
+    },
+    {
+      "path": "/api/v1/saved-searches/<public_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.marketplace.delete_saved_search"
+    },
+    {
+      "path": "/api/v1/shortlists",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.shortlists"
+    },
+    {
+      "path": "/api/v1/shortlists",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.create_shortlist"
+    },
+    {
+      "path": "/api/v1/shortlists/<public_id>/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.add_shortlist_item"
+    },
+    {
+      "path": "/api/v1/shortlist-items/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_shortlist_item"
+    },
+    {
+      "path": "/api/v1/shortlist-items/<public_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.marketplace.delete_shortlist_item"
+    },
+    {
+      "path": "/api/v1/marketplace/listings",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.publish_listing"
+    },
+    {
+      "path": "/api/v1/marketplace/listings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.marketplace_listings"
+    },
+    {
+      "path": "/api/v1/marketplace/listings/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.marketplace_listing_detail"
+    },
+    {
+      "path": "/api/v1/marketplace/my-listings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.my_marketplace_listings"
+    },
+    {
+      "path": "/api/v1/marketplace/listings/<public_id>/pricing",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.marketplace.update_marketplace_listing_pricing"
+    },
+    {
+      "path": "/api/v1/marketplace/result-count",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.marketplace.marketplace_result_count"
+    },
+    {
+      "path": "/api/v1/marketplace/facets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.marketplace.marketplace_facets"
+    },
+    {
+      "path": "/api/v1/skills",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.skills"
+    },
+    {
+      "path": "/api/v1/projects",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.projects"
+    },
+    {
+      "path": "/api/v1/projects",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.projects.create_project"
+    },
+    {
+      "path": "/api/v1/public/cinema",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.public_cinema"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.project_detail"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.projects.update_project"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/duplicate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.projects.duplicate_project"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/room",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.project_room"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/room/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.projects.create_project_room_item"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/members",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.project_members"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/members",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.projects.add_project_member"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/files",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.project_files"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/files",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.projects.link_project_file"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/requirements",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.projects.project_requirements"
+    },
+    {
+      "path": "/api/v1/projects/<public_id>/requirements",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.projects.create_project_requirement"
+    },
+    {
+      "path": "/api/v1/requirements/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.projects.update_requirement"
+    },
+    {
+      "path": "/api/v1/availability",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.availability_entries"
+    },
+    {
+      "path": "/api/v1/availability",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.create_availability_entry"
+    },
+    {
+      "path": "/api/v1/availability/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.bookings.update_availability_entry"
+    },
+    {
+      "path": "/api/v1/availability/<public_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.bookings.delete_availability_entry"
+    },
+    {
+      "path": "/api/v1/availability/check",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.availability_check"
+    },
+    {
+      "path": "/api/v1/bookings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.bookings"
+    },
+    {
+      "path": "/api/v1/talent/opportunities",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.talent_opportunities"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.booking_detail"
+    },
+    {
+      "path": "/api/v1/bookings",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.create_booking"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>/send",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.send_booking"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.bookings.update_booking_draft"
+    },
+    {
+      "path": "/api/v1/negotiations",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.negotiations"
+    },
+    {
+      "path": "/api/v1/negotiations/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.negotiation_detail"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>/offers",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.create_counter_offer"
+    },
+    {
+      "path": "/api/v1/offers/<public_id>/accept",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.accept_offer"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>/reject",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.reject_booking"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>/cancel",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.cancel_booking"
+    },
+    {
+      "path": "/api/v1/conversations/<public_id>/messages",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.bookings.conversation_messages"
+    },
+    {
+      "path": "/api/v1/conversations/<public_id>/messages",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.create_message"
+    },
+    {
+      "path": "/api/v1/messages/<public_id>/pin",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.bookings.pin_message"
+    },
+    {
+      "path": "/api/v1/casting/roles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.list_casting_roles"
+    },
+    {
+      "path": "/api/v1/casting/roles/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.casting_role_detail"
+    },
+    {
+      "path": "/api/v1/casting/roles/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.casting.publish_casting_role"
+    },
+    {
+      "path": "/api/v1/casting/roles/<public_id>/save",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.save_casting_role"
+    },
+    {
+      "path": "/api/v1/casting/roles/<public_id>/save",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.casting.unsave_casting_role"
+    },
+    {
+      "path": "/api/v1/casting/roles/<public_id>/applications",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.create_casting_application"
+    },
+    {
+      "path": "/api/v1/casting/applications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.list_actor_applications"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.actor_application_detail"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.casting.update_actor_application"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/submit",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.submit_casting_application"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/withdraw",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.withdraw_casting_application"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/confirm-audition",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.confirm_casting_audition"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/meetings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.list_casting_meetings"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/meetings/propose",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.propose_casting_meeting"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.accept_casting_meeting"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.decline_casting_meeting"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/self-tape",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.submit_casting_self_tape"
+    },
+    {
+      "path": "/api/v1/casting/applications/<public_id>/conversation",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.ensure_casting_conversation"
+    },
+    {
+      "path": "/api/v1/director/projects/<public_id>/casting-applications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.list_director_casting_applications"
+    },
+    {
+      "path": "/api/v1/director/casting-applications/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.casting.update_director_casting_application"
+    },
+    {
+      "path": "/api/v1/director/casting-applications/<public_id>/meetings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.casting.list_director_casting_meetings"
+    },
+    {
+      "path": "/api/v1/director/casting-applications/<public_id>/meetings/propose",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.propose_director_casting_meeting"
+    },
+    {
+      "path": "/api/v1/director/casting-applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.accept_director_casting_meeting"
+    },
+    {
+      "path": "/api/v1/director/casting-applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.casting.decline_director_casting_meeting"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.productions_index"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.productions_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.production_show"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.cineplanner.production_update"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/scripts",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.script_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/jobs/<job_public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.job_show"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/jobs/<job_public_id>/retry",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.job_retry"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/approve-breakdown",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.approve_breakdown"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/<resource>/<entity_public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.cineplanner.resource_update"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/locations",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.location_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/elements",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.element_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/crew",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.crew_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/team",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.production_team_upsert"
+    },
+    {
+      "path": "/api/v1/cineplanner/actors",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.actors_index"
+    },
+    {
+      "path": "/api/v1/cineplanner/actors",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.actors_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/actors/<actor_public_id>/availability",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.actor_availability_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/cast-assignments",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.cast_assignment_upsert"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/schedule",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.schedule_show"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/schedule/generate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.schedule_generate"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/schedule/events/<event_public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.cineplanner.schedule_event_move"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/schedule/optimize",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.schedule_optimize"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/schedule/lock",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.schedule_lock"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/budget",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.budget_show"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/budget/<line_public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.cineplanner.budget_line_update"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/call-sheets",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.call_sheet_create"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/call-sheets/<sheet_public_id>.pdf",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.call_sheet_pdf"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/reports/<report_type>.csv",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.report_csv"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/reports/<report_type>.xlsx",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.report_excel"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/reports/<report_type>.pdf",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.report_pdf"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/reports/<report_type>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.report_json"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/assistant",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.cineplanner.assistant_query"
+    },
+    {
+      "path": "/api/v1/cineplanner/productions/<public_id>/audit-logs",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.cineplanner.audit_logs"
+    },
+    {
+      "path": "/api/v1/opportunities/roles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.list_opportunity_roles"
+    },
+    {
+      "path": "/api/v1/opportunities/roles/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.get_opportunity_role"
+    },
+    {
+      "path": "/api/v1/opportunities/roles/<public_id>/save",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.save_opportunity_role"
+    },
+    {
+      "path": "/api/v1/opportunities/roles/<public_id>/save",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.opportunities.unsave_opportunity_role"
+    },
+    {
+      "path": "/api/v1/opportunities/roles/<public_id>/applications",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.create_opportunity_application"
+    },
+    {
+      "path": "/api/v1/opportunities/applications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.list_my_opportunity_applications"
+    },
+    {
+      "path": "/api/v1/opportunities/applications/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.get_my_opportunity_application"
+    },
+    {
+      "path": "/api/v1/opportunities/applications/<public_id>/withdraw",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.withdraw_opportunity_application"
+    },
+    {
+      "path": "/api/v1/opportunities/applications/<public_id>/meetings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.list_opportunity_meetings"
+    },
+    {
+      "path": "/api/v1/opportunities/applications/<public_id>/meetings/propose",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.propose_opportunity_meeting"
+    },
+    {
+      "path": "/api/v1/opportunities/applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.accept_opportunity_meeting"
+    },
+    {
+      "path": "/api/v1/opportunities/applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.decline_opportunity_meeting"
+    },
+    {
+      "path": "/api/v1/director/projects/<public_id>/opportunity-applications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.list_director_opportunity_applications"
+    },
+    {
+      "path": "/api/v1/director/opportunity-applications/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.opportunities.update_director_opportunity_application"
+    },
+    {
+      "path": "/api/v1/director/opportunity-applications/<public_id>/meetings",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.opportunities.list_director_opportunity_meetings"
+    },
+    {
+      "path": "/api/v1/director/opportunity-applications/<public_id>/meetings/propose",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.propose_director_opportunity_meeting"
+    },
+    {
+      "path": "/api/v1/director/opportunity-applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.accept_director_opportunity_meeting"
+    },
+    {
+      "path": "/api/v1/director/opportunity-applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.opportunities.decline_director_opportunity_meeting"
+    },
+    {
+      "path": "/api/v1/contracts/<public_id>/verification",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.contract_verification_link"
+    },
+    {
+      "path": "/api/v1/contracts/verify/<token>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.verify_contract_link"
+    },
+    {
+      "path": "/api/v1/contract-templates",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.contract_templates"
+    },
+    {
+      "path": "/api/v1/legal/templates",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.legal_templates"
+    },
+    {
+      "path": "/api/v1/legal/templates/<public_id>/reviews",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.contracts.review_contract_template"
+    },
+    {
+      "path": "/api/v1/contracts",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.contracts"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>/contracts",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.contracts.generate_contract"
+    },
+    {
+      "path": "/api/v1/contracts/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.contract_detail"
+    },
+    {
+      "path": "/api/v1/contracts/<public_id>.pdf",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.contract_pdf"
+    },
+    {
+      "path": "/api/v1/contracts/<public_id>/signatures",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.contracts.sign_contract"
+    },
+    {
+      "path": "/api/v1/contracts/<public_id>/addendums",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.contracts.create_addendum"
+    },
+    {
+      "path": "/api/v1/legal-reviews",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.contracts.request_legal_review"
+    },
+    {
+      "path": "/api/v1/legal/reviews",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.legal_reviews"
+    },
+    {
+      "path": "/api/v1/legal-reviews/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.legal_review_detail"
+    },
+    {
+      "path": "/api/v1/legal-reviews/<public_id>/decision",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.contracts.legal_review_decision"
+    },
+    {
+      "path": "/api/v1/legal/billing-records",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.contracts.legal_billing_records"
+    },
+    {
+      "path": "/api/v1/legal/billing-records/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.contracts.update_legal_billing_record"
+    },
+    {
+      "path": "/api/v1/director/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_dashboard"
+    },
+    {
+      "path": "/api/v1/brands/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_dashboard"
+    },
+    {
+      "path": "/api/v1/director/schedule",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_schedule"
+    },
+    {
+      "path": "/api/v1/brands/schedule",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_schedule"
+    },
+    {
+      "path": "/api/v1/director/schedule",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.director.create_director_schedule_event"
+    },
+    {
+      "path": "/api/v1/brands/schedule",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.director.create_director_schedule_event"
+    },
+    {
+      "path": "/api/v1/director/discovery",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_discovery"
+    },
+    {
+      "path": "/api/v1/brands/discovery",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_discovery"
+    },
+    {
+      "path": "/api/v1/director/discovery/<kind>/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_discovery_item"
+    },
+    {
+      "path": "/api/v1/brands/discovery/<kind>/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.director.director_discovery_item"
+    },
+    {
+      "path": "/api/v1/payments/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.payments_dashboard"
+    },
+    {
+      "path": "/api/v1/payment-schedules",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.payment_schedules"
+    },
+    {
+      "path": "/api/v1/payment-schedules/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.payment_schedule_detail"
+    },
+    {
+      "path": "/api/v1/payment-proofs",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.payments.submit_payment_proof"
+    },
+    {
+      "path": "/api/v1/ledger",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.ledger"
+    },
+    {
+      "path": "/api/v1/receipts/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.receipt_detail"
+    },
+    {
+      "path": "/api/v1/receipts/<public_id>.pdf",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.receipt_pdf"
+    },
+    {
+      "path": "/api/v1/payout-accounts",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.payout_accounts"
+    },
+    {
+      "path": "/api/v1/payout-accounts",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.payments.create_payout_account"
+    },
+    {
+      "path": "/api/v1/admin/payment-proofs",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.admin_payment_proofs"
+    },
+    {
+      "path": "/api/v1/admin/payment-proofs/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.payments.admin_payment_proof_detail"
+    },
+    {
+      "path": "/api/v1/admin/payment-proofs/<public_id>/decision",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.payments.admin_payment_proof_decision"
+    },
+    {
+      "path": "/api/v1/location-properties",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_location_property"
+    },
+    {
+      "path": "/api/v1/location-properties",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.list_location_properties"
+    },
+    {
+      "path": "/api/v1/location-properties/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_location_property"
+    },
+    {
+      "path": "/api/v1/location-properties/<public_id>/spaces",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_location_space"
+    },
+    {
+      "path": "/api/v1/location-spaces/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_location_space"
+    },
+    {
+      "path": "/api/v1/location-properties/<public_id>/pricing",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_location_pricing"
+    },
+    {
+      "path": "/api/v1/location-pricing/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_location_pricing"
+    },
+    {
+      "path": "/api/v1/location-properties/<public_id>/rules",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_location_rule"
+    },
+    {
+      "path": "/api/v1/location-rules/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_location_rule"
+    },
+    {
+      "path": "/api/v1/location-inspections",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_location_inspection"
+    },
+    {
+      "path": "/api/v1/location-inspections",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.location_inspections"
+    },
+    {
+      "path": "/api/v1/location-inspections/<public_id>/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.add_location_inspection_item"
+    },
+    {
+      "path": "/api/v1/location-inspections/<public_id>/confirm",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.confirm_location_inspection"
+    },
+    {
+      "path": "/api/v1/damage-claims",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_damage_claim"
+    },
+    {
+      "path": "/api/v1/damage-claims",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.damage_claims"
+    },
+    {
+      "path": "/api/v1/damage-claims/<public_id>/evidence",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.add_damage_claim_evidence"
+    },
+    {
+      "path": "/api/v1/equipment/provider-profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.upsert_equipment_profile"
+    },
+    {
+      "path": "/api/v1/equipment/provider-profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.equipment_profile"
+    },
+    {
+      "path": "/api/v1/equipment/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_equipment_item"
+    },
+    {
+      "path": "/api/v1/equipment/items",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.equipment_items"
+    },
+    {
+      "path": "/api/v1/equipment/items/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_equipment_item"
+    },
+    {
+      "path": "/api/v1/equipment/packages",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_equipment_package"
+    },
+    {
+      "path": "/api/v1/equipment/packages",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.equipment_packages"
+    },
+    {
+      "path": "/api/v1/equipment/packages/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_equipment_package"
+    },
+    {
+      "path": "/api/v1/equipment/packages/<public_id>/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.add_equipment_package_item"
+    },
+    {
+      "path": "/api/v1/equipment/terms",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_equipment_term"
+    },
+    {
+      "path": "/api/v1/equipment/terms",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.equipment_terms"
+    },
+    {
+      "path": "/api/v1/equipment/terms/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_equipment_term"
+    },
+    {
+      "path": "/api/v1/equipment-inspections",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.equipment_inspections"
+    },
+    {
+      "path": "/api/v1/equipment-inspections",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_equipment_inspection"
+    },
+    {
+      "path": "/api/v1/equipment-inspections/<public_id>/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.add_equipment_inspection_item"
+    },
+    {
+      "path": "/api/v1/equipment-inspections/<public_id>/confirm",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.confirm_equipment_inspection"
+    },
+    {
+      "path": "/api/v1/safety-checks",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_safety_check"
+    },
+    {
+      "path": "/api/v1/safety-checks/<public_id>/items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_safety_check_item"
+    },
+    {
+      "path": "/api/v1/safety-checks",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.list_safety_checks"
+    },
+    {
+      "path": "/api/v1/safety-checks/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.safety_check_detail"
+    },
+    {
+      "path": "/api/v1/safety-checks/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_safety_check"
+    },
+    {
+      "path": "/api/v1/safety-checks/<public_id>/items/<item_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_safety_check_item"
+    },
+    {
+      "path": "/api/v1/incidents",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_incident"
+    },
+    {
+      "path": "/api/v1/incidents",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.list_incidents"
+    },
+    {
+      "path": "/api/v1/incidents/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.operations.incident_detail"
+    },
+    {
+      "path": "/api/v1/incidents/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.operations.update_incident"
+    },
+    {
+      "path": "/api/v1/safety-check-ins",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.create_safety_check_in"
+    },
+    {
+      "path": "/api/v1/safety-check-ins/<public_id>/complete",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.operations.complete_safety_check_in"
+    },
+    {
+      "path": "/api/v1/insurance/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.insurance.insurance_profile"
+    },
+    {
+      "path": "/api/v1/insurance/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.insurance.upsert_insurance_profile"
+    },
+    {
+      "path": "/api/v1/insurance/policies",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.insurance.create_insurance_policy"
+    },
+    {
+      "path": "/api/v1/insurance/policies",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.insurance.list_insurance_policies"
+    },
+    {
+      "path": "/api/v1/insurance/policies/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.insurance.insurance_policy_detail"
+    },
+    {
+      "path": "/api/v1/insurance/claims",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.insurance.create_insurance_claim"
+    },
+    {
+      "path": "/api/v1/insurance/claims",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.insurance.list_insurance_claims"
+    },
+    {
+      "path": "/api/v1/insurance/claims/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.insurance.insurance_claim_detail"
+    },
+    {
+      "path": "/api/v1/insurance/claims/<public_id>/evidence",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.insurance.add_insurance_claim_evidence"
+    },
+    {
+      "path": "/api/v1/insurance/claims/<public_id>/decision",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.insurance.decide_insurance_claim"
+    },
+    {
+      "path": "/api/v1/insurance/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.insurance.insurance_dashboard"
+    },
+    {
+      "path": "/api/v1/agencies/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.agency_profile"
+    },
+    {
+      "path": "/api/v1/agencies/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.upsert_agency_profile"
+    },
+    {
+      "path": "/api/v1/agency-invitations",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_agency_invitation"
+    },
+    {
+      "path": "/api/v1/agency-invitations",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_agency_invitations"
+    },
+    {
+      "path": "/api/v1/agency-invitations/<public_id>/accept",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.accept_agency_invitation"
+    },
+    {
+      "path": "/api/v1/agencies/<public_id>/talent",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.agency_roster"
+    },
+    {
+      "path": "/api/v1/auditions",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_audition_request"
+    },
+    {
+      "path": "/api/v1/auditions",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_auditions"
+    },
+    {
+      "path": "/api/v1/auditions/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_audition_request"
+    },
+    {
+      "path": "/api/v1/auditions/<public_id>/candidates",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.add_audition_candidate"
+    },
+    {
+      "path": "/api/v1/audition-candidates/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_audition_candidate"
+    },
+    {
+      "path": "/api/v1/self-tapes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_self_tape"
+    },
+    {
+      "path": "/api/v1/audition-candidates/<public_id>/notes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.add_selection_note"
+    },
+    {
+      "path": "/api/v1/agency-commissions",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_agency_commission"
+    },
+    {
+      "path": "/api/v1/agencies/<public_id>/commissions",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.agency_commissions"
+    },
+    {
+      "path": "/api/v1/brands/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.brand_profile"
+    },
+    {
+      "path": "/api/v1/brands/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.upsert_brand_profile"
+    },
+    {
+      "path": "/api/v1/brand-opportunities",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_brand_opportunity"
+    },
+    {
+      "path": "/api/v1/brand-opportunities",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_brand_opportunities"
+    },
+    {
+      "path": "/api/v1/brand-opportunities/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.get_brand_opportunity"
+    },
+    {
+      "path": "/api/v1/brand-opportunities/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_brand_opportunity"
+    },
+    {
+      "path": "/api/v1/brand-opportunities/<public_id>/applications",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_brand_application"
+    },
+    {
+      "path": "/api/v1/brand-opportunities/<public_id>/applications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_brand_applications"
+    },
+    {
+      "path": "/api/v1/brand-applications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_owner_brand_applications"
+    },
+    {
+      "path": "/api/v1/brand-applications/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.get_brand_application"
+    },
+    {
+      "path": "/api/v1/brand-applications/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_brand_application"
+    },
+    {
+      "path": "/api/v1/brand-applications/<public_id>/conversation",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.ensure_brand_application_conversation"
+    },
+    {
+      "path": "/api/v1/brand-applications/<public_id>/terms",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_brand_term"
+    },
+    {
+      "path": "/api/v1/campaign-deliverables",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_campaign_deliverable"
+    },
+    {
+      "path": "/api/v1/campaign-deliverables",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_campaign_deliverables"
+    },
+    {
+      "path": "/api/v1/campaign-deliverables/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_campaign_deliverable"
+    },
+    {
+      "path": "/api/v1/campaign-deliverables/<public_id>/proof",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.submit_campaign_deliverable_proof"
+    },
+    {
+      "path": "/api/v1/campaign-deliverables/<public_id>/approve",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.approve_campaign_deliverable"
+    },
+    {
+      "path": "/api/v1/campaign-metrics",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_campaign_metric"
+    },
+    {
+      "path": "/api/v1/model/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.model_profile"
+    },
+    {
+      "path": "/api/v1/model/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_model_profile"
+    },
+    {
+      "path": "/api/v1/model/campaign-categories",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.model_campaign_categories"
+    },
+    {
+      "path": "/api/v1/model/campaign-categories",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_model_campaign_categories"
+    },
+    {
+      "path": "/api/v1/model/usage-rights",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_model_usage_rights"
+    },
+    {
+      "path": "/api/v1/model/usage-rights",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_model_usage_right"
+    },
+    {
+      "path": "/api/v1/model/usage-rights/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_model_usage_right"
+    },
+    {
+      "path": "/api/v1/model/usage-rates",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_model_usage_rates"
+    },
+    {
+      "path": "/api/v1/model/usage-rates",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_model_usage_rate"
+    },
+    {
+      "path": "/api/v1/model/usage-rates/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_model_usage_rate"
+    },
+    {
+      "path": "/api/v1/model/restricted-categories",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.model_restricted_categories"
+    },
+    {
+      "path": "/api/v1/model/restricted-categories",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_model_restricted_categories"
+    },
+    {
+      "path": "/api/v1/distribution/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.distribution_profile"
+    },
+    {
+      "path": "/api/v1/distribution/profile",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.upsert_distribution_profile"
+    },
+    {
+      "path": "/api/v1/distribution-projects",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_distribution_project"
+    },
+    {
+      "path": "/api/v1/distribution-projects",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_distribution_projects"
+    },
+    {
+      "path": "/api/v1/distribution-projects/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_distribution_project"
+    },
+    {
+      "path": "/api/v1/distribution-projects/<public_id>/release-windows",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_release_window"
+    },
+    {
+      "path": "/api/v1/distribution-projects/<public_id>/handover-items",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_handover_item"
+    },
+    {
+      "path": "/api/v1/release-handover-items/<item_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_handover_item"
+    },
+    {
+      "path": "/api/v1/distributor-contacts",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_distributor_contact"
+    },
+    {
+      "path": "/api/v1/distributor-contacts",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_distributor_contacts"
+    },
+    {
+      "path": "/api/v1/distributor-contacts/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.specialist.update_distributor_contact"
+    },
+    {
+      "path": "/api/v1/distribution-reports",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.specialist.create_distribution_report"
+    },
+    {
+      "path": "/api/v1/distribution-reports",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.list_distribution_reports"
+    },
+    {
+      "path": "/api/v1/distribution-reports/export.csv",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.specialist.export_distribution_reports"
+    },
+    {
+      "path": "/api/v1/bookings/<public_id>/review-eligibility",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.review_eligibility"
+    },
+    {
+      "path": "/api/v1/reviews",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_review"
+    },
+    {
+      "path": "/api/v1/users/<public_id>/reviews",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.user_reviews"
+    },
+    {
+      "path": "/api/v1/review-requests",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_review_request"
+    },
+    {
+      "path": "/api/v1/reports/reasons",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.report_reasons"
+    },
+    {
+      "path": "/api/v1/reports",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_report"
+    },
+    {
+      "path": "/api/v1/blocked-users",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_blocked_user"
+    },
+    {
+      "path": "/api/v1/blocked-users",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.list_blocked_users"
+    },
+    {
+      "path": "/api/v1/blocked-users/<public_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "api_v1.trust_safety.delete_blocked_user"
+    },
+    {
+      "path": "/api/v1/admin/moderation-cases",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_moderation_case"
+    },
+    {
+      "path": "/api/v1/admin/moderation-cases",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_moderation_cases"
+    },
+    {
+      "path": "/api/v1/admin/moderation-cases/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_moderation_case_detail"
+    },
+    {
+      "path": "/api/v1/admin/moderation-cases/<public_id>/decision",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_moderation_case_decision"
+    },
+    {
+      "path": "/api/v1/disputes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_dispute"
+    },
+    {
+      "path": "/api/v1/disputes",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.list_disputes"
+    },
+    {
+      "path": "/api/v1/disputes/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.dispute_detail"
+    },
+    {
+      "path": "/api/v1/disputes/<public_id>/evidence",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.add_dispute_evidence"
+    },
+    {
+      "path": "/api/v1/admin/disputes",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_disputes"
+    },
+    {
+      "path": "/api/v1/admin/disputes/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_dispute_detail"
+    },
+    {
+      "path": "/api/v1/admin/disputes/<public_id>/decision",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_dispute_decision"
+    },
+    {
+      "path": "/api/v1/support-tickets",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_support_ticket"
+    },
+    {
+      "path": "/api/v1/support-tickets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.list_support_tickets"
+    },
+    {
+      "path": "/api/v1/support-tickets/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.support_ticket_detail"
+    },
+    {
+      "path": "/api/v1/support-tickets/<public_id>/messages",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_support_message"
+    },
+    {
+      "path": "/api/v1/admin/support-tickets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_support_tickets"
+    },
+    {
+      "path": "/api/v1/admin/support-tickets/<public_id>",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.trust_safety.update_support_ticket"
+    },
+    {
+      "path": "/api/v1/admin/announcements",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.create_announcement"
+    },
+    {
+      "path": "/api/v1/admin/announcements",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.admin_announcements"
+    },
+    {
+      "path": "/api/v1/admin/announcements/<public_id>/publish",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.publish_announcement"
+    },
+    {
+      "path": "/api/v1/notifications",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.trust_safety.list_notifications"
+    },
+    {
+      "path": "/api/v1/notifications/<public_id>/read",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "api_v1.trust_safety.mark_notification_read"
+    },
+    {
+      "path": "/api/v1/notifications/read-all",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.mark_all_notifications_read"
+    },
+    {
+      "path": "/api/v1/push-devices",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.register_push_device"
+    },
+    {
+      "path": "/api/v1/push/receipts/<token>",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.trust_safety.acknowledge_push_display"
+    },
+    {
+      "path": "/api/v1/me/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.analytics.my_dashboard"
+    },
+    {
+      "path": "/api/v1/admin/dashboard",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.analytics.admin_dashboard"
+    },
+    {
+      "path": "/api/v1/admin/analytics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.analytics.admin_analytics"
+    },
+    {
+      "path": "/api/v1/exports",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "api_v1.analytics.create_export"
+    },
+    {
+      "path": "/api/v1/exports",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.analytics.list_exports"
+    },
+    {
+      "path": "/api/v1/exports/<public_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "api_v1.analytics.get_export"
+    },
+    {
+      "path": "/api/health",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "health_alias"
+    }
+  ],
+  "seed_password_candidates": 2,
+  "seed_password_matches": {
+    "accounts_checked": 240,
+    "matched": {
+      "active_accounts": 173
+    },
+    "active_role_assignments": {
+      "legal_partner": 13,
+      "equipment_provider": 13,
+      "crew_service": 13,
+      "director_producer": 13,
+      "super_admin": 4,
+      "model": 13,
+      "finance_admin": 3,
+      "insurance_partner": 13,
+      "general_public": 4,
+      "distribution_partner": 13,
+      "casting_agency": 13,
+      "actor_talent": 13,
+      "location_owner": 13,
+      "brand_sponsor": 13,
+      "reviewer": 3,
+      "influencer": 13,
+      "support_agent": 3
+    },
+    "malformed_hashes": 0
+  },
+  "rate_limit_redis": {
+    "sampled_keys": 1,
+    "loopback_keys": 1
+  },
+  "rate_keys": [
+    "127.0.0.1",
+    "127.0.0.1"
+  ]
+}

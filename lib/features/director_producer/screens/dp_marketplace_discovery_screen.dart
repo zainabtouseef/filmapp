@@ -76,9 +76,7 @@ class _MarketplaceCategoryWrap extends StatelessWidget {
                     border: Border.all(color: palette.border),
                   ),
                   child: Text(
-                    category == 'Media & Equipment'
-                        ? 'Camera & Lighting'
-                        : category,
+                    marketplaceCategoryLabel(category),
                     style: AppTextStyles.caption.copyWith(
                       color: selected == category
                           ? palette.onGold
@@ -510,7 +508,7 @@ class _DPMarketplaceDiscoveryScreenState
                         values: categories,
                         selected: _category,
                         onSelected: _setCategory,
-                        labelFor: (category) => category,
+                        labelFor: marketplaceCategoryLabel,
                         railColor: CineMarketplaceVisuals.of(context).surface,
                         selectedColor: CineMarketplaceVisuals.of(context).gold,
                         selectedTextColor:
@@ -548,7 +546,7 @@ class _DPMarketplaceDiscoveryScreenState
                   ? 'All services'
                   : value == 'DOP'
                       ? 'Director of Photography'
-                      : value,
+                      : marketplaceCategoryLabel(value),
             ),
           ],
           if (_verifiedOnly || _newOnly) ...[
@@ -1690,7 +1688,7 @@ class _MarketplaceCategoryHeading extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '${category == 'Media & Equipment' ? 'Camera & Lighting' : category} · $count',
+            '${marketplaceCategoryLabel(category)} · $count',
             style: visuals.archivo(
               size: 15,
               weight: FontWeight.w700,
@@ -1732,8 +1730,7 @@ class _MarketplaceResultsToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final qualifiers = <String>[
-      if (category != 'All')
-        category == 'Media & Equipment' ? 'Camera & Lighting' : category,
+      if (category != 'All') marketplaceCategoryLabel(category),
       if (verifiedOnly) 'verified',
       if (newOnly) 'new this week',
     ];

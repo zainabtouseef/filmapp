@@ -1,0 +1,26 @@
+{
+  "cineconnect-api": {
+    "log_bytes": 22817,
+    "restart_count": 0,
+    "started_at": "2026-10-14T15:27:46.400082751Z",
+    "running": true
+  },
+  "cineconnect-worker": {
+    "log_bytes": 22507,
+    "restart_count": 0,
+    "started_at": "2026-10-14T15:27:49.045365007Z",
+    "running": true
+  },
+  "cineconnect-scheduler": {
+    "log_bytes": 9845,
+    "restart_count": 0,
+    "started_at": "2026-10-14T15:27:49.265848245Z",
+    "running": true
+  },
+  "api_30m_log_summary": {
+    "traceback_count": 0,
+    "http_500_lines": 0
+  },
+  "freshclam_database_age_seconds": 31851,
+  "backup_gzip_integrity_exit": 0
+}

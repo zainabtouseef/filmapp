@@ -254,7 +254,7 @@ class _BrandRouteHeading extends StatelessWidget {
     return switch (route) {
       BrandSponsorRoutes.home => 'Brand workspace · overview',
       BrandSponsorRoutes.projects => 'Campaign planning · production scope',
-      BrandSponsorRoutes.marketplace => 'Talent · crew · locations · equipment',
+      BrandSponsorRoutes.marketplace => 'Actors · production services · locations · equipment',
       BrandSponsorRoutes.shortlists => 'Project picks · comparison · selection',
       BrandSponsorRoutes.bookings => 'Requests · responses · confirmations',
       BrandSponsorRoutes.profile => 'Identity · organization trust',

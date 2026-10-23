@@ -1,0 +1,8 @@
+{
+  "status": "blocked",
+  "attempt": "2026-10-14",
+  "apps": [],
+  "browsers": [],
+  "error": "Native apps: Sky Computer Use native pipe startup failed",
+  "consequence": "No fresh live visual, accessibility, camera, download, or push-display sign-off"
+}

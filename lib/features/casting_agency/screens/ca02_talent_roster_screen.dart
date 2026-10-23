@@ -49,7 +49,7 @@ class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
           child: Column(
             children: [
               AgencySearchField(
-                hintText: 'Search represented talent...',
+                hintText: 'Search represented artists...',
                 onChanged: (value) => setState(() => _query = value),
               ),
               const SizedBox(height: 10),
@@ -67,7 +67,7 @@ class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
           const CoreEmptyState(
             icon: Icons.lock_outline_rounded,
             title: 'Sign in to view agency roster',
-            message: 'Represented talent records are loaded from the server.',
+            message: 'Represented artist records are loaded from the server.',
           )
         else
           FutureBuilder<List<AgencyTalentDto>>(
@@ -86,7 +86,7 @@ class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
                   icon: Icons.person_search_outlined,
                   title: 'No live roster matches',
                   message:
-                      'Clear filters or wait for represented talent records.',
+                      'Clear filters or wait for represented artist records.',
                   actionLabel: 'Clear',
                   onAction: () => setState(() {
                     _query = '';
@@ -137,7 +137,7 @@ class _CA02TalentRosterScreenState extends State<CA02TalentRosterScreen> {
         children: [
           AgencyInfoRow(
             icon: Icons.badge_outlined,
-            label: 'Talent profile',
+            label: 'Artist profile',
             value: talent.talentProfileId,
           ),
           AgencyInfoRow(

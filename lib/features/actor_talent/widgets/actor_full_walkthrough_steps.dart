@@ -33,8 +33,8 @@ const _actorFullWalkthroughChapters = <_ActorTourChapter>[
     routeName: ActorTalentRoutes.dashboard,
     topics: [
       _ActorTourTopic(
-        'Welcome to your Talent Workspace',
-        'This walkthrough follows the real actor/talent lifecycle on CineConnect — building a complete profile, applying to real casting calls, handling offers and contracts, and getting paid — and the hero card above always points at your single most useful next action, ranked from finishing your profile to opening a confirmed booking.',
+        'Welcome to your Actor Workspace',
+        'This walkthrough follows the real actor workflow on CineConnect — building a complete profile, applying to real casting calls, handling offers and contracts, and getting paid — and the hero card above always points at your single most useful next action, ranked from finishing your profile to opening a confirmed booking.',
         targetId: 'actor.dashboard.hero',
       ),
       _ActorTourTopic(
@@ -43,7 +43,7 @@ const _actorFullWalkthroughChapters = <_ActorTourChapter>[
         targetId: 'actor.dashboard.quickAccess',
       ),
       _ActorTourTopic(
-        'Check your Talent Snapshot',
+        'Check your Actor Snapshot',
         'Your stage name, city, languages, agency and availability status show exactly what directors see first — use Edit profile here whenever a detail goes stale.',
         targetId: 'actor.dashboard.snapshot',
       ),
@@ -114,7 +114,7 @@ const _actorFullWalkthroughChapters = <_ActorTourChapter>[
       ),
       _ActorTourTopic(
         'Publish your marketplace listing',
-        'Publishing creates a public listing per enabled category so directors can discover you in marketplace search — approved Actor/Talent KYC is required first.',
+        'Publishing creates a public listing per enabled category so directors can discover you in marketplace search — approved actor verification is required first.',
         targetId: 'actor.profile.publishListing',
       ),
       _ActorTourTopic(
@@ -184,12 +184,12 @@ const _actorFullWalkthroughChapters = <_ActorTourChapter>[
       ),
       _ActorTourTopic(
         'Set your marketplace pricing preference',
-        'Choose how your Actor/Talent listings show pricing to directors browsing the marketplace — this preference applies across every category you publish.',
+        'Choose how your actor listings show pricing to directors browsing the marketplace — this preference applies across every category you publish.',
         targetId: 'actor.rates.pricingPreference',
       ),
       _ActorTourTopic(
         'Publish your standard day rate',
-        'This is the one rate field the server actually stores on your talent profile — complete your Casting Profile first, since publishing is blocked without a stage name.',
+        'This is the one rate field the server actually stores on your actor profile — complete your Casting Profile first, since publishing is blocked without a stage name.',
         targetId: 'actor.rates.publishedRate',
       ),
     ],
@@ -304,7 +304,7 @@ const _actorFullWalkthroughChapters = <_ActorTourChapter>[
       ),
       _ActorTourTopic(
         'Read the clause-by-clause preview',
-        'Project, talent fee, effective date and signature progress are pulled straight from the contract record — check every figure against the offer you actually accepted.',
+        'Project, actor fee, effective date and signature progress are pulled straight from the contract record — check every figure against the offer you actually accepted.',
         targetId: 'actor.contracts.preview',
       ),
       _ActorTourTopic(

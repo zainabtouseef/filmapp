@@ -35,11 +35,11 @@ class GeneralPublicRoutes {
     return switch (route) {
       home => 'Campaign Home',
       cinema => 'Cinema',
-      browse => 'Browse Talent',
+      browse => 'Browse People',
       actors => 'Book Actors',
       models => 'Book Models',
       influencers => 'Book Influencers',
-      profile => 'Talent Profile',
+      profile => 'Profile',
       bookingRequest => 'Booking Request',
       requests => 'My Requests',
       contracts => 'Contracts',

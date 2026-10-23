@@ -23,18 +23,20 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="description" content="CineConnect production marketplace and portal suite.">
+  <meta name="theme-color" content="#070708">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="cineconnect">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="CineConnect">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=2">
+  <link rel="shortcut icon" href="favicon.ico?v=2">
 
   <title>CineConnect</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json?v=2">
   <style>
     #cc-boot-screen {
       position: fixed;
@@ -78,6 +80,7 @@
     @keyframes cc-boot-spin { to { transform: rotate(360deg); } }
   </style>
   <script src="cineconnect_push.js"></script>
+  <script src="mov_file_picker_fix.js"></script>
 </head>
 <body>
   <div id="cc-boot-screen" role="status" aria-live="polite">
@@ -104,7 +107,7 @@
     // Flutter no longer generates a service-worker version when PWA caching is
     // disabled, so keep an explicit release ID for the stable bundle filename.
     // Bump this for every production release.
-    const releaseVersion = '20261014-audit2';
+    const releaseVersion = '20261017-role-chooser-v5';
     const pageUrl = new URL(window.location.href);
     const recoveryMode =
       pageUrl.searchParams.get('cc-recovery') === releaseVersion;

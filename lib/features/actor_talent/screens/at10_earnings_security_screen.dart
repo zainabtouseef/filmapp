@@ -154,7 +154,7 @@ class _LiveEarnings extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Verified talent ledger credits from CineConnect.',
+                  'Verified booking credits from CineConnect.',
                   style: AppTextStyles.smallMeta.copyWith(
                     color: context.appColors.textSecondary,
                   ),

@@ -52,6 +52,10 @@ class Config:
     )
     APP_STORE_URL = os.getenv("APP_STORE_URL", "")
     RELEASE_VERSION = os.getenv("RELEASE_VERSION", "1.0.0+1")
+    DEMO_ACCOUNT_PICKER_ENABLED = (
+        os.getenv("DEMO_ACCOUNT_PICKER_ENABLED", "false").lower() == "true"
+    )
+    DEMO_ACCOUNT_PICKER_KEY = os.getenv("DEMO_ACCOUNT_PICKER_KEY", "")
     FILE_SCAN_COMMAND = os.getenv("FILE_SCAN_COMMAND", "")
     CLAMD_HOST = os.getenv("CLAMD_HOST", "127.0.0.1")
     CLAMD_PORT = int(os.getenv("CLAMD_PORT", "3310"))
@@ -87,6 +91,16 @@ class Config:
     OPENAPI_PATH = os.getenv("OPENAPI_PATH", "/app/docs/openapi.yaml")
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_SCREENPLAY_MODEL = os.getenv("OPENAI_SCREENPLAY_MODEL", "gpt-5-mini")
+    CINEPLANNER_UNLOCK_HASH = os.getenv("CINEPLANNER_UNLOCK_HASH", "")
+    CINEPLANNER_BILLING_ENABLED = (
+        os.getenv("CINEPLANNER_BILLING_ENABLED", "true").lower() == "true"
+    )
+    CINEPLANNER_PAYMENT_INSTRUCTIONS = os.getenv(
+        "CINEPLANNER_PAYMENT_INSTRUCTIONS",
+        "Contact CineConnect support for the bank details and the "
+        "USD 20 transfer reference before paying.",
+    )
+    CINEPLANNER_TASK_QUEUE = os.getenv("CINEPLANNER_TASK_QUEUE", "celery")
     CINEPLANNER_AI_PARALLELISM = max(
         1, min(4, int(os.getenv("CINEPLANNER_AI_PARALLELISM", "4")))
     )
@@ -116,6 +130,11 @@ class Config:
         database_url = str(values["SQLALCHEMY_DATABASE_URI"])
         if not database_url.startswith("mysql+pymysql://"):
             raise RuntimeError("DATABASE_URL must use mysql+pymysql")
+        if (
+            values.get("DEMO_ACCOUNT_PICKER_ENABLED")
+            and len(str(values.get("DEMO_ACCOUNT_PICKER_KEY", ""))) < 64
+        ):
+            raise RuntimeError("DEMO_ACCOUNT_PICKER_KEY must contain 64 characters")
         if environment != "production":
             return
         if len(str(values["SECRET_KEY"])) < 64:
@@ -135,6 +154,7 @@ class Config:
 
 class TestConfig(Config):
     TESTING = True
+    CINEPLANNER_BILLING_ENABLED = False
     APP_ENV = "test"
     SECRET_KEY = "test-secret"
     JWT_SECRET_KEY = "test-jwt-secret-with-enough-length-for-hs256"

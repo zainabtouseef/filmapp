@@ -41,8 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     setState(() {
-      _identityError =
-          _identity.text.trim().isEmpty ? 'Email is required' : null;
+      _identityError = _identity.text.trim().isEmpty
+          ? 'Username or email is required'
+          : null;
       _passwordError = _password.text.isEmpty ? 'Password is required' : null;
     });
     if (_identityError != null || _passwordError != null) return;
@@ -94,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 CoreTextField(
                   controller: _identity,
-                  label: 'Phone or email',
+                  label: 'Username or email',
                   icon: Icons.alternate_email_rounded,
                   errorText: _identityError,
                 ),

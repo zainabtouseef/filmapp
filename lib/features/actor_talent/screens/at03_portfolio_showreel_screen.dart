@@ -180,7 +180,7 @@ class _AT03PortfolioShowreelScreenState
       _reload();
     } on ApiException catch (error) {
       if (!mounted) return;
-      actorSnack(context, _friendlyError(error));
+      actorSnack(context, _friendlyUploadError(error));
     } finally {
       if (mounted) setState(() => _busySlotKey = null);
     }
@@ -212,7 +212,7 @@ class _AT03PortfolioShowreelScreenState
       _reload();
     } on ApiException catch (error) {
       if (!mounted) return;
-      actorSnack(context, _friendlyError(error));
+      actorSnack(context, _friendlyUploadError(error));
     } finally {
       if (mounted) setState(() => _busySlotKey = null);
     }
@@ -297,7 +297,7 @@ class _AT03PortfolioShowreelScreenState
       type: FileType.custom,
       allowedExtensions: kind == _SlotKind.image
           ? const ['jpg', 'jpeg', 'png', 'webp']
-          : const ['mp4'],
+          : const ['mp4', 'mov'],
       withData: true,
     );
     final item = result?.files.single;
@@ -311,7 +311,9 @@ class _AT03PortfolioShowreelScreenState
               'webp' => 'image/webp',
               _ => 'image/jpeg',
             }
-          : 'video/mp4',
+          : item.extension?.toLowerCase() == 'mov'
+              ? 'video/quicktime'
+              : 'video/mp4',
       bytes: bytes,
     );
   }
@@ -323,13 +325,30 @@ class _AT03PortfolioShowreelScreenState
         'auth.invalid_token' =>
           'Sign in to manage portfolio media.',
         'validation.invalid' => error.fields['file_id']?.join(' ') ??
-            'Complete your talent profile before adding portfolio media.',
+            'Complete your profile before adding portfolio media.',
         'network.offline' =>
           'Portfolio media is unavailable offline. Check your connection and retry.',
         _ => 'Could not load portfolio media. Try again.',
       };
     }
     return 'Could not load portfolio media. Try again.';
+  }
+
+  String _friendlyUploadError(ApiException error) {
+    if (error.code == 'validation.invalid') {
+      final detail =
+          error.fields.values.expand((messages) => messages).join(' ');
+      if (detail.isNotEmpty) return detail;
+    }
+    if (error.code == 'network.offline') {
+      return 'Upload failed. Check your connection and retry.';
+    }
+    if (error.code == 'network.timeout') {
+      return 'Video upload took too long. Check your connection and retry.';
+    }
+    return error.message.isNotEmpty
+        ? error.message
+        : 'Could not upload portfolio media. Try again.';
   }
 }
 

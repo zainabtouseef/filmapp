@@ -11,6 +11,7 @@ import '../../../shared/cards/cine_card_system.dart';
 import '../../../shared/dashboard/dashboard_kit.dart';
 import '../../../shared/formatters/cine_format.dart';
 import '../../../shared/widgets/cine_hover_zoom.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../models/dp_candidate.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dashboard/dp_command_header.dart';
@@ -630,7 +631,7 @@ class _DiscoverShowcaseState extends State<_DiscoverShowcase> {
                 ),
                 for (final category in _categories)
                   _DiscoveryCategoryPill(
-                    label: category,
+                    label: marketplaceCategoryLabel(category),
                     selected: _category == category,
                     onTap: () => setState(() => _category = category),
                   ),

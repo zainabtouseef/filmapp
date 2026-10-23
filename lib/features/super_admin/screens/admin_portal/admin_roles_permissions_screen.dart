@@ -52,7 +52,8 @@ class _AdminRolesPermissionsScreenState
         _draftPermissions,
       );
       if (!mounted) return;
-      showCoreSnack(context, 'Permissions saved for ${role.name}.');
+      showCoreSnack(context,
+          'Permissions saved for ${RoleMapper.displayLabelForName(role.name)}.');
       _refresh();
     } on ApiException catch (error) {
       if (mounted) showCoreSnack(context, error.message);
@@ -295,7 +296,8 @@ class _AdminRoleCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _text(context, role.name, strong: true),
+                  _text(context, RoleMapper.displayLabelForName(role.name),
+                      strong: true),
                   _text(
                     context,
                     '${role.permissions.length} permissions · '

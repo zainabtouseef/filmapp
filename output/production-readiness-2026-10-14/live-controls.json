@@ -1,0 +1,181 @@
+{
+  "checked_at": "2026-10-14T15:44:27Z",
+  "checks": [
+    {
+      "path": "/api/v1/app/bootstrap",
+      "status": 200,
+      "ms": 514,
+      "bytes": 1773,
+      "data": {
+        "capabilities": {
+          "email": false,
+          "liveness": "manual_review",
+          "push": true,
+          "sms_otp": false,
+          "social_metrics": "self_reported",
+          "vapid_public_key": "BJzqFU53HmPIaMvgs9AwYaOIkEU3mqCAuMHA0iUhrUxplZbawsFASlnSKDzkrzrnYrGDl9wZw4OVsfXi63-RE0g"
+        },
+        "force_update": {
+          "required": false,
+          "store_url": null
+        },
+        "maintenance": {
+          "enabled": false,
+          "message": null,
+          "return_at": null
+        },
+        "release_version": "2026.10.14-audit2",
+        "supported_roles": [
+          {
+            "code": "director_producer",
+            "name": "Director / Producer",
+            "portal_route": "/director",
+            "requires_kyc": true
+          },
+          {
+            "code": "actor_talent",
+            "name": "Actor / Talent",
+            "portal_route": "/talent",
+            "requires_kyc": true
+          },
+          {
+            "code": "model",
+            "name": "Model",
+            "portal_route": "/model",
+            "requires_kyc": true
+          },
+          {
+            "code": "influencer",
+            "name": "Influencer",
+            "portal_route": "/talent",
+            "requires_kyc": true
+          },
+          {
+            "code": "location_owner",
+            "name": "Location Owner",
+            "portal_route": "/location-owner",
+            "requires_kyc": true
+          },
+          {
+            "code": "equipment_provider",
+            "name": "Media / Equipment Provider",
+            "portal_route": "/equipment-provider",
+            "requires_kyc": true
+          },
+          {
+            "code": "crew_service",
+            "name": "Crew / Services",
+            "portal_route": "/crew",
+            "requires_kyc": true
+          },
+          {
+            "code": "casting_agency",
+            "name": "Casting Agency",
+            "portal_route": "/agency",
+            "requires_kyc": true
+          },
+          {
+            "code": "brand_sponsor",
+            "name": "Brand / Sponsor",
+            "portal_route": "/brand",
+            "requires_kyc": true
+          },
+          {
+            "code": "legal_partner",
+            "name": "Legal Partner",
+            "portal_route": "/legal",
+            "requires_kyc": true
+          },
+          {
+            "code": "general_public",
+            "name": "General Public",
+            "portal_route": "/public",
+            "requires_kyc": false
+          },
+          {
+            "code": "insurance_partner",
+            "name": "Insurance / Safety Partner",
+            "portal_route": "/insurance",
+            "requires_kyc": true
+          },
+          {
+            "code": "distribution_partner",
+            "name": "Distribution / Release Partner",
+            "portal_route": "/distribution",
+            "requires_kyc": true
+          }
+        ]
+      }
+    },
+    {
+      "path": "/api/v1/app/public-config",
+      "status": 200,
+      "ms": 377,
+      "bytes": 356,
+      "data": {
+        "default_currency": "PKR",
+        "default_timezone": "Asia/Karachi",
+        "support": {
+          "business_name": "CineConnect",
+          "payments": {
+            "mode": "manual_bank_transfer",
+            "notice": "Bank transfers are made outside CineConnect. Submit proof for verification; CineConnect records and reconciles payments."
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 401,
+      "ms": 395,
+      "bytes": 134
+    },
+    {
+      "path": "/api/v1/admin/control/users",
+      "status": 401,
+      "ms": 410,
+      "bytes": 134
+    },
+    {
+      "path": "/api/v1/admin/payment-proofs",
+      "status": 401,
+      "ms": 392,
+      "bytes": 134
+    },
+    {
+      "path": "/api/v1/safety-checks",
+      "status": 401,
+      "ms": 391,
+      "bytes": 134
+    },
+    {
+      "path": "/api/v1/incidents",
+      "status": 401,
+      "ms": 379,
+      "bytes": 134
+    },
+    {
+      "path": "/api/v1/roles",
+      "status": 200,
+      "ms": 424,
+      "bytes": 1372
+    },
+    {
+      "path": "/api/v1/marketplace/listings",
+      "status": 200,
+      "ms": 980,
+      "bytes": 38417
+    }
+  ],
+  "http_redirect": {
+    "status": 301,
+    "location": "https://cine.nalexustechnologies.com/"
+  },
+  "untrusted_origin_allow_header": null,
+  "tls": {
+    "version": "TLSv1.3",
+    "expires": "Dec 14 14:56:04 2026 GMT",
+    "cipher": "TLS_AES_256_GCM_SHA384"
+  },
+  "database_public_tcp_reachable": true
+}

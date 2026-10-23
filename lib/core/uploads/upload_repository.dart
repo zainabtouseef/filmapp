@@ -41,7 +41,9 @@ class UploadRepository {
     );
     final ticket =
         UploadTicket.fromJson(presign['data'] as Map<String, dynamic>);
-    onStatus?.call('Uploading image to server...');
+    onStatus?.call(file.mimeType.startsWith('video/')
+        ? 'Uploading video to server...'
+        : 'Uploading file to server...');
     await _client.putBytes(
       ticket.uploadUrl,
       bytes: file.bytes,
@@ -50,7 +52,7 @@ class UploadRepository {
     );
     onStatus?.call('Finalizing upload...');
     final complete = await _client.post('/uploads/${ticket.id}/complete');
-    onStatus?.call('Upload saved for admin review.');
+    onStatus?.call('Upload saved. Processing media...');
     final data = complete['data'] as Map<String, dynamic>;
     var uploaded = UploadedFile.fromJson(
       data['file'] as Map<String, dynamic>,
@@ -60,7 +62,8 @@ class UploadRepository {
       return uploaded;
     }
     onStatus?.call('Checking file safety...');
-    for (var attempt = 0; attempt < 40; attempt++) {
+    // Large videos can need more than the former 20-second processing window.
+    for (var attempt = 0; attempt < 240; attempt++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       final status = await _client.get('/files/${uploaded.publicId}');
       final statusData = status['data'] as Map<String, dynamic>;

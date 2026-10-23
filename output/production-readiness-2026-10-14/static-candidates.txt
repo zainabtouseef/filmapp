@@ -1,0 +1,44 @@
+lib/models/talent.dart:12:  final String imageAsset; // asset path (may be empty -> placeholder)
+backend/app/scripts/seed_cinema_demo_media.py:15:OWNER_EMAIL = "dp01@demo.cine.nalexustechnologies.com"
+backend/app/scripts/seed_cinema_demo_media.py:23:        "description": "Official Pakistani film trailer reference for CineConnect cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:45:        "description": "Official Shoaib Mansoor film trailer reference for cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:56:        "description": "Official Shoaib Mansoor film trailer reference for cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:67:        "description": "Official HUM Music OST reference for Pakistani drama cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:78:        "description": "Official ARY Digital OST reference for Pakistani drama cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:89:        "description": "Official HUM TV drama OST reference for premium cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:100:        "description": "Official Har Pal Geo OST reference for public cinema demos.",
+backend/app/scripts/seed_cinema_demo_media.py:204:    print(f"Seeded cinema demo media: created={created} updated={updated}")
+backend/app/scripts/seed_cineplanner_demo.py:50:DEMO_EMAIL = "cineplanner.demo@demo.cine.nalexustechnologies.com"
+backend/app/scripts/seed_cineplanner_demo.py:57:SEED_BATCH = "cineplanner-frontend-demo-2026-08"
+backend/app/scripts/seed_cineplanner_demo.py:62:        str(Path(__file__).resolve().parents[2] / "demo" / DEMO_PDF_NAME),
+backend/app/scripts/seed_cineplanner_demo.py:317:            "The demo screenplay must contain scene headings 1 through 60."
+backend/app/scripts/seed_cineplanner_demo.py:474:            "demo": True,
+backend/app/scripts/seed_cineplanner_demo.py:595:    storage_key = "demo/cineplanner/shehar-ke-paar.pdf"
+backend/app/scripts/seed_cineplanner_demo.py:641:        "email": f"actor{index:02}@demo.cine.nalexustechnologies.com",
+backend/app/scripts/seed_cineplanner_demo.py:684:            "is_demo": True,
+backend/app/scripts/seed_cineplanner_demo.py:719:        metadata_json={"is_demo": True, "seed_batch": SEED_BATCH},
+backend/app/scripts/seed_cineplanner_demo.py:865:                email=f"crew{index:02}@demo.cine.nalexustechnologies.com",
+backend/app/scripts/seed_cineplanner_demo.py:974:            metadata_json={"is_demo": True, "department": "Locations"},
+backend/app/scripts/seed_cineplanner_demo.py:992:                new_value_json={"detail": detail, "is_demo": True},
+backend/app/scripts/seed_cineplanner_demo.py:1004:        raise RuntimeError("The CinePlanner demo screenplay is not a valid PDF.")
+backend/app/services/private_fields.py:61:    # Old placeholder tokens contain no recoverable submitted value.
+lib/features/location_owner/widgets/location_full_walkthrough_steps.dart:167:        'Full-day rate, night shoot rate, security deposit and saved-rate-line count are pulled from your actual property pricing records, not placeholders.',
+lib/shared/widgets/portrait_image.dart:7:/// placeholder if the asset is missing (so the app runs before you
+lib/shared/widgets/portrait_image.dart:23:    final placeholder = _placeholder();
+lib/shared/widgets/portrait_image.dart:24:    if (asset.isEmpty) return placeholder;
+lib/shared/widgets/portrait_image.dart:28:      errorBuilder: (_, __, ___) => placeholder,
+lib/shared/widgets/portrait_image.dart:32:  Widget _placeholder() {
+backend/app/api/specialist.py:309:        # Early demo/import rows stored `{ "advance": 50, ... }`; the public
+lib/core/core_contract/screens/contract_viewer_screen.dart:38:  // Contract identifiers are opaque server values. Production demo records use
+lib/core/core_contract/screens/contract_viewer_screen.dart:263:                    'CineConnect could not load this live contract. No demo contract is being substituted.',
+lib/shared/widgets/app_search_bar.dart:11:  final String placeholder;
+lib/shared/widgets/app_search_bar.dart:16:    this.placeholder = 'Search actors, models, directors...',
+lib/shared/widgets/app_search_bar.dart:106:                      placeholder,
+lib/core/core_ui/core_routes.dart:841:  /// Guards deep-link id segments against the literal `:id` placeholder —
+lib/features/role_portals/screens/role_portal_screen.dart:58:    description: 'Legacy generic ${group.label} portal placeholder.',
+lib/shared/dashboard/portal_poster_card.dart:229:/// new" dashed placeholder card.
+lib/core/theme/app_colors.dart:8:/// portrait placeholder).
+lib/features/super_admin/routes/super_admin_routes.dart:6:  static const loginDemo = '/admin/login-demo';
+lib/features/director_producer/widgets/dashboard/dp_pulse_strip.dart:11:/// computed live from demo-data state.
+lib/features/director_producer/screens/dp_stakeholder_profile_screen.dart:771:              title: 'Audience demographics',
+lib/shared/cards/cine_card_system.dart:2803:                  // Keep the placeholder lines inside compact skeletons.

@@ -159,8 +159,8 @@ class ProjectRequirement {
       'model' => 'Models',
       'location' => 'Locations',
       'equipment' => 'Media & Equipment',
-      'crew' => 'Crew',
-      'service' => 'Crew',
+      'crew' => 'Production Services',
+      'service' => 'Production Services',
       _ => _titleCase(category),
     };
   }

@@ -1,0 +1,28 @@
+{
+  "site": "https://cineconnect.net",
+  "deployed_at_local": "2026-10-19",
+  "frontend_release": "20261019-portfolio-routes-verified",
+  "frontend_sha256": "47b22c1012e5fa2951878755765c394f67743875a3fe9e59c0abc53ee8d95a98",
+  "backend_image": "cineconnect-net-api:20261018-profile-suite",
+  "migration": "20261018_showcase_box_office",
+  "source": "/Users/abdulbasit/Desktop/cineconnect-net-production",
+  "backend_tests_passed": 26,
+  "frontend_tests_passed": 92,
+  "checks": {
+    "repeated_real_profile_saves": [
+      200,
+      200
+    ],
+    "creative_leaders_preserved": 8,
+    "dedicated_editor_login": 200,
+    "editor_role_public_self_assignment_blocked": true,
+    "director_main_router_verified": true,
+    "actor_director_selector_preserved": true,
+    "desktop_mobile_profiles": true,
+    "box_office_dated_history_chart_preview": true,
+    "production_box_office_fictional_data_added": false,
+    "javascript_errors_final_browser": []
+  },
+  "editor_email": "boxoffice@cineconnect.net",
+  "credentials_file": "/Users/abdulbasit/Desktop/filmapp/output/private/CineConnect_Box_Office_Editor_2026-10-19.txt"
+}

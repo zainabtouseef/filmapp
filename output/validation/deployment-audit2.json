@@ -1,0 +1,18 @@
+{
+  "release": "2026.10.14-audit2",
+  "image": "sha256:1ebed18aee51668e478bb155f766ed768c97adab74018dc3a67ba0c8adb6087f",
+  "web_main_sha256": "0c89dcea93f34036cf387e917490447019f8d6334cb1a8658bfedff09a2ff0d6",
+  "backup_path": "/var/backups/cineconnect/audit-completion-20261014",
+  "record_counts": {
+    "users": 240,
+    "files": 476,
+    "bookings": 42,
+    "contracts": 12,
+    "payout_accounts": 10
+  },
+  "migration": "9f84c2e7a6b1",
+  "backend_tests": 391,
+  "coverage": 85.75455741401993,
+  "source_files_verified": 74,
+  "source_commit": "59c4791e67aa9609c72d1f5bcff5ea696f10bfcd"
+}

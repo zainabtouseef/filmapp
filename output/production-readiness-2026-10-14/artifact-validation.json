@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-14T16:00:51.382256+00:00",
+  "http_ready_status": 200,
+  "health": {
+    "data": {
+      "dependencies": {
+        "database": "ok",
+        "redis": "ok"
+      },
+      "service": "cineconnect-api",
+      "status": "ok"
+    },
+    "meta": {
+      "pagination": null,
+      "request_id": "req_ODfovLtcIxsIvusgL7RFOQ"
+    }
+  },
+  "pdf_pages": 28,
+  "pdf_embedded_evidence_files": 13,
+  "pdf_sha256": "e8a955aff6755d4eb972e4dfe27dd7f132a03cc6aa587f6ba513b0c542d7ad43",
+  "tracked_source_changes": false,
+  "production_mutations_during_audit": false,
+  "visual_review": "All 28 pages inspected in contact sheets; pages 7, 10 and 24 inspected at larger resolution"
+}

@@ -401,7 +401,7 @@ class _ME02ProviderProfileScreenState extends State<ME02ProviderProfileScreen> {
               const SizedBox(height: 10),
               CoreTextField(
                 controller: categories,
-                label: 'Equipment and crew categories',
+                label: 'Equipment and service categories',
                 icon: Icons.category_outlined,
               ),
               const SizedBox(height: 10),

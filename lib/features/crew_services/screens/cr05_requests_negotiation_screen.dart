@@ -62,7 +62,7 @@ class _CR05RequestsNegotiationScreenState
         TourTarget(
           id: 'crew.requests.searchFilter',
           child: CrewSectionCard(
-            title: 'Crew Request Inbox',
+            title: 'Request Inbox',
             icon: Icons.move_to_inbox_outlined,
             selected: true,
             child: Column(
@@ -103,7 +103,7 @@ class _CR05RequestsNegotiationScreenState
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const InlineNotice(
-                  message: 'Loading crew booking requests...',
+                  message: 'Loading booking requests...',
                   icon: Icons.hourglass_top_rounded,
                 );
               }
@@ -123,7 +123,7 @@ class _CR05RequestsNegotiationScreenState
                   child: CoreEmptyState(
                     icon: Icons.inbox_outlined,
                     title: all.isEmpty
-                        ? 'No crew requests yet'
+                        ? 'No requests yet'
                         : 'No matching requests',
                     message: all.isEmpty
                         ? 'Published service profile and portfolio will receive Director booking requests here.'
@@ -193,7 +193,7 @@ class _CR05RequestsNegotiationScreenState
       await bookings.acceptOffer(offer.publicId);
       if (!mounted) return;
       setState(_reload);
-      crewSnack(context, 'Crew booking accepted');
+      crewSnack(context, 'Booking accepted');
     } catch (error) {
       if (mounted) crewSnack(context, 'Could not accept request: $error');
     } finally {
@@ -210,11 +210,11 @@ class _CR05RequestsNegotiationScreenState
     );
     final conditions = TextEditingController(
       text:
-          'Rates include listed crew role only. Overtime, transport, and meal terms apply.',
+          'Rates include the listed service only. Overtime, transport, and meal terms apply.',
     );
     showCrewSheet(
       context,
-      title: 'Counter crew request',
+      title: 'Counter request',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -248,7 +248,7 @@ class _CR05RequestsNegotiationScreenState
                   bookingId: booking.publicId,
                   feeMinor: value * 100,
                   conditions: conditions.text.trim(),
-                  message: 'Crew provider counteroffer',
+                  message: 'Service provider counteroffer',
                 );
                 if (!mounted || !context.mounted) return;
                 Navigator.pop(context);
@@ -274,7 +274,7 @@ class _CR05RequestsNegotiationScreenState
     final reason = TextEditingController(text: 'Not available for these dates');
     showCrewSheet(
       context,
-      title: 'Reject crew request',
+      title: 'Reject request',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -43,7 +43,7 @@ final List<TourStep> dpTourSteps = [
     targetId: 'dp.findProviders',
     badge: '4 / 8',
     title: 'Find providers',
-    description: 'Search vetted crew, gear and locations.',
+    description: 'Search production professionals, gear and locations.',
   ),
   const TourStep(
     id: 'dp.needsAttention',
@@ -57,7 +57,7 @@ final List<TourStep> dpTourSteps = [
     targetId: 'nav:${DirectorProducerRoutes.schedule}',
     badge: '6 / 8',
     title: 'Plan the schedule',
-    description: 'Lock shoot dates once talent is booked.',
+    description: 'Lock shoot dates once actors are booked.',
   ),
   const TourStep(
     id: 'dp.contracts',

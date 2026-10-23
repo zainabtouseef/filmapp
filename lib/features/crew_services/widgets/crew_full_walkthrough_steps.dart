@@ -2,7 +2,7 @@ import '../../../core/tour/tour_models.dart';
 import '../../../shared/marketplace/marketplace_routes.dart';
 import '../routes/crew_services_routes.dart';
 
-/// Persisted-preferences id for the complete Crew Services workflow.
+/// Persisted-preferences id for the complete Production Services workflow.
 const crewFullWalkthroughTourId = 'crew_services.full_workflow';
 
 class _CrewTourTopic {
@@ -34,14 +34,14 @@ class _CrewTourChapter {
 /// crew_services screen for that chapter — see `cr01`..`cr08` under
 /// `lib/features/crew_services/screens/`. The marketplace chapter reuses the
 /// `dp.marketplace.*` targets already wired on the shared marketplace
-/// discovery screen every portal (including Crew Services) browses through.
+/// discovery screen every portal (including Production Services) browses through.
 const _crewFullWalkthroughChapters = <_CrewTourChapter>[
   _CrewTourChapter(
     routeName: CrewServicesRoutes.home,
     topics: [
       _CrewTourTopic(
-        'Welcome to your Crew Workspace',
-        "This walkthrough follows the real crew lifecycle on CineConnect: publish your service profile, build proof of past work, keep availability current, win and negotiate bookings, sign contracts, get paid, and earn verified reviews.",
+        'Welcome to your Production Services',
+        "This walkthrough follows the service provider workflow on CineConnect: publish your service profile, build proof of past work, keep availability current, win and negotiate bookings, sign contracts, get paid, and earn verified reviews.",
         targetId: 'crew.dashboard.hero',
       ),
       _CrewTourTopic(
@@ -81,7 +81,7 @@ const _crewFullWalkthroughChapters = <_CrewTourChapter>[
       ),
       _CrewTourTopic(
         'Add a profile photo and cover image',
-        'A recognizable photo and cover image are the first things a director sees on a crew card. Profiles without them get skipped in search results.',
+        'A recognizable photo and cover image are the first things a director sees on a service card. Profiles without them get skipped in search results.',
         targetId: 'crew.profile.photos',
       ),
       _CrewTourTopic(
@@ -91,7 +91,7 @@ const _crewFullWalkthroughChapters = <_CrewTourChapter>[
       ),
       _CrewTourTopic(
         'Describe your role, department and kit in your bio',
-        "There's no separate department or equipment field — your bio is where you state your crew role (gaffer, sound recordist, focus puller, and so on), the department you cover, and any owned kit or gear you bring, since that's exactly what a director is scanning for.",
+        "There's no separate department or equipment field — your bio is where you state your production role (gaffer, sound recordist, focus puller, and so on), the department you cover, and any owned kit or gear you bring, since that's exactly what a director is scanning for.",
         targetId: 'crew.profile.identity',
       ),
       _CrewTourTopic(
@@ -155,13 +155,13 @@ const _crewFullWalkthroughChapters = <_CrewTourChapter>[
     routeName: MarketplaceRoutes.browse,
     topics: [
       _CrewTourTopic(
-        'See how directors search for crew',
+        'See how directors search for production services',
         'The marketplace is the same search directors use to find you. Try a real search here to understand what makes a profile surface quickly.',
         targetId: 'dp.marketplace.search',
       ),
       _CrewTourTopic(
         'Filter by category',
-        'Category chips (Crew, Locations, Media & Equipment and more) are the first filter a director applies — being tagged correctly under Crew is what puts you in front of the right search.',
+        'Category chips (Production Services, Locations, Media & Equipment and more) are the first filter a director applies — being tagged correctly under Production Services is what puts you in front of the right search.',
         targetId: 'dp.marketplace.categories',
       ),
       _CrewTourTopic(
@@ -180,8 +180,8 @@ const _crewFullWalkthroughChapters = <_CrewTourChapter>[
     routeName: CrewServicesRoutes.opportunities,
     topics: [
       _CrewTourTopic(
-        'Browse open crew requirements',
-        'Open Crew Requests lists live requirements directors have posted for your category — search here regularly instead of waiting for a direct request.',
+        'Browse open production service requests',
+        'Open Service Requests lists live requirements directors have posted for your category — search here regularly instead of waiting for a direct request.',
         targetId: 'crew.opportunities.screen',
       ),
       _CrewTourTopic(
@@ -256,7 +256,7 @@ const _crewFullWalkthroughChapters = <_CrewTourChapter>[
       ),
       _CrewTourTopic(
         'Track the payment ledger',
-        "Every credit and debit tied to your crew bookings lands here with its status, so you can reconcile what's been released against what's still pending.",
+        "Every credit and debit tied to your bookings lands here with its status, so you can reconcile what's been released against what's still pending.",
         targetId: 'crew.contracts.ledger',
       ),
     ],
@@ -288,7 +288,7 @@ const _crewFullWalkthroughChapters = <_CrewTourChapter>[
   ),
 ];
 
-/// The complete Crew Services walkthrough.
+/// The complete Production Services walkthrough.
 final List<TourStep> crewFullWalkthroughSteps =
     _buildCrewFullWalkthroughSteps();
 

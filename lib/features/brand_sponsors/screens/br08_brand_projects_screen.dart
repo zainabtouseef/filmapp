@@ -253,7 +253,7 @@ class _BR08BrandProjectsScreenState extends State<BR08BrandProjectsScreen> {
                           ? 'No brand projects yet'
                           : 'No matching projects',
                       message: _projects.isEmpty
-                          ? 'Create a campaign project to connect talent, crew, locations and equipment.'
+                          ? 'Create a campaign project to connect actors, production services, locations and equipment.'
                           : 'Try a different search or status filter.',
                       actionLabel: _projects.isEmpty ? 'Create project' : null,
                       onAction: _projects.isEmpty ? _createProject : null,

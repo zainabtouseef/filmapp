@@ -130,7 +130,7 @@ class _KycReviewDetailScreenState extends State<KycReviewDetailScreen> {
         children: [
           AdminUserMiniCard(
             name: submission.applicantName,
-            detail: '${submission.roleName} - ${submission.applicantEmail}',
+            detail: '${RoleMapper.displayLabelForName(submission.roleName)} - ${submission.applicantEmail}',
             badge: submission.status,
           ),
           const SizedBox(height: 14),

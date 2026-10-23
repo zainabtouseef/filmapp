@@ -8,6 +8,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/projects/project_models.dart';
 import '../../../core/projects/projects_controller.dart';
 import '../../../core/uploads/upload_repository.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../models/dp_requirement.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_empty_state.dart';
@@ -123,7 +124,7 @@ class _DPRequirementBuilderScreenState
               GestureDetector(
                 onTap: () => setState(() => _category = category),
                 child: DPStatusChip(
-                  label: category,
+                  label: marketplaceCategoryLabel(category),
                   tone: _category == category ? DpTone.warning : DpTone.neutral,
                 ),
               ),

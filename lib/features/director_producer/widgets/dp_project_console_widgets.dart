@@ -1204,7 +1204,7 @@ class DPProductionChecklist extends StatelessWidget {
       _StageSpec('Cast', 'Roles', Icons.theater_comedy_outlined),
       _StageSpec('Models', 'Models', Icons.style_outlined),
       _StageSpec('Locations', 'Locations', Icons.location_city_outlined),
-      _StageSpec('Crew', 'Crew', Icons.groups_2_outlined),
+      _StageSpec('Production Services', 'Crew', Icons.groups_2_outlined),
       _StageSpec('Media & Equipment', 'Media & Equipment',
           Icons.video_camera_back_outlined),
       _StageSpec('Brands / Partners', 'Partners', Icons.campaign_outlined),
@@ -1364,7 +1364,7 @@ class _ProductionStageCard extends StatelessWidget {
                     arguments: {
                       'projectId': project.id,
                       'category':
-                          stage.category == 'Roles' ? 'Talent' : stage.category,
+                          stage.category == 'Roles' ? 'Actors' : stage.category,
                     },
                   ),
                 ),

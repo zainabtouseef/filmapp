@@ -172,7 +172,7 @@ class _BR09BrandMarketplaceScreenState
               icon: Icons.cloud_sync_outlined,
               title: 'Sign in to browse production resources',
               message:
-                  'Verified talent, crew, locations and equipment load from the CineConnect backend.',
+                  'Verified actors, production professionals, locations and equipment load from the CineConnect backend.',
             ),
           ],
         ),
@@ -282,9 +282,7 @@ class _BR09BrandMarketplaceScreenState
                     });
                     _load();
                   },
-                  labelFor: (category) => category == 'Media & Equipment'
-                      ? 'Camera & Lighting'
-                      : category,
+                  labelFor: marketplaceCategoryLabel,
                   railColor: CineMarketplaceVisuals.of(context).surface,
                   selectedColor: CineMarketplaceVisuals.of(context).gold,
                   selectedTextColor: CineMarketplaceVisuals.of(context).onGold,
@@ -298,8 +296,9 @@ class _BR09BrandMarketplaceScreenState
                   values: const ['All', 'DOP', 'General Crew'],
                   selected: _subcategory,
                   onSelected: (value) => setState(() => _subcategory = value),
-                  labelFor: (value) =>
-                      value == 'DOP' ? 'Director of Photography' : value,
+                  labelFor: (value) => value == 'DOP'
+                      ? 'Director of Photography'
+                      : marketplaceCategoryLabel(value),
                 ),
               ],
             ],
@@ -716,7 +715,7 @@ class _BrandResultsToolbar extends StatelessWidget {
       children: [
         Text(
           '$count approved ${count == 1 ? 'listing' : 'listings'}'
-          '${category == 'All' ? '' : ' · ${category == 'Media & Equipment' ? 'Camera & Lighting' : category}'}',
+          '${category == 'All' ? '' : ' · ${marketplaceCategoryLabel(category)}'}',
           style: CineMarketplaceVisuals.of(context).archivo(
             size: 11.5,
             weight: FontWeight.w600,
@@ -766,7 +765,7 @@ class _BrandCategoryHeading extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '${category == 'Media & Equipment' ? 'Camera & Lighting' : category} · $count',
+            '${marketplaceCategoryLabel(category)} · $count',
             style: visuals.archivo(
               size: 15,
               weight: FontWeight.w700,

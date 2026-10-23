@@ -41,6 +41,19 @@ from app.services.marketplace_categories import crew_categories, equipment_categ
 
 marketplace_blueprint = Blueprint("marketplace", __name__)
 
+_ROLE_COVERS_KEY = "_cineconnect_role_covers"
+
+
+def _profile_links(profile: UserProfile | None) -> dict[str, Any]:
+    if profile is None or not profile.social_links_json:
+        return {}
+    try:
+        links = json.loads(profile.social_links_json)
+    except (TypeError, ValueError):
+        return {}
+    return links if isinstance(links, dict) else {}
+
+
 TALENT_LISTING_TYPES = {"talent", "actor", "model", "influencer"}
 TALENT_AVAILABILITY_CATEGORIES = {"actor", "model", "influencer"}
 PRICING_MODES = {"fixed", "negotiable", "on_request"}
@@ -142,9 +155,11 @@ def _profile_payload(profile: UserProfile | None) -> dict[str, Any]:
         "bio": profile.bio,
         "city": _city_payload(profile.city),
         "website_url": profile.website_url,
-        "social_links": (
-            json.loads(profile.social_links_json) if profile.social_links_json else {}
-        ),
+        "social_links": {
+            key: value
+            for key, value in _profile_links(profile).items()
+            if key != _ROLE_COVERS_KEY
+        },
         "profile_visibility": profile.profile_visibility,
         "rating_average": f"{Decimal(profile.rating_average):.2f}",
         "review_count": profile.review_count,
@@ -972,6 +987,82 @@ def my_profile() -> Response:
     return jsonify(success({"profile": _profile_payload(profile)}))
 
 
+@marketplace_blueprint.get("/me/role-covers")
+def my_role_covers() -> Response:
+    user = _current_user()
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    stored = _profile_links(profile).get(_ROLE_COVERS_KEY, {})
+    if not isinstance(stored, dict):
+        stored = {}
+    owned_ids = {item.role.code for item in user.roles if item.status == "active"}
+    files = (
+        db.session.execute(
+            select(FileAsset).where(
+                FileAsset.owner_user_id == user.id,
+                FileAsset.public_id.in_(
+                    [value for value in stored.values() if isinstance(value, str)]
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_id = {file.public_id: file for file in files}
+    return jsonify(
+        success(
+            {
+                "covers": {
+                    code: _file_payload(by_id[file_id])
+                    for code, file_id in stored.items()
+                    if code in owned_ids
+                    and isinstance(file_id, str)
+                    and file_id in by_id
+                    and public_url_for(by_id[file_id])
+                }
+            }
+        )
+    )
+
+
+@marketplace_blueprint.patch("/me/role-covers/<role_code>")
+def update_my_role_cover(role_code: str) -> Response:
+    user = _current_user()
+    if not any(
+        item.status == "active" and item.role.code == role_code for item in user.roles
+    ):
+        raise APIError(
+            "auth.role_required", "Add this role before editing its cover.", status=403
+        )
+    payload = _json_body()
+    raw_file_id = payload.get("file_id")
+    if raw_file_id is not None and not isinstance(raw_file_id, str):
+        raise _field_error("file_id", "Select a cover image.")
+    file = None
+    if raw_file_id:
+        file = _owned_ready_file(raw_file_id, user.id, "file_id")
+        if not file.mime_type.startswith("image/") or not public_url_for(file):
+            raise _field_error("file_id", "Select a ready, public image.")
+    profile = db.session.execute(
+        select(UserProfile).where(UserProfile.user_id == user.id)
+    ).scalar_one_or_none()
+    if profile is None:
+        profile = UserProfile(user_id=user.id, profile_visibility="private")
+        db.session.add(profile)
+    links = _profile_links(profile)
+    covers = links.get(_ROLE_COVERS_KEY, {})
+    covers = dict(covers) if isinstance(covers, dict) else {}
+    if file is None:
+        covers.pop(role_code, None)
+    else:
+        covers[role_code] = file.public_id
+    links[_ROLE_COVERS_KEY] = covers
+    profile.social_links_json = json.dumps(links)
+    db.session.commit()
+    return jsonify(success({"role_code": role_code, "cover": _file_payload(file)}))
+
+
 @marketplace_blueprint.patch("/me/profile")
 def update_my_profile() -> Response:
     user = _current_user()
@@ -1000,6 +1091,10 @@ def update_my_profile() -> Response:
             raise _field_error(
                 "social_links", "Social links supports up to 16 entries."
             )
+        existing_covers = _profile_links(profile).get(_ROLE_COVERS_KEY)
+        social_links.pop(_ROLE_COVERS_KEY, None)
+        if existing_covers:
+            social_links[_ROLE_COVERS_KEY] = existing_covers
         profile.social_links_json = json.dumps(social_links) if social_links else None
     if "avatar_file_id" in payload:
         raw_avatar_id = str(payload.get("avatar_file_id") or "").strip()
@@ -1372,8 +1467,10 @@ def create_credit_entry() -> ResponseReturnValue:
     if len(title) < 2:
         raise _field_error("title", "Credit title is required.")
     production_name = str(payload.get("production_name", "")).strip()
-    if len(production_name) < 2:
-        raise _field_error("production_name", "Production name is required.")
+    if production_name and len(production_name) < 2:
+        raise _field_error(
+            "production_name", "Use at least 2 characters for a production name."
+        )
     cover_file = None
     raw_cover_id = str(payload.get("cover_file_id", "")).strip()
     if raw_cover_id:
@@ -1423,8 +1520,10 @@ def update_credit_entry(public_id: str) -> Response:
         item.title = title[:180]
     if "production_name" in payload:
         production_name = str(payload.get("production_name", "")).strip()
-        if len(production_name) < 2:
-            raise _field_error("production_name", "Production name is required.")
+        if production_name and len(production_name) < 2:
+            raise _field_error(
+                "production_name", "Use at least 2 characters for a production name."
+            )
         item.production_name = production_name[:180]
     if "role_label" in payload:
         item.role_label = str(payload.get("role_label", "")).strip()[:180] or None

@@ -5,12 +5,70 @@ from sqlalchemy import select
 
 from app.errors import APIError
 from app.extensions import db
+from app.models.files import FileAsset
 from app.models.identity import Role, User, UserRole
 from app.models.kyc import KycSubmission
 from app.models.operations import EquipmentProviderProfile
 from app.security import hash_password, issue_token_pair
 from tests.unit.test_admin_workflows import admin_world as admin_world
 from tests.unit.test_private_workflow_fields import api
+
+
+def test_role_covers_are_independent_and_survive_profile_edits(
+    client, app, admin_world
+):
+    headers = admin_world["actor"]["headers"]
+    with app.app_context():
+        actor = db.session.scalar(
+            select(User).where(User.public_id == admin_world["actor"]["id"])
+        )
+        assert actor is not None
+        file = FileAsset(
+            owner_user_id=actor.id,
+            storage_key="role-covers/actor.jpg",
+            bucket="public",
+            mime_type="image/jpeg",
+            size_bytes=300,
+            visibility="public",
+            scan_status="clean",
+            processing_status="ready",
+            original_name="actor.jpg",
+        )
+        db.session.add(file)
+        db.session.commit()
+        file_id = file.public_id
+    cover = api(
+        client, headers, "PATCH", "/me/role-covers/actor_talent", {"file_id": file_id}
+    )["cover"]
+    assert cover["public_id"] == file_id
+    assert "actor_talent" in api(client, headers, "GET", "/me/role-covers")["covers"]
+    api(
+        client,
+        headers,
+        "PATCH",
+        "/me/profile",
+        {"social_links": {"instagram": "actor"}, "profile_visibility": "public"},
+    )
+    assert "actor_talent" in api(client, headers, "GET", "/me/role-covers")["covers"]
+    assert api(client, headers, "GET", "/me/profile")["profile"]["social_links"] == {
+        "instagram": "actor"
+    }
+    api(
+        client,
+        headers,
+        "PATCH",
+        "/me/role-covers/director_producer",
+        {"file_id": file_id},
+        403,
+    )
+    api(
+        client,
+        admin_world["support"]["headers"],
+        "PATCH",
+        "/me/role-covers/support_agent",
+        {"file_id": file_id},
+        422,
+    )
 
 
 def test_profile_edits_reload_and_reject_invalid_social_links(client, admin_world):
@@ -89,15 +147,34 @@ def test_credit_editor_updates_all_saved_fields_and_enforces_owner(client, admin
     ]:
         assert saved[key] == changes[key]
     assert api(client, h, "GET", "/credits")["items"][0] == saved
+    title_only = api(
+        client,
+        h,
+        "POST",
+        "/credits",
+        {"title": "Twisted Sapnay"},
+        201,
+    )["item"]
+    assert title_only["production_name"] == ""
+    assert (
+        api(client, h, "PATCH", path, {"production_name": ""})["item"][
+            "production_name"
+        ]
+        == ""
+    )
     for invalid in [
         {"title": ""},
-        {"production_name": ""},
+        {"production_name": "A"},
         {"year": "bad"},
         {"cover_file_id": "MISSING"},
     ]:
         api(client, h, "PATCH", path, invalid, 422)
     api(client, admin_world["support"]["headers"], "PATCH", path, changes, 404)
     assert api(client, h, "DELETE", path)["deleted"] is True
+    assert (
+        api(client, h, "DELETE", "/credits/" + title_only["public_id"])["deleted"]
+        is True
+    )
     assert api(client, h, "GET", "/credits")["items"] == []
 
 

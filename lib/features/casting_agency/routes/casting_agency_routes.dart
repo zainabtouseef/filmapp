@@ -32,7 +32,7 @@ class CastingAgencyRoutes {
   static String titleFor(String route) {
     return switch (route) {
       home => 'Agency Dashboard',
-      roster => 'Talent Roster Manager',
+      roster => 'Artist Roster',
       auditions => 'Audition Request Inbox',
       shortlist => 'Candidate Shortlist Builder',
       selfTapes => 'Self-Tape Collection',

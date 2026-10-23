@@ -64,7 +64,7 @@ class _ME04PackageBuilderScreenState extends State<ME04PackageBuilderScreen> {
               ),
               MediaInfoRow(
                 icon: Icons.engineering_outlined,
-                label: 'Crew',
+                label: 'Production team',
                 value: 'Set operator inclusion clearly',
               ),
               MediaInfoRow(

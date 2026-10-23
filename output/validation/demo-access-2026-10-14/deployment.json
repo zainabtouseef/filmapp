@@ -1,0 +1,34 @@
+{
+  "release": "2026.10.14-demo-access",
+  "image": "sha256:4a7ea3608d9c9f074ae72e5c9f9175b4e437f2561fec0a63fd718c9ecea356bf",
+  "web_main_sha256": "ca4ab272ee04ab9252a1fe12ea073928396b793e6cf366e7c4b5c36af3b28f86",
+  "record_counts": {
+    "users": 240,
+    "files": 476,
+    "projects": 64,
+    "bookings": 42,
+    "contracts": 12,
+    "payout_accounts": 10
+  },
+  "verified_categories": [
+    "director_producer",
+    "actor_talent",
+    "model",
+    "influencer",
+    "location_owner",
+    "equipment_provider",
+    "crew_service",
+    "casting_agency",
+    "brand_sponsor",
+    "general_public",
+    "legal_partner",
+    "insurance_partner",
+    "distribution_partner",
+    "support_agent",
+    "reviewer",
+    "finance_admin",
+    "super_admin"
+  ],
+  "backend_source_files_verified": 75,
+  "backup_path": "/var/backups/cineconnect/demo-access-20261014"
+}

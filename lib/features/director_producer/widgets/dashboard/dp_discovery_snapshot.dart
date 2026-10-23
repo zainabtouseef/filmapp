@@ -23,7 +23,7 @@ class DPDiscoverySnapshot extends StatelessWidget {
           runSpacing: 8,
           children: [
             DPHolographicButton(
-              label: 'Find Talent',
+              label: 'Find Actors',
               icon: Icons.theater_comedy_outlined,
               onTap: () => Navigator.pushNamed(
                 context,
@@ -53,7 +53,7 @@ class DPDiscoverySnapshot extends StatelessWidget {
               secondary: true,
             ),
             DPHolographicButton(
-              label: 'Find Crew',
+              label: 'Find Production Services',
               icon: Icons.groups_2_outlined,
               onTap: () => Navigator.pushNamed(
                 context,
@@ -78,7 +78,7 @@ class DPDiscoverySnapshot extends StatelessWidget {
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
-                  'Discovery results now come from the live marketplace database. Open marketplace to browse seeded Pakistani talent, crew, locations, and equipment with public media.',
+                  'Discovery results now come from the live marketplace database. Open marketplace to browse actors, production services, locations, and equipment with public media.',
                   style: AppTextStyles.smallMeta
                       .copyWith(color: colors.textSecondary),
                 ),

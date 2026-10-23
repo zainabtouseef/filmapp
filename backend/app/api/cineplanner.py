@@ -9,7 +9,7 @@ from datetime import date, time
 from typing import Any
 
 from celery import Celery
-from flask import Blueprint, Response, current_app, jsonify, send_file
+from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask.typing import ResponseReturnValue
 from openpyxl import Workbook
 from reportlab.lib import colors
@@ -47,6 +47,7 @@ from app.models.files import FileAsset
 from app.models.identity import User
 from app.models.projects import Project, ProjectFile, ProjectMember
 from app.responses import success
+from app.services.cineplanner_access import preview_snapshot, require_full
 from app.services.cineplanner_budget import recalculate_budget
 from app.services.cineplanner_productions import sync_cineplanner_projects
 from app.services.cineplanner_scheduling import (
@@ -99,6 +100,7 @@ EDITABLE_RESOURCES: dict[str, tuple[type[Any], set[str]]] = {
             "page_length_eighths",
             "estimated_screen_seconds",
             "summary",
+            "source_text",
             "cast_json",
             "extras_json",
             "props_json",
@@ -218,6 +220,15 @@ def _production_for_user(public_id: str, user: User) -> CineProduction:
             "CinePlanner production was not found.",
             status=404,
         )
+    preview_routes = {
+        "production_show",
+        "production_update",
+        "script_create",
+        "job_show",
+        "job_retry",
+    }
+    if (request.endpoint or "").rsplit(".", 1)[-1] not in preview_routes:
+        require_full(user, production)
     return production
 
 
@@ -322,6 +333,7 @@ def _script_payload(item: CineScriptVersion) -> dict[str, Any]:
         "revision": item.revision,
         "total_pages": item.total_pages,
         "analysis_status": item.analysis_status,
+        "coverage": (item.metadata_json or {}).get("coverage"),
         "approved_at": item.approved_at.isoformat() if item.approved_at else None,
         "created_at": item.created_at.isoformat(),
     }
@@ -334,6 +346,7 @@ def _job_payload(item: CineAIJob) -> dict[str, Any]:
         "current_stage": item.current_stage,
         "progress_percent": item.progress_percent,
         "completed_stages": item.completed_stages_json,
+        "coverage": (item.stage_results_json or {}).get("coverage"),
         "attempt_count": item.attempt_count,
         "error": {"code": item.error_code, "message": item.error_message}
         if item.error_code
@@ -356,6 +369,7 @@ def _scene_payload(item: CineScene) -> dict[str, Any]:
         "page_length_eighths": item.page_length_eighths,
         "estimated_screen_seconds": item.estimated_screen_seconds,
         "summary": item.summary,
+        "source_text": item.source_text,
         "cast": item.cast_json,
         "extras": item.extras_json,
         "props": item.props_json,
@@ -715,7 +729,7 @@ def production_show(public_id: str) -> Response:
     production = _production_for_user(public_id, user)
     snapshot = _production_snapshot(production, user)
     db.session.commit()
-    return jsonify(success(snapshot))
+    return jsonify(success(preview_snapshot(snapshot, user, production)))
 
 
 @cineplanner_blueprint.patch("/productions/<public_id>")
@@ -795,6 +809,11 @@ def script_create(public_id: str) -> ResponseReturnValue:
     user = _current_user()
     production = _production_for_user(public_id, user)
     _require_permission(production, user, "edit")
+    db.session.execute(
+        select(CineProduction.id)
+        .where(CineProduction.id == production.id)
+        .with_for_update()
+    ).scalar_one()
     payload = _json_body()
     file_public_id = str(payload.get("file_id", "")).strip()
     file = db.session.execute(
@@ -809,11 +828,13 @@ def script_create(public_id: str) -> ResponseReturnValue:
     if file is None:
         raise _field_error("file_id", "Select a ready, privately uploaded PDF.")
     latest_number = (
-        db.session.execute(
-            select(func.max(CineScriptVersion.version_number)).where(
-                CineScriptVersion.production_id == production.id
-            )
-        ).scalar_one()
+        db.session.scalar(
+            select(CineScriptVersion.version_number)
+            .where(CineScriptVersion.production_id == production.id)
+            .order_by(CineScriptVersion.version_number.desc())
+            .limit(1)
+            .with_for_update()
+        )
         or 0
     )
     script = CineScriptVersion(
@@ -879,12 +900,22 @@ def _enqueue_analysis(job_public_id: str) -> None:
     celery_client.conf.broker_url = current_app.config["CELERY_BROKER_URL"]
     try:
         celery_client.send_task(
-            "app.tasks.cineplanner.analyze_screenplay", args=[job_public_id]
+            "app.tasks.cineplanner.analyze_screenplay",
+            args=[job_public_id],
+            queue=current_app.config["CINEPLANNER_TASK_QUEUE"],
         )
     except Exception:
         current_app.logger.exception(
             "cineplanner_enqueue_failed", extra={"job_public_id": job_public_id}
         )
+        job = db.session.scalar(
+            select(CineAIJob).where(CineAIJob.public_id == job_public_id)
+        )
+        if job:
+            job.status = "failed"
+            job.error_code = "cineplanner.queue_unavailable"
+            job.error_message = "Analysis queue is unavailable. Please resume shortly."
+            db.session.commit()
 
 
 @cineplanner_blueprint.get("/productions/<public_id>/jobs/<job_public_id>")

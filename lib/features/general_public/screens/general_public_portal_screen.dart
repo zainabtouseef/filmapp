@@ -226,14 +226,14 @@ class GeneralPublicHomeScreen extends StatelessWidget {
       children: [
         PortalHeroCard(
           initials: _publicInitials(user?.displayName ?? 'CineConnect Member'),
-          name: user?.displayName ?? 'Book talent for your brand',
+          name: user?.displayName ?? 'Find people for your production',
           badgeLabel: 'Verified customer workspace',
           stats: const [
-            PortalHeroStat(value: '3', label: 'Talent categories'),
+            PortalHeroStat(value: '3', label: 'Creative categories'),
             PortalHeroStat(value: 'Verified', label: 'Profiles'),
             PortalHeroStat(value: 'Secured', label: 'Booking flow'),
           ],
-          ctaLabel: 'Browse talent',
+          ctaLabel: 'Browse people',
           onCta: () => Navigator.pushNamed(context, GeneralPublicRoutes.browse),
           secondaryIcon: Icons.local_movies_outlined,
           onSecondary: () =>
@@ -410,7 +410,7 @@ class _GeneralPublicRequestsScreenState
                 ),
                 const SizedBox(height: 14),
                 DPHolographicButton(
-                  label: 'Browse talent',
+                  label: 'Browse people',
                   icon: Icons.search_rounded,
                   onTap: () =>
                       Navigator.pushNamed(context, GeneralPublicRoutes.browse),

@@ -1,0 +1,126 @@
+{
+  "checked_at": "2026-10-14T15:46:20.691744+00:00",
+  "demo_email_accounts": [
+    [
+      122
+    ]
+  ],
+  "kyc_statuses": [
+    [
+      "approved",
+      102
+    ],
+    [
+      "submitted",
+      12
+    ]
+  ],
+  "approved_kyc_missing_file_documents": [
+    [
+      144
+    ]
+  ],
+  "listing_states": [
+    [
+      "public",
+      "approved",
+      "approved",
+      131
+    ],
+    [
+      "public",
+      "published",
+      "approved",
+      13
+    ],
+    [
+      "public",
+      "pending",
+      "approved",
+      5
+    ]
+  ],
+  "notification_delivery_states": [
+    [
+      "in_app",
+      "sent",
+      30
+    ],
+    [
+      "in_app",
+      "delivered",
+      33
+    ],
+    [
+      "push",
+      "unverified_legacy",
+      1
+    ]
+  ],
+  "mysql_database_tables": [
+    [
+      161
+    ]
+  ],
+  "stale_upload_sessions": [
+    [
+      37
+    ]
+  ],
+  "db_schema_privileges": [
+    [
+      "SELECT"
+    ],
+    [
+      "INSERT"
+    ],
+    [
+      "UPDATE"
+    ],
+    [
+      "DELETE"
+    ],
+    [
+      "CREATE"
+    ],
+    [
+      "DROP"
+    ],
+    [
+      "REFERENCES"
+    ],
+    [
+      "INDEX"
+    ],
+    [
+      "ALTER"
+    ],
+    [
+      "CREATE TEMPORARY TABLES"
+    ],
+    [
+      "LOCK TABLES"
+    ],
+    [
+      "EXECUTE"
+    ],
+    [
+      "CREATE VIEW"
+    ],
+    [
+      "SHOW VIEW"
+    ],
+    [
+      "CREATE ROUTINE"
+    ],
+    [
+      "ALTER ROUTINE"
+    ],
+    [
+      "EVENT"
+    ],
+    [
+      "TRIGGER"
+    ]
+  ]
+}

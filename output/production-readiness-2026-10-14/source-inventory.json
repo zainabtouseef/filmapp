@@ -1,0 +1,3311 @@
+{
+  "commit": "59c4791e67aa9609c72d1f5bcff5ea696f10bfcd",
+  "tracked_files": 980,
+  "lib_dart": 477,
+  "flutter_tests": 57,
+  "backend_app_python": 74,
+  "backend_test_files": 42,
+  "feature_dirs": [
+    "actor_talent",
+    "brand_sponsors",
+    "casting_agency",
+    "crew_services",
+    "director_producer",
+    "distribution_partner",
+    "general_public",
+    "influencer",
+    "insurance_partner",
+    "legal_partner",
+    "location_owner",
+    "media_equipment",
+    "model_extension",
+    "role_portals",
+    "super_admin"
+  ],
+  "models_tables": [
+    "files",
+    "file_variants",
+    "upload_sessions",
+    "app_settings",
+    "payment_schedules",
+    "payment_milestones",
+    "payment_transactions",
+    "payment_proofs",
+    "receipts",
+    "ledger_entries",
+    "fee_rules",
+    "booking_fee_snapshots",
+    "payout_accounts",
+    "payouts",
+    "bookings",
+    "booking_participants",
+    "booking_status_events",
+    "offers",
+    "negotiation_threads",
+    "negotiation_rounds",
+    "availability_calendars",
+    "availability_entries",
+    "conversations",
+    "conversation_members",
+    "messages",
+    "message_attachments",
+    "pinned_decisions",
+    "kyc_submissions",
+    "kyc_documents",
+    "verification_events",
+    "reviews",
+    "review_dimensions",
+    "review_requests",
+    "blocked_users",
+    "reports",
+    "moderation_cases",
+    "moderation_events",
+    "disputes",
+    "dispute_evidence",
+    "dispute_events",
+    "support_tickets",
+    "support_messages",
+    "announcements",
+    "notifications",
+    "notification_deliveries",
+    "push_devices",
+    "insurance_partner_profiles",
+    "insurance_policies",
+    "insurance_claims",
+    "insurance_claim_evidence",
+    "cine_productions",
+    "cine_production_roles",
+    "cine_script_versions",
+    "cine_ai_jobs",
+    "cine_scenes",
+    "cine_characters",
+    "cine_actors",
+    "cine_cast_assignments",
+    "cine_actor_availability",
+    "cine_locations",
+    "cine_elements",
+    "cine_crew_members",
+    "cine_shoot_days",
+    "cine_schedule_events",
+    "cine_budget_lines",
+    "cine_call_sheets",
+    "cine_audit_logs",
+    "cine_conflicts",
+    "location_properties",
+    "location_spaces",
+    "location_pricing",
+    "location_rules",
+    "location_inspections",
+    "location_inspection_items",
+    "damage_claims",
+    "damage_claim_evidence",
+    "equipment_provider_profiles",
+    "equipment_items",
+    "equipment_packages",
+    "equipment_package_items",
+    "equipment_terms",
+    "equipment_inspections",
+    "equipment_inspection_items",
+    "safety_checks",
+    "safety_check_items",
+    "incidents",
+    "safety_check_ins",
+    "casting_role_briefs",
+    "saved_casting_roles",
+    "casting_applications",
+    "casting_application_status_events",
+    "requirement_applications",
+    "requirement_application_status_events",
+    "casting_agencies",
+    "agency_invitations",
+    "agency_talent",
+    "audition_requests",
+    "audition_candidates",
+    "self_tapes",
+    "selection_notes",
+    "agency_commissions",
+    "brand_profiles",
+    "brand_opportunities",
+    "brand_applications",
+    "brand_terms",
+    "campaign_deliverables",
+    "campaign_metrics",
+    "distribution_partner_profiles",
+    "distribution_projects",
+    "distributor_contacts",
+    "release_handover_items",
+    "release_windows",
+    "distribution_reports",
+    "countries",
+    "cities",
+    "user_profiles",
+    "talent_profiles",
+    "talent_languages",
+    "marketplace_listings",
+    "portfolio_items",
+    "credit_entries",
+    "listing_media",
+    "saved_searches",
+    "shortlists",
+    "shortlist_items",
+    "model_profiles",
+    "model_campaign_categories",
+    "model_usage_rights",
+    "model_usage_rates",
+    "model_restricted_categories",
+    "contract_templates",
+    "template_clauses",
+    "contracts",
+    "contract_parties",
+    "contract_clauses",
+    "contract_signatures",
+    "contract_addendums",
+    "legal_review_requests",
+    "legal_clause_risks",
+    "legal_billing_records",
+    "meeting_threads",
+    "meeting_rounds",
+    "export_jobs",
+    "projects",
+    "project_members",
+    "skills",
+    "project_requirements",
+    "requirement_skills",
+    "project_files",
+    "project_room_items",
+    "users",
+    "roles",
+    "permissions",
+    "role_permissions",
+    "user_roles",
+    "user_sessions",
+    "password_reset_tokens",
+    "auth_security_events",
+    "user_settings",
+    "notification_preferences"
+  ],
+  "route_operations": 390,
+  "backend_tables": 160,
+  "route_inventory": [
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 226,
+      "name": "register",
+      "method": "POST",
+      "path": "/auth/register",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 328,
+      "name": "login",
+      "method": "POST",
+      "path": "/auth/login",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 363,
+      "name": "refresh",
+      "method": "POST",
+      "path": "/auth/refresh",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 380,
+      "name": "logout",
+      "method": "POST",
+      "path": "/auth/logout",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 390,
+      "name": "forgot_password",
+      "method": "POST",
+      "path": "/auth/password/forgot",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 437,
+      "name": "reset_password",
+      "method": "POST",
+      "path": "/auth/password/reset",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 468,
+      "name": "me",
+      "method": "GET",
+      "path": "/me",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 474,
+      "name": "update_me",
+      "method": "PATCH",
+      "path": "/me",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 493,
+      "name": "my_sessions",
+      "method": "GET",
+      "path": "/me/sessions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 514,
+      "name": "revoke_my_session",
+      "method": "DELETE",
+      "path": "/me/sessions/<session_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 548,
+      "name": "revoke_other_sessions",
+      "method": "POST",
+      "path": "/me/sessions/revoke-others",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 578,
+      "name": "my_roles",
+      "method": "GET",
+      "path": "/me/roles",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 584,
+      "name": "my_settings",
+      "method": "GET",
+      "path": "/me/settings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 592,
+      "name": "update_my_settings",
+      "method": "PATCH",
+      "path": "/me/settings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 650,
+      "name": "add_role",
+      "method": "POST",
+      "path": "/me/roles",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/auth.py",
+      "line": 696,
+      "name": "set_primary_role",
+      "method": "PATCH",
+      "path": "/me/primary-role",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 71,
+      "name": "get_kyc_requirements",
+      "method": "GET",
+      "path": "/kyc/requirements/<role_code>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 89,
+      "name": "update_kyc_requirements",
+      "method": "PATCH",
+      "path": "/admin/kyc/requirements/<role_code>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 393,
+      "name": "presign_upload",
+      "method": "POST",
+      "path": "/uploads/presign",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 467,
+      "name": "upload_binary",
+      "method": "PUT",
+      "path": "/uploads/<public_id>/binary",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 509,
+      "name": "complete_upload",
+      "method": "POST",
+      "path": "/uploads/<public_id>/complete",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 558,
+      "name": "file_status",
+      "method": "GET",
+      "path": "/files/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 572,
+      "name": "file_download_link",
+      "method": "POST",
+      "path": "/files/<public_id>/download-link",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 591,
+      "name": "download_file",
+      "method": "GET",
+      "path": "/files/<public_id>/download",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 647,
+      "name": "public_media",
+      "method": "GET",
+      "path": "/media/<path:storage_key>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 664,
+      "name": "create_kyc_submission",
+      "method": "POST",
+      "path": "/kyc/submissions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 767,
+      "name": "submit_kyc",
+      "method": "POST",
+      "path": "/kyc/submissions/<public_id>/submit",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 799,
+      "name": "my_kyc",
+      "method": "GET",
+      "path": "/me/kyc",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 812,
+      "name": "resubmit_kyc",
+      "method": "POST",
+      "path": "/kyc/submissions/<public_id>/resubmit",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 845,
+      "name": "admin_kyc_queue",
+      "method": "GET",
+      "path": "/admin/kyc/submissions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 861,
+      "name": "admin_kyc_detail",
+      "method": "GET",
+      "path": "/admin/kyc/submissions/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/verification.py",
+      "line": 873,
+      "name": "admin_kyc_decision",
+      "method": "POST",
+      "path": "/admin/kyc/submissions/<public_id>/decision",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 253,
+      "name": "payments_dashboard",
+      "method": "GET",
+      "path": "/payments/dashboard",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 289,
+      "name": "payment_schedules",
+      "method": "GET",
+      "path": "/payment-schedules",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 311,
+      "name": "payment_schedule_detail",
+      "method": "GET",
+      "path": "/payment-schedules/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 319,
+      "name": "submit_payment_proof",
+      "method": "POST",
+      "path": "/payment-proofs",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 419,
+      "name": "ledger",
+      "method": "GET",
+      "path": "/ledger",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 457,
+      "name": "receipt_detail",
+      "method": "GET",
+      "path": "/receipts/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 468,
+      "name": "receipt_pdf",
+      "method": "GET",
+      "path": "/receipts/<public_id>.pdf",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 484,
+      "name": "payout_accounts",
+      "method": "GET",
+      "path": "/payout-accounts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 497,
+      "name": "create_payout_account",
+      "method": "POST",
+      "path": "/payout-accounts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 545,
+      "name": "admin_payment_proofs",
+      "method": "GET",
+      "path": "/admin/payment-proofs",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 555,
+      "name": "admin_payment_proof_detail",
+      "method": "GET",
+      "path": "/admin/payment-proofs/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/payments.py",
+      "line": 579,
+      "name": "admin_payment_proof_decision",
+      "method": "POST",
+      "path": "/admin/payment-proofs/<public_id>/decision",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/health.py",
+      "line": 14,
+      "name": "live",
+      "method": "GET",
+      "path": "/live",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/health.py",
+      "line": 19,
+      "name": "ready",
+      "method": "GET",
+      "path": "/ready",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 629,
+      "name": "availability_entries",
+      "method": "GET",
+      "path": "/availability",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 651,
+      "name": "create_availability_entry",
+      "method": "POST",
+      "path": "/availability",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 685,
+      "name": "update_availability_entry",
+      "method": "PATCH",
+      "path": "/availability/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 738,
+      "name": "delete_availability_entry",
+      "method": "DELETE",
+      "path": "/availability/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 753,
+      "name": "availability_check",
+      "method": "POST",
+      "path": "/availability/check",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 772,
+      "name": "bookings",
+      "method": "GET",
+      "path": "/bookings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 798,
+      "name": "talent_opportunities",
+      "method": "GET",
+      "path": "/talent/opportunities",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 815,
+      "name": "booking_detail",
+      "method": "GET",
+      "path": "/bookings/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 823,
+      "name": "create_booking",
+      "method": "POST",
+      "path": "/bookings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 919,
+      "name": "send_booking",
+      "method": "POST",
+      "path": "/bookings/<public_id>/send",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 990,
+      "name": "update_booking_draft",
+      "method": "PATCH",
+      "path": "/bookings/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1023,
+      "name": "negotiations",
+      "method": "GET",
+      "path": "/negotiations",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1038,
+      "name": "negotiation_detail",
+      "method": "GET",
+      "path": "/negotiations/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1057,
+      "name": "create_counter_offer",
+      "method": "POST",
+      "path": "/bookings/<public_id>/offers",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1088,
+      "name": "accept_offer",
+      "method": "POST",
+      "path": "/offers/<public_id>/accept",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1148,
+      "name": "reject_booking",
+      "method": "POST",
+      "path": "/bookings/<public_id>/reject",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1171,
+      "name": "cancel_booking",
+      "method": "POST",
+      "path": "/bookings/<public_id>/cancel",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1218,
+      "name": "conversation_messages",
+      "method": "GET",
+      "path": "/conversations/<public_id>/messages",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1225,
+      "name": "create_message",
+      "method": "POST",
+      "path": "/conversations/<public_id>/messages",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/bookings.py",
+      "line": 1276,
+      "name": "pin_message",
+      "method": "POST",
+      "path": "/messages/<public_id>/pin",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 301,
+      "name": "review_eligibility",
+      "method": "GET",
+      "path": "/bookings/<public_id>/review-eligibility",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 330,
+      "name": "create_review",
+      "method": "POST",
+      "path": "/reviews",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 402,
+      "name": "user_reviews",
+      "method": "GET",
+      "path": "/users/<public_id>/reviews",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 428,
+      "name": "create_review_request",
+      "method": "POST",
+      "path": "/review-requests",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 474,
+      "name": "report_reasons",
+      "method": "GET",
+      "path": "/reports/reasons",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 479,
+      "name": "create_report",
+      "method": "POST",
+      "path": "/reports",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 518,
+      "name": "create_blocked_user",
+      "method": "POST",
+      "path": "/blocked-users",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 546,
+      "name": "list_blocked_users",
+      "method": "GET",
+      "path": "/blocked-users",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 564,
+      "name": "delete_blocked_user",
+      "method": "DELETE",
+      "path": "/blocked-users/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 583,
+      "name": "create_moderation_case",
+      "method": "POST",
+      "path": "/admin/moderation-cases",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 609,
+      "name": "admin_moderation_cases",
+      "method": "GET",
+      "path": "/admin/moderation-cases",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 623,
+      "name": "admin_moderation_case_detail",
+      "method": "GET",
+      "path": "/admin/moderation-cases/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 637,
+      "name": "admin_moderation_case_decision",
+      "method": "POST",
+      "path": "/admin/moderation-cases/<public_id>/decision",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 676,
+      "name": "create_dispute",
+      "method": "POST",
+      "path": "/disputes",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 719,
+      "name": "list_disputes",
+      "method": "GET",
+      "path": "/disputes",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 730,
+      "name": "dispute_detail",
+      "method": "GET",
+      "path": "/disputes/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 737,
+      "name": "add_dispute_evidence",
+      "method": "POST",
+      "path": "/disputes/<public_id>/evidence",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 778,
+      "name": "admin_disputes",
+      "method": "GET",
+      "path": "/admin/disputes",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 792,
+      "name": "admin_dispute_detail",
+      "method": "GET",
+      "path": "/admin/disputes/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 804,
+      "name": "admin_dispute_decision",
+      "method": "POST",
+      "path": "/admin/disputes/<public_id>/decision",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 848,
+      "name": "create_support_ticket",
+      "method": "POST",
+      "path": "/support-tickets",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 881,
+      "name": "list_support_tickets",
+      "method": "GET",
+      "path": "/support-tickets",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 914,
+      "name": "support_ticket_detail",
+      "method": "GET",
+      "path": "/support-tickets/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 923,
+      "name": "create_support_message",
+      "method": "POST",
+      "path": "/support-tickets/<public_id>/messages",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 966,
+      "name": "admin_support_tickets",
+      "method": "GET",
+      "path": "/admin/support-tickets",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 988,
+      "name": "update_support_ticket",
+      "method": "PATCH",
+      "path": "/admin/support-tickets/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1035,
+      "name": "create_announcement",
+      "method": "POST",
+      "path": "/admin/announcements",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1062,
+      "name": "admin_announcements",
+      "method": "GET",
+      "path": "/admin/announcements",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1074,
+      "name": "publish_announcement",
+      "method": "POST",
+      "path": "/admin/announcements/<public_id>/publish",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1107,
+      "name": "list_notifications",
+      "method": "GET",
+      "path": "/notifications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1131,
+      "name": "mark_notification_read",
+      "method": "PATCH",
+      "path": "/notifications/<public_id>/read",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1148,
+      "name": "mark_all_notifications_read",
+      "method": "POST",
+      "path": "/notifications/read-all",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1165,
+      "name": "register_push_device",
+      "method": "POST",
+      "path": "/push-devices",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/trust_safety.py",
+      "line": 1241,
+      "name": "acknowledge_push_display",
+      "method": "POST",
+      "path": "/push/receipts/<token>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 107,
+      "name": "insurance_profile",
+      "method": "GET",
+      "path": "/insurance/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 118,
+      "name": "upsert_insurance_profile",
+      "method": "PATCH",
+      "path": "/insurance/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 145,
+      "name": "create_insurance_policy",
+      "method": "POST",
+      "path": "/insurance/policies",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 201,
+      "name": "list_insurance_policies",
+      "method": "GET",
+      "path": "/insurance/policies",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 238,
+      "name": "insurance_policy_detail",
+      "method": "GET",
+      "path": "/insurance/policies/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 245,
+      "name": "create_insurance_claim",
+      "method": "POST",
+      "path": "/insurance/claims",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 296,
+      "name": "list_insurance_claims",
+      "method": "GET",
+      "path": "/insurance/claims",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 325,
+      "name": "insurance_claim_detail",
+      "method": "GET",
+      "path": "/insurance/claims/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 332,
+      "name": "add_insurance_claim_evidence",
+      "method": "POST",
+      "path": "/insurance/claims/<public_id>/evidence",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 354,
+      "name": "decide_insurance_claim",
+      "method": "POST",
+      "path": "/insurance/claims/<public_id>/decision",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/insurance.py",
+      "line": 383,
+      "name": "insurance_dashboard",
+      "method": "GET",
+      "path": "/insurance/dashboard",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 591,
+      "name": "productions_index",
+      "method": "GET",
+      "path": "/productions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 626,
+      "name": "productions_create",
+      "method": "POST",
+      "path": "/productions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 713,
+      "name": "production_show",
+      "method": "GET",
+      "path": "/productions/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 722,
+      "name": "production_update",
+      "method": "PATCH",
+      "path": "/productions/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 794,
+      "name": "script_create",
+      "method": "POST",
+      "path": "/productions/<public_id>/scripts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 891,
+      "name": "job_show",
+      "method": "GET",
+      "path": "/productions/<public_id>/jobs/<job_public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 906,
+      "name": "job_retry",
+      "method": "POST",
+      "path": "/productions/<public_id>/jobs/<job_public_id>/retry",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 933,
+      "name": "approve_breakdown",
+      "method": "POST",
+      "path": "/productions/<public_id>/approve-breakdown",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 969,
+      "name": "resource_update",
+      "method": "PATCH",
+      "path": "/productions/<public_id>/<resource>/<entity_public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1034,
+      "name": "location_create",
+      "method": "POST",
+      "path": "/productions/<public_id>/locations",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1094,
+      "name": "element_create",
+      "method": "POST",
+      "path": "/productions/<public_id>/elements",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1156,
+      "name": "crew_create",
+      "method": "POST",
+      "path": "/productions/<public_id>/crew",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1198,
+      "name": "production_team_upsert",
+      "method": "POST",
+      "path": "/productions/<public_id>/team",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1275,
+      "name": "actors_index",
+      "method": "GET",
+      "path": "/actors",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1286,
+      "name": "actors_create",
+      "method": "POST",
+      "path": "/actors",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1316,
+      "name": "actor_availability_create",
+      "method": "POST",
+      "path": "/actors/<actor_public_id>/availability",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1359,
+      "name": "cast_assignment_upsert",
+      "method": "POST",
+      "path": "/productions/<public_id>/cast-assignments",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1498,
+      "name": "schedule_show",
+      "method": "GET",
+      "path": "/productions/<public_id>/schedule",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1524,
+      "name": "schedule_generate",
+      "method": "POST",
+      "path": "/productions/<public_id>/schedule/generate",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1578,
+      "name": "schedule_event_move",
+      "method": "PATCH",
+      "path": "/productions/<public_id>/schedule/events/<event_public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1637,
+      "name": "schedule_optimize",
+      "method": "POST",
+      "path": "/productions/<public_id>/schedule/optimize",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1666,
+      "name": "schedule_lock",
+      "method": "POST",
+      "path": "/productions/<public_id>/schedule/lock",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1694,
+      "name": "budget_show",
+      "method": "GET",
+      "path": "/productions/<public_id>/budget",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1712,
+      "name": "budget_line_update",
+      "method": "PATCH",
+      "path": "/productions/<public_id>/budget/<line_public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1754,
+      "name": "call_sheet_create",
+      "method": "POST",
+      "path": "/productions/<public_id>/call-sheets",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 1811,
+      "name": "call_sheet_pdf",
+      "method": "GET",
+      "path": "/productions/<public_id>/call-sheets/<sheet_public_id>.pdf",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 2057,
+      "name": "report_csv",
+      "method": "GET",
+      "path": "/productions/<public_id>/reports/<report_type>.csv",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 2077,
+      "name": "report_excel",
+      "method": "GET",
+      "path": "/productions/<public_id>/reports/<report_type>.xlsx",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 2100,
+      "name": "report_pdf",
+      "method": "GET",
+      "path": "/productions/<public_id>/reports/<report_type>.pdf",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 2114,
+      "name": "report_json",
+      "method": "GET",
+      "path": "/productions/<public_id>/reports/<report_type>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 2337,
+      "name": "assistant_query",
+      "method": "POST",
+      "path": "/productions/<public_id>/assistant",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/cineplanner.py",
+      "line": 2448,
+      "name": "audit_logs",
+      "method": "GET",
+      "path": "/productions/<public_id>/audit-logs",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 600,
+      "name": "create_location_property",
+      "method": "POST",
+      "path": "/location-properties",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 632,
+      "name": "list_location_properties",
+      "method": "GET",
+      "path": "/location-properties",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 643,
+      "name": "update_location_property",
+      "method": "PATCH",
+      "path": "/location-properties/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 688,
+      "name": "create_location_space",
+      "method": "POST",
+      "path": "/location-properties/<public_id>/spaces",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 709,
+      "name": "update_location_space",
+      "method": "PATCH",
+      "path": "/location-spaces/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 742,
+      "name": "create_location_pricing",
+      "method": "POST",
+      "path": "/location-properties/<public_id>/pricing",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 764,
+      "name": "update_location_pricing",
+      "method": "PATCH",
+      "path": "/location-pricing/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 801,
+      "name": "create_location_rule",
+      "method": "POST",
+      "path": "/location-properties/<public_id>/rules",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 821,
+      "name": "update_location_rule",
+      "method": "PATCH",
+      "path": "/location-rules/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 852,
+      "name": "create_location_inspection",
+      "method": "POST",
+      "path": "/location-inspections",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 880,
+      "name": "location_inspections",
+      "method": "GET",
+      "path": "/location-inspections",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 915,
+      "name": "add_location_inspection_item",
+      "method": "POST",
+      "path": "/location-inspections/<public_id>/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 952,
+      "name": "confirm_location_inspection",
+      "method": "POST",
+      "path": "/location-inspections/<public_id>/confirm",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 976,
+      "name": "create_damage_claim",
+      "method": "POST",
+      "path": "/damage-claims",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1009,
+      "name": "damage_claims",
+      "method": "GET",
+      "path": "/damage-claims",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1027,
+      "name": "add_damage_claim_evidence",
+      "method": "POST",
+      "path": "/damage-claims/<public_id>/evidence",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1056,
+      "name": "upsert_equipment_profile",
+      "method": "PATCH",
+      "path": "/equipment/provider-profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1105,
+      "name": "equipment_profile",
+      "method": "GET",
+      "path": "/equipment/provider-profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1118,
+      "name": "create_equipment_item",
+      "method": "POST",
+      "path": "/equipment/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1145,
+      "name": "equipment_items",
+      "method": "GET",
+      "path": "/equipment/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1169,
+      "name": "update_equipment_item",
+      "method": "PATCH",
+      "path": "/equipment/items/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1201,
+      "name": "create_equipment_package",
+      "method": "POST",
+      "path": "/equipment/packages",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1221,
+      "name": "equipment_packages",
+      "method": "GET",
+      "path": "/equipment/packages",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1241,
+      "name": "update_equipment_package",
+      "method": "PATCH",
+      "path": "/equipment/packages/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1272,
+      "name": "add_equipment_package_item",
+      "method": "POST",
+      "path": "/equipment/packages/<public_id>/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1314,
+      "name": "create_equipment_term",
+      "method": "POST",
+      "path": "/equipment/terms",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1338,
+      "name": "equipment_terms",
+      "method": "GET",
+      "path": "/equipment/terms",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1356,
+      "name": "update_equipment_term",
+      "method": "PATCH",
+      "path": "/equipment/terms/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1385,
+      "name": "equipment_inspections",
+      "method": "GET",
+      "path": "/equipment-inspections",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1409,
+      "name": "create_equipment_inspection",
+      "method": "POST",
+      "path": "/equipment-inspections",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1442,
+      "name": "add_equipment_inspection_item",
+      "method": "POST",
+      "path": "/equipment-inspections/<public_id>/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1499,
+      "name": "confirm_equipment_inspection",
+      "method": "POST",
+      "path": "/equipment-inspections/<public_id>/confirm",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1523,
+      "name": "create_safety_check",
+      "method": "POST",
+      "path": "/safety-checks",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1548,
+      "name": "create_safety_check_item",
+      "method": "POST",
+      "path": "/safety-checks/<public_id>/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1573,
+      "name": "list_safety_checks",
+      "method": "GET",
+      "path": "/safety-checks",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1593,
+      "name": "safety_check_detail",
+      "method": "GET",
+      "path": "/safety-checks/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1600,
+      "name": "update_safety_check",
+      "method": "PATCH",
+      "path": "/safety-checks/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1625,
+      "name": "update_safety_check_item",
+      "method": "PATCH",
+      "path": "/safety-checks/<public_id>/items/<item_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1657,
+      "name": "create_incident",
+      "method": "POST",
+      "path": "/incidents",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1688,
+      "name": "list_incidents",
+      "method": "GET",
+      "path": "/incidents",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1706,
+      "name": "incident_detail",
+      "method": "GET",
+      "path": "/incidents/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1713,
+      "name": "update_incident",
+      "method": "PATCH",
+      "path": "/incidents/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1736,
+      "name": "create_safety_check_in",
+      "method": "POST",
+      "path": "/safety-check-ins",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/operations.py",
+      "line": 1751,
+      "name": "complete_safety_check_in",
+      "method": "POST",
+      "path": "/safety-check-ins/<public_id>/complete",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 578,
+      "name": "list_casting_roles",
+      "method": "GET",
+      "path": "/casting/roles",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 649,
+      "name": "casting_role_detail",
+      "method": "GET",
+      "path": "/casting/roles/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 676,
+      "name": "publish_casting_role",
+      "method": "PATCH",
+      "path": "/casting/roles/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 739,
+      "name": "save_casting_role",
+      "method": "POST",
+      "path": "/casting/roles/<public_id>/save",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 757,
+      "name": "unsave_casting_role",
+      "method": "DELETE",
+      "path": "/casting/roles/<public_id>/save",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 774,
+      "name": "create_casting_application",
+      "method": "POST",
+      "path": "/casting/roles/<public_id>/applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 823,
+      "name": "list_actor_applications",
+      "method": "GET",
+      "path": "/casting/applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 841,
+      "name": "actor_application_detail",
+      "method": "GET",
+      "path": "/casting/applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 852,
+      "name": "update_actor_application",
+      "method": "PATCH",
+      "path": "/casting/applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 868,
+      "name": "submit_casting_application",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/submit",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 897,
+      "name": "withdraw_casting_application",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/withdraw",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 913,
+      "name": "confirm_casting_audition",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/confirm-audition",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 944,
+      "name": "list_casting_meetings",
+      "method": "GET",
+      "path": "/casting/applications/<public_id>/meetings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 953,
+      "name": "propose_casting_meeting",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/meetings/propose",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 988,
+      "name": "accept_casting_meeting",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1015,
+      "name": "decline_casting_meeting",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1043,
+      "name": "submit_casting_self_tape",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/self-tape",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1087,
+      "name": "ensure_casting_conversation",
+      "method": "POST",
+      "path": "/casting/applications/<public_id>/conversation",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1136,
+      "name": "list_director_casting_applications",
+      "method": "GET",
+      "path": "/director/projects/<public_id>/casting-applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1172,
+      "name": "update_director_casting_application",
+      "method": "PATCH",
+      "path": "/director/casting-applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1294,
+      "name": "list_director_casting_meetings",
+      "method": "GET",
+      "path": "/director/casting-applications/<public_id>/meetings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1303,
+      "name": "propose_director_casting_meeting",
+      "method": "POST",
+      "path": "/director/casting-applications/<public_id>/meetings/propose",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1335,
+      "name": "accept_director_casting_meeting",
+      "method": "POST",
+      "path": "/director/casting-applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/casting.py",
+      "line": 1359,
+      "name": "decline_director_casting_meeting",
+      "method": "POST",
+      "path": "/director/casting-applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 311,
+      "name": "list_opportunity_roles",
+      "method": "GET",
+      "path": "/opportunities/roles",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 370,
+      "name": "get_opportunity_role",
+      "method": "GET",
+      "path": "/opportunities/roles/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 378,
+      "name": "save_opportunity_role",
+      "method": "POST",
+      "path": "/opportunities/roles/<public_id>/save",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 397,
+      "name": "unsave_opportunity_role",
+      "method": "DELETE",
+      "path": "/opportunities/roles/<public_id>/save",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 413,
+      "name": "create_opportunity_application",
+      "method": "POST",
+      "path": "/opportunities/roles/<public_id>/applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 480,
+      "name": "list_my_opportunity_applications",
+      "method": "GET",
+      "path": "/opportunities/applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 496,
+      "name": "get_my_opportunity_application",
+      "method": "GET",
+      "path": "/opportunities/applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 509,
+      "name": "withdraw_opportunity_application",
+      "method": "POST",
+      "path": "/opportunities/applications/<public_id>/withdraw",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 535,
+      "name": "list_opportunity_meetings",
+      "method": "GET",
+      "path": "/opportunities/applications/<public_id>/meetings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 545,
+      "name": "propose_opportunity_meeting",
+      "method": "POST",
+      "path": "/opportunities/applications/<public_id>/meetings/propose",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 579,
+      "name": "accept_opportunity_meeting",
+      "method": "POST",
+      "path": "/opportunities/applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 605,
+      "name": "decline_opportunity_meeting",
+      "method": "POST",
+      "path": "/opportunities/applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 629,
+      "name": "list_director_opportunity_applications",
+      "method": "GET",
+      "path": "/director/projects/<public_id>/opportunity-applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 666,
+      "name": "update_director_opportunity_application",
+      "method": "PATCH",
+      "path": "/director/opportunity-applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 747,
+      "name": "list_director_opportunity_meetings",
+      "method": "GET",
+      "path": "/director/opportunity-applications/<public_id>/meetings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 758,
+      "name": "propose_director_opportunity_meeting",
+      "method": "POST",
+      "path": "/director/opportunity-applications/<public_id>/meetings/propose",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 790,
+      "name": "accept_director_opportunity_meeting",
+      "method": "POST",
+      "path": "/director/opportunity-applications/<public_id>/meetings/rounds/<round_public_id>/accept",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/opportunities.py",
+      "line": 816,
+      "name": "decline_director_opportunity_meeting",
+      "method": "POST",
+      "path": "/director/opportunity-applications/<public_id>/meetings/rounds/<round_public_id>/decline",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 557,
+      "name": "agency_profile",
+      "method": "GET",
+      "path": "/agencies/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 566,
+      "name": "upsert_agency_profile",
+      "method": "PATCH",
+      "path": "/agencies/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 586,
+      "name": "create_agency_invitation",
+      "method": "POST",
+      "path": "/agency-invitations",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 619,
+      "name": "list_agency_invitations",
+      "method": "GET",
+      "path": "/agency-invitations",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 639,
+      "name": "accept_agency_invitation",
+      "method": "POST",
+      "path": "/agency-invitations/<public_id>/accept",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 669,
+      "name": "agency_roster",
+      "method": "GET",
+      "path": "/agencies/<public_id>/talent",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 681,
+      "name": "create_audition_request",
+      "method": "POST",
+      "path": "/auditions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 721,
+      "name": "list_auditions",
+      "method": "GET",
+      "path": "/auditions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 756,
+      "name": "update_audition_request",
+      "method": "PATCH",
+      "path": "/auditions/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 767,
+      "name": "add_audition_candidate",
+      "method": "POST",
+      "path": "/auditions/<public_id>/candidates",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 809,
+      "name": "update_audition_candidate",
+      "method": "PATCH",
+      "path": "/audition-candidates/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 843,
+      "name": "create_self_tape",
+      "method": "POST",
+      "path": "/self-tapes",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 880,
+      "name": "add_selection_note",
+      "method": "POST",
+      "path": "/audition-candidates/<public_id>/notes",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 904,
+      "name": "create_agency_commission",
+      "method": "POST",
+      "path": "/agency-commissions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 938,
+      "name": "agency_commissions",
+      "method": "GET",
+      "path": "/agencies/<public_id>/commissions",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 955,
+      "name": "brand_profile",
+      "method": "GET",
+      "path": "/brands/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 965,
+      "name": "upsert_brand_profile",
+      "method": "PATCH",
+      "path": "/brands/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 999,
+      "name": "create_brand_opportunity",
+      "method": "POST",
+      "path": "/brand-opportunities",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1046,
+      "name": "list_brand_opportunities",
+      "method": "GET",
+      "path": "/brand-opportunities",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1086,
+      "name": "get_brand_opportunity",
+      "method": "GET",
+      "path": "/brand-opportunities/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1092,
+      "name": "update_brand_opportunity",
+      "method": "PATCH",
+      "path": "/brand-opportunities/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1143,
+      "name": "create_brand_application",
+      "method": "POST",
+      "path": "/brand-opportunities/<public_id>/applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1167,
+      "name": "list_brand_applications",
+      "method": "GET",
+      "path": "/brand-opportunities/<public_id>/applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1188,
+      "name": "list_owner_brand_applications",
+      "method": "GET",
+      "path": "/brand-applications",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1235,
+      "name": "get_brand_application",
+      "method": "GET",
+      "path": "/brand-applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1242,
+      "name": "update_brand_application",
+      "method": "PATCH",
+      "path": "/brand-applications/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1273,
+      "name": "ensure_brand_application_conversation",
+      "method": "POST",
+      "path": "/brand-applications/<public_id>/conversation",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1312,
+      "name": "create_brand_term",
+      "method": "POST",
+      "path": "/brand-applications/<public_id>/terms",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1341,
+      "name": "create_campaign_deliverable",
+      "method": "POST",
+      "path": "/campaign-deliverables",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1395,
+      "name": "list_campaign_deliverables",
+      "method": "GET",
+      "path": "/campaign-deliverables",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1445,
+      "name": "update_campaign_deliverable",
+      "method": "PATCH",
+      "path": "/campaign-deliverables/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1502,
+      "name": "submit_campaign_deliverable_proof",
+      "method": "POST",
+      "path": "/campaign-deliverables/<public_id>/proof",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1523,
+      "name": "approve_campaign_deliverable",
+      "method": "POST",
+      "path": "/campaign-deliverables/<public_id>/approve",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1546,
+      "name": "create_campaign_metric",
+      "method": "POST",
+      "path": "/campaign-metrics",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1605,
+      "name": "model_profile",
+      "method": "GET",
+      "path": "/model/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1616,
+      "name": "update_model_profile",
+      "method": "PATCH",
+      "path": "/model/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1631,
+      "name": "model_campaign_categories",
+      "method": "GET",
+      "path": "/model/campaign-categories",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1637,
+      "name": "update_model_campaign_categories",
+      "method": "PATCH",
+      "path": "/model/campaign-categories",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1665,
+      "name": "list_model_usage_rights",
+      "method": "GET",
+      "path": "/model/usage-rights",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1672,
+      "name": "create_model_usage_right",
+      "method": "POST",
+      "path": "/model/usage-rights",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1690,
+      "name": "update_model_usage_right",
+      "method": "PATCH",
+      "path": "/model/usage-rights/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1715,
+      "name": "list_model_usage_rates",
+      "method": "GET",
+      "path": "/model/usage-rates",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1723,
+      "name": "create_model_usage_rate",
+      "method": "POST",
+      "path": "/model/usage-rates",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1742,
+      "name": "update_model_usage_rate",
+      "method": "PATCH",
+      "path": "/model/usage-rates/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1767,
+      "name": "model_restricted_categories",
+      "method": "GET",
+      "path": "/model/restricted-categories",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1786,
+      "name": "update_model_restricted_categories",
+      "method": "PATCH",
+      "path": "/model/restricted-categories",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1819,
+      "name": "distribution_profile",
+      "method": "GET",
+      "path": "/distribution/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1834,
+      "name": "upsert_distribution_profile",
+      "method": "PATCH",
+      "path": "/distribution/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1857,
+      "name": "create_distribution_project",
+      "method": "POST",
+      "path": "/distribution-projects",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1890,
+      "name": "list_distribution_projects",
+      "method": "GET",
+      "path": "/distribution-projects",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1937,
+      "name": "update_distribution_project",
+      "method": "PATCH",
+      "path": "/distribution-projects/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1962,
+      "name": "create_release_window",
+      "method": "POST",
+      "path": "/distribution-projects/<public_id>/release-windows",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 1983,
+      "name": "create_handover_item",
+      "method": "POST",
+      "path": "/distribution-projects/<public_id>/handover-items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2001,
+      "name": "update_handover_item",
+      "method": "PATCH",
+      "path": "/release-handover-items/<item_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2044,
+      "name": "create_distributor_contact",
+      "method": "POST",
+      "path": "/distributor-contacts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2065,
+      "name": "list_distributor_contacts",
+      "method": "GET",
+      "path": "/distributor-contacts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2079,
+      "name": "update_distributor_contact",
+      "method": "PATCH",
+      "path": "/distributor-contacts/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2109,
+      "name": "create_distribution_report",
+      "method": "POST",
+      "path": "/distribution-reports",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2143,
+      "name": "list_distribution_reports",
+      "method": "GET",
+      "path": "/distribution-reports",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/specialist.py",
+      "line": 2162,
+      "name": "export_distribution_reports",
+      "method": "GET",
+      "path": "/distribution-reports/export.csv",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 905,
+      "name": "cities",
+      "method": "GET",
+      "path": "/cities",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 913,
+      "name": "get_travel_preferences",
+      "method": "GET",
+      "path": "/talent/travel-preferences",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 927,
+      "name": "update_travel_preferences",
+      "method": "PATCH",
+      "path": "/talent/travel-preferences",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 967,
+      "name": "my_profile",
+      "method": "GET",
+      "path": "/me/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 976,
+      "name": "update_my_profile",
+      "method": "PATCH",
+      "path": "/me/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1023,
+      "name": "get_talent_profile",
+      "method": "GET",
+      "path": "/talent/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1032,
+      "name": "update_talent_profile",
+      "method": "PATCH",
+      "path": "/talent/profile",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1141,
+      "name": "portfolio_items",
+      "method": "GET",
+      "path": "/portfolio",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1160,
+      "name": "create_portfolio_item",
+      "method": "POST",
+      "path": "/portfolio",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1231,
+      "name": "update_portfolio_item",
+      "method": "PATCH",
+      "path": "/portfolio/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1321,
+      "name": "delete_portfolio_item",
+      "method": "DELETE",
+      "path": "/portfolio/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1345,
+      "name": "credit_entries",
+      "method": "GET",
+      "path": "/credits",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1364,
+      "name": "create_credit_entry",
+      "method": "POST",
+      "path": "/credits",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1415,
+      "name": "update_credit_entry",
+      "method": "PATCH",
+      "path": "/credits/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1451,
+      "name": "delete_credit_entry",
+      "method": "DELETE",
+      "path": "/credits/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1460,
+      "name": "saved_searches",
+      "method": "GET",
+      "path": "/saved-searches",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1473,
+      "name": "create_saved_search",
+      "method": "POST",
+      "path": "/saved-searches",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1511,
+      "name": "delete_saved_search",
+      "method": "DELETE",
+      "path": "/saved-searches/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1529,
+      "name": "shortlists",
+      "method": "GET",
+      "path": "/shortlists",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1540,
+      "name": "create_shortlist",
+      "method": "POST",
+      "path": "/shortlists",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1564,
+      "name": "add_shortlist_item",
+      "method": "POST",
+      "path": "/shortlists/<public_id>/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1597,
+      "name": "update_shortlist_item",
+      "method": "PATCH",
+      "path": "/shortlist-items/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1615,
+      "name": "delete_shortlist_item",
+      "method": "DELETE",
+      "path": "/shortlist-items/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1624,
+      "name": "publish_listing",
+      "method": "POST",
+      "path": "/marketplace/listings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1901,
+      "name": "marketplace_listings",
+      "method": "GET",
+      "path": "/marketplace/listings",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1940,
+      "name": "marketplace_listing_detail",
+      "method": "GET",
+      "path": "/marketplace/listings/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1962,
+      "name": "my_marketplace_listings",
+      "method": "GET",
+      "path": "/marketplace/my-listings",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 1990,
+      "name": "update_marketplace_listing_pricing",
+      "method": "PATCH",
+      "path": "/marketplace/listings/<public_id>/pricing",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 2034,
+      "name": "marketplace_result_count",
+      "method": "POST",
+      "path": "/marketplace/result-count",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/marketplace.py",
+      "line": 2045,
+      "name": "marketplace_facets",
+      "method": "GET",
+      "path": "/marketplace/facets",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 297,
+      "name": "contract_verification_link",
+      "method": "GET",
+      "path": "/contracts/<public_id>/verification",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 324,
+      "name": "verify_contract_link",
+      "method": "GET",
+      "path": "/contracts/verify/<token>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 391,
+      "name": "contract_templates",
+      "method": "GET",
+      "path": "/contract-templates",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 403,
+      "name": "legal_templates",
+      "method": "GET",
+      "path": "/legal/templates",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 415,
+      "name": "review_contract_template",
+      "method": "POST",
+      "path": "/legal/templates/<public_id>/reviews",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 473,
+      "name": "contracts",
+      "method": "GET",
+      "path": "/contracts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 486,
+      "name": "generate_contract",
+      "method": "POST",
+      "path": "/bookings/<public_id>/contracts",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 582,
+      "name": "contract_detail",
+      "method": "GET",
+      "path": "/contracts/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 590,
+      "name": "contract_pdf",
+      "method": "GET",
+      "path": "/contracts/<public_id>.pdf",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 602,
+      "name": "sign_contract",
+      "method": "POST",
+      "path": "/contracts/<public_id>/signatures",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 668,
+      "name": "create_addendum",
+      "method": "POST",
+      "path": "/contracts/<public_id>/addendums",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 703,
+      "name": "request_legal_review",
+      "method": "POST",
+      "path": "/legal-reviews",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 725,
+      "name": "legal_reviews",
+      "method": "GET",
+      "path": "/legal/reviews",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 737,
+      "name": "legal_review_detail",
+      "method": "GET",
+      "path": "/legal-reviews/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 756,
+      "name": "legal_review_decision",
+      "method": "POST",
+      "path": "/legal-reviews/<public_id>/decision",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 804,
+      "name": "legal_billing_records",
+      "method": "GET",
+      "path": "/legal/billing-records",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/contracts.py",
+      "line": 824,
+      "name": "update_legal_billing_record",
+      "method": "PATCH",
+      "path": "/legal/billing-records/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/app.py",
+      "line": 60,
+      "name": "get_app_settings",
+      "method": "GET",
+      "path": "/admin/app-settings",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/app.py",
+      "line": 79,
+      "name": "update_app_settings",
+      "method": "PATCH",
+      "path": "/admin/app-settings",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/app.py",
+      "line": 218,
+      "name": "bootstrap",
+      "method": "GET",
+      "path": "/app/bootstrap",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/app.py",
+      "line": 244,
+      "name": "public_config",
+      "method": "GET",
+      "path": "/app/public-config",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/app.py",
+      "line": 271,
+      "name": "roles",
+      "method": "GET",
+      "path": "/roles",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/app.py",
+      "line": 290,
+      "name": "openapi",
+      "method": "GET",
+      "path": "/openapi.yaml",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/analytics.py",
+      "line": 57,
+      "name": "my_dashboard",
+      "method": "GET",
+      "path": "/me/dashboard",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/analytics.py",
+      "line": 123,
+      "name": "admin_dashboard",
+      "method": "GET",
+      "path": "/admin/dashboard",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/analytics.py",
+      "line": 202,
+      "name": "admin_analytics",
+      "method": "GET",
+      "path": "/admin/analytics",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/analytics.py",
+      "line": 605,
+      "name": "create_export",
+      "method": "POST",
+      "path": "/exports",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/analytics.py",
+      "line": 654,
+      "name": "list_exports",
+      "method": "GET",
+      "path": "/exports",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/analytics.py",
+      "line": 670,
+      "name": "get_export",
+      "method": "GET",
+      "path": "/exports/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 247,
+      "name": "admin_bookings",
+      "method": "GET",
+      "path": "/admin/control/bookings",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 263,
+      "name": "admin_booking_detail",
+      "method": "GET",
+      "path": "/admin/control/bookings/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 274,
+      "name": "admin_update_booking",
+      "method": "PATCH",
+      "path": "/admin/control/bookings/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 320,
+      "name": "admin_users",
+      "method": "GET",
+      "path": "/admin/control/users",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 339,
+      "name": "admin_update_user",
+      "method": "PATCH",
+      "path": "/admin/control/users/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 406,
+      "name": "admin_listings",
+      "method": "GET",
+      "path": "/admin/control/listings",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 422,
+      "name": "admin_update_listing",
+      "method": "PATCH",
+      "path": "/admin/control/listings/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 507,
+      "name": "admin_contract_templates",
+      "method": "GET",
+      "path": "/admin/control/contract-templates",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 519,
+      "name": "admin_create_contract_template",
+      "method": "POST",
+      "path": "/admin/control/contract-templates",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 550,
+      "name": "admin_update_contract_template",
+      "method": "PATCH",
+      "path": "/admin/control/contract-templates/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 615,
+      "name": "admin_fee_rules",
+      "method": "GET",
+      "path": "/admin/control/fee-rules",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 624,
+      "name": "admin_create_fee_rule",
+      "method": "POST",
+      "path": "/admin/control/fee-rules",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 675,
+      "name": "admin_update_fee_rule",
+      "method": "PATCH",
+      "path": "/admin/control/fee-rules/<public_id>",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 750,
+      "name": "admin_roles",
+      "method": "GET",
+      "path": "/admin/control/roles",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 772,
+      "name": "admin_update_role_permissions",
+      "method": "PATCH",
+      "path": "/admin/control/roles/<code>/permissions",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/admin_control.py",
+      "line": 811,
+      "name": "admin_audit_events",
+      "method": "GET",
+      "path": "/admin/control/audit-events",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 573,
+      "name": "skills",
+      "method": "GET",
+      "path": "/skills",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 585,
+      "name": "projects",
+      "method": "GET",
+      "path": "/projects",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 597,
+      "name": "create_project",
+      "method": "POST",
+      "path": "/projects",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 636,
+      "name": "public_cinema",
+      "method": "GET",
+      "path": "/public/cinema",
+      "direct_current_user": false
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 682,
+      "name": "project_detail",
+      "method": "GET",
+      "path": "/projects/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 689,
+      "name": "update_project",
+      "method": "PATCH",
+      "path": "/projects/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 706,
+      "name": "duplicate_project",
+      "method": "POST",
+      "path": "/projects/<public_id>/duplicate",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 788,
+      "name": "project_room",
+      "method": "GET",
+      "path": "/projects/<public_id>/room",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 806,
+      "name": "create_project_room_item",
+      "method": "POST",
+      "path": "/projects/<public_id>/room/items",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 833,
+      "name": "project_members",
+      "method": "GET",
+      "path": "/projects/<public_id>/members",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 842,
+      "name": "add_project_member",
+      "method": "POST",
+      "path": "/projects/<public_id>/members",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 905,
+      "name": "project_files",
+      "method": "GET",
+      "path": "/projects/<public_id>/files",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 914,
+      "name": "link_project_file",
+      "method": "POST",
+      "path": "/projects/<public_id>/files",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 954,
+      "name": "project_requirements",
+      "method": "GET",
+      "path": "/projects/<public_id>/requirements",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 969,
+      "name": "create_project_requirement",
+      "method": "POST",
+      "path": "/projects/<public_id>/requirements",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/projects.py",
+      "line": 990,
+      "name": "update_requirement",
+      "method": "PATCH",
+      "path": "/requirements/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2330,
+      "name": "director_dashboard",
+      "method": "GET",
+      "path": "/brands/dashboard",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2330,
+      "name": "director_dashboard",
+      "method": "GET",
+      "path": "/director/dashboard",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2389,
+      "name": "director_schedule",
+      "method": "GET",
+      "path": "/brands/schedule",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2389,
+      "name": "director_schedule",
+      "method": "GET",
+      "path": "/director/schedule",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2399,
+      "name": "create_director_schedule_event",
+      "method": "POST",
+      "path": "/brands/schedule",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2399,
+      "name": "create_director_schedule_event",
+      "method": "POST",
+      "path": "/director/schedule",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2518,
+      "name": "director_discovery",
+      "method": "GET",
+      "path": "/brands/discovery",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2518,
+      "name": "director_discovery",
+      "method": "GET",
+      "path": "/director/discovery",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2540,
+      "name": "director_discovery_item",
+      "method": "GET",
+      "path": "/brands/discovery/<kind>/<public_id>",
+      "direct_current_user": true
+    },
+    {
+      "file": "backend/app/api/director.py",
+      "line": 2540,
+      "name": "director_discovery_item",
+      "method": "GET",
+      "path": "/director/discovery/<kind>/<public_id>",
+      "direct_current_user": true
+    }
+  ]
+}

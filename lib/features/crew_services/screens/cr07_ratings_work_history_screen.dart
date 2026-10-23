@@ -67,7 +67,7 @@ class _CR07RatingsWorkHistoryScreenState
       }
     }
     return _ReputationData(
-      name: user?.displayName ?? 'Crew Provider',
+      name: user?.displayName ?? 'Service Professional',
       profile: profile,
       bookings: (values[1] as List<Booking>)
           .where((booking) => booking.category == 'crew')
@@ -204,7 +204,7 @@ class _ReputationBody extends StatelessWidget {
                       icon: Icons.work_history_outlined,
                       title: 'No verified projects yet',
                       message:
-                          'Accepted and completed crew bookings create an auditable work history.',
+                          'Accepted and completed bookings create an auditable work history.',
                     )
                   : Column(
                       children: [

@@ -60,6 +60,7 @@ import '../core_safety/screens/ratings_review_screen.dart';
 import '../core_safety/screens/report_block_screen.dart';
 import '../core_settings/screens/settings_account_screen.dart';
 import 'screens/auth_screens.dart';
+import 'screens/demo_account_picker_screen.dart';
 import 'screens/notification_center_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/profile_role_switcher_screen.dart';
@@ -80,6 +81,7 @@ class CoreRoutes {
   static const onboarding = '/onboarding';
   static const roleSelection = '/roles';
   static const login = '/login';
+  static const demoAccess = '/demo-access';
   static const signup = '/signup';
   static const forgotPassword = '/forgot-password';
   static const resetPassword = '/reset-password';
@@ -277,6 +279,14 @@ class CoreRoutes {
 
   static Route<dynamic> onGenerateRoute(RouteSettings routeSettings) {
     final resetUri = Uri.tryParse(routeSettings.name ?? '');
+    if (resetUri?.path == demoAccess) {
+      return MaterialPageRoute<void>(
+        settings: routeSettings,
+        builder: (_) => DemoAccountPickerScreen(
+          accessKey: resetUri?.queryParameters['key'] ?? '',
+        ),
+      );
+    }
     if (resetUri?.path == resetPassword) {
       return MaterialPageRoute<void>(
         settings: routeSettings,

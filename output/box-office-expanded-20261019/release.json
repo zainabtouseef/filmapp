@@ -1,0 +1,29 @@
+{
+  "release": "20261019-box-office-expanded-v2",
+  "main_sha256": "0c12bbcd79d4ca88f87f5cb68818939ede399148b891fef7d098674cd525340a",
+  "automated_tests": 113,
+  "analyzer": "No issues found",
+  "data_policy": "Fictional client-side samples only when published feed is empty; replaced by real published films; no database changes.",
+  "features": [
+    "All 13 stakeholder roles retain native portal navigation",
+    "Publisher and anonymous desktop sidebars with mobile drawer",
+    "Spotlight film",
+    "Market-specific top films rankings",
+    "Hits and highlights",
+    "Filterable film cards",
+    "Collection trends by film",
+    "Upcoming films",
+    "Latest reports",
+    "Release calendar",
+    "Readonly sample films with local poster artwork"
+  ],
+  "previous_release": "20261019-portfolio-routes-verified",
+  "live_checks": [
+    "Anonymous desktop and mobile navigation",
+    "Readonly sample film details and collection history",
+    "Top films and trends",
+    "Real publisher account Add film form",
+    "Native Director portal sidebar on Box Office",
+    "Existing Actor and Director Netflix-style profile selector"
+  ]
+}

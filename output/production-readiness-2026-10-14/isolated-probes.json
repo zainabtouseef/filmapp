@@ -1,0 +1,111 @@
+{
+  "checked_at": "2026-10-14T15:47:42.704828+00:00",
+  "isolation": "temporary SQLite; no production credentials; no delivery calls",
+  "probes": [
+    {
+      "probe": "Read-only member can change safety risk and completion",
+      "method": "PATCH",
+      "path": "/safety-checks/<check>",
+      "actual_status": 200,
+      "expected_secure_status": 403,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Read-only member can make mandatory safety item optional",
+      "method": "PATCH",
+      "path": "/safety-checks/<check>/items/<item>",
+      "actual_status": 200,
+      "expected_secure_status": 403,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Removed project member can create safety check",
+      "method": "POST",
+      "path": "/safety-checks",
+      "actual_status": 201,
+      "expected_secure_status": 404,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Support role with zero permissions reads account directory",
+      "method": "GET",
+      "path": "/admin/control/users",
+      "actual_status": 200,
+      "expected_secure_status": 403,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Regular member blocked from project settings",
+      "method": "PATCH",
+      "path": "/projects/<project>",
+      "actual_status": 403,
+      "expected_secure_status": 403,
+      "issue_reproduced": false
+    },
+    {
+      "probe": "Unrelated support user denied private safety check",
+      "method": "GET",
+      "path": "/safety-checks/<check>",
+      "actual_status": 404,
+      "expected_secure_status": 404,
+      "issue_reproduced": false
+    },
+    {
+      "probe": "Admin suspends account in isolated test",
+      "method": "PATCH",
+      "path": "/admin/control/users/<viewer>",
+      "actual_status": 200,
+      "expected_secure_status": 200,
+      "issue_reproduced": false
+    },
+    {
+      "probe": "Account suspension creates visible admin audit record",
+      "events_before": 0,
+      "events_after": 0,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Refresh token replay rejects old token and revokes family",
+      "old_token_rejected": true,
+      "session_revoked": false,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Private project member-only external trailer excluded from public cinema",
+      "public_items": 1,
+      "private_budget_exposed": true,
+      "issue_reproduced": true
+    },
+    {
+      "probe": "Payment submitter with admin role can approve own proof",
+      "method": "POST",
+      "path": "/admin/payment-proofs/PP-F9B6057BD1C9/decision",
+      "actual_status": 200,
+      "expected_secure_status": 403,
+      "issue_reproduced": true
+    }
+  ],
+  "route_counts": {
+    "static": 1,
+    "admin_control": 16,
+    "health": 2,
+    "app": 6,
+    "auth": 16,
+    "verification": 16,
+    "marketplace": 30,
+    "projects": 16,
+    "bookings": 20,
+    "casting": 24,
+    "cineplanner": 32,
+    "opportunities": 18,
+    "contracts": 17,
+    "director": 10,
+    "payments": 12,
+    "operations": 44,
+    "insurance": 11,
+    "specialist": 60,
+    "trust_safety": 34,
+    "analytics": 6,
+    "health_alias": 1
+  }
+}

@@ -1,11 +1,11 @@
 {
-    "name": "cineconnect",
-    "short_name": "cineconnect",
+    "name": "CineConnect",
+    "short_name": "CineConnect",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "CineConnect dark cinematic film-industry marketplace app.",
+    "background_color": "#070708",
+    "theme_color": "#070708",
+    "description": "Connect film talent, crew and production teams.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

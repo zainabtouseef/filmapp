@@ -16,6 +16,7 @@ from sqlalchemy import (
     Time,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import Base
@@ -197,6 +198,9 @@ class CineScene(EntityMixin, Base):
         Integer, nullable=False, default=60
     )
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_text: Mapped[str] = mapped_column(
+        Text().with_variant(LONGTEXT(), "mysql"), nullable=False, default=""
+    )
     cast_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     extras_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     props_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)

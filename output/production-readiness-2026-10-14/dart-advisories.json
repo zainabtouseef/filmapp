@@ -1,0 +1,485 @@
+{
+  "packages_scanned": 96,
+  "results": [
+    {
+      "name": "args",
+      "version": "2.7.0",
+      "advisories": []
+    },
+    {
+      "name": "async",
+      "version": "2.13.1",
+      "advisories": []
+    },
+    {
+      "name": "boolean_selector",
+      "version": "2.1.2",
+      "advisories": []
+    },
+    {
+      "name": "camera",
+      "version": "0.11.4",
+      "advisories": []
+    },
+    {
+      "name": "camera_android_camerax",
+      "version": "0.6.30",
+      "advisories": []
+    },
+    {
+      "name": "camera_avfoundation",
+      "version": "0.9.23+2",
+      "advisories": []
+    },
+    {
+      "name": "camera_platform_interface",
+      "version": "2.13.1",
+      "advisories": []
+    },
+    {
+      "name": "camera_web",
+      "version": "0.3.5+4",
+      "advisories": []
+    },
+    {
+      "name": "characters",
+      "version": "1.4.1",
+      "advisories": []
+    },
+    {
+      "name": "clock",
+      "version": "1.1.2",
+      "advisories": []
+    },
+    {
+      "name": "code_assets",
+      "version": "1.2.1",
+      "advisories": []
+    },
+    {
+      "name": "collection",
+      "version": "1.19.1",
+      "advisories": []
+    },
+    {
+      "name": "connectivity_plus",
+      "version": "6.1.5",
+      "advisories": []
+    },
+    {
+      "name": "connectivity_plus_platform_interface",
+      "version": "2.1.0",
+      "advisories": []
+    },
+    {
+      "name": "cross_file",
+      "version": "0.3.5+4",
+      "advisories": []
+    },
+    {
+      "name": "crypto",
+      "version": "3.0.7",
+      "advisories": []
+    },
+    {
+      "name": "cupertino_icons",
+      "version": "1.0.9",
+      "advisories": []
+    },
+    {
+      "name": "dbus",
+      "version": "0.7.14",
+      "advisories": []
+    },
+    {
+      "name": "fake_async",
+      "version": "1.3.3",
+      "advisories": []
+    },
+    {
+      "name": "ffi",
+      "version": "2.2.0",
+      "advisories": []
+    },
+    {
+      "name": "file_picker",
+      "version": "8.3.7",
+      "advisories": []
+    },
+    {
+      "name": "file_selector_linux",
+      "version": "0.9.4",
+      "advisories": []
+    },
+    {
+      "name": "file_selector_macos",
+      "version": "0.9.5",
+      "advisories": []
+    },
+    {
+      "name": "file_selector_platform_interface",
+      "version": "2.7.0",
+      "advisories": []
+    },
+    {
+      "name": "file_selector_windows",
+      "version": "0.9.3+5",
+      "advisories": []
+    },
+    {
+      "name": "flutter_lints",
+      "version": "5.0.0",
+      "advisories": []
+    },
+    {
+      "name": "flutter_plugin_android_lifecycle",
+      "version": "2.0.35",
+      "advisories": []
+    },
+    {
+      "name": "flutter_secure_storage",
+      "version": "9.2.4",
+      "advisories": []
+    },
+    {
+      "name": "flutter_secure_storage_linux",
+      "version": "1.2.3",
+      "advisories": []
+    },
+    {
+      "name": "flutter_secure_storage_macos",
+      "version": "3.1.3",
+      "advisories": []
+    },
+    {
+      "name": "flutter_secure_storage_platform_interface",
+      "version": "1.1.2",
+      "advisories": []
+    },
+    {
+      "name": "flutter_secure_storage_web",
+      "version": "1.2.1",
+      "advisories": []
+    },
+    {
+      "name": "flutter_secure_storage_windows",
+      "version": "3.1.2",
+      "advisories": []
+    },
+    {
+      "name": "google_fonts",
+      "version": "6.3.3",
+      "advisories": []
+    },
+    {
+      "name": "hooks",
+      "version": "2.0.2",
+      "advisories": []
+    },
+    {
+      "name": "http",
+      "version": "1.6.0",
+      "advisories": []
+    },
+    {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "advisories": []
+    },
+    {
+      "name": "image_picker",
+      "version": "1.2.3",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_android",
+      "version": "0.8.13+17",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_for_web",
+      "version": "3.1.1",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_ios",
+      "version": "0.8.13+6",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_linux",
+      "version": "0.2.2",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_macos",
+      "version": "0.2.2+1",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_platform_interface",
+      "version": "2.11.1",
+      "advisories": []
+    },
+    {
+      "name": "image_picker_windows",
+      "version": "0.2.2",
+      "advisories": []
+    },
+    {
+      "name": "intl",
+      "version": "0.19.0",
+      "advisories": []
+    },
+    {
+      "name": "jni",
+      "version": "1.0.0",
+      "advisories": []
+    },
+    {
+      "name": "jni_flutter",
+      "version": "1.0.1",
+      "advisories": []
+    },
+    {
+      "name": "js",
+      "version": "0.6.7",
+      "advisories": []
+    },
+    {
+      "name": "leak_tracker",
+      "version": "11.0.2",
+      "advisories": []
+    },
+    {
+      "name": "leak_tracker_flutter_testing",
+      "version": "3.0.10",
+      "advisories": []
+    },
+    {
+      "name": "leak_tracker_testing",
+      "version": "3.0.2",
+      "advisories": []
+    },
+    {
+      "name": "lints",
+      "version": "5.1.1",
+      "advisories": []
+    },
+    {
+      "name": "logging",
+      "version": "1.3.0",
+      "advisories": []
+    },
+    {
+      "name": "matcher",
+      "version": "0.12.18",
+      "advisories": []
+    },
+    {
+      "name": "material_color_utilities",
+      "version": "0.13.0",
+      "advisories": []
+    },
+    {
+      "name": "meta",
+      "version": "1.17.0",
+      "advisories": []
+    },
+    {
+      "name": "mime",
+      "version": "2.0.0",
+      "advisories": []
+    },
+    {
+      "name": "nm",
+      "version": "0.5.0",
+      "advisories": []
+    },
+    {
+      "name": "objective_c",
+      "version": "9.4.1",
+      "advisories": []
+    },
+    {
+      "name": "package_config",
+      "version": "2.2.0",
+      "advisories": []
+    },
+    {
+      "name": "path",
+      "version": "1.9.1",
+      "advisories": []
+    },
+    {
+      "name": "path_provider",
+      "version": "2.1.6",
+      "advisories": []
+    },
+    {
+      "name": "path_provider_android",
+      "version": "2.3.1",
+      "advisories": []
+    },
+    {
+      "name": "path_provider_foundation",
+      "version": "2.6.0",
+      "advisories": []
+    },
+    {
+      "name": "path_provider_linux",
+      "version": "2.2.2",
+      "advisories": []
+    },
+    {
+      "name": "path_provider_platform_interface",
+      "version": "2.1.3",
+      "advisories": []
+    },
+    {
+      "name": "path_provider_windows",
+      "version": "2.3.0",
+      "advisories": []
+    },
+    {
+      "name": "petitparser",
+      "version": "7.0.2",
+      "advisories": []
+    },
+    {
+      "name": "platform",
+      "version": "3.1.6",
+      "advisories": []
+    },
+    {
+      "name": "plugin_platform_interface",
+      "version": "2.1.8",
+      "advisories": []
+    },
+    {
+      "name": "pub_semver",
+      "version": "2.2.0",
+      "advisories": []
+    },
+    {
+      "name": "record_use",
+      "version": "0.6.0",
+      "advisories": []
+    },
+    {
+      "name": "source_span",
+      "version": "1.10.2",
+      "advisories": []
+    },
+    {
+      "name": "stack_trace",
+      "version": "1.12.1",
+      "advisories": []
+    },
+    {
+      "name": "stream_channel",
+      "version": "2.1.4",
+      "advisories": []
+    },
+    {
+      "name": "stream_transform",
+      "version": "2.1.1",
+      "advisories": []
+    },
+    {
+      "name": "string_scanner",
+      "version": "1.4.1",
+      "advisories": []
+    },
+    {
+      "name": "term_glyph",
+      "version": "1.2.2",
+      "advisories": []
+    },
+    {
+      "name": "test_api",
+      "version": "0.7.9",
+      "advisories": []
+    },
+    {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher",
+      "version": "6.3.3",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_android",
+      "version": "6.3.30",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_ios",
+      "version": "6.4.2",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_linux",
+      "version": "3.2.3",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_macos",
+      "version": "3.2.6",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_platform_interface",
+      "version": "2.3.2",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_web",
+      "version": "2.4.3",
+      "advisories": []
+    },
+    {
+      "name": "url_launcher_windows",
+      "version": "3.1.6",
+      "advisories": []
+    },
+    {
+      "name": "vector_math",
+      "version": "2.2.0",
+      "advisories": []
+    },
+    {
+      "name": "vm_service",
+      "version": "15.2.0",
+      "advisories": []
+    },
+    {
+      "name": "web",
+      "version": "1.1.1",
+      "advisories": []
+    },
+    {
+      "name": "win32",
+      "version": "5.15.0",
+      "advisories": []
+    },
+    {
+      "name": "xdg_directories",
+      "version": "1.1.0",
+      "advisories": []
+    },
+    {
+      "name": "xml",
+      "version": "6.6.1",
+      "advisories": []
+    },
+    {
+      "name": "yaml",
+      "version": "3.1.3",
+      "advisories": []
+    }
+  ]
+}

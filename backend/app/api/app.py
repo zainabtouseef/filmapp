@@ -153,7 +153,7 @@ ROLES = [
     },
     {
         "code": "actor_talent",
-        "name": "Actor / Talent",
+        "name": "Actor",
         "portal_route": "/talent",
         "requires_kyc": True,
     },
@@ -177,7 +177,7 @@ ROLES = [
     },
     {
         "code": "crew_service",
-        "name": "Crew / Services",
+        "name": "Production Services",
         "portal_route": "/crew",
         "requires_kyc": True,
     },

@@ -1,0 +1,14 @@
+{
+  "build/web/main.dart.js": {
+    "bytes": 3610490,
+    "gzip_bytes": 1033464
+  },
+  "build/web/index.html": {
+    "bytes": 19458,
+    "gzip_bytes": 7022
+  },
+  "build/web/canvaskit/canvaskit.wasm": {
+    "bytes": 7155780,
+    "gzip_bytes": 2876441
+  }
+}

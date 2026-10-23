@@ -184,7 +184,7 @@ class _DPRouteHeading extends StatelessWidget {
       DirectorProducerRoutes.requirements => 'Project brief · requirements',
       DirectorProducerRoutes.filters => 'Discovery controls · saved view',
       DirectorProducerRoutes.profile => 'Verified profile · booking ready',
-      DirectorProducerRoutes.shortlist => 'Shortlists · saved talent',
+      DirectorProducerRoutes.shortlist => 'Shortlists · saved people',
       DirectorProducerRoutes.bookingRequest => 'Booking composer · live terms',
       DirectorProducerRoutes.negotiationThread =>
         'Offer thread · counter terms',
@@ -377,7 +377,7 @@ class _DPSearchPill extends StatelessWidget {
                     ? 'Search...'
                     : isPublicBuyer
                         ? 'Search actors, models, influencers...'
-                        : 'Search talent and resources...',
+                        : 'Search people and resources...',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.smallMeta.copyWith(

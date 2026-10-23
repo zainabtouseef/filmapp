@@ -102,12 +102,12 @@ const _brandFullWalkthroughChapters = <_BrandTourChapter>[
       ),
       _BrandTourTopic(
         'Add production requirements',
-        'Add registers a talent, model, crew, location or equipment need with a quantity — each one becomes discoverable and bookable from Discover.',
+        'Add registers an actor, model, production service, location or equipment need with a quantity — each one becomes discoverable and bookable from Discover.',
         targetId: 'brand.projects.requirements',
       ),
       _BrandTourTopic(
         'Review attached resources',
-        'Shortlisted and selected talent, crew, locations and equipment for this project collect here automatically as Discover and Shortlists work happens.',
+        'Shortlisted actors, production professionals, locations and equipment for this project collect here automatically as Discover and Shortlists work happens.',
         targetId: 'brand.projects.resources',
       ),
       _BrandTourTopic(
@@ -215,7 +215,7 @@ const _brandFullWalkthroughChapters = <_BrandTourChapter>[
       ),
       _BrandTourTopic(
         'Filter by resource type',
-        'Switch between actors, models, influencers, crew, locations, media & equipment, agencies and distribution partners without leaving the search.',
+        'Switch between actors, models, influencers, production services, locations, media & equipment, agencies and distribution partners without leaving the search.',
         targetId: 'brand.discovery.categories',
       ),
       _BrandTourTopic(

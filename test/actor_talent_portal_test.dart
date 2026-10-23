@@ -59,7 +59,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Actor / Talent Portal'), findsOneWidget);
+      expect(find.text('Actor Portal'), findsOneWidget);
       expect(find.text(ActorTalentRoutes.titleFor(route)), findsWidgets);
       final exception = tester.takeException();
       expect(exception, isNull, reason: 'Unexpected exception: $exception');

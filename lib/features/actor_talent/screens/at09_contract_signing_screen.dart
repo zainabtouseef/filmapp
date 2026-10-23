@@ -301,7 +301,7 @@ class _LiveContractPreview extends StatelessWidget {
           ),
           ActorInfoRow(
             icon: Icons.payments_outlined,
-            label: 'Talent fee',
+            label: 'Actor fee',
             value: contract.displayValue,
           ),
           ActorInfoRow(

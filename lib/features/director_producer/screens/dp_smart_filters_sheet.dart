@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/theme/app_color_scheme.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/widgets/cine_marketplace_card.dart';
 import '../routes/director_producer_routes.dart';
 import '../widgets/dp_holographic_button.dart';
 import '../widgets/dp_layout_helpers.dart';
@@ -193,7 +194,7 @@ class _FilterGroup extends StatelessWidget {
               GestureDetector(
                 onTap: () => onSelected(option),
                 child: DPStatusChip(
-                  label: option,
+                  label: marketplaceCategoryLabel(option),
                   tone: option == active ? DpTone.warning : DpTone.neutral,
                 ),
               ),

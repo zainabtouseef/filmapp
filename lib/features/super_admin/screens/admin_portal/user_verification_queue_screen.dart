@@ -41,7 +41,8 @@ class _UserVerificationQueueScreenState
       List<verification.KycSubmission> submissions) {
     final query = _search.text.toLowerCase();
     return submissions.where((item) {
-      final roleMatch = _role == 'All' || item.roleName.contains(_role);
+      final roleMatch = _role == 'All' ||
+          RoleMapper.displayLabelForName(item.roleName).contains(_role);
       final queryMatch = query.isEmpty ||
           item.applicantName.toLowerCase().contains(query) ||
           item.applicantEmail.toLowerCase().contains(query) ||
@@ -79,7 +80,7 @@ class _UserVerificationQueueScreenState
                 filters: const [
                   'All',
                   'Director / Producer',
-                  'Actor / Talent',
+                  'Actor',
                   'Model',
                   'Location Owner',
                   'Media / Equipment Provider',
@@ -180,7 +181,8 @@ class _UserVerificationQueueScreenState
                   .map(
                     (row) => [
                       _text(context, row.applicantName, strong: true),
-                      _text(context, row.roleName),
+                      _text(context,
+                          RoleMapper.displayLabelForName(row.roleName)),
                       _text(context, '${row.files.length} file(s)'),
                       AdminRiskBadge(
                         label: row.riskLevel,

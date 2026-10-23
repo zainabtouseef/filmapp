@@ -91,7 +91,7 @@ class _CR06ContractsPaymentsScreenState
       return const CoreEmptyState(
         icon: Icons.cloud_sync_outlined,
         title: 'Sign in to load contracts',
-        message: 'Crew contracts and payments are stored in the backend.',
+        message: 'Contracts and payments are stored in the backend.',
       );
     }
     return FutureBuilder<_ContractsData>(
@@ -195,14 +195,14 @@ class _CR06ContractsPaymentsScreenState
           left: TourTarget(
             id: 'crew.contracts.list',
             child: CrewSectionCard(
-              title: 'Crew contracts',
+              title: 'Contracts',
               icon: Icons.draw_outlined,
               child: data.contracts.isEmpty
                   ? const CoreEmptyState(
                       icon: Icons.description_outlined,
-                      title: 'No crew contracts yet',
+                      title: 'No contracts yet',
                       message:
-                          'Accepted crew bookings can generate an auditable contract here.',
+                          'Accepted bookings can generate an auditable contract here.',
                     )
                   : Column(
                       children: [
@@ -224,7 +224,7 @@ class _CR06ContractsPaymentsScreenState
               child: data.ledger.isEmpty
                   ? const CoreEmptyState(
                       icon: Icons.account_balance_wallet_outlined,
-                      title: 'No crew ledger entries',
+                      title: 'No ledger entries',
                       message:
                           'Released project milestones and payout activity will appear here.',
                     )
@@ -246,7 +246,7 @@ class _CR06ContractsPaymentsScreenState
     try {
       await _contracts!.generateForBooking(booking.publicId);
       if (!mounted) return;
-      crewSnack(context, 'Crew contract generated');
+      crewSnack(context, 'Contract generated');
       _reload();
     } catch (error) {
       if (mounted) crewSnack(context, 'Could not generate contract: $error');

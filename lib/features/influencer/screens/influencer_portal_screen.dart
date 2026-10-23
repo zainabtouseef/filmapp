@@ -755,7 +755,7 @@ class _InfluencerPackagesScreenState extends State<InfluencerPackagesScreen> {
       return const CoreEmptyState(
         icon: Icons.sell_outlined,
         title: 'Sign in to edit packages',
-        message: 'Packages are stored in your live talent profile settings.',
+        message: 'Packages are stored in your live profile settings.',
       );
     }
     return FutureBuilder<TalentProfile>(
